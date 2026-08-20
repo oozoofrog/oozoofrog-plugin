@@ -6,27 +6,26 @@ It initializes local handoff storage, converts selected repository files into ha
 
 ## Install
 
-From a clone of `oozoofrog/codex-skills`:
+From Codex, request a network installation without running Python directly:
 
-```bash
-python3 scripts/manage_skills.py install gptpro
+```text
+$skill-installer Install gptpro from https://github.com/oozoofrog/codex-skills/tree/main/gptpro
 ```
 
-Preview the operation or update an existing installation:
+Start a new Codex task after installation. Alternatively, register the repository Marketplace once and install `GPT Pro Collaborator` from the Plugins browser:
+
+```bash
+codex plugin marketplace add oozoofrog/codex-skills --ref main
+```
+
+The Plugin package is under `plugins/gptpro`; the standalone GitHub path remains available for compatibility. See the [Plugin installation guide](https://github.com/oozoofrog/codex-skills/blob/main/docs/plugin-installation.md) for installation choices and the public-directory release gate.
+
+Maintainers using a reviewed clone can still preview, install, or atomically update the standalone package:
 
 ```bash
 python3 scripts/manage_skills.py install gptpro --dry-run
+python3 scripts/manage_skills.py install gptpro
 python3 scripts/manage_skills.py install gptpro --update
-```
-
-The default destination is `${CODEX_HOME:-~/.codex}/skills/gptpro`. Restart Codex if the Skill does not appear immediately.
-
-The bundled system installer is also compatible with a fresh installation from GitHub:
-
-```bash
-python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
-  --repo oozoofrog/codex-skills \
-  --path gptpro
 ```
 
 ## Use

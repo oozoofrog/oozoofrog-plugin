@@ -1,0 +1,84 @@
+# gptpro
+
+`gptpro` is an attended Codex Skill for consulting a logged-in ChatGPT Pro general Chat without giving the web model direct authority over the local repository.
+
+It initializes local handoff storage, converts selected repository files into hash-verified structured Markdown, records the exact Git state, excludes likely secrets and build noise, requires transport-specific user approval, guides the visible Chrome handoff, imports only the package-marked response, and records Codex's later evaluation. A ZIP is retained locally for audit and integrity checks but is not uploaded by default.
+
+## Install
+
+From Codex, request a network installation without running Python directly:
+
+```text
+$skill-installer Install gptpro from https://github.com/oozoofrog/codex-skills/tree/main/gptpro
+```
+
+Start a new Codex task after installation. Alternatively, register the repository Marketplace once and install `GPT Pro Collaborator` from the Plugins browser:
+
+```bash
+codex plugin marketplace add oozoofrog/codex-skills --ref main
+```
+
+The Plugin package is under `plugins/gptpro`; the standalone GitHub path remains available for compatibility. See the [Plugin installation guide](https://github.com/oozoofrog/codex-skills/blob/main/docs/plugin-installation.md) for installation choices and the public-directory release gate.
+
+Maintainers using a reviewed clone can still preview, install, or atomically update the standalone package:
+
+```bash
+python3 scripts/manage_skills.py install gptpro --dry-run
+python3 scripts/manage_skills.py install gptpro
+python3 scripts/manage_skills.py install gptpro --update
+```
+
+## Use
+
+Invoke `$gptpro` and provide a mode plus task, for example:
+
+```text
+$gptpro review 모드로 현재 변경의 정확성과 빠진 테스트를 검토해주세요.
+```
+
+The Skill will prepare and verify local artifacts first. Transmission is a separate attended action: it must show the exact manifest summary and receive approval before pasting, attaching, or submitting to `chatgpt.com`.
+
+## First-use setup
+
+Preview the repository-local environment without writing anything:
+
+```bash
+python3 scripts/gptpro.py init --repo /path/to/repo
+```
+
+The recommended `local` scope plans two idempotent changes: create `<repo>/.gptpro/handoffs/` and add `.gptpro/` to that clone's `.git/info/exclude`. After reviewing and approving the JSON preview:
+
+```bash
+python3 scripts/gptpro.py init --repo /path/to/repo --apply
+```
+
+Use `--ignore-scope repository` to update the tracked-worktree `.gitignore` instead, or `--ignore-scope none` to create only the directory. The Skill never applies the preview automatically. `prepare` remains usable without initialization but reports a warning when an in-repository output directory is not ignored.
+
+The default `--transport auto` uses:
+
+- `paste` when the complete structured payload is at most 128 KiB;
+- `text-file` for larger payloads, attaching one `context-<id>.md` and pasting `prompt.md`.
+
+The 128 KiB cutoff is a conservative Skill policy, not a published ChatGPT limit. Override it with `--max-paste-bytes`, or choose `--transport paste|text-file` explicitly. A failed transport never falls back automatically because approval binds the exact outbound bytes.
+
+This release uses manifest schema 2. A schema-1 ZIP-first handoff is not upgraded in place; prepare a new handoff so the new transport and approval hashes are explicit.
+
+## Local CLI
+
+```bash
+python3 scripts/gptpro.py prepare --repo /path/to/repo --mode plan --transport auto --task "Plan the change."
+python3 scripts/gptpro.py verify --handoff-dir /path/to/repo/.gptpro/handoffs/<id>
+python3 scripts/gptpro.py status --handoff-dir /path/to/repo/.gptpro/handoffs/<id>
+```
+
+The five modes are `plan`, `ask`, `review`, `debug`, and `architecture`. Run `python3 scripts/gptpro.py --help` for the full lifecycle.
+
+## Security posture
+
+- No OpenAI API key is required.
+- No private ChatGPT endpoints or headless session scraping are used.
+- Secret values are never printed in findings; matching files are excluded.
+- Chrome/browser automation stops at login, CAPTCHA, permission, model-selection, or ambiguous-submission blockers.
+- Imported Pro output is advisory until Codex verifies it against current repository evidence.
+
+Generated handoffs live under `<repo>/.gptpro/handoffs/` by default. Add `.gptpro/` to the target repository's ignore rules if appropriate.
