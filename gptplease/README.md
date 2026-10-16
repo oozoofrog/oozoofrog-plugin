@@ -51,6 +51,6 @@ $gptplease Work에서 Astra High로 이 기획안을 분석하고 완료 결과�
 
 ## 설치
 
-Plugin은 `gptplease@codex-skills`, standalone은 `gptplease/`를 선택합니다. 설치 후 새 대화에서 `$gptplease`를 호출하세요. 이전 이름의 플러그인·스킬을 제거해 중복 노출을 피하고, 과거 상담 패키지와 로그인 프로필은 별도로 보존합니다. [저장소 설치 안내](https://github.com/oozoofrog/codex-skills/blob/main/docs/plugin-installation.md)를 참고하세요.
+Plugin은 `gptplease@oozoofrog-plugin`, standalone은 `gptplease/`를 선택합니다. 설치 후 새 대화에서 `$gptplease`를 호출하세요. 이전 이름의 플러그인·스킬을 제거해 중복 노출을 피하고, 과거 상담 패키지와 로그인 프로필은 별도로 보존합니다. [저장소 설치 안내](https://github.com/oozoofrog/oozoofrog-plugin/blob/main/docs/plugin-installation.md)를 참고하세요.
 
 0.3.0의 화면별 정책 변경은 모델 선택 지침과 배포 갱신입니다. 위의 9월 7일·12일 관측은 과거 증거이며 새 모델 조합의 live UI 검증을 의미하지 않습니다.

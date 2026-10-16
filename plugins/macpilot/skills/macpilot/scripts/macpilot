@@ -1,0 +1,25 @@
+#!/bin/sh
+set -eu
+script=$0
+while [ -L "$script" ]; do
+    target=$(/usr/bin/readlink "$script")
+    case $target in
+        /*) script=$target ;;
+        *) script=$(dirname -- "$script")/$target ;;
+    esac
+done
+skill_dir=$(CDPATH= cd -- "$(dirname -- "$script")/.." && pwd)
+executable="$skill_dir/bin/MacPilot.app/Contents/MacOS/macpilot"
+needs_build=false
+if [ ! -x "$executable" ]; then
+    needs_build=true
+elif [ "$skill_dir/scripts/build.sh" -nt "$executable" ] || [ "$skill_dir/tool/Package.swift" -nt "$executable" ]; then
+    needs_build=true
+elif /usr/bin/find "$skill_dir/tool/Sources" -type f -name '*.swift' -newer "$executable" -print -quit | /usr/bin/grep -q .; then
+    needs_build=true
+fi
+if [ "$needs_build" = true ]; then
+    "$skill_dir/scripts/build.sh" >&2
+fi
+export MACPILOT_SKILL_DIR="$skill_dir"
+exec "$executable" "$@"

@@ -24,7 +24,7 @@ $astra-team-building으로 이 프로젝트의 목표를 완료해주세요.
 이 저장소에서 `skills/astra-team-building/`이 원본이며 standalone 중복 사본은 관리하지 않습니다. Git marketplace에 변경이 게시된 뒤에는 다음과 같이 설치할 수 있습니다.
 
 ```bash
-codex plugin add astra-team-building@codex-skills
+codex plugin add astra-team-building@oozoofrog-plugin
 codex plugin remove astra-orchestrator@codex-skills
 ```
 

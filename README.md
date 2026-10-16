@@ -1,6 +1,6 @@
-# codex-skills
+# oozoofrog-plugin
 
-ChatGPT Chat·Work의 목적별 모델 선택과 상담과 응답 회수를 위한 `$gptplease`, Swift 의미론 탐색용 `swift-intelligence`, 개발 팀 구성과 협업을 위한 `astra-team-building`, Figma UI 작업용 `figma-computer-use`, 일반 Codex 세션의 작업 인계용 `session-continuity`, 켄트 벡의 글을 바탕으로 한 개발 절차 `ponytail-beck-tdd`, 명시적 외부 runner 호출용 `unreal-agent`, Local AI Studio 설치·모델 실행용 `local-ai-studio`를 제공합니다.
+ChatGPT Chat·Work의 목적별 모델 선택과 상담과 응답 회수를 위한 `$gptplease`, Swift 의미론 탐색용 `swift-intelligence`, 개발 팀 구성과 협업을 위한 `astra-team-building`, Figma UI 작업용 `figma-computer-use`, 일반 Codex 세션의 작업 인계용 `session-continuity`, 켄트 벡의 글을 바탕으로 한 개발 절차 `ponytail-beck-tdd`, 명시적 외부 runner 호출용 `unreal-agent`, Local AI Studio 설치·모델 실행용 `local-ai-studio`, macOS 데스크톱 제어·화면·시스템 오디오 녹화용 `macpilot`를 제공합니다.
 
 ## GPT Please
 
@@ -57,7 +57,7 @@ Standalone `unreal-agent/`와 byte-identical skills-only Plugin `0.1.3`를 제�
 Go 1.27+, Git, Python 3.9+, Codex CLI가 있으면 다음 한 명령으로 upstream runner와 Codex Plugin을 설치할 수 있습니다.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/oozoofrog/codex-skills/main/scripts/install_unreal_agent.sh | bash
+curl -fsSL https://raw.githubusercontent.com/oozoofrog/oozoofrog-plugin/main/scripts/install_unreal_agent.sh | bash
 ```
 
 설치기는 기존 marketplace source와 Plugin 상태를 먼저 검사합니다. 미등록이면 원격 marketplace와 Plugin을 설치하고, 의도한 원격 source는 필요할 때 갱신하며, 같은 저장소의 로컬 checkout은 등록을 유지합니다. 다른 source면 변경 없이 중단합니다. Codex 변경 전에 config와 설치 목록을 백업하고 다른 Plugin·인증은 건드리지 않습니다. 비활성화된 기존 Plugin은 그대로 두며 새 Codex 대화에서 노출을 확인하세요. 기존 미관리 바이너리는 덮어쓰지 않습니다.
@@ -77,6 +77,22 @@ $local-ai-studio로 이 영어 문서를 한국어로 번역해 지정한 TXT �
 Standalone `local-ai-studio/`와 byte-identical skills-only Plugin `0.2.1`을 제공합니다. Plugin에 모델·런타임·생성 미디어·인증·실행기 바이너리는 포함하지 않습니다. 설치 시 현재 소스·CLI 기능, 선택한 저장 위치와 용량을 확인하고 필요한 모델만 받습니다. `/Volumes/eyedisk/AI`는 참조 Mac의 발견 후보일 뿐 보편적인 기본값이 아닙니다. Qwen Image 다운로드에는 사용자의 명시적 라이선스 동의가 필요합니다. 24 GB Mac에서는 대형 생성 모델을 한 번에 하나만 실행합니다.
 
 설치 후 `ai --help`로 지원 명령을 확인합니다. 공개 LocalAIHub 소스와 다른 로컬 체크아웃의 기능이 다를 수 있습니다. `READY`·종료 코드·`Output:` 로그만으로 결과 품질을 주장하지 않으며 실제 파일·형식·미리보기/재생/내용 확인 여부를 구분해 전달합니다. [스킬 본문](local-ai-studio/SKILL.md), [LocalAIHub 설치](local-ai-studio/references/setup.md), [명령·출력 규칙](local-ai-studio/references/cli-workflows.md), [Plugin 설치 안내](docs/plugin-installation.md#local-ai-studio)를 참고하세요.
+
+## MacPilot
+
+`macpilot`는 macOS 앱·창·메뉴·파일·시스템과 브라우저 작업을 관찰·실행·검증합니다. 작업별 멀티 가상 커서, 백그라운드 제어, 라이브 프리뷰, 선택적 private API와 Codex 개선 요청 전송이 필요한 데스크톱 워크플로에 사용합니다.
+
+```text
+$macpilot로 macOS·브라우저 작업과 화면·시스템 오디오 녹화를 수행하고 결과를 검증하세요.
+```
+
+원본은 [macpilot/](macpilot/), 배포 사본은 [Plugin 스킬](plugins/macpilot/skills/macpilot/SKILL.md)에서 관리합니다. `3.0.0`은 Swift 코어·CLI·MCP, 작업 격리·취소·포커스, 라이브 캡처·오버레이, 파일·Finder 태그·CoreAudio, Chromium 확장과 Safari Apple Events, 로컬 개선 요청 대기열·Codex app-server 전송을 포함합니다. 실제 OS 커서와 키보드 포커스는 공유하며, 모든 앱·모든 브라우저 기능의 성공을 보장하지 않습니다. [작업별 지원 범위](macpilot/references/workflows.md)에 백엔드별 제약을 명시합니다.
+
+macOS 14 이상과 Apple Swift 개발 도구가 필요합니다. `macpilot/scripts/macpilot`는 첫 실행에서 로컬 앱을 빌드·ad-hoc 서명합니다. Python·Node.js는 개발 검증용이며 외부 SwiftPM 패키지는 없습니다. Chromium 확장·사이트 접근과 Safari Automation·JavaScript from Apple Events는 별도 활성화가 필요합니다. 화면·시스템 오디오는 [`mac_record`](macpilot/references/recording.md)로 MP4에 녹화하고 검사합니다(macOS 15+). Safari·Chrome 개발자 설정은 [`mac_browser_developer`](macpilot/references/browser-developer-settings.md)로 조회·준비하고 사용자 승인 후 켤 수 있습니다. Codex 개선 요청 전송에는 명시적 목적지 설정과 로그인·모델 연결이 필요합니다. 일반 로컬 제어는 모델을 요구하지 않습니다.
+
+현재 MCP 도구가 필요한 기능을 제공하면 직접 사용하고, 구버전이면 이 스킬의 CLI를 사용합니다. Plugin은 전역 스킬·MCP 설정·사용자 브라우저 프로필을 자동 교체하지 않습니다. 원격 게시·설치·활성화·새 세션 노출은 별도입니다. [스킬 본문](macpilot/SKILL.md), [CLI·MCP](macpilot/references/tools.md), [개발·검증](macpilot/references/development.md), [설치 안내](docs/plugin-installation.md#macpilot)를 참고하세요.
+
+이후 변경은 원본에서 수행하고 `python3 scripts/sync_skill_mirrors.py --package macpilot --write`로 배포 사본에 반영합니다. 바이너리·빌드 캐시·화면·로그 증거는 Git과 배포 사본에서 제외합니다.
 
 ## 다른 Plugin
 
@@ -114,11 +130,12 @@ Figma `126.8.18` 네이티브 앱에서 프레임·한글 텍스트·Auto layout
 필요한 Plugin만 선택해 설치합니다. 아래 명령은 해당 변경이 원격 marketplace에 반영된 뒤 사용할 수 있습니다.
 
 ```bash
-codex plugin marketplace add oozoofrog/codex-skills --ref main
-codex plugin add gptplease@codex-skills
-codex plugin add session-continuity@codex-skills
-codex plugin add unreal-agent@codex-skills
-codex plugin add local-ai-studio@codex-skills
+codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
+codex plugin add gptplease@oozoofrog-plugin
+codex plugin add session-continuity@oozoofrog-plugin
+codex plugin add unreal-agent@oozoofrog-plugin
+codex plugin add local-ai-studio@oozoofrog-plugin
+codex plugin add macpilot@oozoofrog-plugin
 ```
 
 설치 후 새 대화에서 `$gptplease`를 호출합니다. 이전 `gptwork`/`gptpro` 설치본의 중복 노출을 정리하되 과거 패키지와 계정 프로필은 보존합니다. 다른 Plugin의 요구 사항과 standalone 설치는 [Plugin 설치 안내](docs/plugin-installation.md)를 참고하세요.
@@ -130,16 +147,18 @@ python3 -m unittest discover -s scripts/tests -v
 python3 scripts/sync_skill_mirrors.py --package gptplease
 node --test gptplease/tests/*.test.mjs
 python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py gptplease
-python3 ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/gptplease
 python3 scripts/sync_skill_mirrors.py --package unreal-agent
 python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py unreal-agent
 python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/unreal-agent/skills/unreal-agent
-python3 ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/unreal-agent
 python3 scripts/sync_skill_mirrors.py --package local-ai-studio
 python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py local-ai-studio
 python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/local-ai-studio/skills/local-ai-studio
-python3 ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/local-ai-studio
+python3 scripts/sync_skill_mirrors.py --package macpilot
+python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py macpilot
+python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/macpilot/skills/macpilot
+xcrun swift test --package-path macpilot/tool
+python3 macpilot/scripts/verify_mcp.py
 git diff --check
 ```
 
-Swift Intelligence를 수정할 때는 해당 Plugin의 검증 지침을 별도로 따릅니다. 변경 기록은 [CHANGELOG.md](CHANGELOG.md)에 있습니다.
+Plugin manifest와 marketplace는 저장소 배포 검사로 확인합니다. 실제 원격 등록·설치는 별도 `CODEX_HOME`에서 CLI로 검증하며 기존 설치·인증을 변경하지 않습니다. Swift Intelligence를 수정할 때는 해당 Plugin의 검증 지침을 별도로 따릅니다. 변경 기록은 [CHANGELOG.md](CHANGELOG.md)에 있습니다.

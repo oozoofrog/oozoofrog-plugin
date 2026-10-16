@@ -24,19 +24,19 @@ python3 --version
 2. Swift Intelligence Plugin을 설치합니다.
 
 ```bash
-codex plugin marketplace add oozoofrog/codex-skills --ref main
-codex plugin add swift-intelligence@codex-skills
+codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
+codex plugin add swift-intelligence@oozoofrog-plugin
 codex plugin list
 ```
 
-`codex plugin list`에 `swift-intelligence@codex-skills`가 `installed, enabled`로 표시되어야 합니다. 설치 후 Codex 데스크톱 앱을 다시 시작하고 새 작업을 여십시오.
+`codex plugin list`에 `swift-intelligence@oozoofrog-plugin`가 `installed, enabled`로 표시되어야 합니다. 설치 후 Codex 데스크톱 앱을 다시 시작하고 새 작업을 여십시오.
 
 동일한 marketplace 이름이 이미 등록되어 오류가 발생하면 기존 등록을 제거한 뒤 GitHub marketplace를 다시 등록합니다.
 
 ```bash
-codex plugin marketplace remove codex-skills
-codex plugin marketplace add oozoofrog/codex-skills --ref main
-codex plugin add swift-intelligence@codex-skills
+codex plugin marketplace remove oozoofrog-plugin
+codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
+codex plugin add swift-intelligence@oozoofrog-plugin
 ```
 
 ## 사용
@@ -101,8 +101,8 @@ SWIFT_INTELLIGENCE_TRACE=1
 ## 제거
 
 ```bash
-codex plugin remove swift-intelligence@codex-skills
-codex plugin marketplace remove codex-skills
+codex plugin remove swift-intelligence@oozoofrog-plugin
+codex plugin marketplace remove oozoofrog-plugin
 ```
 
 공식 참고 문서: [Package your plugin](https://developers.openai.com/plugins/build/plugins)

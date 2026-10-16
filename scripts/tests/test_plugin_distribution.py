@@ -31,10 +31,10 @@ class PluginDistributionTests(unittest.TestCase):
         marketplace = json.loads(
             (REPO_ROOT / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8")
         )
-        self.assertEqual("codex-skills", marketplace["name"])
-        self.assertEqual("Codex Skills", marketplace["interface"]["displayName"])
+        self.assertEqual("oozoofrog-plugin", marketplace["name"])
+        self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ["swift-intelligence", "astra-team-building", "figma-computer-use", "gptplease", "session-continuity", "ponytail-beck-tdd", "unreal-agent", "local-ai-studio"],
+            ["swift-intelligence", "astra-team-building", "figma-computer-use", "gptplease", "session-continuity", "ponytail-beck-tdd", "unreal-agent", "local-ai-studio", "macpilot"],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -51,6 +51,8 @@ class PluginDistributionTests(unittest.TestCase):
                     (plugin_root / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8")
                 )
                 self.assertEqual(entry["name"], manifest["name"])
+                if "repository" in manifest:
+                    self.assertEqual("https://github.com/oozoofrog/oozoofrog-plugin", manifest["repository"])
                 skill_root = plugin_root / manifest["skills"] / entry["name"]
                 self.assertTrue((skill_root / "SKILL.md").is_file())
 
@@ -80,6 +82,65 @@ class PluginDistributionTests(unittest.TestCase):
             for target in re.findall(r"\[[^\]]*\]\(([^)]+)\)", path.read_text()):
                 if "://" not in target:
                     self.assertTrue((path.parent / target.split("#")[0]).exists(), (path, target))
+
+    def test_macpilot_distribution(self) -> None:
+        source = REPO_ROOT / "macpilot"
+        plugin = REPO_ROOT / "plugins" / source.name
+        mirror = plugin / "skills" / source.name
+        from test_sync_skill_mirrors import load_module
+        module = load_module()
+        self.assertIn(source.name, module.PACKAGES)
+        self.assertEqual(module.package_files(source), module.package_files(mirror))
+        for relative in ("tool/Package.swift", "tool/Sources/MacPilot/Main.swift",
+                         "tool/Sources/MacPilotCore/Engine.swift",
+                         "tool/Sources/MacPilotFixture/main.swift",
+                         "tool/Tests/MacPilotCoreTests/CoreTests.swift",
+                         "scripts/verify_mcp.py", "scripts/verify_runtime.py", "scripts/verify_features.py",
+                         "scripts/verify_browser.mjs", "scripts/verify_safari.py", "scripts/verify_preview_drag.swift", "browser/extension/manifest.json",
+                         "browser/extension/background.js", "browser/extension/content.js", "browser/extension/popup.html",
+                         "browser/extension/popup.js", "references/workflows.md", "references/private-api.md", "references/development.md",
+                         "tool/Sources/MacPilotCore/Tasks.swift", "tool/Sources/MacPilotCore/BrowserBridge.swift",
+                         "tool/Sources/MacPilotCore/SafariBridge.swift", "tool/Sources/MacPilotCore/Improvements.swift",
+                         "tool/Sources/MacPilotCore/BrowserDeveloperSettings.swift",
+                         "tool/Tests/MacPilotCoreTests/BrowserDeveloperTests.swift",
+                         "scripts/verify_browser_developer.py", "references/browser-developer-settings.md",
+                         "tool/Sources/MacPilotCore/Recording.swift", "tool/Tests/MacPilotCoreTests/RecordingTests.swift",
+                         "scripts/verify_recording_chrome.mjs", "scripts/verify_recording_lifecycle.py", "references/recording.md"):
+            self.assertTrue((mirror / relative).is_file(), relative)
+        for relative in ("scripts/macpilot", "scripts/build.sh"):
+            self.assertTrue((mirror / relative).stat().st_mode & 0o111, relative)
+        for relative in module.GENERATED_PATHS[source.name]:
+            self.assertFalse((mirror / relative).exists(), relative)
+        manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text())
+        self.assertEqual(source.name, manifest["name"])
+        self.assertEqual("3.0.0", manifest["version"])
+        self.assertEqual(manifest["version"], json.loads((source / "browser/extension/manifest.json").read_text())["version"])
+        frontmatter = (source / "SKILL.md").read_text().split("---", 2)[1]
+        self.assertEqual({"name", "description"}, {line.split(":", 1)[0] for line in frontmatter.splitlines() if ":" in line})
+        self.assertIn("description: " + manifest["description"], frontmatter)
+
+        self.assertEqual("./skills/", manifest["skills"])
+        for key in ("mcpServers", "apps", "hooks"):
+            self.assertNotIn(key, manifest)
+        for relative in (".mcp.json", ".app.json", "hooks"):
+            self.assertFalse((plugin / relative).exists(), relative)
+        metadata = {}
+        for line in (source / "agents/openai.yaml").read_text().splitlines():
+            if line.startswith("  ") and ": " in line:
+                key, value = line.strip().split(": ", 1)
+                metadata[key] = json.loads(value)
+        self.assertEqual(metadata["display_name"], manifest["interface"]["displayName"])
+        self.assertEqual(metadata["short_description"], manifest["interface"]["shortDescription"])
+        prompts = manifest["interface"]["defaultPrompt"]
+        self.assertIn(metadata["default_prompt"], prompts)
+        self.assertTrue(1 <= len(prompts) <= 3)
+        for prompt in prompts:
+            self.assertIn("$macpilot", prompt)
+            self.assertLessEqual(len(prompt), 128)
+        from test_document_links import local_targets
+        for document in source.rglob("*.md"):
+            for target in local_targets(document.read_text(encoding="utf-8")):
+                self.assertTrue((document.parent / target).exists(), (document, target))
 
     def test_retired_packages_are_not_distributed(self) -> None:
         for name in ("gptpro", "gptwork", "astra-orchestrator", "jev-start", "jev-blender-use", "jev-computer-use"):
