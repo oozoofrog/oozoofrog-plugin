@@ -22,7 +22,7 @@
       "Use $session-continuity to resume the requested task from its state and actual repository evidence."
     ]
   },
-  "repository": "https://github.com/oozoofrog/codex-skills",
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
   "keywords": [
     "codex",
     "session-continuity",

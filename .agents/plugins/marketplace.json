@@ -1,7 +1,7 @@
 {
-  "name": "codex-skills",
+  "name": "oozoofrog-plugin",
   "interface": {
-    "displayName": "Codex Skills"
+    "displayName": "oozoofrog-plugin"
   },
   "plugins": [
     {
@@ -93,6 +93,18 @@
       "source": {
         "source": "local",
         "path": "./plugins/local-ai-studio"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "macpilot",
+      "source": {
+        "source": "local",
+        "path": "./plugins/macpilot"
       },
       "policy": {
         "installation": "AVAILABLE",

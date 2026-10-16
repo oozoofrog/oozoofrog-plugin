@@ -20,7 +20,7 @@ class InstallerTests(unittest.TestCase):
         (self.tools / 'git').write_text('''#!/bin/sh
 case " $* " in
   *" init "*) mkdir -p "$3" ;;
-  *" remote get-url origin "*) echo "${MOCK_ORIGIN:-https://github.com/oozoofrog/codex-skills.git}" ;;
+  *" remote get-url origin "*) echo "${MOCK_ORIGIN:-https://github.com/oozoofrog/oozoofrog-plugin.git}" ;;
   *" rev-parse "*) echo "${MOCK_COMMIT}" ;;
   *) exit 0 ;;
 esac
@@ -41,9 +41,9 @@ printf '%s\n' "$*" >> "$MOCK_CALLS"
 if [ "${MOCK_CODEX_FAIL:-0}" != 0 ]; then exit "$MOCK_CODEX_FAIL"; fi
 if [ "$1 $2" = "plugin add" ]; then
   if [ "${MOCK_NO_ENABLE:-0}" = 1 ]; then
-    printf '%s' '{"installed":[{"pluginId":"unreal-agent@codex-skills","installed":true,"enabled":false}]}' > "$MOCK_PLUGINS"
+    printf '%s' '{"installed":[{"pluginId":"unreal-agent@oozoofrog-plugin","installed":true,"enabled":false}]}' > "$MOCK_PLUGINS"
   else
-    printf '%s' '{"installed":[{"pluginId":"unreal-agent@codex-skills","installed":true,"enabled":true}]}' > "$MOCK_PLUGINS"
+    printf '%s' '{"installed":[{"pluginId":"unreal-agent@oozoofrog-plugin","installed":true,"enabled":true}]}' > "$MOCK_PLUGINS"
   fi
 fi
 exit 0
@@ -64,19 +64,19 @@ exit 0
     def set_market(self, kind):
         if kind == 'absent': entries = []
         else:
-            source = ('https://github.com/oozoofrog/codex-skills.git' if kind == 'remote'
+            source = ('https://github.com/oozoofrog/oozoofrog-plugin.git' if kind == 'remote'
                       else str(self.root / 'checkout') if kind == 'local'
                       else 'https://github.com/other/repo')
-            entries = [{'name': 'codex-skills', 'marketplaceSource':
+            entries = [{'name': 'oozoofrog-plugin', 'marketplaceSource':
                         {'sourceType': 'local' if kind == 'local' else 'git', 'source': source}}]
             if kind == 'local':
                 manifest = self.root / 'checkout/.agents/plugins/marketplace.json'
                 manifest.parent.mkdir(parents=True, exist_ok=True)
-                manifest.write_text('{"name":"codex-skills"}')
+                manifest.write_text('{"name":"oozoofrog-plugin"}')
         self.markets.write_text(json.dumps({'marketplaces': entries}))
 
     def set_plugin(self, state):
-        entries = [] if state == 'absent' else [{'pluginId': 'unreal-agent@codex-skills',
+        entries = [] if state == 'absent' else [{'pluginId': 'unreal-agent@oozoofrog-plugin',
                                                   'installed': True, 'enabled': state == 'enabled'}]
         self.plugins.write_text(json.dumps({'installed': entries}))
 
@@ -91,7 +91,7 @@ exit 0
         first = self.run_installer()
         self.assertEqual(first.returncode, 0, first.stderr)
         self.assertEqual((self.bin / 'unreal-agent-runner').read_text(), 'mock runner')
-        self.assertEqual(self.commands(), ['plugin marketplace add oozoofrog/codex-skills --ref main', 'plugin add unreal-agent@codex-skills'])
+        self.assertEqual(self.commands(), ['plugin marketplace add oozoofrog/oozoofrog-plugin --ref main', 'plugin add unreal-agent@oozoofrog-plugin'])
         backups = list((self.root / 'codex-home/backups').glob('unreal-agent-install.*'))
         self.assertEqual(len(backups), 1)
         self.assertEqual(json.loads((backups[0] / 'plugins-before.json').read_text()), {'installed': []})
@@ -163,18 +163,27 @@ exec /bin/mv "$@"
     def test_remote_upgrade_then_add(self):
         self.set_market('remote')
         self.assertEqual(self.run_installer().returncode, 0)
-        self.assertEqual(self.commands(), ['plugin marketplace upgrade codex-skills',
-                                           'plugin add unreal-agent@codex-skills'])
+        self.assertEqual(self.commands(), ['plugin marketplace upgrade oozoofrog-plugin',
+                                           'plugin add unreal-agent@oozoofrog-plugin'])
 
     def test_local_checkout_add_without_marketplace_mutation(self):
         self.set_market('local')
         self.assertEqual(self.run_installer().returncode, 0)
-        self.assertEqual(self.commands(), ['plugin add unreal-agent@codex-skills'])
+        self.assertEqual(self.commands(), ['plugin add unreal-agent@oozoofrog-plugin'])
 
     def test_local_checkout_with_different_origin_fails(self):
         self.set_market('local')
         result = self.run_installer(MOCK_ORIGIN='https://github.com/other/repo.git')
         self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.commands(), [])
+        self.assertFalse(self.bin.exists())
+
+    def test_legacy_marketplace_install_does_not_create_a_duplicate(self):
+        self.plugins.write_text(json.dumps({'installed': [{'pluginId': 'unreal-agent@codex-skills',
+                                                          'installed': True, 'enabled': False}]}))
+        result = self.run_installer()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('legacy unreal-agent@codex-skills is installed', result.stderr)
         self.assertEqual(self.commands(), [])
         self.assertFalse(self.bin.exists())
 
@@ -204,7 +213,7 @@ exec /bin/mv "$@"
         config.write_text('original-config')
         result = self.run_installer(MOCK_CODEX_FAIL='1')
         self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(self.commands(), ['plugin add unreal-agent@codex-skills'])
+        self.assertEqual(self.commands(), ['plugin add unreal-agent@oozoofrog-plugin'])
         self.assertFalse((self.bin / 'unreal-agent-runner').exists())
         backups = list((self.root / 'codex-home/backups').glob('unreal-agent-install.*'))
         self.assertEqual(len(backups), 1)

@@ -6,14 +6,14 @@
 
 ### 저장소 Plugin 설치
 
-`oozoofrog/codex-skills` marketplace의 `session-continuity` Plugin으로 설치할 수 있다.
+`oozoofrog/oozoofrog-plugin` marketplace의 `session-continuity` Plugin으로 설치할 수 있다.
 
 ```sh
-codex plugin marketplace add oozoofrog/codex-skills --ref main
-codex plugin add session-continuity@codex-skills
+codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
+codex plugin add session-continuity@oozoofrog-plugin
 ```
 
-이미 marketplace가 등록되어 있으면 첫 명령 대신 `codex plugin marketplace upgrade codex-skills`로 목록을 갱신한다. 설치 후 새 작업에서 `$session-continuity` 또는 `$session-continuity:session-continuity`로 호출한다. 실제 설치 성공과 새 작업의 스킬 노출은 별도로 확인한다.
+이미 marketplace가 등록되어 있으면 첫 명령 대신 `codex plugin marketplace upgrade oozoofrog-plugin`로 목록을 갱신한다. 설치 후 새 작업에서 `$session-continuity` 또는 `$session-continuity:session-continuity`로 호출한다. 실제 설치 성공과 새 작업의 스킬 노출은 별도로 확인한다.
 
 ### Standalone 폴더 설치
 

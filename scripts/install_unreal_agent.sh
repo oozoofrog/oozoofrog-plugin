@@ -19,7 +19,10 @@ read_plugin_state() {
   python3 -c '
 import json, sys
 try:
-    entries = [p for p in json.load(sys.stdin)["installed"] if p["pluginId"] == "unreal-agent@codex-skills"]
+    installed = json.load(sys.stdin)["installed"]
+    entries = [p for p in installed if p["pluginId"] == "unreal-agent@oozoofrog-plugin"]
+    if not entries and any(p.get("pluginId") == "unreal-agent@codex-skills" and p.get("installed") is True for p in installed):
+        raise ValueError("legacy unreal-agent@codex-skills is installed; review marketplace migration before adding a duplicate")
     if len(entries) > 1: raise ValueError("duplicate named plugin entries")
     if not entries: print("absent")
     elif entries[0]["installed"] is True:
@@ -44,17 +47,17 @@ if [[ $reinstall != --runner-only ]]; then
 import json, subprocess, sys
 try:
     items = json.load(sys.stdin)["marketplaces"]
-    hits = [m for m in items if m["name"] == "codex-skills"]
+    hits = [m for m in items if m["name"] == "oozoofrog-plugin"]
     if not hits:
         print("absent"); sys.exit(0)
     if len(hits) != 1:
-        raise ValueError("duplicate codex-skills marketplaces")
+        raise ValueError("duplicate oozoofrog-plugin marketplaces")
     source = hits[0]["marketplaceSource"]
     kind, value = source["sourceType"], source["source"]
     def canonical(url):
         return url.rstrip("/").removesuffix(".git").lower() in (
-            "https://github.com/oozoofrog/codex-skills",
-            "git@github.com:oozoofrog/codex-skills")
+            "https://github.com/oozoofrog/oozoofrog-plugin",
+            "git@github.com:oozoofrog/oozoofrog-plugin")
     if kind == "git" and canonical(value):
         print("remote")
     elif kind == "local" and value.startswith("/"):
@@ -62,14 +65,14 @@ try:
         root = Path(value)
         manifest = json.loads((root / ".agents/plugins/marketplace.json").read_text())
         origin = subprocess.check_output(["git", "-C", str(root), "remote", "get-url", "origin"], text=True).strip()
-        print("local" if manifest.get("name") == "codex-skills" and canonical(origin) else "conflict")
+        print("local" if manifest.get("name") == "oozoofrog-plugin" and canonical(origin) else "conflict")
     else:
         print("conflict")
 except Exception as exc:
     print(f"cannot verify marketplace source: {exc}", file=sys.stderr)
     sys.exit(2)
 ') || fail 'invalid marketplace inventory or unverifiable source'
-  [[ $market_state != conflict ]] || fail 'codex-skills marketplace has a different source; leaving registration and plugin untouched'
+  [[ $market_state != conflict ]] || fail 'oozoofrog-plugin marketplace has a different source; leaving registration and plugin untouched'
   plugin_state=$(printf '%s' "$plugins" | read_plugin_state) || fail 'invalid Codex plugin inventory'
   [[ $market_state != absent || $plugin_state == absent ]] || fail 'plugin installed but marketplace missing; inspect Codex state manually'
 fi
@@ -87,12 +90,12 @@ install_plugin() {
     if [[ -f $codex_home/config.toml ]]; then cp -p "$codex_home/config.toml" "$backup/config.toml"; fi
     printf 'Codex pre-change config and inventories backed up at %s\n' "$backup"
     if [[ $market_state == absent ]]; then
-      codex plugin marketplace add oozoofrog/codex-skills --ref main || fail 'marketplace add failed; backup retained'
+      codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main || fail 'marketplace add failed; backup retained'
     elif [[ $market_state == remote && $plugin_state == absent ]]; then
-      codex plugin marketplace upgrade codex-skills || fail 'marketplace upgrade failed; backup retained'
+      codex plugin marketplace upgrade oozoofrog-plugin || fail 'marketplace upgrade failed; backup retained'
     fi
     if [[ $plugin_state == absent ]]; then
-      codex plugin add unreal-agent@codex-skills || fail 'plugin add failed; backup retained; inspect marketplace before retry'
+      codex plugin add unreal-agent@oozoofrog-plugin || fail 'plugin add failed; backup retained; inspect marketplace before retry'
       updated_plugins=$(codex plugin list --json) || fail 'cannot verify installed Plugin; backup retained'
       updated_state=$(printf '%s' "$updated_plugins" | read_plugin_state) || fail 'cannot verify installed Plugin; backup retained'
       [[ $updated_state == enabled ]] || fail "Plugin was not enabled after install ($updated_state); backup retained"
@@ -101,7 +104,7 @@ install_plugin() {
   if [[ $plugin_state == disabled ]]; then
     printf 'Plugin already installed but disabled; preserving disabled state. Enable it manually in Codex if desired.\n'
   else
-    printf 'Plugin unreal-agent@codex-skills installed/enabled (verify in a new Codex session).\n'
+    printf 'Plugin unreal-agent@oozoofrog-plugin installed/enabled (verify in a new Codex session).\n'
   fi
   printf 'Provider credentials and model availability are not configured by this installer.\n'
 }

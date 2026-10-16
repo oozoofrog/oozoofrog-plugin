@@ -23,7 +23,7 @@
       "Use $figma-computer-use to refresh its Figma manuals and compatibility baseline, then version the skill."
     ]
   },
-  "repository": "https://github.com/oozoofrog/codex-skills",
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
   "keywords": [
     "figma",
     "computer-use",

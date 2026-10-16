@@ -1,0 +1,97 @@
+#!/bin/sh
+set -eu
+umask 077
+
+skill_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+bin_dir="$skill_dir/bin"
+bundle="$bin_dir/MacPilot.app"
+
+if [ -L "$bin_dir" ] || [ -L "$bundle" ]; then
+    printf '%s\n' 'Refusing to install through a symbolic link' >&2
+    exit 1
+fi
+/bin/mkdir -p "$bin_dir"
+
+build_root=$(/usr/bin/mktemp -d "${TMPDIR:-/tmp}/macpilot-build.XXXXXX")
+install_root=$(/usr/bin/mktemp -d "$bin_dir/.macpilot-install.XXXXXX")
+staged_bundle="$install_root/MacPilot.app"
+cleanup() {
+    /bin/rm -rf -- "$build_root" "$install_root"
+}
+trap cleanup EXIT HUP INT TERM
+
+# A private scratch directory prevents a prior SwiftPM product from entering the
+# installed bundle. The current bundle stays untouched until the staged app is
+# signed and strictly verified.
+/usr/bin/xcrun swift build \
+    --package-path "$skill_dir/tool" \
+    --scratch-path "$build_root/swiftpm" \
+    --configuration release \
+    --product macpilot >&2
+product_dir=$(/usr/bin/xcrun swift build \
+    --package-path "$skill_dir/tool" \
+    --scratch-path "$build_root/swiftpm" \
+    --configuration release \
+    --show-bin-path)
+
+/bin/mkdir -p "$staged_bundle/Contents/MacOS"
+/bin/cp "$product_dir/macpilot" "$staged_bundle/Contents/MacOS/macpilot"
+/bin/chmod 0755 "$staged_bundle/Contents/MacOS/macpilot"
+/bin/cat > "$staged_bundle/Contents/Info.plist" <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>local.macpilot</string>
+<key>CFBundleExecutable</key><string>macpilot</string>
+<key>CFBundleName</key><string>MacPilot</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleShortVersionString</key><string>3.0.0</string>
+<key>CFBundleVersion</key><string>3</string>
+<key>LSMinimumSystemVersion</key><string>14.0</string>
+<key>LSUIElement</key><true/>
+<key>NSHighResolutionCapable</key><true/>
+<key>NSAppleEventsUsageDescription</key><string>MacPilot uses Apple Events only for an explicitly requested automation task.</string>
+<key>NSScreenCaptureUsageDescription</key><string>MacPilot captures explicitly selected windows or displays for observation and verification.</string>
+<key>NSAudioCaptureUsageDescription</key><string>MacPilot records system audio only with an explicitly requested screen recording. Microphone audio is not captured.</string>
+</dict></plist>
+PLIST
+/usr/bin/plutil -lint "$staged_bundle/Contents/Info.plist" >&2
+/usr/bin/codesign --force --sign - --identifier local.macpilot "$staged_bundle" >&2
+/usr/bin/codesign --verify --strict "$staged_bundle" >&2
+
+swap_bundles() {
+    /usr/bin/xcrun swift - "$1" "$2" <<'SWIFT'
+import Darwin
+
+guard CommandLine.arguments.count == 3 else { exit(EX_USAGE) }
+let status = renamex_np(
+    CommandLine.arguments[1],
+    CommandLine.arguments[2],
+    UInt32(RENAME_SWAP)
+)
+if status != 0 {
+    perror("renamex_np")
+    exit(EX_OSERR)
+}
+SWIFT
+}
+
+if [ -e "$bundle" ]; then
+    if [ ! -d "$bundle" ]; then
+        printf '%s\n' 'Existing MacPilot.app is not a directory' >&2
+        exit 1
+    fi
+    # renamex_np(RENAME_SWAP) replaces a live installation in one filesystem
+    # operation. A process already using the old executable can finish safely.
+    swap_bundles "$staged_bundle" "$bundle"
+    if ! /usr/bin/codesign --verify --strict "$bundle" >&2; then
+        printf '%s\n' 'Installed bundle verification failed; restoring the prior bundle' >&2
+        swap_bundles "$staged_bundle" "$bundle"
+        exit 1
+    fi
+else
+    /bin/mv "$staged_bundle" "$bundle"
+    /usr/bin/codesign --verify --strict "$bundle" >&2
+fi
+
+printf '%s\n' "$bundle/Contents/MacOS/macpilot"

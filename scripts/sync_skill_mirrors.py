@@ -13,9 +13,10 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-PACKAGES = ("gptplease", "figma-computer-use", "session-continuity", "ponytail-beck-tdd", "unreal-agent", "local-ai-studio")
+PACKAGES = ("gptplease", "figma-computer-use", "session-continuity", "ponytail-beck-tdd", "unreal-agent", "local-ai-studio", "macpilot")
 IGNORED_NAMES = {".DS_Store", "__pycache__"}
 IGNORED_SUFFIXES = {".pyc", ".pyo"}
+GENERATED_PATHS = {"macpilot": ("bin", "evidence", "tool/.build", "tool/.swiftpm")}
 
 
 class SyncError(Exception):
@@ -32,6 +33,9 @@ def package_files(root: Path) -> dict[str, tuple[int, str]]:
     files: dict[str, tuple[int, str]] = {}
     for path in sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix()):
         relative = path.relative_to(root)
+        if any(relative == Path(prefix) or Path(prefix) in relative.parents
+               for prefix in GENERATED_PATHS.get(root.name, ())):
+            continue
         if path.is_symlink():
             raise SyncError(f"Symlink is not allowed in Skill package: {relative.as_posix()}")
         if any(part in IGNORED_NAMES or " 2." in part for part in relative.parts):

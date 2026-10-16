@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+- 저장소와 Codex marketplace 이름을 `codex-skills`에서 `oozoofrog-plugin`으로 변경했습니다. 개별 플러그인 이름은 유지하고 카탈로그 표시명·GitHub repository URL·등록/설치/갱신 명령·Unreal Agent 설치기·배포 검사를 새 이름에 맞췄습니다. 과거 검증 기록과 폐기된 플러그인의 이전 선택자는 보존하며, 기존 설치·활성화·사용자 데이터는 자동 이전하지 않습니다. 같은 대화에서 구현한 MacPilot 소스·플러그인 배포본을 함께 게시합니다.
+
+- `macpilot`에 `mac_record`를 추가했습니다. macOS 15+ ScreenCaptureKit으로 창·디스플레이·선택 영역과 오디오를 H.264/AAC MP4에 기록하고, 파일의 트랙·코덱·PCM 신호·시간별 프레임을 검사합니다. 마이크 없이 녹화하며 앱 귀속 오디오와 전체 시스템 오디오, 완료·무음·취소를 구분합니다. Safari와 실제 GUI Chrome의 YouTube 녹화, FFmpeg 독립 디코딩과 MCP 취소 검증을 별도 증거로 남깁니다.
+
+- `macpilot`에 `mac_browser_developer`를 추가했습니다. Safari 웹 개발자 기능·Apple Events JavaScript와 Chrome 확장 개발자 모드를 실제 UI에서 조회·준비하고, 사용자가 네이티브 대화상자를 승인하면 선택한 설정 하나를 켭니다. 승인 플래그 우회 없이 취소·시간 초과·대상 변경을 차단하고 단일 클릭 후 값을 다시 확인합니다. 격리 Chrome의 실제 토글과 네이티브 승인 시간 초과를 검증하며, 테스트 승인 주입·Safari 상태 조회·사람의 실제 승인 검증을 구분합니다.
+
+- `macpilot`를 `3.0.0`으로 확장했습니다. Swift 코어에 작업별 상태·취소·자원 잠금, 실제 macOS 화면의 화살표형 멀티 가상 커서와 접근 대상 창 강조, 통합 포커스, 제목 표시줄 없는 SCStream 라이브 프리뷰·숨김·재열기, 파일 해시·Finder 태그·CoreAudio 동작을 추가했습니다. 데스크톱 커서·대상 강조는 프리뷰와 독립적으로 유지하며 프리뷰 안에는 커서를 합성하지 않습니다. 커서는 작업·대상 라벨과 Bézier·minimum-jerk 이동을 사용하며 앞의 앱 창에 가려집니다. 프리뷰 드래그, 더블클릭·열기 버튼의 대상 활성화 후 프리뷰 종료를 지원합니다. Chromium 확장·Swift native host와 Safari Apple Events로 탭·DOM·프레임·업로드를 지원하며 Chromium 다운로드·상태 조회도 제공합니다. Safari 교차 출처 프레임·다운로드·screenshot은 호스트·네이티브 도구가 필요합니다. `_AXUIElementGetWindow` opt-in 백엔드와 private 심볼 조사 카탈로그, 로컬 오류 대기열·중복 방지·실제 Codex app-server 전송·응답 추적을 추가했습니다. 자동 전송은 명시적 설정이 필요하며 응답 완료가 코드 수정·배포를 뜻하지 않습니다. 전용 앱·Chrome·Safari·합성 파일·실제 Codex 진단으로 실행 검증하며 OS·브라우저별 미검증 범위를 문서에 분리했습니다.
+
+- 기존 사용자 범위의 `macpilot` 스킬과 SwiftPM 소스·테스트·빌드 런처·검증 스크립트를 `macpilot/`로 가져왔습니다. 버전 `2.0.0`의 Plugin manifest·로컬 marketplace 항목·배포 미러를 추가했습니다. 편입 빌드에서 발견한 `public` 기본 인수의 `internal` 이미지 제한 상수 참조 오류는 `@usableFromInline`으로 수정하고 제한값과 호출 방식을 유지했습니다. 설치 경로에 의존하던 예시를 스킬 디렉터리 기준으로 바꾸고 바이너리·SwiftPM 캐시·화면·로그 증거를 Git과 미러에서 제외했습니다. 기존 전역 설치본과 MCP 설정은 변경하지 않습니다. 원격 게시·Plugin 설치·새 세션 노출·실제 앱 입력 검증은 별도 단계입니다.
+
 - Jev 스킬·Plugin 전체(`jev-start`, `jev-blender-use`, `jev-computer-use`)와 전용 CLI를 제거했습니다. Marketplace·미러 동기화·설치 안내·배포 검사에서 해당 패키지를 제외했습니다. 아래 Jev 항목은 제거 이전의 변경 이력입니다.
 
 - `jev-blender-use`를 `0.2.1`로 개선했습니다. Codex가 작업 규모에 맞는 절차를 선택하도록 하고 health·전체 예제·독립 검토·환경별 사전 시험을 매 작업의 필수 조건에서 제외했습니다. 기존 원본/후보 보호를 유지하며 완료 evidence와 명시적 Codex 판단을 조립하는 `completion-state`/`verdict`, plan 범위에 맞춘 MCP `inspect --plan`, 선택적 protected 목록 처리와 사용 중 schema/context 복구 지침을 추가했습니다.

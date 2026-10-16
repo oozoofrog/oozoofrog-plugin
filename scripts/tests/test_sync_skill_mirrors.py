@@ -55,6 +55,30 @@ class SyncSkillMirrorsTests(unittest.TestCase):
         with self.assertRaises(self.module.SyncError):
             self.module.sync_one(self.source, self.mirror, write=True)
 
+    def test_macpilot_builds_and_observation_evidence_are_not_distributed(self) -> None:
+        source = self.root / "macpilot"
+        mirror = self.root / "plugins/macpilot/skills/macpilot"
+        source.mkdir()
+        (source / "SKILL.md").write_text("---\nname: macpilot\n---\n")
+        code = source / "tool/Sources/MacPilot/Main.swift"
+        code.parent.mkdir(parents=True)
+        code.write_text("import AppKit\n")
+        for prefix in self.module.GENERATED_PATHS["macpilot"]:
+            generated = source / prefix
+            generated.mkdir(parents=True)
+            (generated / "private-data").write_text("must remain local")
+            (generated / "generated-link").symlink_to(code)
+        result = self.module.sync_one(source, mirror, write=True)
+        self.assertTrue(result["current"])
+        self.assertEqual(
+            {"SKILL.md", "tool/Sources/MacPilot/Main.swift"},
+            set(self.module.package_files(mirror)),
+        )
+        self.assertEqual(code.read_bytes(), (mirror / code.relative_to(source)).read_bytes())
+        for prefix in self.module.GENERATED_PATHS["macpilot"]:
+            self.assertFalse((mirror / prefix).exists())
+            self.assertTrue((source / prefix / "private-data").is_file())
+
 
 if __name__ == "__main__":
     unittest.main()
