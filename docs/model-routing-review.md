@@ -28,7 +28,7 @@ Codex가 개발과 검증의 주체이며 기존 Astra 메인 세션과 긴 맥�
 
 ### gptplease: 화면별 모델 후보
 
-[모델 선택 원본](../gptplease/references/model-selection.md)을 Chat/Work 열로 나누었다. 실제 화면에 있는 모델·effort만 적용하고, 명시 조합이 없으면 보내지 않는다. Work 후보에 최신 Luna/Sol을 포함하되 Chat을 Work로 바꾸지 않는다. keep-current·recommend-only·명시 Pro·부분 명시·Standard·단일 Send와 전송 불명 상태의 읽기 복구는 유지한다. 상담 대상의 모델을 호출한 Codex의 모델로 혼동하지 않는다.
+현재는 제거한 `gptplease/references/model-selection.md`을 Chat/Work 열로 나누었다. 실제 화면에 있는 모델·effort만 적용하고, 명시 조합이 없으면 보내지 않는다. Work 후보에 최신 Luna/Sol을 포함하되 Chat을 Work로 바꾸지 않는다. keep-current·recommend-only·명시 Pro·부분 명시·Standard·단일 Send와 전송 불명 상태의 읽기 복구는 유지한다. 상담 대상의 모델을 호출한 Codex의 모델로 혼동하지 않는다.
 
 ### astra-team-building: 작업에 맞춘 팀 구성
 

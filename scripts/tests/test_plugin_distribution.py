@@ -5,9 +5,6 @@ import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-STANDALONE_SKILL = REPO_ROOT / "gptplease"
-PLUGIN_ROOT = REPO_ROOT / "plugins" / "gptplease"
-PLUGIN_SKILL = PLUGIN_ROOT / "skills" / "gptplease"
 SWIFT_PLUGIN_ROOT = REPO_ROOT / "plugins" / "swift-intelligence"
 SWIFT_PLUGIN_SKILL = SWIFT_PLUGIN_ROOT / "skills" / "swift-intelligence"
 IGNORED_NAMES = {".DS_Store", "__pycache__"}
@@ -31,7 +28,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ["swift-intelligence", "gptplease", "local-ai-studio", "macpilot"],
+            ["swift-intelligence", "local-ai-studio", "macpilot"],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -52,33 +49,6 @@ class PluginDistributionTests(unittest.TestCase):
                     self.assertEqual("https://github.com/oozoofrog/oozoofrog-plugin", manifest["repository"])
                 skill_root = plugin_root / manifest["skills"] / entry["name"]
                 self.assertTrue((skill_root / "SKILL.md").is_file())
-
-    def test_gptplease_distribution(self) -> None:
-        self.assertTrue((STANDALONE_SKILL / "SKILL.md").is_file())
-        self.assertEqual(tree_files(STANDALONE_SKILL), tree_files(PLUGIN_SKILL))
-        manifest = json.loads((PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text())
-        self.assertEqual("gptplease", manifest["name"])
-        self.assertEqual("0.3.0", manifest["version"].split("+")[0])
-        for relative in ("runtime/consult.mjs", "runtime/cua-chatgpt.mjs", "tests/consult.test.mjs", "tests/adapter.test.mjs", "references/transport-contract.md", "references/transport-recovery.md"):
-            self.assertTrue((STANDALONE_SKILL / relative).is_file())
-        for extension in ("json", "md", "swift"):
-            self.assertTrue((STANDALONE_SKILL / "tests" / "fixtures" / f"probe.{extension}").is_file())
-        self.assertEqual("./skills/", manifest["skills"])
-        self.assertNotIn("mcpServers", manifest)
-        self.assertNotIn("apps", manifest)
-        self.assertFalse((PLUGIN_ROOT / ".mcp.json").exists())
-        self.assertFalse((PLUGIN_ROOT / ".app.json").exists())
-        prompts = manifest["interface"]["defaultPrompt"]
-        self.assertIsInstance(prompts, list)
-        self.assertTrue(1 <= len(prompts) <= 3)
-        for prompt in prompts:
-            self.assertIn("$gptplease", prompt)
-            self.assertLessEqual(len(prompt), 128)
-        for path in STANDALONE_SKILL.rglob("*.md"):
-            import re
-            for target in re.findall(r"\[[^\]]*\]\(([^)]+)\)", path.read_text()):
-                if "://" not in target:
-                    self.assertTrue((path.parent / target.split("#")[0]).exists(), (path, target))
 
     def test_macpilot_distribution(self) -> None:
         source = REPO_ROOT / "macpilot"
@@ -140,7 +110,7 @@ class PluginDistributionTests(unittest.TestCase):
                 self.assertTrue((document.parent / target).exists(), (document, target))
 
     def test_retired_packages_are_not_distributed(self) -> None:
-        for name in ("gptpro", "gptwork", "astra-orchestrator", "jev-start", "jev-blender-use", "jev-computer-use",
+        for name in ("gptplease", "gptpro", "gptwork", "astra-orchestrator", "jev-start", "jev-blender-use", "jev-computer-use",
                      "astra-team-building", "figma-computer-use", "session-continuity",
                      "ponytail-beck-tdd", "unreal-agent"):
             self.assertFalse((REPO_ROOT / name / "SKILL.md").exists())

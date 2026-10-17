@@ -86,5 +86,9 @@
       ],
       "policy_document": "gptplease/references/model-selection.md"
     }
-  ]
+  ],
+  "retired": {
+    "date": "2026-10-17",
+    "reason": "gptplease was removed. Requests and policy_document paths are historical records, not current executable workflows."
+  }
 }
