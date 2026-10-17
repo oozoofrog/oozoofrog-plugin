@@ -1,7 +1,7 @@
 {
   "name": "macpilot",
-  "version": "3.0.0",
-  "description": "macOS 앱·창·메뉴·파일·시스템과 브라우저를 제어하고 화면·시스템 오디오를 녹화·검증한다. 작업별 멀티 가상 커서, 백그라운드 제어, 라이브 프리뷰, 선택적 private API와 Codex 개선 요청 전송이 필요한 데스크톱 워크플로에 사용한다.",
+  "version": "3.1.0",
+  "description": "macOS 앱·창·메뉴·파일·시스템과 브라우저를 제어하고 화면·시스템 오디오를 녹화·검증한다. 권한 요청·앱 드래그 설정, MCP 연결 진단, 작업별 멀티 가상 커서, 백그라운드 제어, 라이브 프리뷰, 선택적 private API와 Codex 개선 요청 전송이 필요한 데스크톱 워크플로에 사용한다.",
   "author": {
     "name": "oozoofrog",
     "url": "https://github.com/oozoofrog"
@@ -9,8 +9,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "MacPilot",
-    "shortDescription": "macOS·브라우저 제어, 화면·소리 녹화와 멀티 커서",
-    "longDescription": "Swift 실행 코어와 Chromium 확장·Safari Apple Events로 macOS와 브라우저를 제어합니다. macOS 15 이상에서 화면·시스템 오디오 MP4 녹화와 저장 파일 검사를 지원합니다. 작업별 커서·라이브 프리뷰·파일·CoreAudio·선택적 private API를 포함합니다. 설정한 Codex 목적지로 개선 요청을 전송하고 상태를 추적합니다. 첫 CLI 실행에서 빌드하며 MCP 서버는 자동 등록하지 않습니다.",
+    "shortDescription": "macOS·브라우저 제어, 녹화·멀티 커서, 권한 설정과 MCP 진단",
+    "longDescription": "Swift 실행 코어와 Chromium 확장·Safari Apple Events로 macOS와 브라우저를 제어합니다. macOS 15 이상에서 화면·시스템 오디오 MP4 녹화와 저장 파일 검사를 지원합니다. 작업별 커서·라이브 프리뷰·파일·CoreAudio·선택적 private API를 포함합니다. 설정한 Codex 목적지로 개선 요청을 전송하고 상태를 추적합니다. 첫 CLI 실행에서 빌드하며 MCP 서버는 자동 등록하지 않습니다. MCP 연결 진단과 격리된 연결 검사를 제공하며 기존 서버나 Codex 앱을 재시작하지 않습니다. 권한 요청과 실제 앱을 설정 목록에 드래그하는 안내 창을 제공하며, 최종 승인은 사용자가 합니다.",
     "developerName": "oozoofrog",
     "category": "Productivity",
     "capabilities": [

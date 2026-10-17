@@ -8,10 +8,14 @@ import CryptoKit
     public let baseStore: Store
     public let taskRecord: TaskRecord?
     public let cursorID: String
-    public init(store: Store, baseStore: Store? = nil, task: TaskRecord? = nil, cursorID: String = "primary") {
+    public let transport: InvocationTransport
+    public init(store: Store, baseStore: Store? = nil, task: TaskRecord? = nil, cursorID: String = "primary", transport: InvocationTransport = .cli) {
         self.store = store; self.baseStore = baseStore ?? store; self.taskRecord = task; self.cursorID = cursorID
+        self.transport = transport
     }
     public func call(_ tool: String, arguments: [String: Any]) async throws -> [String: Any] {
+        // Diagnostics must remain available while a task owns the execution lock.
+        if tool == "mac_connection" { return try await ConnectionDiagnostics.call(Arguments(arguments), transport: transport) }
         if tool == "mac_task" {
             let lease = try baseStore.lease(".tasks.lock")
             defer { withExtendedLifetime(lease) {} }
@@ -32,7 +36,7 @@ import CryptoKit
                 throw ToolFailure("task_target_mismatch", "This task is bound to a different window")
             }
             if tool == "mac_observe", input["windowID"] == nil, let window = record.windowID { input["windowID"] = window }
-            let engine = Engine(store: try Tasks.state(record.id, in: baseStore), baseStore: baseStore, task: record, cursorID: cursor)
+            let engine = Engine(store: try Tasks.state(record.id, in: baseStore), baseStore: baseStore, task: record, cursorID: cursor, transport: transport)
             let worker = Task { @MainActor in try await engine.execute(tool, arguments: input) }
             let monitor = Task { @MainActor in
                 while !Task.isCancelled {
@@ -50,7 +54,7 @@ import CryptoKit
             result["taskID"] = record.id
             return result
         }
-        return try await Engine(store: store, baseStore: baseStore, cursorID: cursor).execute(tool, arguments: input)
+        return try await Engine(store: store, baseStore: baseStore, cursorID: cursor, transport: transport).execute(tool, arguments: input)
     }
     private func execute(_ tool: String, arguments: [String: Any]) async throws -> [String: Any] {
         let requestedPID = auditPID(arguments)
@@ -66,6 +70,7 @@ import CryptoKit
                 leases.append(try baseStore.lease(".target-\(pid).lock"))
             }
             let foregroundAction = arguments["route"] as? String == "global" || tool == "mac_activate" || tool == "mac_focus"
+                || tool == "mac_permission"
                 || (tool == "mac_browser_developer" && arguments["operation"] as? String != "status")
                 || (tool == "mac_app" && arguments["action"] as? String == "activate")
                 || ((tool == "mac_launch" || tool == "mac_open") && (arguments["activate"] as? Bool ?? (tool == "mac_open")))
@@ -425,7 +430,7 @@ import CryptoKit
             try a.only([])
             var ids = [CGDirectDisplayID](repeating: 0, count: 32), count: UInt32 = 0
             CGGetActiveDisplayList(32, &ids, &count)
-            return ["status":"ok", "version":"3.0.0", "os":ProcessInfo.processInfo.operatingSystemVersionString,
+            return ["status":"ok", "version":MacPilotRuntime.version, "os":ProcessInfo.processInfo.operatingSystemVersionString,
                     "permissions":["accessibility":AXIsProcessTrusted(), "screenCapture":CGPreflightScreenCaptureAccess(),
                         "postEvent":CGPreflightPostEventAccess(), "inputMonitoring":CGPreflightListenEventAccess()],
                     "secureEventInput":IsSecureEventInputEnabled(), "stateDirectory":store.root.path,

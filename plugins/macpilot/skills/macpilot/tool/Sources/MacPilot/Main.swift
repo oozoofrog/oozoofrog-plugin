@@ -180,10 +180,13 @@ private final class BoundedLineReader: @unchecked Sendable {
         NSApplication.shared.setActivationPolicy(.prohibited)
         do {
             let args = Array(CommandLine.arguments.dropFirst())
-            guard let command = args.first, command != "--help", command != "help" else {
+            let command = args.first ?? "permission-setup"
+            guard command != "--help", command != "help" else {
                 print("""
                 macpilot — macOS and browser automation tools (macOS 14+)
                   doctor                        Permission/backend status
+                  connection-check              Isolated MCP probe; does not reconnect the host
+                  permission-setup [KIND]        Drag MacPilot.app into privacy settings
                   tools                         JSON tool schemas
                   call TOOL --json FILE|-       One tool call; '-' reads JSON stdin
                   mcp                           JSON-RPC/MCP over newline-delimited stdio
@@ -195,7 +198,19 @@ private final class BoundedLineReader: @unchecked Sendable {
                 """)
                 return
             }
+            if command == "permission-setup" {
+                guard args.count <= 2 else { throw ToolFailure("invalid_argument", "permission-setup accepts accessibility or screenCapture") }
+                try PermissionSetup.run(kind: args.count == 2 ? args[1] : "accessibility")
+                return
+            }
             if command == "tools" { print(String(data: try jsonData(ToolCatalog.tools, pretty:true), encoding:.utf8)!); return }
+            if command == "connection-check" {
+                guard args.count == 1 else { throw ToolFailure("invalid_argument", "connection-check accepts no arguments; use call mac_connection for probe options") }
+                let result = try await ConnectionDiagnostics.call(Arguments(["operation": "probe"]), transport: .cli)
+                print(String(data: try jsonData(result, pretty: true), encoding: .utf8)!)
+                if result["status"] as? String != "probe_passed" { exit(2) }
+                return
+            }
             if command == "deliver-improvement" {
                 guard args.count==5,args[1]=="--state",args[3]=="--request",args[2].hasPrefix("/") else{throw ToolFailure("invalid_argument","deliver-improvement requires --state and --request")}
                 let result=try await Improvements.deliver(args[4],store:Store(root:URL(fileURLWithPath:args[2])),timeout:120_000)
@@ -218,7 +233,7 @@ private final class BoundedLineReader: @unchecked Sendable {
                 }
                 try SnapshotPanel.run(store:Store(root:URL(fileURLWithPath:args[1])),id:args[2],sequence:args[3]); return
             }
-            let store = try Store(), engine = Engine(store: store)
+            let store = try Store(), engine = Engine(store: store, transport: command == "mcp" ? .mcpStdio : .cli)
             if command == "mcp" { await serve(engine); return }
             if command == "preview" {
                 guard args.count == 2 else { throw ToolFailure("invalid_argument", "preview requires an observation UUID") }

@@ -45,8 +45,8 @@ product_dir=$(/usr/bin/xcrun swift build \
 <key>CFBundleExecutable</key><string>macpilot</string>
 <key>CFBundleName</key><string>MacPilot</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>3.0.0</string>
-<key>CFBundleVersion</key><string>3</string>
+<key>CFBundleShortVersionString</key><string>3.1.0</string>
+<key>CFBundleVersion</key><string>31</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>

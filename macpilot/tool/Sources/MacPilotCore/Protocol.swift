@@ -22,7 +22,7 @@ public enum ToolCatalog {
                              read: Bool = false, destructive: Bool? = nil, idempotent: Bool? = nil, openWorld: Bool = false,
                              variants: [[String: Any]]? = nil, anyOf: [[String: Any]]? = nil) -> [String: Any] {
         var allProperties = properties
-        if name != "mac_task" { allProperties["taskID"] = str("Optional active MacPilot task UUID. Isolates state, cursor, cancellation and deadline.") }
+        if name != "mac_task" && name != "mac_connection" { allProperties["taskID"] = str("Optional active MacPilot task UUID. Isolates state, cursor, cancellation and deadline.") }
         if ["mac_pointer", "mac_click", "mac_drag", "mac_scroll", "mac_cursors"].contains(name) {
             allProperties["cursorID"] = str("Independent virtual cursor ID within this task; default primary. ASCII letters, digits, hyphens or underscores; at most 64 bytes.")
         }
@@ -64,6 +64,13 @@ public enum ToolCatalog {
         scroll["vertical"] = int("Lines; positive up, negative down",min:-100,max:100)
         scroll["horizontal"] = int("Horizontal lines",min:-100,max:100)
         return [
+            spec("mac_connection", "Diagnose this server's process identity, parent, permissions and CLI/MCP scope, or probe a separate isolated MCP. Never kills existing servers, reloads the host or retries mutations. Probe success is not host reconnection.",
+                 ["operation":str("status reads this process; probe starts and cleans up one owned MCP subprocess",choices:["status","probe"]),
+                  "previousServerPID":int("Previous server PID; requires previousServerStartID",min:1),
+                  "previousServerStartID":str("Previous server processStartID from connection status"),
+                  "previousParentPID":int("Previous parent PID; requires previousParentStartID",min:1),
+                  "previousParentStartID":str("Previous parent processStartID from connection status"),
+                  "timeoutMs":int("Probe-only deadline; default 10000, plus bounded child cleanup",min:500,max:30000)], ["operation"],read:true),
             spec("mac_task", "Begin, inspect, cancel or finish isolated MacPilot work. Background preservation is the default. Cancellation interrupts active task calls.",
                  ["operation":str("Task operation", choices:["begin","list","status","cancel","finish"]),
                   "taskID":str("Task UUID for status, cancel and finish"), "goal":str("Explicit task intent; up to 4096 UTF-8 bytes"),
@@ -199,8 +206,9 @@ public enum ToolCatalog {
                   "timeoutMs":int("Timeout in milliseconds; default 10000",min:100,max:60000),
                   "maxOutputBytes":int("Maximum bytes retained for each output stream; default 65536",min:1,max:1048576)],
                  ["language","source"], destructive:true, idempotent:false, openWorld:true),
-            spec("mac_permission", "Request one macOS permission through the standard OS dialog. Use when the user requests permission setup.",
+            spec("mac_permission", "Request a macOS permission, or open a draggable app setup window. Requires a foreground-capable task and the shared input lease. User approval in System Settings is required.",
                  ["kind":str("Permission",choices:["accessibility","screenCapture","postEvent"]),
+                  "operation":str("Default request shows the OS prompt; setup opens a file-drag helper for accessibility or screenCapture",choices:["request","setup"]),
                   "timeoutMs":int("Synchronous system request timeout; default 10000. A timed-out request may still complete.",min:100,max:60000)], ["kind"]),
             spec("mac_observe", "Capture one app window and a bounded AX tree. Returns short-lived node IDs and a local PNG. Partial coverage never proves absence.",
                  ["pid":int("Running owner PID",min:1), "processStartID":processStartID,
@@ -271,7 +279,7 @@ public enum RPC {
         let supported = ["2024-11-05","2025-03-26","2025-06-18","2025-11-25"]
         let requested = parameters["protocolVersion"] as? String ?? ""
         return ["protocolVersion":supported.contains(requested) ? requested : "2025-11-25",
-                "serverInfo":["name":"macpilot","version":"3.0.0"], "capabilities":["tools":["listChanged":false]],
+                "serverInfo":["name":"macpilot","version":MacPilotRuntime.version], "capabilities":["tools":["listChanged":false]],
                 "instructions":"Local macOS tools use Apple frameworks and fixed system executables. No language model or shell interpolation. Open URLs, Shortcuts, and OSA scripts can invoke apps or external resources. Reobserve after UI mutations and verify the requested postcondition."]
     }
 }

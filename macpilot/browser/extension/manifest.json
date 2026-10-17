@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "MacPilot Browser Bridge",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Connect explicitly selected browser work to local MacPilot tools.",
   "permissions": ["activeTab", "tabs", "scripting", "webNavigation", "downloads", "nativeMessaging", "storage"],
   "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],

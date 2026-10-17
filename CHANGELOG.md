@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+- MacPilot에 `permission-setup`과 `mac_permission operation=setup`을 추가했습니다. 실행한 앱 번들을 시스템 설정에 드래그하는 네이티브 창, 설정 바로 열기, Finder 표시와 창 프로세스 기준 권한 상태를 제공합니다. 기본 권한 요청은 유지하며 드롭 수락과 실제 사용자 승인·현재 MCP 권한을 구분합니다. 백그라운드 유지 작업과 다른 작업의 시스템 입력 잠금에서는 권한 요청·설정 실행을 사전에 차단합니다.
+
+- MacPilot `3.1.0`에 `mac_connection status|probe`와 CLI `connection-check`를 추가했습니다. 현재 프로세스·부모의 PID·시작 ID·instance ID, 호출 경로와 권한을 반환합니다. 별도 임시 상태에서 실제 MCP handshake·도구 목록·읽기 호출을 검사하고 생성한 자식만 정리합니다. 기존 연결·설정·Codex 앱을 변경하지 않으며, 별도 연결 성공을 현재 대화 재연결로 보고하지 않습니다. 실행 잠금 중 진단, PID 재사용·EOF·프로토콜 오류·시간 초과·취소와 두 MCP 사이의 격리를 검증합니다. 스킬과 배포 미러에 복구 지침을 연결했습니다.
+
 - 기본 `README.md`를 영어로 전환하고 한국어 안내를 `README.ko.md`로 분리했습니다. 두 문서 상단에 언어 전환 링크를 추가했습니다.
 
 - 2026-10-17: `gptplease` standalone·Plugin·상담 runtime 배포를 제거했습니다. Marketplace·설치 안내·미러 동기화·전용 배포/정책 검사를 정리했습니다. 남는 Plugin은 `swift-intelligence`, `local-ai-studio`, `macpilot`입니다. 과거 검증 문서·상담 패키지·로그인 프로필은 보존합니다.

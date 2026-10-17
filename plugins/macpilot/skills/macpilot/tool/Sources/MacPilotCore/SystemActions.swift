@@ -412,9 +412,12 @@ private struct TrashRecycleOutcome: @unchecked Sendable {
     }
 
     public static func permission(_ a: Arguments) async throws -> [String: Any] {
-        try a.only(["kind", "timeoutMs"])
+        try a.only(["kind", "operation", "timeoutMs"])
         let kind = try a.string("kind")
         let timeout = try a.integer("timeoutMs", default: 10_000, range: 100...60_000)
+        let operation = try a.string("operation", default: "request")
+        if operation == "setup" { return try await PermissionSetup.open(kind: kind, timeout: timeout) }
+        guard operation == "request" else { throw ToolFailure("invalid_argument", "Permission operation must be request or setup") }
         let granted: Bool
         switch kind {
         case "accessibility":
