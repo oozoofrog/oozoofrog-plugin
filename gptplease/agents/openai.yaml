@@ -1,4 +1,0 @@
-interface:
-  display_name: "GPT Please"
-  short_description: "Chat·Work 설정 검증, 실제 파일 첨부와 단일 전송, 완료 응답 회수"
-  default_prompt: "Use $gptplease to choose a suitable Chat or Work model and reasoning for my request, verify file delivery, and process the completed response here."

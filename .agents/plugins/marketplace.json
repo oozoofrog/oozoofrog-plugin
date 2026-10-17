@@ -17,18 +17,6 @@
       "category": "Productivity"
     },
     {
-      "name": "gptplease",
-      "source": {
-        "source": "local",
-        "path": "./plugins/gptplease"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
       "name": "local-ai-studio",
       "source": {
         "source": "local",

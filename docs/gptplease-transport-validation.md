@@ -1,5 +1,7 @@
 # gptplease 0.2.0 전송 런타임 검증
 
+이 문서는 2026-10-17에 제거한 `gptplease`의 과거 검증 기록입니다. 아래 명령과 소스 경로는 현재 제공하지 않습니다.
+
 검증일: 2026-09-12 (Asia/Seoul). 대상: issue #45의 번들 상담 모듈. 의도한 실제 전송에는 합성 문장과 공개 테스트 fixture만 사용했다.
 
 ## 구현과 자동 검사
@@ -40,4 +42,4 @@
 - 자동 artifact 다운로드는 하지 않는다. 반환된 `bytes_retrieved:false`와 대화에 종속된 `sandbox:` 링크를 실제 로컬 파일이나 회수 완료 bytes로 해석하면 안 된다.
 - 상태는 호출 세션과 명시적으로 보존한 checkpoint에 한정된다. 상태를 잃은 새 프로세스 전체에 대한 exactly-once 보장은 없다. 불명 Send의 재전송은 허용되지 않는다.
 
-자세한 실행 순서는 [전송 계약](../gptplease/references/transport-contract.md)과 [복구 계약](../gptplease/references/transport-recovery.md)에 있다.
+당시 실행 순서는 `gptplease/references/transport-contract.md`과 `gptplease/references/transport-recovery.md`에 기록되어 있었다. 현재 두 파일은 제거했다.
