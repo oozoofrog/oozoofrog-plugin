@@ -1,6 +1,8 @@
 # Astra Team Building 0.1.0 검증 기록
 
-확인일: 2026-09-26. `astra-orchestrator`를 [Astra Team Building](../plugins/astra-team-building/README.md)으로 교체한 로컬 작업의 기록이다. 원격 배포, 모든 모델/effort의 실제 실행, 최적 비용 측정을 뜻하지 않는다.
+> 2026-10-17: 이 문서의 관련 스킬은 배포에서 제거했습니다. 과거 검증 기록을 보존하며 소스 링크는 제거 전 커밋을 가리킵니다.
+
+확인일: 2026-09-26. `astra-orchestrator`를 [Astra Team Building](https://github.com/oozoofrog/oozoofrog-plugin/blob/f6b7dfb354a15cc1d81d9c3160475be9aad3b34a/plugins/astra-team-building/README.md)으로 교체한 로컬 작업의 기록이다. 원격 배포, 모든 모델/effort의 실제 실행, 최적 비용 측정을 뜻하지 않는다.
 
 ## 변경과 확인
 

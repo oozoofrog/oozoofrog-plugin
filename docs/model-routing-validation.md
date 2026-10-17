@@ -1,6 +1,8 @@
 # Model routing validation — 2026-09-25
 
-> 과거 검증 기록입니다. 아래 astra-orchestrator 명령·수치는 당시 산출물에 대한 기록이며 현재 astra-team-building의 실행 증거가 아닙니다. 현재 구조는 [새 Plugin](../plugins/astra-team-building/README.md)을 참조하세요.
+> 2026-10-17: 이 문서의 관련 스킬은 배포에서 제거했습니다. 과거 검증 기록을 보존하며 소스 링크는 제거 전 커밋을 가리킵니다.
+
+> 과거 검증 기록입니다. 아래 astra-orchestrator 명령·수치는 당시 산출물에 대한 기록이며 현재 astra-team-building의 실행 증거가 아닙니다. 현재 구조는 [새 Plugin](https://github.com/oozoofrog/oozoofrog-plugin/blob/f6b7dfb354a15cc1d81d9c3160475be9aad3b34a/plugins/astra-team-building/README.md)을 참조하세요.
 
 ## 대상과 실행 환경
 

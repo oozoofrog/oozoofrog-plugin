@@ -4,7 +4,6 @@ import json
 import unittest
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 STANDALONE_SKILL = REPO_ROOT / "gptplease"
 PLUGIN_ROOT = REPO_ROOT / "plugins" / "gptplease"
@@ -13,7 +12,6 @@ SWIFT_PLUGIN_ROOT = REPO_ROOT / "plugins" / "swift-intelligence"
 SWIFT_PLUGIN_SKILL = SWIFT_PLUGIN_ROOT / "skills" / "swift-intelligence"
 IGNORED_NAMES = {".DS_Store", "__pycache__"}
 IGNORED_SUFFIXES = {".pyc", ".pyo"}
-
 
 def tree_files(root: Path) -> dict[str, tuple[int, bytes]]:
     files: dict[str, tuple[int, bytes]] = {}
@@ -25,7 +23,6 @@ def tree_files(root: Path) -> dict[str, tuple[int, bytes]]:
             files[relative.as_posix()] = (path.stat().st_mode & 0o777, path.read_bytes())
     return files
 
-
 class PluginDistributionTests(unittest.TestCase):
     def test_marketplace_points_to_available_plugins(self) -> None:
         marketplace = json.loads(
@@ -34,7 +31,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ["swift-intelligence", "astra-team-building", "figma-computer-use", "gptplease", "session-continuity", "ponytail-beck-tdd", "unreal-agent", "local-ai-studio", "macpilot"],
+            ["swift-intelligence", "gptplease", "local-ai-studio", "macpilot"],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -143,156 +140,11 @@ class PluginDistributionTests(unittest.TestCase):
                 self.assertTrue((document.parent / target).exists(), (document, target))
 
     def test_retired_packages_are_not_distributed(self) -> None:
-        for name in ("gptpro", "gptwork", "astra-orchestrator", "jev-start", "jev-blender-use", "jev-computer-use"):
+        for name in ("gptpro", "gptwork", "astra-orchestrator", "jev-start", "jev-blender-use", "jev-computer-use",
+                     "astra-team-building", "figma-computer-use", "session-continuity",
+                     "ponytail-beck-tdd", "unreal-agent"):
             self.assertFalse((REPO_ROOT / name / "SKILL.md").exists())
             self.assertFalse((REPO_ROOT / "plugins" / name / ".codex-plugin" / "plugin.json").exists())
-
-    def test_astra_team_building_distribution(self) -> None:
-        plugin = REPO_ROOT / "plugins" / "astra-team-building"
-        skill = plugin / "skills" / plugin.name
-        manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text())
-        self.assertEqual("0.1.0", manifest["version"].split("+")[0])
-        self.assertEqual("./skills/", manifest["skills"])
-        self.assertFalse((REPO_ROOT / plugin.name / "SKILL.md").exists())
-        self.assertEqual({".codex-plugin", "README.md", "skills"}, {p.name for p in plugin.iterdir()})
-        for key in ("mcpServers", "apps", "hooks"):
-            self.assertNotIn(key, manifest)
-        for path in plugin.rglob("*"):
-            self.assertFalse(path.is_symlink(), path)
-        from test_document_links import local_targets
-        for document in plugin.rglob("*.md"):
-            for target in local_targets(document.read_text(encoding="utf-8")):
-                self.assertTrue((document.parent / target).exists(), (document, target))
-        self.assertTrue((skill / "SKILL.md").is_file())
-
-    def test_figma_computer_use_distribution(self) -> None:
-        source = REPO_ROOT / "figma-computer-use"
-        plugin = REPO_ROOT / "plugins" / source.name
-        self.assertTrue((source / "SKILL.md").is_file())
-        self.assertEqual(tree_files(source), tree_files(plugin / "skills" / source.name))
-        manifest = json.loads((plugin / ".codex-plugin" / "plugin.json").read_text())
-        baseline = json.loads((source / "references" / "compatibility.json").read_text())
-        self.assertEqual(source.name, manifest["name"])
-        self.assertEqual(baseline["skill_version"], manifest["version"])
-        self.assertEqual("./skills/", manifest["skills"])
-        self.assertNotIn("mcpServers", manifest)
-        self.assertNotIn("apps", manifest)
-        self.assertFalse((plugin / ".mcp.json").exists())
-        self.assertFalse((plugin / ".app.json").exists())
-        prompts = manifest["interface"]["defaultPrompt"]
-        self.assertIsInstance(prompts, list)
-        self.assertTrue(1 <= len(prompts) <= 3)
-        for prompt in prompts:
-            self.assertIn("$figma-computer-use", prompt)
-            self.assertLessEqual(len(prompt), 128)
-        for path in source.rglob("*.md"):
-            import re
-            for target in re.findall(r"\[[^\]]*\]\(([^)]+)\)", path.read_text()):
-                if "://" not in target:
-                    self.assertTrue((path.parent / target.split("#")[0]).exists(), (path, target))
-
-    def test_session_continuity_distribution(self) -> None:
-        source = REPO_ROOT / "session-continuity"
-        plugin = REPO_ROOT / "plugins" / source.name
-        self.assertTrue((source / "SKILL.md").is_file())
-        self.assertEqual(tree_files(source), tree_files(plugin / "skills" / source.name))
-        manifest = json.loads((plugin / ".codex-plugin" / "plugin.json").read_text())
-        self.assertEqual(source.name, manifest["name"])
-        self.assertEqual("0.1.1", manifest["version"])
-        self.assertEqual("./skills/", manifest["skills"])
-        self.assertNotIn("mcpServers", manifest)
-        self.assertNotIn("apps", manifest)
-        prompts = manifest["interface"]["defaultPrompt"]
-        self.assertIsInstance(prompts, list)
-        self.assertTrue(1 <= len(prompts) <= 3)
-        for prompt in prompts:
-            self.assertIn("$session-continuity", prompt)
-            self.assertLessEqual(len(prompt), 128)
-        for path in source.rglob("*.md"):
-            import re
-            for target in re.findall(r"\[[^\]]*\]\(([^)]+)\)", path.read_text()):
-                if "://" not in target:
-                    self.assertTrue((path.parent / target.split("#")[0]).exists(), (path, target))
-
-    def test_ponytail_beck_tdd_distribution(self) -> None:
-        source = REPO_ROOT / "ponytail-beck-tdd"
-        plugin = REPO_ROOT / "plugins" / source.name
-        self.assertTrue((source / "SKILL.md").is_file())
-        self.assertTrue((source / "agents" / "openai.yaml").is_file())
-        self.assertTrue((source / "references" / "kent-beck.md").is_file())
-        self.assertEqual(tree_files(source), tree_files(plugin / "skills" / source.name))
-        manifest = json.loads((plugin / ".codex-plugin" / "plugin.json").read_text())
-        self.assertEqual(source.name, manifest["name"])
-        self.assertEqual("0.1.0", manifest["version"].split("+")[0])
-        self.assertEqual("./skills/", manifest["skills"])
-        for key in ("mcpServers", "apps", "hooks"):
-            self.assertNotIn(key, manifest)
-        prompts = manifest["interface"]["defaultPrompt"]
-        self.assertIsInstance(prompts, list)
-        self.assertTrue(1 <= len(prompts) <= 3)
-        for prompt in prompts:
-            self.assertIn("$ponytail-beck-tdd", prompt)
-            self.assertLessEqual(len(prompt), 128)
-        from test_document_links import local_targets
-        for document in source.rglob("*.md"):
-            for target in local_targets(document.read_text(encoding="utf-8")):
-                self.assertTrue((document.parent / target).exists(), (document, target))
-
-    def test_unreal_agent_distribution(self) -> None:
-        source = REPO_ROOT / "unreal-agent"
-        plugin = REPO_ROOT / "plugins" / source.name
-        mirror = plugin / "skills" / source.name
-        skill_files = {"SKILL.md", "agents/openai.yaml"}
-        self.assertEqual(skill_files, set(tree_files(source)))
-        self.assertEqual(tree_files(source), tree_files(mirror))
-        # A skills-only allowlist excludes runners, credentials, MCP, apps and hooks,
-        # including hidden files that would otherwise escape extension checks.
-        self.assertEqual(
-            {".codex-plugin/plugin.json"}
-            | {f"skills/{source.name}/{relative}" for relative in skill_files},
-            set(tree_files(plugin)),
-        )
-        for root in (source, plugin):
-            for path in root.rglob("*"):
-                self.assertFalse(path.is_symlink(), path)
-        manifest = json.loads((plugin / ".codex-plugin" / "plugin.json").read_text())
-        self.assertEqual(source.name, manifest["name"])
-        self.assertEqual("0.1.3", manifest["version"])
-        self.assertEqual("./skills/", manifest["skills"])
-        for key in ("mcpServers", "apps", "hooks"):
-            self.assertNotIn(key, manifest)
-        for relative in (".mcp.json", ".app.json", "hooks", "scripts", "runtime", "bin"):
-            self.assertFalse((plugin / relative).exists())
-        prompts = manifest["interface"]["defaultPrompt"]
-        self.assertIsInstance(prompts, list)
-        self.assertTrue(1 <= len(prompts) <= 3)
-        for prompt in prompts:
-            self.assertIsInstance(prompt, str)
-            self.assertIn("$unreal-agent", prompt)
-            self.assertLessEqual(len(prompt), 128)
-        from test_sync_skill_mirrors import load_module
-        self.assertIn(source.name, load_module().PACKAGES)
-
-    def test_unreal_agent_explicit_invocation_metadata(self) -> None:
-        source = REPO_ROOT / "unreal-agent"
-        metadata_text = (source / "agents" / "openai.yaml").read_text(encoding="utf-8")
-        scalars = {}
-        for line in metadata_text.splitlines():
-            if line.startswith("  ") and ": " in line:
-                key, value = line.strip().split(": ", 1)
-                scalars[key] = value.strip('"')
-        self.assertEqual(
-            {"display_name", "short_description", "default_prompt", "allow_implicit_invocation"},
-            set(scalars),
-        )
-        self.assertEqual("false", scalars["allow_implicit_invocation"])
-        manifest = json.loads(
-            (REPO_ROOT / "plugins" / source.name / ".codex-plugin" / "plugin.json").read_text()
-        )
-        self.assertEqual(manifest["interface"]["displayName"], scalars["display_name"])
-        self.assertEqual(manifest["interface"]["shortDescription"], scalars["short_description"])
-        self.assertTrue(25 <= len(scalars["short_description"]) <= 64)
-        self.assertIn(scalars["default_prompt"], manifest["interface"]["defaultPrompt"])
 
     def test_local_ai_studio_distribution(self) -> None:
         source = REPO_ROOT / "local-ai-studio"
@@ -368,7 +220,6 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual(".", server["cwd"])
         self.assertTrue(server["enabled"])
         self.assertTrue((SWIFT_PLUGIN_ROOT / "scripts" / "swift_intelligence_mcp.py").is_file())
-
 
 if __name__ == "__main__":
     unittest.main()
