@@ -26,13 +26,13 @@ Standalone `local-ai-studio/`와 byte-identical skills-only Plugin `0.2.1`을 �
 $macpilot로 macOS·브라우저 작업과 화면·시스템 오디오 녹화를 수행하고 결과를 검증하세요.
 ```
 
-원본은 [macpilot/](macpilot/), 배포 사본은 [Plugin 스킬](plugins/macpilot/skills/macpilot/SKILL.md)에서 관리합니다. `3.1.0`은 Swift 코어·CLI·MCP, 작업 격리·취소·포커스, 라이브 캡처·오버레이, 파일·Finder 태그·CoreAudio, Chromium 확장과 Safari Apple Events, 로컬 개선 요청 대기열·Codex app-server 전송을 포함합니다. 실제 OS 커서와 키보드 포커스는 공유하며, 모든 앱·모든 브라우저 기능의 성공을 보장하지 않습니다. [작업별 지원 범위](macpilot/references/workflows.md)에 백엔드별 제약을 명시합니다.
+원본은 [macpilot/](macpilot/), 배포 사본은 [Plugin 스킬](plugins/macpilot/skills/macpilot/SKILL.md)에서 관리합니다. `3.2.0`은 Swift 코어·CLI·MCP, 작업 격리·취소·포커스, 라이브 캡처·오버레이, 파일·Finder 태그·CoreAudio, Chromium 확장과 Safari Apple Events, 로컬 개선 요청 대기열·Codex app-server 전송을 포함합니다. 실제 OS 커서와 키보드 포커스는 공유하며, 모든 앱·모든 브라우저 기능의 성공을 보장하지 않습니다. [작업별 지원 범위](macpilot/references/workflows.md)에 백엔드별 제약을 명시합니다.
 
 macOS 14 이상과 Apple Swift 개발 도구가 필요합니다. `macpilot/scripts/macpilot`는 첫 실행에서 로컬 앱을 빌드·ad-hoc 서명합니다. Python·Node.js는 개발 검증용이며 외부 SwiftPM 패키지는 없습니다. Chromium 확장·사이트 접근과 Safari Automation·JavaScript from Apple Events는 별도 활성화가 필요합니다. 화면·시스템 오디오는 [`mac_record`](macpilot/references/recording.md)로 MP4에 녹화하고 검사합니다(macOS 15+). Safari·Chrome 개발자 설정은 [`mac_browser_developer`](macpilot/references/browser-developer-settings.md)로 조회·준비하고 사용자 승인 후 켤 수 있습니다. Codex 개선 요청 전송에는 명시적 목적지 설정과 로그인·모델 연결이 필요합니다. 일반 로컬 제어는 모델을 요구하지 않습니다.
 
 [`mac_connection`](macpilot/references/mcp-recovery.md)으로 서버·부모 프로세스 신원, 권한과 CLI/MCP 호출 경로를 확인합니다. CLI `connection-check`는 기존 서버·Codex를 재시작하지 않고 격리된 새 MCP를 검사합니다. 별도 검사 성공을 현재 대화의 재연결 성공으로 취급하지 않습니다.
 
-권한 설정은 `mac_permission`으로 요청합니다. `operation=setup` 또는 CLI `permission-setup`은 실제 앱을 드래그할 수 있는 창과 시스템 설정을 엽니다. 사용자가 앱을 목록에 놓고 스위치를 켭니다. [권한 설정](macpilot/references/permission-setup.md)을 참고하세요.
+권한 설정은 `mac_permission operation=setup kind=all` 또는 CLI `permission-setup`으로 진행합니다. macOS 시스템 설정 옆에 앱 아이콘만 있는 88×88pt 안내 패널을 붙입니다. 사용자가 패널의 아이콘을 권한 목록으로 끌어 넣거나 아이콘 우클릭 메뉴에서 ‘자동으로 추가’를 선택할 수 있습니다. Finder나 큰 별도 설정 창은 열지 않습니다. 패널은 설정 창 이동을 따라가고 다른 앱이 활성화되면 숨습니다. 아이콘과 잡는 손 모양의 짧은 시연이 직접 드래그를 안내합니다. 사용자가 아이콘을 잡으면 시연을 멈추며 동작 줄이기를 따릅니다. Automation은 앱별 macOS 동의 요청을 사용하며, 시스템 인증과 최종 승인은 사용자가 직접 진행합니다. [권한 설정](macpilot/references/permission-setup.md)을 참고하세요.
 
 현재 MCP 도구가 필요한 기능을 제공하면 직접 사용하고, 구버전이면 이 스킬의 CLI를 사용합니다. Plugin은 전역 스킬·MCP 설정·사용자 브라우저 프로필을 자동 교체하지 않습니다. 원격 게시·설치·활성화·새 세션 노출은 별도입니다. [스킬 본문](macpilot/SKILL.md), [CLI·MCP](macpilot/references/tools.md), [개발·검증](macpilot/references/development.md), [설치 안내](docs/plugin-installation.md#macpilot)를 참고하세요.
 

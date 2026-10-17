@@ -18,7 +18,7 @@ python3 scripts/sync_skill_mirrors.py --package macpilot --write
 python3 -m unittest discover -s scripts/tests -v
 ```
 
-`PermissionSetupTests`는 한글·공백 경로의 실제 파일 URL을 전용 pasteboard로 왕복하고, 앱 정체성·잘못된 설정 인수·창 배치를 검사한다. `MACPILOT_PERMISSION_TEST_EVIDENCE=/absolute/layout.png`를 지정하면 창 내용의 렌더링을 저장한다. 이 검사는 시스템 설정의 실제 드롭이나 사용자 권한 승인을 수행하지 않는다. 설치된 번들의 `permission-setup` 실행·창 표시와 현재 MCP의 권한 재검사는 별도로 확인한다. `xcrun swift macpilot/scripts/verify_permission_drag.swift PID WINDOW_ID X Y /absolute/MacPilot.app START_ID`는 새 관찰에서 얻은 안내 창 PID·시작 ID·창 ID·드래그 항목의 화면 좌표를 받아 전용 테스트 창으로 실제 파일 드래그를 검사한다. 시스템 설정에는 드롭하지 않는다. 이 실행은 전경 앱과 포인터를 이동하며 Post Event 권한이 필요하다.
+`PermissionSetupTests`는 한글·공백 경로의 앱 파일 URL, 88×88pt 패널의 아이콘 단일 계층·우클릭 메뉴, 네이티브 설정 창 옆 배치·이동 계산, 최소 권한 계획, 전경·입력 잠금, Automation 상태와 인증·재실행 안내 분류, 화면·오디오 주 목록 선택을 검사한다. `MACPILOT_PERMISSION_TEST_EVIDENCE=/absolute/guide.png`는 아이콘 패널 렌더링을 남긴다. `xcrun swift macpilot/scripts/verify_permission_drag.swift PID WINDOW_ID X Y /absolute/MacPilot.app START_ID`는 실제 부착 패널에서 소유한 테스트 창으로 파일 URL을 드래그한다. 시스템 설정의 권한이나 인증 버튼에는 입력을 보내지 않는다. 실제 창 추적·다른 앱 전환 시 숨김·직접 드래그와 자동 추가는 별도 런타임 근거로 남긴다.
 
 `verify_features.py --stage tasks|preview|files|browser|safari|codex`로 해당 단계만 실행할 수 있다. `all`은 전부 실행한다. 이미 검증한 경로는 관련 입력·실패가 바뀔 때 다시 실행한다. `verify_runtime.py`는 기존 입력·메뉴·창·보안·CLI·MCP 회귀를 위해 release 앱을 다시 빌드·서명한다. 두 실행기는 실제 전경 앱과 포인터에 영향을 줄 수 있다. 전용 fixture와 합성 데이터만 사용한다.
 
@@ -42,6 +42,8 @@ macOS의 `/var`와 `/private/var`처럼 같은 파일의 경로 표현이 다를
 
 `bin/`, `tool/.build/`, `tool/.swiftpm/`, `evidence/`는 생성물이다. Git과 Plugin 미러에 넣지 않는다. 미러는 소스·확장·테스트·문서를 실행 권한까지 일치시킨다. 전역 스킬·MCP 설정·개인 로그인 프로필의 변경은 이 저장소 편입과 별도다.
 
+앱 아이콘 원본은 `assets/app-icon.png`다. `scripts/build.sh`는 macOS 기본 도구 `sips`·`iconutil`로 16–1024px ICNS를 만들고 `Contents/Resources/MacPilot.icns`와 `CFBundleIconFile`을 함께 포함한 뒤 서명한다. 권한 패널은 같은 앱 경로의 `NSWorkspace.icon(forFile:)`을 사용한다. 원본과 생성 근거는 [아이콘 자산](../assets/README.md)을 참고한다.
+
 합성 이벤트는 비동기로 도착한다. 보안 입력으로 포커스가 옮겨질 때 key down 직후 또는 up 직후 중단될 수 있다. 전송 개수를 정확히 2로 고정하지 않는다. 중단 원인, 입력 접두 범위, 보안 값 보존과 cleanup release의 균형으로 판정한다. 프리뷰 검증은 테두리 없는 표시와 실제 데스크톱 커서·대상 강조의 독립 수명도 확인한다.
 
 데스크톱 피드백은 `.floating`으로 다른 앱 위에 사각형을 그리면 안 된다. 대상 창과의 순서를 유지하고 위에 놓인 창의 영역을 제외한다. 프리뷰 숨김·종료와 별개로 커서를 유지한다. 화면에는 내부 cursorID 대신 동작·대상 라벨을 쓴다. UI 검증은 실제 창 가림·이동·드래그와 키보드 포커스 유지까지 확인한다.
@@ -55,3 +57,9 @@ WindowServer 인벤토리의 alpha=1이 전체 사각형의 불투명도를 뜻�
 공유 데스크톱에서 사용자 앱 전환이 관찰되면 완료 시점의 전경 PID·AX 창 포커스 확인과 이후 사용자 선택을 구분한다. 프리뷰 열기 검증은 해당 실행의 `focus_verified` receipt와 실제 프리뷰 닫힘을 연결한다. 이미 확인한 포커스를 사용자가 바꿨다고 해서 전경을 반복해서 되찾지 않는다.
 
 화면·시스템 오디오 녹화는 `node macpilot/scripts/verify_recording_chrome.mjs`와 `python3 macpilot/scripts/verify_recording_lifecycle.py`로 검증한다. `MACPILOT_RECORDING_SCOPE=display|region`은 실제 GUI 화면과 시스템 소리를 캡처한다. [녹화 검증 범위](recording.md)를 확인한다. Chrome의 별도 프로필 독립 창에서 무음이 나온 결과를 전체 시스템 오디오 성공과 섞지 않는다.
+
+권한 아이콘 패널은 설정 창이 일시적으로 가려지거나 최소화되어 WindowServer의 onscreen 목록에서 사라져도 종료하지 않는다. 그동안 숨기고 설정 창이 다시 나타나면 같은 패널을 표시한다. 자동 종료 타이머는 이 재표시를 막을 수 있으므로 사용하지 않는다.
+
+`NSVisualEffectView`의 behind-window 재질에는 레이어의 `cornerRadius`만 적용하지 않는다. `maskImage`의 알파 채널로 재질과 창 그림자의 라운드 윤곽을 지정한다. `PermissionSetupTests`는 마스크의 네 모서리가 투명하고 중앙이 불투명한지 검사한다. 실제 WindowServer 합성 결과는 실행한 패널로 별도 확인한다.
+
+드래그 시연은 `PermissionDragOnboarding.swift`가 담당한다. 투명 창은 입력을 통과시키며 실제 앱 아이콘은 고정한다. 사용자 입력 중지·동작 줄이기·두 번 제한은 소스 검사와 실제 무권한 앱의 드래그 근거를 구분해 확인한다. [무권한 검증](permission-validation.md)의 실행기는 별도 bundle ID로 동일 실행 코어를 빌드한다. 앱과 실시간 로그는 내부 임시 경로에 둔다. 외장 볼륨의 로그 접근 자체가 별도 동의를 요구하므로 그 동의를 초기 권한 검증과 섞지 않는다.

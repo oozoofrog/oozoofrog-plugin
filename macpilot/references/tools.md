@@ -16,7 +16,7 @@
 
 CLI는 성공 시 JSON을 stdout에 출력한다. 인수·권한·대상 오류는 JSON 오류와 종료 코드 2를 반환한다. 도움말은 일반 텍스트다. 빌드 로그는 stderr로 출력한다.
 
-`permission-setup [accessibility|screenCapture]`은 실제 앱을 드래그할 수 있는 창과 시스템 설정을 연다. 창을 닫으면 CLI가 종료된다. MCP에서는 `mac_permission`에 `operation=setup`을 추가한다. 기본 권한 요청과 실제 승인, 현재 MCP와 안내 창의 권한은 [권한 설정](permission-setup.md)에서 구분한다.
+`permission-setup [KIND] [TARGET_BUNDLE_ID]`은 macOS 시스템 설정과 옆에 붙는 작은 아이콘 안내 패널을 연다. 기본 KIND는 `all`이며 접근성·화면·Safari Automation을 순서대로 안내한다. 사용자가 직접 드래그하거나 ‘자동으로 추가’를 선택한다. Finder나 큰 설정 대시보드는 열지 않는다. MCP는 `mac_permission operation=setup kind=all`을 사용한다. 지원 항목과 승인·재검사는 [권한 설정](permission-setup.md)을 따른다.
 
 `mac_connection`의 `status`는 현재 프로세스·부모 신원과 호출 경로를 반환한다. `probe`와 CLI `connection-check`는 기존 연결을 변경하지 않고 격리된 MCP 자식을 검사·정리한다. 현재 MCP 호출 실패와 별도 CLI 성공을 구분하는 방법은 [연결 진단과 복구](mcp-recovery.md)를 따른다.
 

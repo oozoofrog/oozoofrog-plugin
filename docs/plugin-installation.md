@@ -23,11 +23,11 @@ Swift Intelligence는 macOS, Command Line Tools를 포함한 Xcode, Python 3가 
 
 ## MacPilot
 
-`macpilot` Plugin `3.1.0`은 macOS·브라우저 작업용 스킬, SwiftPM 소스·테스트, Chromium 확장, 빌드 런처와 검증 스크립트를 포함합니다. 새 작업에서 `$macpilot` 또는 `$macpilot:macpilot`로 호출합니다. 현재 MCP에 필요한 기능이 없으면 설치된 스킬의 `scripts/macpilot` CLI를 사용합니다. Plugin은 MCP 서버를 자동 등록하지 않습니다. `mac_record`의 화면·영역·시스템 오디오 MP4 녹화에는 macOS 15 이상이 필요합니다. [녹화 범위와 검증](../macpilot/references/recording.md)을 확인하세요. [CLI·선택적 MCP 설정](../macpilot/references/tools.md)을 참고하세요. MCP가 끊겼으면 [연결 진단과 복구](../macpilot/references/mcp-recovery.md)의 `mac_connection`·`connection-check`를 사용합니다. 기존 연결·Codex 앱을 자동 재시작하지 않습니다.
+`macpilot` Plugin `3.2.0`은 macOS·브라우저 작업용 스킬, SwiftPM 소스·테스트, Chromium 확장, 빌드 런처와 검증 스크립트를 포함합니다. 새 작업에서 `$macpilot` 또는 `$macpilot:macpilot`로 호출합니다. 현재 MCP에 필요한 기능이 없으면 설치된 스킬의 `scripts/macpilot` CLI를 사용합니다. Plugin은 MCP 서버를 자동 등록하지 않습니다. `mac_record`의 화면·영역·시스템 오디오 MP4 녹화에는 macOS 15 이상이 필요합니다. [녹화 범위와 검증](../macpilot/references/recording.md)을 확인하세요. [CLI·선택적 MCP 설정](../macpilot/references/tools.md)을 참고하세요. MCP가 끊겼으면 [연결 진단과 복구](../macpilot/references/mcp-recovery.md)의 `mac_connection`·`connection-check`를 사용합니다. 기존 연결·Codex 앱을 자동 재시작하지 않습니다.
 
 macOS 14 이상과 Apple Swift 개발 도구가 필요합니다. CLI 첫 실행에서 해당 설치 경로의 `bin/MacPilot.app`을 빌드·ad-hoc 서명합니다. 사용하는 기능에 따라 Accessibility·Screen Recording·Automation 권한이 필요합니다. 로컬 실행에 모델·API 키·외부 SwiftPM 패키지·Python·Node.js는 필요하지 않습니다. Python·Node.js는 개발 검증용입니다. Codex 진단 전송을 사용할 때만 별도 Codex 실행 파일·로그인·모델 연결이 필요합니다.
 
-권한을 직접 추가하려면 설치된 스킬의 `scripts/macpilot permission-setup`을 실행합니다. 실제 앱을 설정 목록에 드래그하는 창과 설정 화면이 열립니다. 스위치는 사용자가 직접 켭니다. [권한 설정](../macpilot/references/permission-setup.md)을 확인하세요.
+권한을 설정하려면 설치된 스킬의 `scripts/macpilot permission-setup`을 실행합니다. macOS 시스템 설정 옆에 앱 아이콘만 있는 88×88pt 안내 패널을 붙입니다. 짧은 드래그 시연은 최대 두 번 재생하고, 아이콘을 잡으면 멈추며 동작 줄이기를 따릅니다. 사용자가 패널의 앱 아이콘을 권한 목록으로 드래그하거나 아이콘 우클릭 메뉴에서 선택적 자동 추가를 사용할 수 있습니다. Finder나 큰 별도 설정 창은 열지 않습니다. Automation은 대상 앱별 macOS 동의 요청을 사용합니다. 시스템 인증과 최종 승인은 사용자가 직접 진행합니다. [권한 설정](../macpilot/references/permission-setup.md)을 확인하세요.
 
 Chromium은 `browser/extension/`을 로드하고 `mac_browser install_host`로 해당 확장 ID의 Swift native host를 등록합니다. 필요한 사이트 접근은 확장 팝업에서 허용합니다. Safari는 확장 없이 Apple Events를 사용하며 Safari의 Allow JavaScript from Apple Events가 켜져 있어야 DOM 동작을 실행합니다. `mac_browser_developer`로 Safari·Chrome 개발자 설정을 조회·준비하고 사용자의 네이티브 확인 후 선택한 설정을 켤 수 있습니다. [개발자 설정과 승인 범위](../macpilot/references/browser-developer-settings.md)를 확인하세요. Safari의 교차 출처 프레임·다운로드·screenshot은 호스트 브라우저 또는 네이티브 도구가 필요합니다. 설치 조건·전체 지원 범위는 [작업별 워크플로](../macpilot/references/workflows.md)에 있습니다.
 

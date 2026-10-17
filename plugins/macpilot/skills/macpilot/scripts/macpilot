@@ -13,7 +13,9 @@ executable="$skill_dir/bin/MacPilot.app/Contents/MacOS/macpilot"
 needs_build=false
 if [ ! -x "$executable" ]; then
     needs_build=true
-elif [ "$skill_dir/scripts/build.sh" -nt "$executable" ] || [ "$skill_dir/tool/Package.swift" -nt "$executable" ]; then
+elif [ "$skill_dir/scripts/build.sh" -nt "$executable" ] || \
+     [ "$skill_dir/tool/Package.swift" -nt "$executable" ] || \
+     [ "$skill_dir/assets/app-icon.png" -nt "$executable" ]; then
     needs_build=true
 elif /usr/bin/find "$skill_dir/tool/Sources" -type f -name '*.swift' -newer "$executable" -print -quit | /usr/bin/grep -q .; then
     needs_build=true
