@@ -6,6 +6,8 @@
 
 - 2026-10-17: `gptplease` standalone·Plugin·상담 runtime 배포를 제거했습니다. Marketplace·설치 안내·미러 동기화·전용 배포/정책 검사를 정리했습니다. 남는 Plugin은 `swift-intelligence`, `local-ai-studio`, `macpilot`입니다. 과거 검증 문서·상담 패키지·로그인 프로필은 보존합니다.
 
+- Local AI Studio의 Qwen3-TTS 사용 예제를 한국어 기본 음색 `Sohee`에 맞췄습니다. LocalAIHub 앱·CLI와 직접 실행 launcher의 기본 음색을 Sohee로 변경하고, 명시한 다른 음색은 유지합니다.
+
 - 2026-10-17: `astra-team-building`, `figma-computer-use`, `session-continuity`, `ponytail-beck-tdd`, `unreal-agent`의 standalone·Plugin 배포와 Unreal Agent 전용 설치기를 제거했습니다. Marketplace는 `gptplease`, `swift-intelligence`, `local-ai-studio`, `macpilot` 4개만 제공합니다. 설치 안내·미러 동기화·배포 검사를 갱신하고 과거 검증 문서·사용자 작업 기록·별도 실행기와 모델은 보존합니다.
 
 - 저장소와 Codex marketplace 이름을 `codex-skills`에서 `oozoofrog-plugin`으로 변경했습니다. 개별 플러그인 이름은 유지하고 카탈로그 표시명·GitHub repository URL·등록/설치/갱신 명령·Unreal Agent 설치기·배포 검사를 새 이름에 맞췄습니다. 과거 검증 기록과 폐기된 플러그인의 이전 선택자는 보존하며, 기존 설치·활성화·사용자 데이터는 자동 이전하지 않습니다. 같은 대화에서 구현한 MacPilot 소스·플러그인 배포본을 함께 게시합니다.

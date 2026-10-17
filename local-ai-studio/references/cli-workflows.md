@@ -40,7 +40,7 @@ Current generation width/height must be positive multiples of 32. Do not overwri
 ### Speech and transcription
 
 ```sh
-"$AI" tts --text '안녕하세요.' --model custom-voice --voice Vivian --language Korean --output "$OUT" --prefix greeting
+"$AI" tts --text '안녕하세요.' --model custom-voice --voice Sohee --language Korean --output "$OUT" --prefix greeting
 "$AI" tts --text '안녕하세요.' --model voice-design --instruction 'A calm warm narrator' --language Korean --output "$OUT" --prefix designed
 "$AI" transcribe --audio "$INPUT_AUDIO" --model 1.7b --language Korean --format srt --output "$OUT/transcript"
 ```
