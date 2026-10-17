@@ -1,48 +1,50 @@
 # oozoofrog-plugin
 
-Swift 의미론 탐색용 `swift-intelligence`, 로컬 모델 설치·실행용 `local-ai-studio`, macOS·브라우저 제어와 화면·시스템 오디오 녹화용 `macpilot`를 제공합니다.
+English | [한국어](README.ko.md)
+
+Codex plugins for Swift code navigation (`swift-intelligence`), local model setup and execution (`local-ai-studio`), and macOS and browser automation with screen and system audio recording (`macpilot`).
 
 ## Local AI Studio
 
-`$local-ai-studio`는 Apple Silicon Mac에서 Local AI Studio의 `ai` CLI로 이미지 생성·편집, 음성 합성·전사, 영상·음악 생성, 영어→한국어 번역을 실행하고 결과물을 검증·전달합니다. Local AI Studio 또는 온디바이스 모델 작업을 요청했는데 LocalAIHub나 필요한 모델이 없으면 해당 소스와 요청에 필요한 모델 그룹만 로컬에 설치한 뒤 작업을 이어갑니다. 일반 미디어 요청만으로 대용량 설치를 시작하지 않으며, 사용자가 지정한 도구·모델·저장 위치·형식을 우선합니다.
+Use `$local-ai-studio` on an Apple Silicon Mac to generate and edit images, synthesize and transcribe speech, generate video and music, and translate English into Korean through Local AI Studio's `ai` CLI. The skill verifies and delivers the saved results. When a requested Local AI Studio or on-device model task needs LocalAIHub or a missing model, it prepares the source and only the required model group before continuing. A generic media request does not start a large installation. User-selected tools, models, storage locations, and formats take precedence.
 
 ```text
-$local-ai-studio로 이 녹음을 전사해 지정한 폴더에 SRT로 저장하고 결과를 확인해주세요.
-$local-ai-studio로 비상업적 평가용 찻주전자 이미지를 만들고 PNG 파일을 확인해주세요.
-$local-ai-studio로 이 영어 문서를 한국어로 번역해 지정한 TXT 파일로 저장해주세요.
+Use $local-ai-studio to transcribe this recording, save an SRT file in the specified folder, and verify the result.
+Use $local-ai-studio to generate a teapot image for non-commercial evaluation and verify the PNG file.
+Use $local-ai-studio to translate this English document into Korean and save it as the specified TXT file.
 ```
 
-Standalone `local-ai-studio/`와 byte-identical skills-only Plugin `0.2.1`을 제공합니다. Plugin에 모델·런타임·생성 미디어·인증·실행기 바이너리는 포함하지 않습니다. 설치 시 현재 소스·CLI 기능, 선택한 저장 위치와 용량을 확인하고 필요한 모델만 받습니다. `/Volumes/eyedisk/AI`는 참조 Mac의 발견 후보일 뿐 보편적인 기본값이 아닙니다. Qwen Image 다운로드에는 사용자의 명시적 라이선스 동의가 필요합니다. 24 GB Mac에서는 대형 생성 모델을 한 번에 하나만 실행합니다.
+Available as a standalone skill in `local-ai-studio/` and a skills-only Plugin, version `0.2.1`, with a byte-identical skill copy. The Plugin does not bundle models, runtimes, generated media, credentials, or runner binaries. Setup checks the current source and CLI capabilities, the selected storage location, and available space before downloading only the required models. `/Volumes/eyedisk/AI` is a discovery candidate on the reference Mac, not a universal default. Qwen Image downloads require explicit user acceptance of its license. On a 24 GB Mac, run only one large generator at a time.
 
-설치 후 `ai --help`로 지원 명령을 확인합니다. 공개 LocalAIHub 소스와 다른 로컬 체크아웃의 기능이 다를 수 있습니다. `READY`·종료 코드·`Output:` 로그만으로 결과 품질을 주장하지 않으며 실제 파일·형식·미리보기/재생/내용 확인 여부를 구분해 전달합니다. [스킬 본문](local-ai-studio/SKILL.md), [LocalAIHub 설치](local-ai-studio/references/setup.md), [명령·출력 규칙](local-ai-studio/references/cli-workflows.md), [Plugin 설치 안내](docs/plugin-installation.md#local-ai-studio)를 참고하세요.
+After setup, inspect supported commands with `ai --help`. Public LocalAIHub source and other local checkouts may expose different capabilities. `READY`, an exit code, or an `Output:` log alone does not establish output quality. Report actual file and format checks separately from preview, playback, and content review. See the [skill](local-ai-studio/SKILL.md), [LocalAIHub setup](local-ai-studio/references/setup.md), [CLI and output contracts](local-ai-studio/references/cli-workflows.md), and [Plugin installation](docs/plugin-installation.md#local-ai-studio).
 
 ## MacPilot
 
-`macpilot`는 macOS 앱·창·메뉴·파일·시스템과 브라우저 작업을 관찰·실행·검증합니다. 작업별 멀티 가상 커서, 백그라운드 제어, 라이브 프리뷰, 선택적 private API와 Codex 개선 요청 전송이 필요한 데스크톱 워크플로에 사용합니다.
+Use `macpilot` to observe, execute, and verify macOS app, window, menu, file, system, and browser tasks. It supports per-task virtual cursors, background control, live previews, optional private APIs, and sending authorized improvement requests to Codex.
 
 ```text
-$macpilot로 macOS·브라우저 작업과 화면·시스템 오디오 녹화를 수행하고 결과를 검증하세요.
+Use $macpilot to perform the macOS and browser tasks, record the screen and system audio, and verify the results.
 ```
 
-원본은 [macpilot/](macpilot/), 배포 사본은 [Plugin 스킬](plugins/macpilot/skills/macpilot/SKILL.md)에서 관리합니다. `3.0.0`은 Swift 코어·CLI·MCP, 작업 격리·취소·포커스, 라이브 캡처·오버레이, 파일·Finder 태그·CoreAudio, Chromium 확장과 Safari Apple Events, 로컬 개선 요청 대기열·Codex app-server 전송을 포함합니다. 실제 OS 커서와 키보드 포커스는 공유하며, 모든 앱·모든 브라우저 기능의 성공을 보장하지 않습니다. [작업별 지원 범위](macpilot/references/workflows.md)에 백엔드별 제약을 명시합니다.
+The source is maintained in [macpilot/](macpilot/), with a distribution copy in the [Plugin skill](plugins/macpilot/skills/macpilot/SKILL.md). Version `3.0.0` includes the Swift core, CLI and MCP implementation, task isolation, cancellation, focus control, live capture and overlays, file operations, Finder tags, CoreAudio, a Chromium extension, Safari Apple Events, and a local improvement-request queue with Codex app-server delivery. The physical OS cursor and keyboard focus remain shared resources. Support varies by app and browser; see the [workflow and backend limits](macpilot/references/workflows.md).
 
-macOS 14 이상과 Apple Swift 개발 도구가 필요합니다. `macpilot/scripts/macpilot`는 첫 실행에서 로컬 앱을 빌드·ad-hoc 서명합니다. Python·Node.js는 개발 검증용이며 외부 SwiftPM 패키지는 없습니다. Chromium 확장·사이트 접근과 Safari Automation·JavaScript from Apple Events는 별도 활성화가 필요합니다. 화면·시스템 오디오는 [`mac_record`](macpilot/references/recording.md)로 MP4에 녹화하고 검사합니다(macOS 15+). Safari·Chrome 개발자 설정은 [`mac_browser_developer`](macpilot/references/browser-developer-settings.md)로 조회·준비하고 사용자 승인 후 켤 수 있습니다. Codex 개선 요청 전송에는 명시적 목적지 설정과 로그인·모델 연결이 필요합니다. 일반 로컬 제어는 모델을 요구하지 않습니다.
+Requires macOS 14 or later and Apple Swift development tools. On first use, `macpilot/scripts/macpilot` builds and ad-hoc signs a local app. Python and Node.js are used for development validation; there are no external SwiftPM dependencies. The Chromium extension and site access, Safari Automation, and Safari JavaScript from Apple Events require separate enablement. Use [`mac_record`](macpilot/references/recording.md) to record and inspect MP4 screen and system audio captures on macOS 15 or later. Use [`mac_browser_developer`](macpilot/references/browser-developer-settings.md) to inspect and prepare Safari or Chrome developer settings, then enable a selected setting after user approval. Sending improvement requests to Codex requires an explicitly configured destination, login, and model connection. Ordinary local control does not require a model.
 
-현재 MCP 도구가 필요한 기능을 제공하면 직접 사용하고, 구버전이면 이 스킬의 CLI를 사용합니다. Plugin은 전역 스킬·MCP 설정·사용자 브라우저 프로필을 자동 교체하지 않습니다. 원격 게시·설치·활성화·새 세션 노출은 별도입니다. [스킬 본문](macpilot/SKILL.md), [CLI·MCP](macpilot/references/tools.md), [개발·검증](macpilot/references/development.md), [설치 안내](docs/plugin-installation.md#macpilot)를 참고하세요.
+Use current MCP tools directly when they expose the required feature; otherwise use the skill's CLI. The Plugin does not automatically replace global skills, MCP configuration, or browser profiles. Remote publication, installation, enablement, and availability in a new session are separate checks. See the [skill](macpilot/SKILL.md), [CLI and MCP setup](macpilot/references/tools.md), [development and validation](macpilot/references/development.md), and [installation guide](docs/plugin-installation.md#macpilot).
 
-이후 변경은 원본에서 수행하고 `python3 scripts/sync_skill_mirrors.py --package macpilot --write`로 배포 사본에 반영합니다. 바이너리·빌드 캐시·화면·로그 증거는 Git과 배포 사본에서 제외합니다.
+Make changes in the source directory, then update the distribution copy with `python3 scripts/sync_skill_mirrors.py --package macpilot --write`. Binaries, build caches, screenshots, and logs are excluded from Git and the distribution copy.
 
 ## Swift Intelligence
 
-`swift-intelligence`는 Xcode의 SourceKit-LSP로 Swift 정의, 참조, 구현, 타입, 심볼 및 진단을 읽기 전용으로 조회합니다. MCP 서버가 필요한 Plugin이므로 `plugins/swift-intelligence/`에만 제공합니다. Python 3 외의 Python 패키지나 외부 MCP 바이너리를 추가로 설치하지 않습니다.
+`swift-intelligence` uses Xcode's SourceKit-LSP for read-only lookup of Swift definitions, references, implementations, types, symbols, and diagnostics. It is provided only in `plugins/swift-intelligence/` because it requires an MCP server. It does not install Python packages beyond Python 3 itself or add an external MCP binary.
 
-## 과거 검증 기록
+## Historical validation records
 
-제거된 스킬의 배포·실행 검증은 당시 기록으로 보존합니다. [GPT Please 검증 기록](docs/gptplease-transport-validation.md)도 현재 제공 기능이 아닙니다. [모델 정책 검토](docs/model-routing-review.md)와 [검증 기록](docs/model-routing-validation.md)은 현재 제공 기능과 구분해서 읽으세요. `scripts/model_routing_eval.py`는 기존 합성·관측 기록을 검사하는 오프라인 도구입니다.
+Validation records for removed skills describe their state at the time. The [GPT Please validation record](docs/gptplease-transport-validation.md) does not describe a currently available feature. Read the [model policy review](docs/model-routing-review.md) and [validation record](docs/model-routing-validation.md) separately from current capabilities. `scripts/model_routing_eval.py` is an offline tool for checking existing synthetic and observed records.
 
-## 설치
+## Installation
 
-필요한 Plugin만 선택해 설치합니다. 아래 명령은 해당 변경이 원격 marketplace에 반영된 뒤 사용할 수 있습니다.
+Install only the Plugins you need. These commands use the changes published in the remote marketplace.
 
 ```bash
 codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
@@ -51,9 +53,9 @@ codex plugin add local-ai-studio@oozoofrog-plugin
 codex plugin add macpilot@oozoofrog-plugin
 ```
 
-다른 Plugin의 요구 사항과 standalone 설치는 [Plugin 설치 안내](docs/plugin-installation.md)를 참고하세요.
+See [Plugin installation](docs/plugin-installation.md) for requirements and standalone installation options.
 
-## 검증
+## Validation
 
 ```bash
 python3 -m unittest discover -s scripts/tests -v
@@ -68,4 +70,4 @@ python3 macpilot/scripts/verify_mcp.py
 git diff --check
 ```
 
-Plugin manifest와 marketplace는 저장소 배포 검사로 확인합니다. 실제 원격 등록·설치는 별도 `CODEX_HOME`에서 CLI로 검증하며 기존 설치·인증을 변경하지 않습니다. Swift Intelligence를 수정할 때는 해당 Plugin의 검증 지침을 별도로 따릅니다. 변경 기록은 [CHANGELOG.md](CHANGELOG.md)에 있습니다.
+Repository distribution tests check Plugin manifests and the marketplace catalog. Validate remote registration and installation separately through the CLI with a separate `CODEX_HOME`, without changing existing installations or credentials. Follow the Plugin-specific validation guidance when changing Swift Intelligence. See [CHANGELOG.md](CHANGELOG.md) for the change history.

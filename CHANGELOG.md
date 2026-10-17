@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- 기본 `README.md`를 영어로 전환하고 한국어 안내를 `README.ko.md`로 분리했습니다. 두 문서 상단에 언어 전환 링크를 추가했습니다.
+
 - 2026-10-17: `gptplease` standalone·Plugin·상담 runtime 배포를 제거했습니다. Marketplace·설치 안내·미러 동기화·전용 배포/정책 검사를 정리했습니다. 남는 Plugin은 `swift-intelligence`, `local-ai-studio`, `macpilot`입니다. 과거 검증 문서·상담 패키지·로그인 프로필은 보존합니다.
 
 - Local AI Studio의 Qwen3-TTS 사용 예제를 한국어 기본 음색 `Sohee`에 맞췄습니다. LocalAIHub 앱·CLI와 직접 실행 launcher의 기본 음색을 Sohee로 변경하고, 명시한 다른 음색은 유지합니다.
