@@ -1,6 +1,6 @@
 ---
 name: macpilot
-description: macOS 앱·창·메뉴·파일·시스템과 브라우저를 제어하고 화면·시스템 오디오를 녹화·검증한다. 권한 요청·앱 드래그 설정, MCP 연결 진단, 작업별 멀티 가상 커서, 백그라운드 제어, 라이브 프리뷰, 선택적 private API와 Codex 개선 요청 전송이 필요한 데스크톱 워크플로에 사용한다.
+description: macOS 앱·창·메뉴·파일·시스템과 브라우저를 제어하고 화면·시스템 오디오를 녹화·검증한다. 시스템 설정 부착 안내·아이콘 드래그·선택적 자동 등록·권한 요청, MCP 연결 진단, 작업별 멀티 가상 커서, 백그라운드 제어, 라이브 프리뷰, 선택적 private API와 Codex 개선 요청 전송이 필요한 데스크톱 워크플로에 사용한다.
 ---
 
 # MacPilot
@@ -13,7 +13,7 @@ description: macOS 앱·창·메뉴·파일·시스템과 브라우저를 제어
 - 화면·시스템 오디오 MP4 녹화, 저장 파일·PCM·프레임 검사: [녹화 범위와 사용법](references/recording.md).
 - Safari·Chrome 개발자 설정 조회·승인 후 활성화: [브라우저 개발자 설정](references/browser-developer-settings.md). 승인 대화상자는 사용자가 직접 누르며 에이전트는 조작하지 않는다.
 - 권한·입력 경로·플랫폼 제약: [macOS 기능과 기술 선택](references/macos-capabilities.md).
-- 권한 요청 창·설정 목록에 앱 드래그: [권한 설정](references/permission-setup.md). `mac_permission`으로 요청하고, 직접 추가가 필요하면 `operation=setup` 또는 CLI `permission-setup`을 사용한다. 최종 승인은 사용자가 한다.
+- macOS 시스템 설정 옆의 아이콘 전용 안내 패널·드래그 시연·선택적 자동 추가: [권한 설정](references/permission-setup.md). `operation=setup` 또는 CLI `permission-setup`에서 시스템 설정과 부착 안내 패널을 연다. 짧은 시연으로 사용자의 직접 드래그를 안내하며 아이콘을 잡으면 멈춘다. 우클릭 메뉴에서 ‘자동으로 추가’도 선택할 수 있다. Finder나 큰 별도 설정 창은 열지 않는다. 최종 승인은 사용자가 한다.
 - private API 사용·추가 조사: [비공개 API 범위](references/private-api.md).
 - HID·VM·저수준 입력을 검토할 때: [입력 기술 조사](references/macos-input-research.md).
 - 소스 변경·실제 검증: [개발과 검증](references/development.md).

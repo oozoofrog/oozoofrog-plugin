@@ -180,13 +180,13 @@ private final class BoundedLineReader: @unchecked Sendable {
         NSApplication.shared.setActivationPolicy(.prohibited)
         do {
             let args = Array(CommandLine.arguments.dropFirst())
-            let command = args.first ?? "permission-setup"
+            let command = args.first ?? "permission-setup-ui"
             guard command != "--help", command != "help" else {
                 print("""
                 macpilot — macOS and browser automation tools (macOS 14+)
                   doctor                        Permission/backend status
                   connection-check              Isolated MCP probe; does not reconnect the host
-                  permission-setup [KIND]        Drag MacPilot.app into privacy settings
+                  permission-setup [KIND]        Native Settings with attached icon guide; default all
                   tools                         JSON tool schemas
                   call TOOL --json FILE|-       One tool call; '-' reads JSON stdin
                   mcp                           JSON-RPC/MCP over newline-delimited stdio
@@ -198,9 +198,17 @@ private final class BoundedLineReader: @unchecked Sendable {
                 """)
                 return
             }
+            if command == "permission-setup-ui" {
+                guard args.count <= 3 else { throw ToolFailure("invalid_argument", "permission-setup-ui [KIND] [TARGET_BUNDLE_ID]") }
+                try PermissionSetup.run(kind: args.count >= 2 ? args[1] : "all", targetBundleID: args.count >= 3 ? args[2] : "com.apple.Safari")
+                return
+            }
             if command == "permission-setup" {
-                guard args.count <= 2 else { throw ToolFailure("invalid_argument", "permission-setup accepts accessibility or screenCapture") }
-                try PermissionSetup.run(kind: args.count == 2 ? args[1] : "accessibility")
+                guard args.count <= 3 else { throw ToolFailure("invalid_argument", "permission-setup [KIND] [TARGET_BUNDLE_ID]") }
+                var request: [String: Any] = ["kind": args.count >= 2 ? args[1] : "all", "operation": "setup", "timeoutMs": 60_000]
+                if args.count == 3 { request["targetBundleID"] = args[2] }
+                let result = try await Engine(store: Store(), transport: .cli).call("mac_permission", arguments: request)
+                print(String(data: try jsonData(result, pretty: true), encoding: .utf8)!)
                 return
             }
             if command == "tools" { print(String(data: try jsonData(ToolCatalog.tools, pretty:true), encoding:.utf8)!); return }

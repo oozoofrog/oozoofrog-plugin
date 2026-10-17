@@ -79,7 +79,7 @@ log = (out / "fixture-process.log").open("w")
 p = subprocess.Popen([str(fixture)], env=env, stdout=log, stderr=log)
 p2 = None
 preview = None
-source_paths = list((skill / "tool/Sources").rglob("*.swift")) + [skill / "tool/Package.swift", skill / "scripts/build.sh"]
+source_paths = list((skill / "tool/Sources").rglob("*.swift")) + [skill / "tool/Package.swift", skill / "scripts/build.sh", skill / "assets/app-icon.png"]
 report = {
     "checks":checks,
     "networkPolicy":"sandbox deny network*",

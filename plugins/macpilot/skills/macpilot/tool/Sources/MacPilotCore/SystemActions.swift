@@ -412,11 +412,16 @@ private struct TrashRecycleOutcome: @unchecked Sendable {
     }
 
     public static func permission(_ a: Arguments) async throws -> [String: Any] {
-        try a.only(["kind", "operation", "timeoutMs"])
+        try a.only(["kind", "operation", "timeoutMs", "targetBundleID"])
         let kind = try a.string("kind")
         let timeout = try a.integer("timeoutMs", default: 10_000, range: 100...60_000)
         let operation = try a.string("operation", default: "request")
-        if operation == "setup" { return try await PermissionSetup.open(kind: kind, timeout: timeout) }
+        let target = try a.string("targetBundleID", default: "com.apple.Safari", limit: 255)
+        guard !target.isEmpty, target.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "." || $0 == "-") }) else {
+            throw ToolFailure("invalid_argument", "targetBundleID must be an installed app bundle identifier")
+        }
+        if operation == "setup" { return try await PermissionSetup.open(kind: kind, timeout: timeout, targetBundleID: target) }
+        guard a.values["targetBundleID"] == nil else { throw ToolFailure("invalid_argument", "targetBundleID is used only by setup") }
         guard operation == "request" else { throw ToolFailure("invalid_argument", "Permission operation must be request or setup") }
         let granted: Bool
         switch kind {
@@ -434,8 +439,13 @@ private struct TrashRecycleOutcome: @unchecked Sendable {
                 timeoutMilliseconds: timeout,
                 timeoutFailure: ToolFailure("permission_timeout", "Post Event permission request did not return within \(timeout) ms. The system request may still complete; recheck mac_doctor before retrying.")
             ) { CGRequestPostEventAccess() }
+        case "inputMonitoring":
+            granted = try await withBlockingDeadline(
+                timeoutMilliseconds: timeout,
+                timeoutFailure: ToolFailure("permission_timeout", "Input Monitoring request timed out; recheck before retrying.")
+            ) { CGRequestListenEventAccess() }
         default:
-            throw ToolFailure("invalid_argument", "kind must be accessibility, screenCapture, or postEvent")
+            throw ToolFailure("invalid_argument", "Request kind must be accessibility, screenCapture, postEvent, or inputMonitoring; other kinds use operation=setup")
         }
         return ["status":"permission_requested", "granted":granted]
     }

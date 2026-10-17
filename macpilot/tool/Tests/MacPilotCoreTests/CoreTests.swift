@@ -176,7 +176,7 @@ final class CoreTests: XCTestCase {
         let current=RPC.initialize(["protocolVersion":"2024-11-05"])
         XCTAssertEqual(current["protocolVersion"] as? String,"2024-11-05")
         XCTAssertEqual((current["serverInfo"] as? [String:Any])?["name"] as? String,"macpilot")
-        XCTAssertEqual((current["serverInfo"] as? [String:Any])?["version"] as? String,"3.1.0")
+        XCTAssertEqual((current["serverInfo"] as? [String:Any])?["version"] as? String,"3.2.0")
         XCTAssertEqual(RPC.initialize(["protocolVersion":"future"])["protocolVersion"] as? String,"2025-11-25")
     }
     func testSystemActionSchemasArePresentAndStrict() throws {

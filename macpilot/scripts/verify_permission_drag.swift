@@ -3,7 +3,7 @@ import ApplicationServices
 
 // Development-only drag to an owned drop target. Never targets System Settings
 // and never clicks a permission switch. Arguments come from a fresh observation.
-guard CommandLine.arguments.count == 7,
+guard [7, 8].contains(CommandLine.arguments.count),
       let sourcePID = Int32(CommandLine.arguments[1]), let sourceID = UInt32(CommandLine.arguments[2]),
       let sourceX = Double(CommandLine.arguments[3]), let sourceY = Double(CommandLine.arguments[4]),
       CGPreflightPostEventAccess() else {
@@ -11,6 +11,7 @@ guard CommandLine.arguments.count == 7,
 }
 let expected = URL(fileURLWithPath: CommandLine.arguments[5]).resolvingSymlinksInPath()
 let expectedStartID = CommandLine.arguments[6]
+let expectedBundleID = CommandLine.arguments.count == 8 ? CommandLine.arguments[7] : "local.macpilot"
 func startID(_ pid: Int32) -> String? {
     var info = proc_bsdinfo()
     guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, Int32(MemoryLayout<proc_bsdinfo>.size)) == MemoryLayout<proc_bsdinfo>.size else { return nil }
@@ -19,8 +20,8 @@ func startID(_ pid: Int32) -> String? {
 func helperFrame() -> CGRect? {
     guard startID(sourcePID) == expectedStartID,
           let rows = CGWindowListCopyWindowInfo([.optionIncludingWindow], sourceID) as? [[String: Any]],
-          let row = rows.first, row[kCGWindowOwnerPID as String] as? Int32 == sourcePID,
-          row[kCGWindowName as String] as? String == "MacPilot 권한 설정",
+          let row = rows.first, (row[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value == sourcePID,
+          (row[kCGWindowName as String] as? String).map({ $0 == "MacPilot 권한 안내" }) ?? true,
           let bounds = row[kCGWindowBounds as String] as? [String: Any] else { return nil }
     return CGRect(dictionaryRepresentation: bounds as CFDictionary)
 }
@@ -54,19 +55,22 @@ final class DropTarget: NSView {
 }
 
 NSApplication.shared.setActivationPolicy(.accessory)
-guard let sourceFrame = helperFrame(), sourceFrame.contains(CGPoint(x: sourceX, y: sourceY)),
-      let app = NSRunningApplication(processIdentifier: sourcePID), app.bundleIdentifier == "local.macpilot",
-      let screen = NSScreen.main else { fatalError("Owned helper identity changed; no input sent") }
-let target = NSWindow(contentRect: NSRect(x: screen.visibleFrame.midX, y: screen.visibleFrame.midY - 120, width: 400, height: 240), styleMask: [.titled], backing: .buffered, defer: false)
+guard startID(sourcePID) == expectedStartID,
+      let app = NSRunningApplication(processIdentifier: sourcePID), app.bundleIdentifier == expectedBundleID,
+      let screen = NSScreen.main else { finish(["status": "blocked", "reason": "Owned helper identity changed; no input sent", "actualStartID": startID(sourcePID) ?? "", "bundleID": NSRunningApplication(processIdentifier: sourcePID)?.bundleIdentifier ?? "", "sourceFrameAvailable": helperFrame() != nil], 2) }
+let target = NSWindow(contentRect: NSRect(x: screen.visibleFrame.minX + 80, y: screen.visibleFrame.midY - 120, width: 400, height: 240), styleMask: [.titled], backing: .buffered, defer: false)
 target.title = "MacPilot Permission Drop Fixture"
 target.contentView = DropTarget(frame: NSRect(x: 0, y: 0, width: 400, height: 240))
 target.orderFrontRegardless()
 let endCocoa = target.convertPoint(toScreen: NSPoint(x: 200, y: 120))
 let end = CGPoint(x: endCocoa.x, y: CGDisplayBounds(CGMainDisplayID()).height - endCocoa.y)
 let start = CGPoint(x: sourceX, y: sourceY)
-app.activate(options: [])
-DispatchQueue.global().asyncAfter(deadline: .now() + 0.8) {
-    guard helperFrame() == sourceFrame, NSWorkspace.shared.frontmostApplication?.processIdentifier == sourcePID else {
+let settings = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.systempreferences").first
+settings?.activate(options: [.activateAllWindows])
+let initialForeground = settings?.processIdentifier
+DispatchQueue.global().asyncAfter(deadline: .now() + 1.5) {
+    guard let sourceFrame = helperFrame(), sourceFrame.contains(start),
+          NSWorkspace.shared.frontmostApplication?.processIdentifier == initialForeground else {
         finish(["status": "blocked", "reason": "Source identity or foreground changed; no input sent"], 2)
     }
     let cocoaStart = NSPoint(x: start.x, y: CGDisplayBounds(CGMainDisplayID()).height - start.y)

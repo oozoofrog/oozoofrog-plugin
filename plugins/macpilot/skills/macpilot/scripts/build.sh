@@ -37,6 +37,20 @@ product_dir=$(/usr/bin/xcrun swift build \
 /bin/mkdir -p "$staged_bundle/Contents/MacOS"
 /bin/cp "$product_dir/macpilot" "$staged_bundle/Contents/MacOS/macpilot"
 /bin/chmod 0755 "$staged_bundle/Contents/MacOS/macpilot"
+
+# Bundle the same native app icon used by Finder and the permission drag panel.
+iconset="$build_root/MacPilot.iconset"
+/bin/mkdir -p "$iconset" "$staged_bundle/Contents/Resources"
+for size in 16 32 128 256 512; do
+    /usr/bin/sips -z "$size" "$size" "$skill_dir/assets/app-icon.png" \
+        --out "$iconset/icon_${size}x${size}.png" >/dev/null
+    pixels=$((size * 2))
+    /usr/bin/sips -z "$pixels" "$pixels" "$skill_dir/assets/app-icon.png" \
+        --out "$iconset/icon_${size}x${size}@2x.png" >/dev/null
+done
+/usr/bin/iconutil -c icns "$iconset" \
+    -o "$staged_bundle/Contents/Resources/MacPilot.icns"
+
 /bin/cat > "$staged_bundle/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -44,9 +58,10 @@ product_dir=$(/usr/bin/xcrun swift build \
 <key>CFBundleIdentifier</key><string>local.macpilot</string>
 <key>CFBundleExecutable</key><string>macpilot</string>
 <key>CFBundleName</key><string>MacPilot</string>
+<key>CFBundleIconFile</key><string>MacPilot.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>3.1.0</string>
-<key>CFBundleVersion</key><string>31</string>
+<key>CFBundleShortVersionString</key><string>3.2.0</string>
+<key>CFBundleVersion</key><string>32</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>
