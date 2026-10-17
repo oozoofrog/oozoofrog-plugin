@@ -1,16 +1,11 @@
 # Plugin installation
 
-Repository marketplace에는 `gptplease`, `swift-intelligence`, `astra-team-building`, `figma-computer-use`, `session-continuity`, `ponytail-beck-tdd`, `unreal-agent`, `local-ai-studio`, `macpilot`가 있습니다. 필요한 Plugin만 선택합니다. 아래 명령은 해당 변경이 원격에 반영된 뒤 사용합니다.
+Repository marketplace에는 `gptplease`, `swift-intelligence`, `local-ai-studio`, `macpilot`가 있습니다. 필요한 Plugin만 선택합니다. 아래 명령은 해당 변경이 원격에 반영된 뒤 사용합니다.
 
 ```bash
 codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
 codex plugin add gptplease@oozoofrog-plugin
 codex plugin add swift-intelligence@oozoofrog-plugin
-codex plugin add astra-team-building@oozoofrog-plugin
-codex plugin add figma-computer-use@oozoofrog-plugin
-codex plugin add session-continuity@oozoofrog-plugin
-codex plugin add ponytail-beck-tdd@oozoofrog-plugin
-codex plugin add unreal-agent@oozoofrog-plugin
 codex plugin add local-ai-studio@oozoofrog-plugin
 codex plugin add macpilot@oozoofrog-plugin
 ```
@@ -20,8 +15,6 @@ codex plugin add macpilot@oozoofrog-plugin
 기존 자동 동기화 launchd label과 daemon lock ID는 설치된 작업의 제어 호환성을 위해 유지합니다. 이 저장소의 원격·카탈로그 이름 변경이 사용자 컴퓨터의 기존 작업을 재설치하거나 다른 checkout을 이동시키지는 않습니다.
 
 이미 등록한 원격 marketplace는 `codex plugin marketplace upgrade oozoofrog-plugin`로 snapshot을 갱신한 뒤 설치합니다. 로컬 checkout marketplace를 사용하는 경우에는 그 source를 확인한 뒤 같은 이름으로 재설치합니다.
-
-`ponytail-beck-tdd`는 켄트 벡의 TDD·Tidy First 글과 Ponytail의 구현 원칙을 담은 명시적 호출용 스킬입니다. 설치 후 새 작업에서 `$ponytail-beck-tdd` 또는 `$ponytail-beck-tdd:ponytail-beck-tdd`로 호출합니다. 필요한 원칙을 자체 포함하므로 별도 Ponytail 설치나 MCP 서버가 필요하지 않습니다. 개인 지시를 수정하거나 일반 코딩에 자동 적용하지 않으며, 작은 테스트의 의무 삭제 규칙도 없습니다. [스킬 본문](../ponytail-beck-tdd/SKILL.md)과 [원문 근거](../ponytail-beck-tdd/references/kent-beck.md)를 참고하세요. Standalone 설치를 선택할 때는 `ponytail-beck-tdd/`를 skill-installer로 설치하고 Plugin과 중복 설치하지 않습니다. 기존 구현·테스트의 점검과 개선을 모두 지원하며, 점검만 요청하면 파일 변경 없이 보고합니다. 개선 시에는 [기존 테스트 개선 절차](../ponytail-beck-tdd/references/existing-tests.md)에 따라 전후 효과를 확인합니다.
 
 `gptplease`는 지원되는 CUA 브라우저 제어와 ChatGPT 로그인이 필요합니다. Plugin과 standalone 모두 `runtime/` 모듈을 포함하며 해당 브라우저 JavaScript 세션에서 직접 import합니다. 추가 MCP 서버·실행기·npm 의존성은 없고, 자동 테스트만 Node.js 20 이상에서 실행합니다. [실행 계약](../gptplease/references/transport-contract.md)을 참고하세요. Chat·Work에서 목적·복잡도에 맞는 모델과 사고 수준을 선택하고 명시 설정을 지키며 전송 전에 확인한 뒤, 실제 파일 첨부와 완료 응답 회수를 같은 호출 세션에서 수행합니다. 설치 후 새 대화에서 `$gptplease` 또는 `$gptplease:gptplease`를 호출합니다. [사용 안내](../gptplease/README.md)를 참고하세요.
 
@@ -38,13 +31,7 @@ codex plugin remove gptpro@codex-skills
 
 Standalone이 필요하면 `gptplease/`를 skill-installer로 선택 설치합니다. 제거한 `manage_skills.py`는 사용하지 않습니다.
 
-`figma-computer-use`는 Figma MCP 대신 호스트의 `mcp__cua_repl.js` computer-use를 사용합니다. 이 Plugin 자체에는 MCP 서버나 Figma connector가 없으므로 computer-use가 제공되는 환경과 Figma 접근 권한이 필요합니다. 설치 후 새 작업에서 `$figma-computer-use:figma-computer-use`로 호출합니다. [내부 매뉴얼](../figma-computer-use/references/figma-manual.md)과 [호환성·버전 관리](../figma-computer-use/references/maintenance.md)를 포함합니다. 원본 수정은 설치나 현재 작업의 새 스킬 노출을 의미하지 않습니다.
-
-Astra Team Building은 모델·추론 수준을 지정할 수 있는 Codex 서브에이전트 환경에서 역할과 규모를 조절합니다. 현재 리더의 실행 설정을 보존하고 내부 과제는 서브에이전트로 진행합니다. 새 작업에서 `$astra-team-building:astra-team-building`으로 호출합니다. 기존 `astra-orchestrator`를 대체하며 중복 설치를 피합니다. 자세한 내용은 [설치와 사용](../plugins/astra-team-building/README.md)을 참고하세요.
-
 Swift Intelligence는 macOS, Command Line Tools를 포함한 Xcode, Python 3가 필요합니다. Xcode에 포함된 `sourcekit-lsp`를 실행하며 외부 MCP 바이너리나 Python 패키지를 설치하지 않습니다. Swift Intelligence 설치 후 Codex를 다시 시작하고 새 작업을 열어 Skill과 MCP 도구를 로드하십시오. 자세한 내용은 [Swift Intelligence 설치 및 사용](../plugins/swift-intelligence/docs/installation-and-usage.md)을 참고하세요.
-
-`session-continuity`는 일반 Codex 세션의 작업 상태 초기화·재개·checkpoint·완료 정리를 지원합니다. 리더/워커나 MCP 서버가 필요하지 않으며, 선택적 보조 스크립트는 Python 3.9+와 Git을 사용합니다. 설치 후 새 작업에서 `$session-continuity:session-continuity`로 호출합니다. 저장소 초기화는 호출 후 요청 범위에서 수행하고, `.gitignore` 수정은 선택 사항입니다. [설치와 사용 안내](../session-continuity/README.md), [실행한 검증과 한계](../session-continuity/VALIDATION.md)를 참고하세요.
 
 ## MacPilot
 
@@ -59,34 +46,6 @@ Chromium은 `browser/extension/`을 로드하고 `mac_browser install_host`로 �
 원본은 `macpilot/`에서 수정하고 `python3 scripts/sync_skill_mirrors.py --package macpilot --write`로 배포 미러를 갱신합니다. 바이너리·SwiftPM 캐시·실행 증거는 배포하지 않습니다. [개발과 검증](../macpilot/references/development.md)에서 단위·MCP·실제 앱·브라우저·Codex 전송 검증을 구분합니다.
 
 이 저장소 변경은 기존 `~/.codex/skills/macpilot` 설치본과 MCP 설정을 변경하지 않습니다. Plugin 설치로 전환할 때 기존 경로와 중복 노출을 확인합니다. 원격 게시 전에는 원격 설치 명령에 이번 변경이 포함되지 않습니다. 설치·활성화·새 세션 노출은 별도로 확인해야 합니다.
-
-## 모델 정책 업데이트
-
-`gptplease` 0.3.0의 Chat/Work 분리, `unreal-agent` 0.1.3의 실행 설정 관측, `session-continuity` 0.1.1의 단일 복구 지점은 유지합니다. `astra-team-building` 0.1.0은 이전 Astra-only/선택형 mixed-model 정책을 대체하며 작업에 맞는 혼합 배정과 동적 팀 구성을 제공합니다. [모델 역할 분담 문서](model-routing-review.md)와 [기존 검증 기록](model-routing-validation.md)의 과거 실행 범위를 구별하세요.
-
-혼합 모델은 설치만으로 활성화되지 않습니다. 메인 Codex 모델·컨텍스트·provider·인증·권한을 변경하지 않으며 전역 custom agent나 daemon을 설치하지 않습니다. PR 브랜치의 변경은 merge 전 `main` 설치에 포함되지 않습니다. 이미 사용하는 source와 버전을 확인하고 명시한 설치 경로만 갱신하세요. 과거 실행 기록을 새 버전의 live 검증으로 해석하지 않습니다.
-
-## Unreal Agent
-
-`unreal-agent`는 skills-only Plugin `0.1.3`입니다. 설치 후 새 작업에서 `$unreal-agent` 또는 `$unreal-agent:unreal-agent`로 명시적으로 호출합니다. 일반 코딩이나 Unreal Engine 작업이라는 이유만으로 자동 실행하지 않으며 Codex 실행 모드도 아닙니다. Standalone을 원하면 `unreal-agent/`를 skill-installer로 선택 설치하고 Plugin과 중복 설치하지 않습니다. 기존 전역 스킬이 있다면 덮어쓰지 말고 어느 설치본을 사용할지 먼저 확인하세요.
-
-변경이 원격에 반영되기 전에는 위 원격 설치 명령만으로 새 Plugin을 받을 수 없습니다. 로컬에서 시험하려면 이 저장소 루트에서 `codex plugin marketplace add "$PWD"`로 checkout을 등록한 뒤 `codex plugin add unreal-agent@oozoofrog-plugin`를 사용합니다. 같은 이름의 marketplace가 이미 있으면 먼저 source가 이 checkout인지 확인하세요. 저장소 파일 추가와 실제 설치·활성화·새 세션 노출은 별개입니다.
-
-Go 1.27+, Git, Python 3.9+, Codex CLI가 있는 환경에서는 runner와 Plugin을 한 명령으로 준비할 수 있습니다:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/oozoofrog/oozoofrog-plugin/main/scripts/install_unreal_agent.sh | bash
-```
-
-이 명령은 upstream `v0.2.0`의 고정 commit을 확인해 `~/.local/bin/unreal-agent-runner`에 빌드·설치합니다 (`UNREAL_AGENT_BIN_DIR`로 경로 선택 가능). Go 버전은 upstream `go.mod`의 최소 1.27.0 이상이어야 합니다. 이미 관리 중인 바이너리는 재실행 시 그대로 두고, `bash scripts/install_unreal_agent.sh --reinstall`은 checksum이 맞는 관리본만 교체하며 이전 바이너리와 marker의 보관 위치를 출력합니다. 기존 미관리/변조 바이너리나 symlink는 덮어쓰지 않습니다. PATH에 설치 디렉터리가 없으면 추가하세요. provider 인증은 설치하지 않습니다. curl 파이프라인 실행 전에는 스크립트 소스를 확인하세요.
-
-기본 실행은 `codex plugin marketplace list --json` 및 `codex plugin list --json`으로 먼저 source와 설치/활성화 상태를 검사합니다. marketplace가 없으면 `codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main`, 일치하는 원격 등록에서 Plugin을 새로 설치할 때는 upgrade, 검증된 로컬 checkout에서는 등록 변경 없이 `codex plugin add unreal-agent@oozoofrog-plugin`를 실행합니다. 기존 설치·활성화 상태는 보존합니다 (비활성 상태도 유지). 다른 source나 확인 불가능한 로컬 checkout이면 runner 설치 전 중단하며 등록/Plugin을 변경하지 않습니다. Codex 변경 전에 `$CODEX_HOME/backups/unreal-agent-install.*` (기본 `~/.codex`)에 config.toml(있으면)과 marketplace/Plugin inventory를 저장합니다. 실패 시 백업을 보존하지만 Codex CLI의 내부 변경을 자동 복구하지 않으므로 메시지와 백업을 확인하고 재실행하세요. `--runner-only`는 Codex 설치를 건너뜁니다. 다른 Plugin·인증을 제거하거나 갱신하지 않습니다.
-
-외부 `unreal-agent-runner`를 별도로 설치하고 사용할 provider의 인증·모델 접근을 준비해야 합니다. Plugin은 실행기 바이너리, 인증 정보, MCP 서버, app, hook을 설치하지 않으며 marketplace의 `ON_INSTALL`은 runner 인증을 제공한다는 뜻이 아닙니다. 원본의 `/Users/oozoofrog/.local/bin/unreal-agent-runner`는 한 Mac의 설치 예이고, `openai-codex` / `gpt-6-astra`는 과거 smoke run 관측값입니다. 현재 환경에서 runner 경로·옵션·모델 가용성을 확인하고 작업에 맞는 runner 모델·thinking level을 선택합니다. 사용자 지정 값은 보존하며, 현재 Codex 대화의 모델 설정은 바뀌지 않습니다. runner가 없으면 제한을 알리고 임의로 Codex 실행으로 대체하지 않습니다.
-
-[스킬 본문](../unreal-agent/SKILL.md)은 절대 workspace 경로, 안전한 JSON 요청, JSONL 이벤트·종료 상태 수집과 결과 검토를 안내합니다. 한 실행은 한 요청 후 종료하며, 이어서 작업하려면 같은 `session_id`와 세션 디렉터리를 재사용합니다. 지속적인 Codex 채팅으로 전환되는 것은 아닙니다. Git·외부 효과는 사용자가 허용한 범위만 수행합니다.
-
-이번 등록의 검증 범위는 배포 inventory, 원본/미러 바이트·모드 일치, 명시적 호출 메타데이터, skills-only 구성, 문서 링크와 정적 validator입니다. 실제 runner 실행·인증·모델 응답, Plugin 설치 및 새 세션의 스킬 노출은 별도로 확인해야 합니다. 과거 smoke run 언급을 이번 배포본의 실행 검증으로 해석하지 않습니다.
 
 ## Local AI Studio
 

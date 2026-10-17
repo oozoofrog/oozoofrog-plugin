@@ -13,7 +13,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-PACKAGES = ("gptplease", "figma-computer-use", "session-continuity", "ponytail-beck-tdd", "unreal-agent", "local-ai-studio", "macpilot")
+PACKAGES = ("gptplease", "local-ai-studio", "macpilot")
 IGNORED_NAMES = {".DS_Store", "__pycache__"}
 IGNORED_SUFFIXES = {".pyc", ".pyo"}
 GENERATED_PATHS = {"macpilot": ("bin", "evidence", "tool/.build", "tool/.swiftpm")}

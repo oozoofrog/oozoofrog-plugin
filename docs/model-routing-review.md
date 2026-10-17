@@ -1,8 +1,10 @@
 # Codex 모델 역할 분담 — 원문 검토와 적용 설계
 
+> 2026-10-17: 이 문서의 관련 스킬은 배포에서 제거했습니다. 과거 검증 기록을 보존하며 소스 링크는 제거 전 커밋을 가리킵니다.
+
 작성·공식 문서 확인: 2026-09-25. 검토 기준: `oozoofrog/codex-skills` main `6e720366830dfd4cdbb1770114bdd957fc243410` (2026-09-24 22:28:39 KST). 이 문서는 기존 검토 요청을 구현 가능한 설계와 사용 안내로 정리한 자체 작성 문서다. 외부 글 전문이나 공식 모델 런타임 사양을 대신하지 않는다.
 
-> 2026-09-26 갱신: 팀 구성은 [Astra Team Building](../plugins/astra-team-building/README.md)으로 대체했습니다. 아래 원문 조사와 비교 평가 도구 설명의 2026-09-25 기록은 보존합니다.
+> 2026-09-26 갱신: 팀 구성은 [Astra Team Building](https://github.com/oozoofrog/oozoofrog-plugin/blob/f6b7dfb354a15cc1d81d9c3160475be9aad3b34a/plugins/astra-team-building/README.md)으로 대체했습니다. 아래 원문 조사와 비교 평가 도구 설명의 2026-09-25 기록은 보존합니다.
 
 ## 1. 원문과 확인 범위
 
@@ -30,17 +32,17 @@ Codex가 개발과 검증의 주체이며 기존 Astra 메인 세션과 긴 맥�
 
 ### astra-team-building: 작업에 맞춘 팀 구성
 
-[스킬 원본](../plugins/astra-team-building/skills/astra-team-building/SKILL.md)은 Astra·Sol·Luna의 적합한 혼합 배정을 제공하며 별도 mixed-model 선언을 요구하지 않는다. [모델 정책](../plugins/astra-team-building/skills/astra-team-building/references/model-routing.md)은 공식 출발점과 역할별 조정 기준을 구별한다. 읽기 전용이라는 이유만으로 단순 모델에 어려운 판단을 맡기지 않는다.
+[스킬 원본](https://github.com/oozoofrog/oozoofrog-plugin/blob/f6b7dfb354a15cc1d81d9c3160475be9aad3b34a/plugins/astra-team-building/skills/astra-team-building/SKILL.md)은 Astra·Sol·Luna의 적합한 혼합 배정을 제공하며 별도 mixed-model 선언을 요구하지 않는다. [모델 정책](https://github.com/oozoofrog/oozoofrog-plugin/blob/f6b7dfb354a15cc1d81d9c3160475be9aad3b34a/plugins/astra-team-building/skills/astra-team-building/references/model-routing.md)은 공식 출발점과 역할별 조정 기준을 구별한다. 읽기 전용이라는 이유만으로 단순 모델에 어려운 판단을 맡기지 않는다.
 
-[팀 설계](../plugins/astra-team-building/skills/astra-team-building/references/team-design.md)는 역할과 세션을 분리한다. 리더 단독부터 시작할 수 있고, 준비된 독립 과제·슬롯·격리 환경·공유 자원·통합 여력에 따라 확장·축소한다. 실제 설정은 [세션 도구](../plugins/astra-team-building/skills/astra-team-building/references/session-tools.md)로 지정하고 요청값과 관측값을 구분한다. 기존 리더의 모델·컨텍스트·권한은 보존한다.
+[팀 설계](https://github.com/oozoofrog/oozoofrog-plugin/blob/f6b7dfb354a15cc1d81d9c3160475be9aad3b34a/plugins/astra-team-building/skills/astra-team-building/references/team-design.md)는 역할과 세션을 분리한다. 리더 단독부터 시작할 수 있고, 준비된 독립 과제·슬롯·격리 환경·공유 자원·통합 여력에 따라 확장·축소한다. 실제 설정은 [세션 도구](https://github.com/oozoofrog/oozoofrog-plugin/blob/f6b7dfb354a15cc1d81d9c3160475be9aad3b34a/plugins/astra-team-building/skills/astra-team-building/references/session-tools.md)로 지정하고 요청값과 관측값을 구분한다. 기존 리더의 모델·컨텍스트·권한은 보존한다.
 
 ### unreal-agent: 이미 있는 라우팅 보완
 
-[스킬 원본](../unreal-agent/SKILL.md)의 외부 runner 경계와 명시 호출은 유지한다. Luna의 자동 출발점을 high로 정리하고 기존 low 예시는 검증되지 않은 좁은 정책임을 명시한다. 사용자가 지정한 지원 low는 유지한다. 자동 low 채택은 별도의 승인된 비교 근거가 있을 때만 한다. 이번 PR은 low/high의 실제 성능 비교 결과를 주장하지 않는다.
+[스킬 원본](https://github.com/oozoofrog/oozoofrog-plugin/blob/f6b7dfb354a15cc1d81d9c3160475be9aad3b34a/unreal-agent/SKILL.md)의 외부 runner 경계와 명시 호출은 유지한다. Luna의 자동 출발점을 high로 정리하고 기존 low 예시는 검증되지 않은 좁은 정책임을 명시한다. 사용자가 지정한 지원 low는 유지한다. 자동 low 채택은 별도의 승인된 비교 근거가 있을 때만 한다. 이번 PR은 low/high의 실제 성능 비교 결과를 주장하지 않는다.
 
 ### session-continuity: 전체 상태를 한 곳에서 관리
 
-[연결 지침](../session-continuity/references/orchestration.md)을 추가했다. 일반 단일 세션의 절차와 템플릿은 유지한다. `.codex/work/<task-id>.md`를 전체 작업 복구 지점으로 쓰면 오케스트레이터 상태에는 워커 배정 등 세부 정보와 참조만 남긴다. state의 정책명과 과거 worker ID가 실행 권한이나 현재 생존 증거가 되지 않게 한다.
+[연결 지침](https://github.com/oozoofrog/oozoofrog-plugin/blob/f6b7dfb354a15cc1d81d9c3160475be9aad3b34a/session-continuity/references/orchestration.md)을 추가했다. 일반 단일 세션의 절차와 템플릿은 유지한다. `.codex/work/<task-id>.md`를 전체 작업 복구 지점으로 쓰면 오케스트레이터 상태에는 워커 배정 등 세부 정보와 참조만 남긴다. state의 정책명과 과거 worker ID가 실행 권한이나 현재 생존 증거가 되지 않게 한다.
 
 ### 변경하지 않은 경계
 

@@ -1,6 +1,0 @@
-interface:
-  display_name: "Ponytail + Beck TDD"
-  short_description: "켄트 벡의 TDD와 Ponytail로 구현하고 기존 테스트를 점검·개선"
-  default_prompt: "$ponytail-beck-tdd로 기존 구현과 테스트를 대조하고 동작 보장을 유지하며 필요한 테스트 개선을 검증해주세요."
-policy:
-  allow_implicit_invocation: false

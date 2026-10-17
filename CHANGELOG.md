@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- 2026-10-17: `astra-team-building`, `figma-computer-use`, `session-continuity`, `ponytail-beck-tdd`, `unreal-agent`의 standalone·Plugin 배포와 Unreal Agent 전용 설치기를 제거했습니다. Marketplace는 `gptplease`, `swift-intelligence`, `local-ai-studio`, `macpilot` 4개만 제공합니다. 설치 안내·미러 동기화·배포 검사를 갱신하고 과거 검증 문서·사용자 작업 기록·별도 실행기와 모델은 보존합니다.
+
 - 저장소와 Codex marketplace 이름을 `codex-skills`에서 `oozoofrog-plugin`으로 변경했습니다. 개별 플러그인 이름은 유지하고 카탈로그 표시명·GitHub repository URL·등록/설치/갱신 명령·Unreal Agent 설치기·배포 검사를 새 이름에 맞췄습니다. 과거 검증 기록과 폐기된 플러그인의 이전 선택자는 보존하며, 기존 설치·활성화·사용자 데이터는 자동 이전하지 않습니다. 같은 대화에서 구현한 MacPilot 소스·플러그인 배포본을 함께 게시합니다.
 
 - `macpilot`에 `mac_record`를 추가했습니다. macOS 15+ ScreenCaptureKit으로 창·디스플레이·선택 영역과 오디오를 H.264/AAC MP4에 기록하고, 파일의 트랙·코덱·PCM 신호·시간별 프레임을 검사합니다. 마이크 없이 녹화하며 앱 귀속 오디오와 전체 시스템 오디오, 완료·무음·취소를 구분합니다. Safari와 실제 GUI Chrome의 YouTube 녹화, FFmpeg 독립 디코딩과 MCP 취소 검증을 별도 증거로 남깁니다.

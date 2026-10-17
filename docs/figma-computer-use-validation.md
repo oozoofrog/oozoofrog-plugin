@@ -1,5 +1,7 @@
 # Figma Computer Use 기능 검증 — 2026-09-07
 
+> 2026-10-17: 이 문서의 관련 스킬은 배포에서 제거했습니다. 과거 검증 기록을 보존하며 소스 링크는 제거 전 커밋을 가리킵니다.
+
 네이티브 Figma의 주요 작업 흐름은 실제 실행으로 확인했다. 브라우저 편집과 클라우드/이름 있는 버전 저장은 확인하지 못했으므로 전체 무조건 통과로 판정하지 않는다. 문서에 소개된 모든 고급 기능·조합·플랫폼을 시험한 결과도 아니다.
 
 ## 환경과 범위
@@ -59,7 +61,7 @@
 | Chrome `Timed out after 10000ms waiting for CDP command Accessibility.enable.` | computer-use 도구 내부 오류 원문. 직접 CDP 사용 없음 |
 | Chrome 기존 tab 선택 `js execution timed out; kernel reset, rerun your request` | reset 후 하나의 문서화된 app entrypoint로 시작해 네이티브 복구. 이전 바인딩 재사용/파일 재생성 없음 |
 
-이 결과를 [computer-use 절차](../figma-computer-use/references/computer-use.md), [패키지 내 검증 범위](../figma-computer-use/references/runtime-validation.md), [호환성 기준](../figma-computer-use/references/compatibility.json)에 반영했다. Skill/Plugin은 함께 0.1.0 → 0.1.1로 갱신했다.
+이 결과를 [computer-use 절차](https://github.com/oozoofrog/oozoofrog-plugin/blob/f6b7dfb354a15cc1d81d9c3160475be9aad3b34a/figma-computer-use/references/computer-use.md), [패키지 내 검증 범위](https://github.com/oozoofrog/oozoofrog-plugin/blob/f6b7dfb354a15cc1d81d9c3160475be9aad3b34a/figma-computer-use/references/runtime-validation.md), [호환성 기준](https://github.com/oozoofrog/oozoofrog-plugin/blob/f6b7dfb354a15cc1d81d9c3160475be9aad3b34a/figma-computer-use/references/compatibility.json)에 반영했다. Skill/Plugin은 함께 0.1.0 → 0.1.1로 갱신했다.
 
 ## 실행한 패키지 검사
 
