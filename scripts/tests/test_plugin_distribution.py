@@ -62,11 +62,14 @@ class PluginDistributionTests(unittest.TestCase):
                          "tool/Sources/MacPilotCore/Engine.swift",
                          "tool/Sources/MacPilotFixture/main.swift",
                          "tool/Tests/MacPilotCoreTests/CoreTests.swift",
-                         "scripts/verify_mcp.py", "scripts/verify_runtime.py", "scripts/verify_features.py",
+                         "scripts/verify_mcp.py", "scripts/verify_connection.py", "scripts/verify_runtime.py", "scripts/verify_features.py",
                          "scripts/verify_browser.mjs", "scripts/verify_safari.py", "scripts/verify_preview_drag.swift", "browser/extension/manifest.json",
                          "browser/extension/background.js", "browser/extension/content.js", "browser/extension/popup.html",
                          "browser/extension/popup.js", "references/workflows.md", "references/private-api.md", "references/development.md",
-                         "tool/Sources/MacPilotCore/Tasks.swift", "tool/Sources/MacPilotCore/BrowserBridge.swift",
+                         "tool/Sources/MacPilotCore/Tasks.swift", "tool/Sources/MacPilotCore/ConnectionDiagnostics.swift",
+                         "tool/Tests/MacPilotCoreTests/ConnectionTests.swift", "references/mcp-recovery.md",
+                         "tool/Sources/MacPilotCore/PermissionSetup.swift", "tool/Tests/MacPilotCoreTests/PermissionSetupTests.swift",
+                         "references/permission-setup.md", "scripts/verify_permission_drag.swift", "tool/Sources/MacPilotCore/BrowserBridge.swift",
                          "tool/Sources/MacPilotCore/SafariBridge.swift", "tool/Sources/MacPilotCore/Improvements.swift",
                          "tool/Sources/MacPilotCore/BrowserDeveloperSettings.swift",
                          "tool/Tests/MacPilotCoreTests/BrowserDeveloperTests.swift",
@@ -80,7 +83,7 @@ class PluginDistributionTests(unittest.TestCase):
             self.assertFalse((mirror / relative).exists(), relative)
         manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text())
         self.assertEqual(source.name, manifest["name"])
-        self.assertEqual("3.0.0", manifest["version"])
+        self.assertEqual("3.1.0", manifest["version"])
         self.assertEqual(manifest["version"], json.loads((source / "browser/extension/manifest.json").read_text())["version"])
         frontmatter = (source / "SKILL.md").read_text().split("---", 2)[1]
         self.assertEqual({"name", "description"}, {line.split(":", 1)[0] for line in frontmatter.splitlines() if ":" in line})

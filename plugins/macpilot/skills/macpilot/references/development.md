@@ -10,6 +10,7 @@
 xcrun swift test --package-path macpilot/tool
 macpilot/scripts/build.sh
 python3 macpilot/scripts/verify_mcp.py
+python3 macpilot/scripts/verify_connection.py --binary macpilot/bin/MacPilot.app/Contents/MacOS/macpilot
 python3 macpilot/scripts/verify_browser_developer.py
 python3 macpilot/scripts/verify_features.py --stage all
 python3 macpilot/scripts/verify_runtime.py
@@ -17,7 +18,11 @@ python3 scripts/sync_skill_mirrors.py --package macpilot --write
 python3 -m unittest discover -s scripts/tests -v
 ```
 
+`PermissionSetupTests`는 한글·공백 경로의 실제 파일 URL을 전용 pasteboard로 왕복하고, 앱 정체성·잘못된 설정 인수·창 배치를 검사한다. `MACPILOT_PERMISSION_TEST_EVIDENCE=/absolute/layout.png`를 지정하면 창 내용의 렌더링을 저장한다. 이 검사는 시스템 설정의 실제 드롭이나 사용자 권한 승인을 수행하지 않는다. 설치된 번들의 `permission-setup` 실행·창 표시와 현재 MCP의 권한 재검사는 별도로 확인한다. `xcrun swift macpilot/scripts/verify_permission_drag.swift PID WINDOW_ID X Y /absolute/MacPilot.app START_ID`는 새 관찰에서 얻은 안내 창 PID·시작 ID·창 ID·드래그 항목의 화면 좌표를 받아 전용 테스트 창으로 실제 파일 드래그를 검사한다. 시스템 설정에는 드롭하지 않는다. 이 실행은 전경 앱과 포인터를 이동하며 Post Event 권한이 필요하다.
+
 `verify_features.py --stage tasks|preview|files|browser|safari|codex`로 해당 단계만 실행할 수 있다. `all`은 전부 실행한다. 이미 검증한 경로는 관련 입력·실패가 바뀔 때 다시 실행한다. `verify_runtime.py`는 기존 입력·메뉴·창·보안·CLI·MCP 회귀를 위해 release 앱을 다시 빌드·서명한다. 두 실행기는 실제 전경 앱과 포인터에 영향을 줄 수 있다. 전용 fixture와 합성 데이터만 사용한다.
+
+`verify_connection.py`는 `--binary`로 지정한 빌드의 MCP 두 개와 검사 자식을 사용한다. 현재 연결과 CLI 호출 경로, PID·시작 ID·instance ID, 실제 handshake, 기존 상태 경로 보존, 검사 자식 정리를 확인한다. 데스크톱 앱이나 다른 MCP는 종료하지 않는다. `ConnectionTests`는 PID 재사용·잘못된 인수·EOF·프로토콜 오류·시간 초과·취소와 실행 잠금 중 진단을 검증한다. [복구 범위](mcp-recovery.md)를 따른다.
 
 - tasks/preview: 두 전용 앱, 커서 격리, 서로 다른 대상의 동시 실행, 같은 대상 충돌, 취소, 포커스, private ID, 새 캡처 프레임과 패널 제어를 확인한다.
 - files: 임시 파일의 원본 바이트·해시, Finder 태그, 실제 디스플레이와 CoreAudio를 확인한다. 오디오 쓰기는 현재 값과 같은 값으로 제한한다.
@@ -30,6 +35,8 @@ python3 -m unittest discover -s scripts/tests -v
 ## 상태와 경로
 
 컨트롤러 상태는 `TemporaryDirectory` 또는 기본 사용자 Application Support에 둔다. Store는 쓰기 가능한 공유 상위 디렉터리·심볼릭 링크·잘못된 소유권을 거부한다. 외부 체크아웃이 다른 사용자에게 쓰기 가능한 볼륨 아래에 있으면 그 안에 컨트롤러 상태를 만들지 않는다. 테스트를 위해 Store 검사를 완화하지 않는다. 증거와 실행 상태를 분리한다.
+
+Store는 이미 존재하는 환경 변수 지정 디렉터리에 소유 표식 `.macpilot-state-v1`이 없으면 거부한다. `mkdtemp`로 만든 0700 컨테이너 아래의 **아직 없는** `state/`를 자식의 `MACPILOT_STATE_DIR`로 지정하여 Store가 직접 만들고 표식을 쓰게 한다. 임시 폴더를 먼저 만들었다는 이유로 Store의 소유 검사를 우회하지 않는다.
 
 macOS의 `/var`와 `/private/var`처럼 같은 파일의 경로 표현이 다를 수 있다. 파일 경로 비교는 resolve한 경로 또는 파일 정체성으로 한다. 원본 바이트·해시 검증을 경로 문자열 비교로 대신하지 않는다.
 

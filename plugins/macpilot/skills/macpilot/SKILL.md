@@ -1,6 +1,6 @@
 ---
 name: macpilot
-description: macOS 앱·창·메뉴·파일·시스템과 브라우저를 제어하고 화면·시스템 오디오를 녹화·검증한다. 작업별 멀티 가상 커서, 백그라운드 제어, 라이브 프리뷰, 선택적 private API와 Codex 개선 요청 전송이 필요한 데스크톱 워크플로에 사용한다.
+description: macOS 앱·창·메뉴·파일·시스템과 브라우저를 제어하고 화면·시스템 오디오를 녹화·검증한다. 권한 요청·앱 드래그 설정, MCP 연결 진단, 작업별 멀티 가상 커서, 백그라운드 제어, 라이브 프리뷰, 선택적 private API와 Codex 개선 요청 전송이 필요한 데스크톱 워크플로에 사용한다.
 ---
 
 # MacPilot
@@ -13,9 +13,11 @@ description: macOS 앱·창·메뉴·파일·시스템과 브라우저를 제어
 - 화면·시스템 오디오 MP4 녹화, 저장 파일·PCM·프레임 검사: [녹화 범위와 사용법](references/recording.md).
 - Safari·Chrome 개발자 설정 조회·승인 후 활성화: [브라우저 개발자 설정](references/browser-developer-settings.md). 승인 대화상자는 사용자가 직접 누르며 에이전트는 조작하지 않는다.
 - 권한·입력 경로·플랫폼 제약: [macOS 기능과 기술 선택](references/macos-capabilities.md).
+- 권한 요청 창·설정 목록에 앱 드래그: [권한 설정](references/permission-setup.md). `mac_permission`으로 요청하고, 직접 추가가 필요하면 `operation=setup` 또는 CLI `permission-setup`을 사용한다. 최종 승인은 사용자가 한다.
 - private API 사용·추가 조사: [비공개 API 범위](references/private-api.md).
 - HID·VM·저수준 입력을 검토할 때: [입력 기술 조사](references/macos-input-research.md).
 - 소스 변경·실제 검증: [개발과 검증](references/development.md).
+- MCP `Transport closed`·권한 차이·연결 복구: [연결 진단과 복구](references/mcp-recovery.md). `mac_connection status`로 현재 연결을 확인하고, 호출할 수 없으면 CLI `connection-check`로 격리된 새 MCP를 검사한다. 별도 검사 성공과 현재 대화의 재연결 성공을 구분한다.
 
 ## 실행
 

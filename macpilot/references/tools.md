@@ -1,18 +1,24 @@
 # 도구 사용법
 
-아래 CLI 예시는 설치되거나 체크아웃된 `macpilot/` 스킬 디렉터리를 현재 디렉터리로 사용한다. Plugin 설치본에서도 해당 스킬 디렉터리의 `scripts/macpilot`를 사용한다. MCP 클라이언트 설정에는 실제 설치 위치의 절대 경로를 지정한다.
+아래 CLI 예시는 설치되거나 체크아웃된 `macpilot/` 스킬 디렉터리를 현재 디렉터리로 사용한다. Plugin 설치본에서도 해당 스킬 디렉터리의 `scripts/macpilot`를 사용한다. MCP 클라이언트 설정에는 실제 설치 위치 또는 새 설치본을 가리키는 안정된 launcher의 절대 경로를 지정한다. 버전별 캐시 경로를 직접 지정했다면 [설치본 갱신](mcp-recovery.md)의 경로 보존을 확인한다.
 
 ## 실행과 빌드
 
 ```sh
 ./scripts/macpilot doctor
 ./scripts/macpilot tools
+./scripts/macpilot connection-check
+./scripts/macpilot permission-setup accessibility
 ./scripts/build.sh
 ```
 
 빌드에는 Xcode 또는 Swift를 포함한 Apple 개발 도구가 필요하다. SwiftPM의 외부 의존성은 없다. 빌드한 실행 파일은 `bin/MacPilot.app/Contents/MacOS/macpilot`에 있다. 런처는 실행 파일이 없거나 `Package.swift`, `build.sh`, Swift 소스가 설치된 실행 파일보다 새로우면 원자적으로 다시 빌드한다. 릴리스 검증은 타임스탬프 판단에 의존하지 않고 `build.sh`를 직접 실행한다.
 
 CLI는 성공 시 JSON을 stdout에 출력한다. 인수·권한·대상 오류는 JSON 오류와 종료 코드 2를 반환한다. 도움말은 일반 텍스트다. 빌드 로그는 stderr로 출력한다.
+
+`permission-setup [accessibility|screenCapture]`은 실제 앱을 드래그할 수 있는 창과 시스템 설정을 연다. 창을 닫으면 CLI가 종료된다. MCP에서는 `mac_permission`에 `operation=setup`을 추가한다. 기본 권한 요청과 실제 승인, 현재 MCP와 안내 창의 권한은 [권한 설정](permission-setup.md)에서 구분한다.
+
+`mac_connection`의 `status`는 현재 프로세스·부모 신원과 호출 경로를 반환한다. `probe`와 CLI `connection-check`는 기존 연결을 변경하지 않고 격리된 MCP 자식을 검사·정리한다. 현재 MCP 호출 실패와 별도 CLI 성공을 구분하는 방법은 [연결 진단과 복구](mcp-recovery.md)를 따른다.
 
 ```sh
 printf '%s\n' '{}' | ./scripts/macpilot call mac_apps --json -
