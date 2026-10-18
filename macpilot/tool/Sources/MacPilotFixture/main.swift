@@ -6,6 +6,16 @@ final class FixtureApplication: NSApplication {
             if let fixture=delegate as? Fixture {
                 let name = event.type == .keyDown ? "keyDown" : event.type == .keyUp ? "keyUp" : "flagsChanged"
                 fixture.events[name,default:0] += 1
+                if event.type == .keyDown {
+                    fixture.heldKeys.insert(event.keyCode)
+                    fixture.maximumHeldKeys = max(fixture.maximumHeldKeys, fixture.heldKeys.count)
+                    fixture.keyDownTimes[event.keyCode] = ProcessInfo.processInfo.systemUptime
+                } else if event.type == .keyUp {
+                    fixture.heldKeys.remove(event.keyCode)
+                    if let started = fixture.keyDownTimes.removeValue(forKey: event.keyCode) {
+                        fixture.lastHoldSeconds = ProcessInfo.processInfo.systemUptime - started
+                    }
+                }
                 fixture.save()
             }
             let info:[String:Any] = ["eventType":event.type.rawValue,"keyCode":event.keyCode,"flags":event.modifierFlags.rawValue,
@@ -40,6 +50,10 @@ final class Fixture: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
     let field = NSTextField(string:"초기 값"), secure = NSSecureTextField(string:"synthetic-secret")
     let counter = NSTextField(labelWithString:"0"), canvas = Canvas(frame:NSRect(x:24,y:36,width:590,height:120))
     var clicks = 0, events: [String:Int] = [:]
+    var heldKeys: Set<UInt16> = []
+    var maximumHeldKeys = 0
+    var keyDownTimes: [UInt16: Double] = [:]
+    var lastHoldSeconds = 0.0
     var focusShiftArmed = false
     let directory: URL
     var timer: Timer?
@@ -98,7 +112,7 @@ final class Fixture: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
     func save() {
         let cg = CGEvent(source:nil)?.location ?? .zero
         let selection=field.currentEditor()?.selectedRange ?? NSRange(location:0,length:0)
-        let state:[String:Any] = ["pid":getpid(),"text":field.stringValue,"buttonCount":clicks,"events":events,"selection":["start":selection.location,"length":selection.length],
+        let state:[String:Any] = ["heldKeys":Array(heldKeys).sorted(),"maximumHeldKeys":maximumHeldKeys,"lastHoldSeconds":lastHoldSeconds,"pid":getpid(),"text":field.stringValue,"buttonCount":clicks,"events":events,"selection":["start":selection.location,"length":selection.length],
             "secureUnchanged":secure.stringValue == "synthetic-secret","focusShiftArmed":focusShiftArmed,
             "active":NSApp.isActive,"sheetOpen":window.attachedSheet != nil,"windowNumber":window.windowNumber,"twinWindowNumber":twin?.windowNumber ?? 0,"systemCursor":["x":cg.x,"y":cg.y]]
         if let data=try? JSONSerialization.data(withJSONObject:state,options:[.sortedKeys,.prettyPrinted]) { try? data.write(to:directory.appendingPathComponent("state.json"),options:.atomic) }

@@ -185,3 +185,15 @@ python3 ./scripts/verify_mcp.py
 단일 창 관찰은 macOS 14.2 이상에서 `includeChildWindows=false`로 창 픽셀과 메타데이터 범위를 일치시킨다. Blender File View가 새 창이면 새 windowID로 관찰한다. 파일명 클릭 전 mouse-move를 보내 UI 영역을 갱신한다. 좌표는 `screen|window|normalized|image` 중 명시하며, 화면 전체 캡처와 작은 창 이미지를 혼용하지 않는다.
 
 저장은 고유 새 경로에만 시도한다. 이름 입력 후 새 화면에서 정확한 전체 파일명과 Save As 버튼을 확인하고 저장한다. 입력 수신·파일 생성·Blender filepath/dirty와 파일 크기/mtime/SHA는 서로 다른 검증이다. 전송이 불확실하면 실제 창과 파일을 재조회하며 입력이나 저장을 바로 반복하지 않는다.
+
+
+## 게임 키 유지
+
+`mac_game_input`은 관찰한 focused AX 노드에 `keys`를 동시에 유지하고 `tapKeys`를 50ms씩 반복해서 누른 뒤 `durationMs` 20–10000ms 후 역순으로 해제한다. 두 목록을 합쳐 서로 다른 키 1–8개만 허용한다. 반복 간격은 `tapIntervalMs` 100–2000ms이며 기본값은 250ms다. 예: `keys=["left","up"]`, `durationMs=1500`, `route="global"`, `node="root"`. 게임의 AX 창 자체가 실제 포커스인 경우 root를 쓴다. 매 50ms에 프로세스 정체성·전경·AX 포커스·Secure Event Input을 재검사한다. 취소·오류에도 해제를 시도한다. 사용자와 같은 전역 키보드를 공유하므로 사용자 조작과의 완전한 격리는 없다. 물리 HID 장치나 커널 드라이버를 생성하지 않는다.
+
+`eventSource="hid"`는 공개 Quartz의 HID 시스템 상태를 사용한다. 기본값은 `private`이며 `hid`는 global 전경에서만 허용한다. 가상 HID 장치를 생성하는 옵션이 아니며, 물리 장치를 조회하는 게임에서 수신을 보장하지 않는다.
+
+문자 키가 IME에 소비되면 명시적으로 `inputSource="ascii"`를 선택한다. 이 모드는 global 전경에서만 허용하며 원래 입력 소스를 복구한다. 이벤트 전송과 실제 이동·게임 결과를 별도로 검증한다. 각 동작 후 새 관찰을 사용한다.
+
+
+전역 키보드·마우스 입력에는 모든 디스플레이의 3pt 가장자리 효과와 ‘MacPilot 조작 중 · 키보드/마우스’ 안내가 표시된다. 안내는 포커스나 클릭을 받지 않는다. 동작 줄이기 설정에서는 가장자리 효과를 고정한다. 완료·취소·오류·소유 프로세스 종료 시 숨기며, 안내 호스트가 사라지면 추가 입력을 중단하고 눌린 키를 해제한다. process 경로와 AX 작업에는 이 전역 입력 안내를 표시하지 않는다.

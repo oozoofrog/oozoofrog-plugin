@@ -39,10 +39,10 @@ import Carbon
     public static func post(_ event: CGEvent, route: String, pid: Int32) {
         if route == "process" { event.postToPid(pid) } else { event.post(tap: .cghidEventTap) }
     }
-    public static func keyEvents(key: String, modifiers: [String]) throws -> [CGEvent] {
+    public static func keyEvents(key: String, modifiers: [String], stateID: CGEventSourceStateID = .privateState) throws -> [CGEvent] {
         guard let code = keyCodes[key.lowercased()] else { throw ToolFailure("invalid_argument", "Unknown key name; use keyCode from the documented map") }
         _ = try flags(modifiers) // Validate before creating any events.
-        let source = CGEventSource(stateID: .privateState)
+        let source = CGEventSource(stateID: stateID)
         // GHOST and other event-driven clients track modifier transitions, rather
         // than reconstructing held keys from the flags on the printable key.
         let selected = modifierKeys.filter { modifiers.contains($0.name) }
@@ -76,6 +76,17 @@ import Carbon
         guard event.type == .flagsChanged,
               let item = modifierKeys.first(where: { Int64($0.code) == event.getIntegerValueField(.keyboardEventKeycode) }) else { return false }
         return event.flags.contains(item.flag)
+    }
+    public static func heldKeyEvents(_ keys: [String], stateID: CGEventSourceStateID = .privateState) throws -> [(down: CGEvent, up: CGEvent)] {
+        let names = keys.map { $0.lowercased() }
+        guard !names.isEmpty, names.count <= 8, Set(names).count == names.count else {
+            throw ToolFailure("invalid_argument", "Use one to eight distinct physical key names")
+        }
+        // Prepare the entire set before posting any down event.
+        return try names.map { name in
+            let events = try keyEvents(key: name, modifiers: [], stateID: stateID)
+            return (events[0], events[1])
+        }
     }
     public static func textEvents(_ text: String) throws -> [CGEvent] {
         let source = CGEventSource(stateID: .privateState)

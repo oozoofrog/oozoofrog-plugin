@@ -71,3 +71,16 @@ WindowServer 인벤토리의 alpha=1이 전체 사각형의 불투명도를 뜻�
 
 
 입력 fixture 회귀는 `python3 macpilot/scripts/verify_input.py --binary /absolute/MacPilot.app/Contents/MacOS/macpilot --fixture /absolute/macpilot-fixture --evidence /absolute/new-evidence-directory`로 실행한다. fixture는 같은 저장소의 `xcrun swift build --package-path macpilot/tool --product macpilot-fixture`로 만든다. 새 증거 디렉터리만 허용하고 일반 종료만 요청한다. 입력 소스 변경으로 AXWindows 순서가 달라져도 기존 frame/title의 유일성·정확한 포커스·프로세스 정체성을 유지해야 한다. 배열 index를 창 정체성으로 사용하지 않는다.
+
+## 게임 입력 회귀
+
+`verify_input.py`는 동시 키 유지 시간과 실제 fixture의 눌린 키 집합을 확인한다. MCP 취소는 원래 응답을 생략하므로 취소 요청의 응답을 기다리지 않는다. 후속 `mac_doctor`가 응답하는지와 fixture의 모든 키 해제를 함께 검사한다. 게임에서는 튜토리얼의 실제 키를 확인하고 이동·공격·스테이지 완료를 각각 관찰한다. fixture 통과만으로 물리 HID와의 동등성이나 실제 게임 공격 성공을 주장하지 않는다.
+
+ASCII 입력 소스 전환은 별도 IME AX utility 창을 만들 수 있다. private 창 ID를 재검사할 때 관찰한 frame/title 후보만 조회한다. 관련 없는 utility 창의 private ID 실패 때문에 게임 입력 전체를 중단하지 않는다. 원래 대상의 private ID·frame/title·유일성 검사는 유지한다.
+
+
+전역 입력 안내는 `python3 macpilot/scripts/verify_input_activity.py --binary /absolute/MacPilot.app/Contents/MacOS/macpilot --fixture /absolute/macpilot-fixture --evidence /absolute/new-evidence-directory`로 검증한다. 격리된 상태와 소유한 fixture에서 실제 화면 표시·포커스 유지·클릭 통과·완료와 취소 시 숨김·안내 호스트 종료 후 입력 중단과 키 해제를 검사한다. 렌더링된 `during-input.png`와 `after-input.png`를 직접 검수한다. 호스트 종료 검사는 이 실행이 시작한 격리된 안내 프로세스만 대상으로 한다.
+
+다른 앱의 전체 화면에서는 `fullScreenAuxiliary`만으로 안내의 실제 노출을 보장할 수 없다. UI 호스트를 `.accessory`로 실행하고 `canJoinAllApplications`도 지정한다. 패널 생성 직후부터 반복 생성하지 말고 다음 tick에서 실제 표시 상태가 정착할 시간을 둔다. 안내 패널의 active Space와 WindowServer onscreen 목록을 함께 확인한다. `NSWindow.isVisible`이나 내부 상태만으로 전체 화면 표시 성공을 판정하지 않는다. 실제 게임의 디스플레이 캡처로 별도 확인한다.
+
+안내 호스트의 시작·응답 지연 검사는 격리된 소유 호스트만 2.4초 정지한다. 실제 표시 확인 전 입력이 없고, 대기 중 소유 레코드가 갱신되며, 호스트 재개 후 입력과 종료 시 해제가 이루어지는지 확인한다. 시작 대기는 최대 5초다. 실제 화면·위치·피해에 변화가 없으면 전송 결과와 무관하게 현재 게임 입력 경로는 실패로 기록한다.

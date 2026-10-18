@@ -169,7 +169,11 @@ public struct AXMenuItemInfo: Codable, Equatable {
     public static func root(_ observation: Observation) throws -> AXUIElement {
         let list = try windows(observation.pid)
         if observation.windowIdentityBackend == "_AXUIElementGetWindow" {
-            let matches = try list.filter { try PrivateAPI.windowID($0) == observation.windowID }
+            // An IME may add utility AX windows that cannot provide a native
+            // window ID. Inspect only the already observed geometry and title;
+            // still require the exact private ID and a unique match.
+            let candidates = list.filter { frame($0) == observation.windowFrame && string($0, kAXTitleAttribute) == observation.windowTitle }
+            let matches = try candidates.filter { try PrivateAPI.windowID($0) == observation.windowID }
             guard matches.count == 1, let root = matches.first, frame(root) == observation.windowFrame,
                   string(root, kAXTitleAttribute) == observation.windowTitle else {
                 throw ToolFailure("stale_observation", "Private window identity or observed geometry changed")

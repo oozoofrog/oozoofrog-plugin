@@ -710,6 +710,8 @@ import CryptoKit
                 event.location = p; event.flags = []; Input.address(event, observation: o); events = [event]
             }
             try Task.checkCancellation()
+            let activity = route == "global" ? try await InputActivityScope.begin(store: baseStore, kind: "마우스") : nil
+            defer { activity?.finish() }
             let before = cursorObject(); try store.consume(o)
             var posted = 0
             var pendingRelease: CGEvent?
@@ -718,6 +720,7 @@ import CryptoKit
                     try Task.checkCancellation()
                     try ProcessIdentity.require(pid: o.pid, expected: o.processStartID)
                     try Input.preflight()
+                    try activity?.verify()
                     if route == "global" {
                         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == o.pid else {
                             throw ToolFailure("foreground_changed", "The foreground app changed")
@@ -764,6 +767,88 @@ import CryptoKit
                 result["warning"] = warning
             }
             return result
+        case "mac_game_input":
+            try a.only(["observation", "node", "route", "keys", "tapKeys", "tapIntervalMs", "durationMs", "inputSource", "eventSource"])
+            let nodeID = try a.string("node")
+            let keyNames = try a.strings("keys"), tapNames = try a.strings("tapKeys")
+            let eventSource = try a.string("eventSource", default: "private")
+            guard ["private", "hid"].contains(eventSource) else { throw ToolFailure("invalid_argument", "eventSource must be private or hid") }
+            let prepared = try Input.heldKeyEvents(keyNames + tapNames, stateID: eventSource == "hid" ? .hidSystemState : .privateState)
+            let keys = Array(prepared.prefix(keyNames.count)), tapKeys = Array(prepared.dropFirst(keyNames.count))
+            let tapInterval = try a.integer("tapIntervalMs", default: 250, range: 100...2000)
+            let duration = try a.integer("durationMs", range: 20...10_000)
+            let sourceMode = try a.string("inputSource", default: "current")
+            guard ["current", "ascii"].contains(sourceMode) else {
+                throw ToolFailure("invalid_argument", "inputSource must be current or ascii")
+            }
+            let (o, route) = try inputContext(a, keyboard: true)
+            if eventSource == "hid", route != "global" { throw ToolFailure("invalid_argument", "HID system state requires route=global") }
+            if sourceMode == "ascii", route != "global" {
+                throw ToolFailure("invalid_argument", "Temporary ASCII selection requires route=global")
+            }
+            try Task.checkCancellation()
+            let activity = route == "global" ? try await InputActivityScope.begin(store: baseStore, kind: "키보드") : nil
+            defer { activity?.finish() }
+            try store.consume(o)
+            let sourceScope = sourceMode == "ascii" ? try KeyboardInputSourceScope() : nil
+            var pending: [CGEvent] = []
+            // Release even on cancellation, foreground loss, or an input-source change.
+            defer {
+                for event in pending.reversed() {
+                    _ = postCleanupRelease(event, route: route, observation: o, pointer: false)
+                }
+                sourceScope?.restore()
+            }
+            if sourceScope != nil { try await Task.sleep(nanoseconds: 100_000_000) }
+            for key in keys {
+                try Task.checkCancellation()
+                try sourceScope?.verify()
+                try activity?.verify()
+                try revalidateKeyboardTarget(o, nodeID: nodeID, route: route)
+                key.down.timestamp = DispatchTime.now().uptimeNanoseconds
+                pending.append(key.up)
+                Input.post(key.down, route: route, pid: o.pid)
+            }
+            let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(duration) * 1_000_000
+            var nextTap: UInt64 = 0, tapReleaseAt: UInt64 = 0, tapActive = false, tapCount = 0
+            while DispatchTime.now().uptimeNanoseconds < deadline {
+                try Task.checkCancellation()
+                try sourceScope?.verify()
+                try activity?.verify()
+                try revalidateKeyboardTarget(o, nodeID: nodeID, route: route)
+                let now = DispatchTime.now().uptimeNanoseconds
+                if tapActive, now >= tapReleaseAt {
+                    for key in tapKeys.reversed() {
+                        _ = postCleanupRelease(key.up, route: route, observation: o, pointer: false)
+                        let code = key.up.getIntegerValueField(.keyboardEventKeycode)
+                        pending.removeAll { $0.getIntegerValueField(.keyboardEventKeycode) == code }
+                    }
+                    tapActive = false
+                }
+                if !tapKeys.isEmpty, !tapActive, now >= nextTap {
+                    for key in tapKeys {
+                        key.down.timestamp = DispatchTime.now().uptimeNanoseconds
+                        pending.append(key.up)
+                        Input.post(key.down, route: route, pid: o.pid)
+                    }
+                    tapActive = true; tapCount += 1
+                    tapReleaseAt = now + 50_000_000
+                    nextTap = now + UInt64(tapInterval) * 1_000_000
+                }
+                let remaining = deadline - min(deadline, DispatchTime.now().uptimeNanoseconds)
+                try await Task.sleep(nanoseconds: min(50_000_000, remaining))
+            }
+            for event in pending.reversed() {
+                event.timestamp = DispatchTime.now().uptimeNanoseconds
+                _ = postCleanupRelease(event, route: route, observation: o, pointer: false)
+            }
+            pending.removeAll()
+            try await Task.sleep(nanoseconds: 100_000_000)
+            var result: [String: Any] = ["status": "dispatched_unverified", "route": route,
+                "keysHeld": keys.count, "eventSource": eventSource, "tapCount": tapCount, "durationMs": duration, "releaseEventsPosted": keys.count + tapCount * tapKeys.count,
+                "verification": "Balanced bounded input was posted; observe the game to verify movement and outcome"]
+            if let sourceScope { result["keyboardInputSource"] = sourceScope.restore() }
+            return result
         case "mac_key", "mac_type":
             if tool == "mac_key" {
                 try a.only(["observation", "node", "route", "key", "modifiers", "inputSource"])
@@ -779,6 +864,8 @@ import CryptoKit
                 throw ToolFailure("invalid_argument","Temporary ASCII selection requires route=global and the selected foreground app")
             }
             try Task.checkCancellation()
+            let activity = route == "global" ? try await InputActivityScope.begin(store: baseStore, kind: "키보드") : nil
+            defer { activity?.finish() }
             try store.consume(o)
             let sourceScope = sourceMode == "ascii" ? try KeyboardInputSourceScope() : nil
             defer { sourceScope?.restore() }
@@ -798,6 +885,7 @@ import CryptoKit
                 do {
                     try Task.checkCancellation()
                     try sourceScope?.verify()
+                    try activity?.verify()
                     try revalidateKeyboardTarget(o, nodeID: nodeID, route: route)
                 } catch {
                     if error is CancellationError {

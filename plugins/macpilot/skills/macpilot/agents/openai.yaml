@@ -1,4 +1,4 @@
 interface:
   display_name: "MacPilot"
-  short_description: "macOS·브라우저 제어, 녹화·멀티 커서, 권한 아이콘 안내·자동 추가와 MCP 진단"
-  default_prompt: "$macpilot로 macOS·브라우저 작업과 화면·시스템 오디오 녹화를 수행하고 결과를 검증하세요."
+  short_description: "macOS·브라우저·게임 키 제어, 녹화·멀티 커서, 조작 중 화면 안내·권한 설정과 MCP 진단"
+  default_prompt: "$macpilot로 macOS·브라우저·게임 키 조작과 화면·시스템 오디오 녹화를 수행하고 결과를 검증하세요."
