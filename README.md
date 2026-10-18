@@ -20,13 +20,13 @@ After setup, inspect supported commands with `ai --help`. Public LocalAIHub sour
 
 ## MacPilot
 
-Use `macpilot` to observe, execute, and verify macOS app, window, menu, file, system, and browser tasks. It supports per-task virtual cursors, background control, live previews, optional private APIs, and sending authorized improvement requests to Codex.
+Use `macpilot` to observe, execute, and verify macOS app, window, menu, file, system, and browser tasks. It supports bounded simultaneous game-key holds and repeated taps, visible screen edges and a small notice during system keyboard/mouse input, per-task virtual cursors, background control, live previews, optional private APIs, and sending authorized improvement requests to Codex.
 
 ```text
 Use $macpilot to perform the macOS and browser tasks, record the screen and system audio, and verify the results.
 ```
 
-The source is maintained in [macpilot/](macpilot/), with a distribution copy in the [Plugin skill](plugins/macpilot/skills/macpilot/SKILL.md). Version `3.2.1` includes the Swift core, CLI and MCP implementation, task isolation, cancellation, focus control, live capture and overlays, file operations, Finder tags, CoreAudio, a Chromium extension, Safari Apple Events, and a local improvement-request queue with Codex app-server delivery. The physical OS cursor and keyboard focus remain shared resources. Support varies by app and browser; see the [workflow and backend limits](macpilot/references/workflows.md).
+The source is maintained in [macpilot/](macpilot/), with a distribution copy in the [Plugin skill](plugins/macpilot/skills/macpilot/SKILL.md). Version `3.3.0` includes the Swift core, CLI and MCP implementation, task isolation, cancellation, focus control, live capture and overlays, file operations, Finder tags, CoreAudio, a Chromium extension, Safari Apple Events, and a local improvement-request queue with Codex app-server delivery. The physical OS cursor and keyboard focus remain shared resources. Support varies by app and browser; see the [workflow and backend limits](macpilot/references/workflows.md).
 
 Requires macOS 14 or later and Apple Swift development tools. On first use, `macpilot/scripts/macpilot` builds and ad-hoc signs a local app. Python and Node.js are used for development validation; there are no external SwiftPM dependencies. The Chromium extension and site access, Safari Automation, and Safari JavaScript from Apple Events require separate enablement. Use [`mac_record`](macpilot/references/recording.md) to record and inspect MP4 screen and system audio captures on macOS 15 or later. Use [`mac_browser_developer`](macpilot/references/browser-developer-settings.md) to inspect and prepare Safari or Chrome developer settings, then enable a selected setting after user approval. Sending improvement requests to Codex requires an explicitly configured destination, login, and model connection. Ordinary local control does not require a model.
 

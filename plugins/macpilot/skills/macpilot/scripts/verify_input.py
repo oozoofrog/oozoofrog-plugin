@@ -14,6 +14,8 @@ BIN=str(args.binary.resolve());fixture=args.fixture.resolve();OUT=args.evidence.
 OUT.mkdir(parents=True,exist_ok=False)
 assert Path(BIN).is_file() and fixture.is_file()
 rpc=None
+identity=None
+rpc_log=(OUT/'mcp-stderr.log').open('w')
 seq=0
 def send(obj):
  rpc.stdin.write(json.dumps(obj,ensure_ascii=False)+'\n');rpc.stdin.flush()
@@ -26,7 +28,7 @@ def send(obj):
 def call(name,args,label=None,check=True):
  global rpc,seq
  if rpc is None:
-  rpc=subprocess.Popen([BIN,'mcp'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True)
+  rpc=subprocess.Popen([BIN,'mcp'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=rpc_log,text=True)
   send({'jsonrpc':'2.0','id':0,'method':'initialize','params':{'protocolVersion':'2024-11-05','capabilities':{},'clientInfo':{'name':'macpilot-input-validation','version':'1'}}})
   rpc.stdin.write(json.dumps({'jsonrpc':'2.0','method':'notifications/initialized'})+'\n');rpc.stdin.flush()
   atexit.register(lambda:rpc.stdin.close())
@@ -93,11 +95,37 @@ try:
  ck('ascii_text_and_source_restored',state()['text']=='ASCII 한글 🚀' and typed['keyboardInputSource']['restored'])
  o=observe();invalid=call('mac_type',{'observation':o['id'],'node':node(o,'literal-text')['id'],'text':'forbidden route','route':'process','inputSource':'ascii'},'fixture-ascii-process-reject',False)
  ck('ascii_process_route_rejected',invalid.get('code')=='invalid_argument' and state()['text']=='ASCII 한글 🚀')
+ ax('literal-text','set_value',text='');ax('literal-text','focus');o=observe()
+ letters=call('mac_game_input',{'observation':o['id'],'node':node(o,'literal-text')['id'],'keys':['d','u','i'],'durationMs':100,'route':'global','inputSource':'ascii'},'fixture-game-letters');time.sleep(.2)
+ ck('ascii_game_key_characters_match_physical_keys',state()['text']=='dui' and letters['keyboardInputSource']['restored'])
+ ax('literal-text','set_value',text='');ax('literal-text','focus');o=observe()
+ hid=call('mac_game_input',{'observation':o['id'],'node':node(o,'literal-text')['id'],'keys':['u','i'],'durationMs':100,'route':'global','inputSource':'ascii','eventSource':'hid'},'fixture-game-hid');time.sleep(.2)
+ ck('explicit_hid_source_delivers_and_releases_fixture_keys',state()['text']=='ui' and hid['eventSource']=='hid' and not state()['heldKeys'])
+ o=observe();invalid_hid=call('mac_game_input',{'observation':o['id'],'node':node(o,'literal-text')['id'],'keys':['u'],'durationMs':100,'route':'process','eventSource':'hid'},'fixture-game-hid-process-reject',False)
+ ck('hid_system_state_requires_global_route',invalid_hid.get('code')=='invalid_argument' and state()['text']=='ui' and not state()['heldKeys'])
+ o=observe();held=call('mac_game_input',{'observation':o['id'],'node':node(o,'literal-text')['id'],'keys':['left','up'],'durationMs':300,'route':'process'},'fixture-game-hold');time.sleep(.2)
+ ck('simultaneous_keys_hold_and_release',held['releaseEventsPosted']==2 and state()['maximumHeldKeys']>=2 and not state()['heldKeys'] and state()['lastHoldSeconds']>=.25)
+ ax('literal-text','set_value',text='');ax('literal-text','focus');o=observe()
+ pulsed=call('mac_game_input',{'observation':o['id'],'node':node(o,'literal-text')['id'],'keys':['left'],'tapKeys':['z'],'tapIntervalMs':150,'durationMs':400,'route':'global','inputSource':'ascii'},'fixture-game-pulse');time.sleep(.2)
+ ck('held_movement_with_repeated_taps',2<=pulsed['tapCount']<=4 and state()['text']=='z'*pulsed['tapCount'] and not state()['heldKeys'])
+ o=observe();seq+=1;cancel_id=seq
+ rpc.stdin.write(json.dumps({'jsonrpc':'2.0','id':cancel_id,'method':'tools/call','params':{'name':'mac_game_input','arguments':{'observation':o['id'],'node':node(o,'literal-text')['id'],'keys':['right','down'],'tapKeys':['z'],'durationMs':5000,'route':'process'}}})+'\n');rpc.stdin.flush()
+ time.sleep(.6)
+ rpc.stdin.write(json.dumps({'jsonrpc':'2.0','method':'notifications/cancelled','params':{'requestId':cancel_id,'reason':'owned input cancellation regression'}})+'\n');rpc.stdin.flush()
+ # MCP suppresses the cancelled request's response. A fresh call proves the
+ # execution lease was released; the fixture proves balanced key releases.
+ time.sleep(.2)
+ followup=call('mac_doctor',{},'fixture-game-cancel-followup')
+ time.sleep(.2)
+ ck('cancelled_hold_releases_all_keys',followup['status']=='ok' and not state()['heldKeys'] and .25<state()['lastHoldSeconds']<2)
  print(checks)
 finally:
- (OUT/'report.json').write_text(json.dumps({'checks':checks,'binary':BIN,'binarySHA256':hashlib.sha256(Path(BIN).read_bytes()).hexdigest(),'state':state(),'fixturePID':p.pid,'fixtureData':str(base)},ensure_ascii=False,indent=2))
+ (OUT/'report.json').write_text(json.dumps({'checks':checks,'binary':BIN,'binarySHA256':hashlib.sha256(Path(BIN).read_bytes()).hexdigest(),'state':state() if (base/'fixture/state.json').exists() else {},'fixturePID':p.pid,'fixtureData':str(base)},ensure_ascii=False,indent=2))
  if p.poll() is None:
   # Standard app termination request, never force terminate or kill.
-  call('mac_app',dict(identity,action='terminate'),check=False)
+  if identity and rpc is not None and rpc.poll() is None:
+   try:call('mac_app',dict(identity,action='terminate'),check=False)
+   except Exception:p.terminate()
+  else:p.terminate()
   p.wait(timeout=5)
- log.close()
+ log.close();rpc_log.close()

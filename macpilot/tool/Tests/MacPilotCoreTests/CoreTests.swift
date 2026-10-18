@@ -8,6 +8,21 @@ final class CoreTests: XCTestCase {
             windowFrame:Rect(CGRect(x:-800,y:120,width:600,height:400)),windowTitle:"fixture",axWindowIndex:0,nodes:[],coverage:"partial",diagnostics:[],
             pixelWidth:1200,pixelHeight:800)
     }
+    @MainActor func testHeldKeysValidateBeforeDispatch() throws {
+        for names in [[], ["left", "LEFT"], ["left", "invalid"], Array(repeating: "a", count: 9)] {
+            XCTAssertThrowsError(try Input.heldKeyEvents(names))
+        }
+        let events = try Input.heldKeyEvents(["left", "up", "space"])
+        XCTAssertEqual(events.count, 3)
+        XCTAssertEqual(events.map { $0.down.getIntegerValueField(.keyboardEventKeycode) }, [123, 126, 49])
+        XCTAssertTrue(events.allSatisfy { $0.down.type == .keyDown && $0.up.type == .keyUp })
+    }
+    @MainActor func testGameEventsSelectExplicitSystemStateWithoutChangingDefault() throws {
+        let isolated = try Input.heldKeyEvents(["u"])[0].down
+        let system = try Input.heldKeyEvents(["u"], stateID: .hidSystemState)[0].down
+        XCTAssertNotEqual(isolated.getIntegerValueField(.eventSourceStateID), Int64(CGEventSourceStateID.hidSystemState.rawValue))
+        XCTAssertEqual(system.getIntegerValueField(.eventSourceStateID), Int64(CGEventSourceStateID.hidSystemState.rawValue))
+    }
     func testCoordinateSpacesOnNegativeDisplay() throws {
         let o=observation()
         for (x,y,space) in [(300.0,200.0,"window"),(0.5,0.5,"normalized"),(600.0,400.0,"image"),(-500.0,320.0,"screen")] {
@@ -176,7 +191,7 @@ final class CoreTests: XCTestCase {
         let current=RPC.initialize(["protocolVersion":"2024-11-05"])
         XCTAssertEqual(current["protocolVersion"] as? String,"2024-11-05")
         XCTAssertEqual((current["serverInfo"] as? [String:Any])?["name"] as? String,"macpilot")
-        XCTAssertEqual((current["serverInfo"] as? [String:Any])?["version"] as? String,"3.2.1")
+        XCTAssertEqual((current["serverInfo"] as? [String:Any])?["version"] as? String,"3.3.0")
         XCTAssertEqual(RPC.initialize(["protocolVersion":"future"])["protocolVersion"] as? String,"2025-11-25")
     }
     func testSystemActionSchemasArePresentAndStrict() throws {

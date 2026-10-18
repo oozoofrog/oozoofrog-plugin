@@ -231,6 +231,10 @@ private final class BoundedLineReader: @unchecked Sendable {
                 catch { try? FileHandle.standardError.write(contentsOf:Data((error.localizedDescription+"\n").utf8));exit(2) }
                 return
             }
+            if command == "input-activity-host" {
+                guard args.count == 2, args[1].hasPrefix("/") else { throw ToolFailure("invalid_argument", "input-activity-host needs an absolute state directory") }
+                try InputActivityHost.run(store: Store(root: URL(fileURLWithPath: args[1]))); return
+            }
             if command == "overlay-host" {
                 guard args.count==2,args[1].hasPrefix("/") else{throw ToolFailure("invalid_argument","overlay-host needs an absolute state directory")}
                 try DesktopOverlay.run(store:Store(root:URL(fileURLWithPath:args[1])));return

@@ -60,8 +60,8 @@ done
 <key>CFBundleName</key><string>MacPilot</string>
 <key>CFBundleIconFile</key><string>MacPilot.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>3.2.1</string>
-<key>CFBundleVersion</key><string>33</string>
+<key>CFBundleShortVersionString</key><string>3.3.0</string>
+<key>CFBundleVersion</key><string>34</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>
