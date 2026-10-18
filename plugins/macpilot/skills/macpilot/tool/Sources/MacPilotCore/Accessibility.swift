@@ -56,7 +56,7 @@ public struct AXMenuItemInfo: Codable, Equatable {
         guard let raw = value(e, name) as? String else { return ("", false) }
         return boundedString(raw, limit: limit)
     }
-    public static func boundedString(_ raw: String, limit: Int) -> (value: String, truncated: Bool) {
+    public nonisolated static func boundedString(_ raw: String, limit: Int) -> (value: String, truncated: Bool) {
         let limit = max(0, limit)
         guard raw.utf8.count > limit else { return (raw, false) }
         var bytes = Array(raw.utf8.prefix(limit))

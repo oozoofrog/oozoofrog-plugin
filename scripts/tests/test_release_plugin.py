@@ -96,6 +96,25 @@ class PipelineTests(unittest.TestCase):
     def git(self, *args):
         return release.run(['git', *args], cwd=self.root).strip()
 
+    def test_pin_runtime_records_both_universal_executables(self):
+        import hashlib
+        import plistlib
+        binary = self.root / 'macpilot/bin/MacPilot.app/Contents/MacOS/macpilot'
+        binary.parent.mkdir(parents=True)
+        binary.write_bytes(b'exact main binary')
+        helper = binary.with_name('macpilot-simulator-hid')
+        helper.write_bytes(b'exact isolated driver')
+        (binary.parent.parent / 'Info.plist').write_bytes(plistlib.dumps(dict(CFBundleShortVersionString=self.job.version)))
+        (self.root / 'macpilot/runtime').mkdir()
+        self.job.profile.update(binary=str(binary.relative_to(self.root)), architectures=['arm64','x86_64'], asset_platform='macos-universal')
+        self.job.command = lambda args, **kw: 'x86_64 arm64' if args[0] == 'lipo' else ''
+        self.job.pin_runtime()
+        pins = json.loads((self.root / 'macpilot/runtime/distribution.json').read_text())
+        self.assertEqual(hashlib.sha256(binary.read_bytes()).hexdigest(), pins['mainSHA256'])
+        self.assertEqual(hashlib.sha256(helper.read_bytes()).hexdigest(), pins['helperSHA256'])
+        self.assertEqual('Fixture-1.0.0-macos-universal.zip', pins['asset'])
+        self.assertEqual(self.job.version, pins['version'])
+
     def test_unrelated_staged_file_stops_release(self):
         (self.root / 'other').write_text('user changes\n')
         self.git('add', 'other')

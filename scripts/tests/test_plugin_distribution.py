@@ -85,6 +85,11 @@ class PluginDistributionTests(unittest.TestCase):
                          "tool/Sources/MacPilotCore/Recording.swift", "tool/Tests/MacPilotCoreTests/RecordingTests.swift",
                          "scripts/verify_recording_chrome.mjs", "scripts/verify_recording_lifecycle.py", "references/recording.md",
                          "references/capabilities.md", "scripts/verify_capabilities.py",
+                         "references/ui-analysis.md", "scripts/verify_analysis.py",
+                         "references/simulator.md", "scripts/verify_simulator.py", "scripts/verify_bootstrap.py", "scripts/install-runtime.sh", "runtime/distribution.json",
+                         "tool/Sources/MacPilotCore/Simulator.swift", "tool/Sources/MacPilotSimulatorHID/main.m", "tool/Fixtures/SimulatorFixture.m",
+                         "tool/Tests/MacPilotCoreTests/SimulatorTests.swift",
+                         "tool/Sources/MacPilotCore/UIAnalysis.swift", "tool/Tests/MacPilotCoreTests/UIAnalysisTests.swift",
                          "runtime/image_search_worker.py", "runtime/embeddinggemma2-manifest.json", "runtime/requirements-image-search.txt",
                          "tool/Sources/MacPilotCapabilityFixture/main.swift",
                          "tool/Sources/MacPilotCore/Conditions.swift", "tool/Sources/MacPilotCore/OperationOutcome.swift",
@@ -92,13 +97,13 @@ class PluginDistributionTests(unittest.TestCase):
                          "tool/Sources/MacPilotCore/ImageSearch.swift", "tool/Sources/MacPilotCore/ImageSearchPipeline.swift",
                          "tool/Sources/MacPilotCore/Workflows.swift"):
             self.assertTrue((mirror / relative).is_file(), relative)
-        for relative in ("scripts/macpilot", "scripts/build.sh"):
+        for relative in ("scripts/macpilot", "scripts/build.sh", "scripts/install-runtime.sh", "scripts/verify_simulator.py"):
             self.assertTrue((mirror / relative).stat().st_mode & 0o111, relative)
         for relative in module.GENERATED_PATHS[source.name]:
             self.assertFalse((mirror / relative).exists(), relative)
         manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text())
         self.assertEqual(source.name, manifest["name"])
-        self.assertEqual("3.4.0", manifest["version"])
+        self.assertEqual("3.5.0", manifest["version"])
         self.assertEqual(manifest["version"], json.loads((source / "browser/extension/manifest.json").read_text())["version"])
         frontmatter = (source / "SKILL.md").read_text().split("---", 2)[1]
         self.assertEqual({"name", "description"}, {line.split(":", 1)[0] for line in frontmatter.splitlines() if ":" in line})

@@ -12,7 +12,7 @@
 ./scripts/build.sh
 ```
 
-빌드에는 Xcode 또는 Swift를 포함한 Apple 개발 도구가 필요하다. SwiftPM의 외부 의존성은 없다. 빌드한 실행 파일은 `bin/MacPilot.app/Contents/MacOS/macpilot`에 있다. 런처는 실행 파일이 없거나 `Package.swift`, `build.sh`, Swift 소스나 `runtime/` 자료가 설치된 실행 파일보다 새롭거나 bundled worker가 없으면 원자적으로 다시 빌드한다. 릴리스 검증은 타임스탬프 판단에 의존하지 않고 `build.sh`를 직접 실행한다.
+일반 실행에는 Swift·Xcode가 필요 없다. 런처는 `runtime/distribution.json`의 버전·실행 파일 해시와 앱 서명을 확인하고, 앱이 없거나 다르면 `install-runtime.sh`로 공식 릴리스의 Universal 앱을 내려받는다. 다운로드 실패 시 컴파일로 전환하지 않는다. 소스 개발은 `build.sh` 또는 명시적 `MACPILOT_BUILD_FROM_SOURCE=1`을 사용한다. 배포 빌드는 `MACPILOT_UNIVERSAL=1 scripts/build.sh`로 arm64·x86_64를 포함한다. Simulator만 Xcode·런타임을 요구한다. [Simulator 사용법](simulator.md)을 참고한다.
 
 CLI는 성공 시 JSON을 stdout에 출력한다. 인수·권한·대상 오류는 JSON 오류와 종료 코드 2를 반환한다. 도움말은 일반 텍스트다. 빌드 로그는 stderr로 출력한다.
 
@@ -199,3 +199,6 @@ python3 ./scripts/verify_mcp.py
 
 
 전역 키보드·마우스 입력에는 모든 디스플레이의 3pt 가장자리 효과와 ‘MacPilot 조작 중 · 키보드/마우스’ 안내가 표시된다. 안내는 포커스나 클릭을 받지 않는다. 동작 줄이기 설정에서는 가장자리 효과를 고정한다. 완료·취소·오류·소유 프로세스 종료 시 숨기며, 안내 호스트가 사라지면 추가 입력을 중단하고 눌린 키를 해제한다. process 경로와 AX 작업에는 이 전역 입력 안내를 표시하지 않는다.
+
+
+읽기 전용 `mac_analyze`의 summary·search·inspect·read_text·hit_test는 [네이티브 UI 분석](ui-analysis.md)을 따른다. summary/search가 반환한 새 관찰 ID를 이후 동작에 사용한다.

@@ -23,20 +23,32 @@ trap cleanup EXIT HUP INT TERM
 # A private scratch directory prevents a prior SwiftPM product from entering the
 # installed bundle. The current bundle stays untouched until the staged app is
 # signed and strictly verified.
-/usr/bin/xcrun swift build \
-    --package-path "$skill_dir/tool" \
-    --scratch-path "$build_root/swiftpm" \
-    --configuration release \
-    --product macpilot >&2
-product_dir=$(/usr/bin/xcrun swift build \
-    --package-path "$skill_dir/tool" \
-    --scratch-path "$build_root/swiftpm" \
-    --configuration release \
-    --show-bin-path)
-
 /bin/mkdir -p "$staged_bundle/Contents/MacOS"
-/bin/cp "$product_dir/macpilot" "$staged_bundle/Contents/MacOS/macpilot"
-/bin/chmod 0755 "$staged_bundle/Contents/MacOS/macpilot"
+archs=$(/usr/bin/uname -m)
+if [ "${MACPILOT_UNIVERSAL:-0}" = 1 ]; then archs="arm64 x86_64"; fi
+for arch in $archs; do
+    for product in macpilot macpilot-simulator-hid; do
+        /usr/bin/xcrun swift build --package-path "$skill_dir/tool" \
+            --scratch-path "$build_root/$arch" --configuration release \
+            --triple "$arch-apple-macosx14.0" --product "$product" >&2
+    done
+    product_dir=$(/usr/bin/xcrun swift build --package-path "$skill_dir/tool" \
+        --scratch-path "$build_root/$arch" --configuration release \
+        --triple "$arch-apple-macosx14.0" --show-bin-path)
+    for product in macpilot macpilot-simulator-hid; do
+        /bin/cp "$product_dir/$product" "$build_root/$product-$arch"
+    done
+done
+for product in macpilot macpilot-simulator-hid; do
+    if [ "${MACPILOT_UNIVERSAL:-0}" = 1 ]; then
+        /usr/bin/lipo -create "$build_root/$product-arm64" "$build_root/$product-x86_64" \
+            -output "$staged_bundle/Contents/MacOS/$product"
+    else
+        /bin/cp "$build_root/$product-$archs" "$staged_bundle/Contents/MacOS/$product"
+    fi
+    /bin/chmod 0755 "$staged_bundle/Contents/MacOS/$product"
+    /usr/bin/codesign --force --sign - --identifier "local.$product" "$staged_bundle/Contents/MacOS/$product" >&2
+done
 
 # Bundle the same native app icon used by Finder and the permission drag panel.
 iconset="$build_root/MacPilot.iconset"
@@ -63,8 +75,8 @@ done
 <key>CFBundleName</key><string>MacPilot</string>
 <key>CFBundleIconFile</key><string>MacPilot.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>3.4.0</string>
-<key>CFBundleVersion</key><string>35</string>
+<key>CFBundleShortVersionString</key><string>3.5.0</string>
+<key>CFBundleVersion</key><string>36</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>
@@ -78,20 +90,7 @@ PLIST
 /usr/bin/codesign --verify --strict "$staged_bundle" >&2
 
 swap_bundles() {
-    /usr/bin/xcrun swift - "$1" "$2" <<'SWIFT'
-import Darwin
-
-guard CommandLine.arguments.count == 3 else { exit(EX_USAGE) }
-let status = renamex_np(
-    CommandLine.arguments[1],
-    CommandLine.arguments[2],
-    UInt32(RENAME_SWAP)
-)
-if status != 0 {
-    perror("renamex_np")
-    exit(EX_OSERR)
-}
-SWIFT
+    "$staged_bundle/Contents/MacOS/macpilot-simulator-hid" --swap-bundles "$1" "$2"
 }
 
 if [ -e "$bundle" ]; then
@@ -104,7 +103,7 @@ if [ -e "$bundle" ]; then
     swap_bundles "$staged_bundle" "$bundle"
     if ! /usr/bin/codesign --verify --strict "$bundle" >&2; then
         printf '%s\n' 'Installed bundle verification failed; restoring the prior bundle' >&2
-        swap_bundles "$staged_bundle" "$bundle"
+        "$bundle/Contents/MacOS/macpilot-simulator-hid" --swap-bundles "$staged_bundle" "$bundle"
         exit 1
     fi
 else

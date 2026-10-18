@@ -20,6 +20,7 @@ public enum Outcomes {
         let operation = arguments["operation"] as? String ?? ""
         switch tool {
         case "mac_browser": return ["connections", "receipt", "tabs", "frames", "observe", "verify", "wait", "download_status", "screenshot"].contains(operation)
+        case "mac_simulator": return ["list","status","screenshot","observe","probe_input"].contains(operation)
         case "mac_files": return ["stat", "list", "search", "read"].contains(operation)
         case "mac_system": return operation == "info" || (operation == "audio" && arguments["volume"] == nil && arguments["muted"] == nil)
         case "mac_ax": return operation == "read"

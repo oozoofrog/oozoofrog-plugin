@@ -23,9 +23,13 @@ Swift Intelligence는 macOS, Command Line Tools를 포함한 Xcode, Python 3가 
 
 ## MacPilot
 
-`macpilot` Plugin `3.4.0`은 macOS·브라우저 작업용 스킬, SwiftPM 소스·테스트, Chromium 확장, 빌드 런처와 검증 스크립트를 포함합니다. 새 작업에서 `$macpilot` 또는 `$macpilot:macpilot`로 호출합니다. 현재 MCP에 필요한 기능이 없으면 설치된 스킬의 `scripts/macpilot` CLI를 사용합니다. Plugin은 MCP 서버를 자동 등록하지 않습니다. `mac_record`의 화면·영역·시스템 오디오 MP4 녹화에는 macOS 15 이상이 필요합니다. [녹화 범위와 검증](../macpilot/references/recording.md)을 확인하세요. [CLI·선택적 MCP 설정](../macpilot/references/tools.md)을 참고하세요. MCP가 끊겼으면 [연결 진단과 복구](../macpilot/references/mcp-recovery.md)의 `mac_connection`·`connection-check`를 사용합니다. 기존 연결·Codex 앱을 자동 재시작하지 않습니다.
+`mac_analyze`의 읽기 전용 UI 분석과 Baepsae·Simulator 기능의 구분은 [네이티브 UI 분석](../macpilot/references/ui-analysis.md)을 참고하세요.
 
-macOS 14 이상과 Apple Swift 개발 도구가 필요합니다. CLI 첫 실행에서 해당 설치 경로의 `bin/MacPilot.app`을 빌드·ad-hoc 서명합니다. 사용하는 기능에 따라 Accessibility·Screen Recording·Automation 권한이 필요합니다. 기본 제어에는 모델·API 키·외부 SwiftPM 패키지·Python·Node.js가 필요하지 않습니다. 선택적 VisionKit·EmbeddingGemma 2 검색만 명시적으로 설정한 로컬 Python 환경과 고정 모델을 사용합니다. 전역 입력 중 다른 입력 출처를 감지하려면 Input Monitoring 권한이 필요합니다. 조건 대기·추적·재사용 작업과 이미지 검색은 [기능 사용법](../macpilot/references/capabilities.md)을 확인하세요. Codex 진단 전송을 사용할 때만 별도 Codex 실행 파일·로그인·모델 연결이 필요합니다.
+`macpilot` Plugin `3.5.0`은 macOS·브라우저·Simulator 작업용 스킬, SwiftPM 소스·테스트, Chromium 확장, 빌드 런처와 검증 스크립트를 포함합니다. 새 작업에서 `$macpilot` 또는 `$macpilot:macpilot`로 호출합니다. 현재 MCP에 필요한 기능이 없으면 설치된 스킬의 `scripts/macpilot` CLI를 사용합니다. Plugin은 MCP 서버를 자동 등록하지 않습니다. `mac_record`의 화면·영역·시스템 오디오 MP4 녹화에는 macOS 15 이상이 필요합니다. [녹화 범위와 검증](../macpilot/references/recording.md)을 확인하세요. [CLI·선택적 MCP 설정](../macpilot/references/tools.md)을 참고하세요. MCP가 끊겼으면 [연결 진단과 복구](../macpilot/references/mcp-recovery.md)의 `mac_connection`·`connection-check`를 사용합니다. 기존 연결·Codex 앱을 자동 재시작하지 않습니다.
+
+macOS 14 이상에서 실행합니다. CLI 첫 실행은 고정 해시와 서명을 확인한 Universal 배포 앱을 내려받습니다. 일반 macOS 제어에는 Swift·Xcode 설치가 필요 없습니다. 사용하는 기능에 따라 Accessibility·Screen Recording·Automation 권한이 필요합니다. 기본 제어에는 모델·API 키·외부 SwiftPM 패키지·Python·Node.js가 필요하지 않습니다. 선택적 VisionKit·EmbeddingGemma 2 검색만 명시적으로 설정한 로컬 Python 환경과 고정 모델을 사용합니다. 전역 입력 중 다른 입력 출처를 감지하려면 Input Monitoring 권한이 필요합니다. 조건 대기·추적·재사용 작업과 이미지 검색은 [기능 사용법](../macpilot/references/capabilities.md)을 확인하세요. Codex 진단 전송을 사용할 때만 별도 Codex 실행 파일·로그인·모델 연결이 필요합니다.
+
+`mac_simulator`는 UDID·기기·부팅 정체성을 확인하고 앱 생명주기·PNG·동영상·iOSContentGroup 분석을 제공합니다. IndigoHID 입력은 별도 프로세스이며 매 호출의 `privateAPI=true`가 필요합니다. Simulator 기능에만 Xcode와 해당 런타임이 필요합니다. [Simulator 사용법](../macpilot/references/simulator.md)을 참고하세요.
 
 권한을 설정하려면 설치된 스킬의 `scripts/macpilot permission-setup`을 실행합니다. macOS 시스템 설정 옆에 앱 아이콘만 있는 88×88pt 안내 패널을 붙입니다. 짧은 드래그 시연은 최대 두 번 재생하고, 아이콘을 잡으면 멈추며 동작 줄이기를 따릅니다. 사용자가 패널의 앱 아이콘을 권한 목록으로 드래그하거나 아이콘 우클릭 메뉴에서 선택적 자동 추가를 사용할 수 있습니다. Finder나 큰 별도 설정 창은 열지 않습니다. Automation은 대상 앱별 macOS 동의 요청을 사용합니다. 시스템 인증과 최종 승인은 사용자가 직접 진행합니다. [권한 설정](../macpilot/references/permission-setup.md)을 확인하세요.
 
@@ -33,7 +37,7 @@ Chromium은 `browser/extension/`을 로드하고 `mac_browser install_host`로 �
 
 작업별 멀티 가상 커서·백그라운드 제어·라이브 프리뷰·통합 포커스, 파일·Finder 태그·CoreAudio, 선택적 private 창 ID 백엔드를 제공합니다. Codex 개선 요청은 목적지·전송 범위를 명시적으로 설정하며 기본은 수동 전송입니다. `automaticSend=true`를 허용하면 이후 오류를 자동 전달합니다. 응답 완료는 수정·설치 완료와 구분합니다.
 
-원본은 `macpilot/`에서 수정하고 `python3 scripts/sync_skill_mirrors.py --package macpilot --write`로 배포 미러를 갱신합니다. 바이너리·SwiftPM 캐시·실행 증거는 배포하지 않습니다. [개발과 검증](../macpilot/references/development.md)에서 단위·MCP·실제 앱·브라우저·Codex 전송 검증을 구분합니다.
+원본은 `macpilot/`에서 수정하고 `python3 scripts/sync_skill_mirrors.py --package macpilot --write`로 배포 미러를 갱신합니다. Plugin 소스 패키지에는 바이너리·SwiftPM 캐시·실행 증거를 넣지 않습니다. 검증한 Universal 실행 앱은 공식 릴리스의 별도 ZIP으로 제공합니다. [개발과 검증](../macpilot/references/development.md)에서 단위·MCP·실제 앱·브라우저·Codex 전송 검증을 구분합니다.
 
 이 저장소 변경은 기존 `~/.codex/skills/macpilot` 설치본과 MCP 설정을 변경하지 않습니다. Plugin 설치로 전환할 때 기존 경로와 중복 노출을 확인합니다. 원격 게시 전에는 원격 설치 명령에 이번 변경이 포함되지 않습니다. 설치·활성화·새 세션 노출은 별도로 확인해야 합니다.
 
