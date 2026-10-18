@@ -41,6 +41,9 @@ product_dir=$(/usr/bin/xcrun swift build \
 # Bundle the same native app icon used by Finder and the permission drag panel.
 iconset="$build_root/MacPilot.iconset"
 /bin/mkdir -p "$iconset" "$staged_bundle/Contents/Resources"
+/bin/mkdir -p "$staged_bundle/Contents/Resources/ImageSearch"
+/bin/cp "$skill_dir/runtime/image_search_worker.py" "$skill_dir/runtime/embeddinggemma2-manifest.json" \
+    "$skill_dir/runtime/requirements-image-search.txt" "$staged_bundle/Contents/Resources/ImageSearch/"
 for size in 16 32 128 256 512; do
     /usr/bin/sips -z "$size" "$size" "$skill_dir/assets/app-icon.png" \
         --out "$iconset/icon_${size}x${size}.png" >/dev/null
@@ -60,8 +63,8 @@ done
 <key>CFBundleName</key><string>MacPilot</string>
 <key>CFBundleIconFile</key><string>MacPilot.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>3.3.0</string>
-<key>CFBundleVersion</key><string>34</string>
+<key>CFBundleShortVersionString</key><string>3.4.0</string>
+<key>CFBundleVersion</key><string>35</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>

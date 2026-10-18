@@ -3,7 +3,7 @@ import ApplicationServices
 import Darwin
 
 public enum MacPilotRuntime {
-    public static let version = "3.3.0"
+    public static let version = "3.4.0"
     public static let instanceID = UUID().uuidString.lowercased()
 }
 

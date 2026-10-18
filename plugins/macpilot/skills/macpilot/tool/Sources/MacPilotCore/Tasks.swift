@@ -18,6 +18,7 @@ public struct TaskRecord: Codable {
     public var status: String
     public var created: Date
     public var deadline: Date
+    public var interruptionReason: String? = nil
     public var object: [String: Any] {
         (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(self))) as? [String: Any] ?? [:]
     }
@@ -47,6 +48,12 @@ public enum Tasks {
         guard record.deadline > Date() else { throw ToolFailure("task_expired", "Task deadline elapsed") }
         if let pid = record.pid, let identity = record.processStartID { try ProcessIdentity.require(pid: pid, expected: identity) }
     }
+    public static func interrupt(_ id: String, reason: String, store: Store) throws {
+        let lease = try store.lease(".tasks.lock"); defer { withExtendedLifetime(lease) {} }
+        var record = try load(id, in: store)
+        guard record.status == "active" else { return }
+        record.status = "interrupted"; record.interruptionReason = reason; try save(record, in: store)
+    }
     @MainActor public static func call(_ a: Arguments, store: Store) throws -> [String: Any] {
         let operation = try a.string("operation")
         switch operation {
@@ -73,16 +80,32 @@ public enum Tasks {
                 try? JSONDecoder().decode(TaskRecord.self, from: store.read(name)).object
             }
             return ["status": "tasks", "tasks": records]
-        case "status", "cancel", "finish":
+        case "status", "cancel", "finish", "resume":
             try a.only(["operation", "taskID"])
             var record = try load(a.string("taskID"), in: store)
+            if operation == "resume" {
+                guard record.status == "interrupted" else { throw ToolFailure("task_not_interrupted", "Only an interrupted task can be explicitly resumed") }
+                guard record.deadline > Date() else { throw ToolFailure("task_expired", "Task deadline elapsed") }
+                if let pid = record.pid, let identity = record.processStartID { try ProcessIdentity.require(pid: pid, expected: identity) }
+                let state = try state(record.id,in:store)
+                // User activity can change focus and meaning without changing a
+                // node's bytes. Never revive pre-interruption input evidence.
+                for name in try state.names(prefix:"") where name.hasSuffix(".json") {
+                    let reference = String(name.dropLast(5))
+                    if UUID(uuidString:reference) != nil {
+                        try state.remove(name); try state.remove(reference + ".png")
+                    }
+                }
+                record.status = "active"; record.interruptionReason = nil; try save(record, in: store)
+                return ["status":"task_resumed", "task":record.object, "verification":"Controller state resumed; make a fresh observation before input"]
+            }
             if operation != "status" {
-                guard record.status == "active" else { return ["status": "task_\(record.status)", "task": record.object] }
+                guard ["active","interrupted"].contains(record.status) else { return ["status": "task_\(record.status)", "task": record.object] }
                 record.status = operation == "cancel" ? "cancelled" : "finished"
                 try save(record, in: store)
             }
             return ["status": "task_\(record.status)", "task": record.object]
-        default: throw ToolFailure("invalid_argument", "operation must be begin, list, status, cancel or finish")
+        default: throw ToolFailure("invalid_argument", "operation must be begin, list, status, cancel, finish or resume")
         }
     }
 }

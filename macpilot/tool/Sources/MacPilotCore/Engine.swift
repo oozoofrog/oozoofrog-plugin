@@ -9,13 +9,27 @@ import CryptoKit
     public let taskRecord: TaskRecord?
     public let cursorID: String
     public let transport: InvocationTransport
+    private var inputMonitor: UserInputMonitor?
     public init(store: Store, baseStore: Store? = nil, task: TaskRecord? = nil, cursorID: String = "primary", transport: InvocationTransport = .cli) {
         self.store = store; self.baseStore = baseStore ?? store; self.taskRecord = task; self.cursorID = cursorID
         self.transport = transport
     }
     public func call(_ tool: String, arguments: [String: Any]) async throws -> [String: Any] {
+        do { return Outcomes.attach(tool, arguments: arguments, value: try await routeCall(tool, arguments: arguments)) }
+        catch let error as ToolFailure {
+            if error.outcome != nil { throw error }
+            throw ToolFailure(error.code, error.description, improvementRequestID: error.improvementRequestID,
+                              outcome: Outcomes.failure(tool, arguments: arguments, beforeDispatch: true))
+        }
+    }
+    private func routeCall(_ tool: String, arguments: [String: Any]) async throws -> [String: Any] {
         // Diagnostics must remain available while a task owns the execution lock.
         if tool == "mac_connection" { return try await ConnectionDiagnostics.call(Arguments(arguments), transport: transport) }
+        if tool == "mac_workflow", ["runs","run_status"].contains(arguments["operation"] as? String ?? "") {
+            var value = arguments; var selected = store
+            if value["taskID"] != nil { selected = try Tasks.state(Arguments(value).string("taskID"),in:baseStore); value.removeValue(forKey:"taskID") }
+            return try Workflows.inspect(Arguments(value),store:selected)
+        }
         if tool == "mac_task" {
             let lease = try baseStore.lease(".tasks.lock")
             defer { withExtendedLifetime(lease) {} }
@@ -41,7 +55,9 @@ import CryptoKit
             let monitor = Task { @MainActor in
                 while !Task.isCancelled {
                     do {
-                        try Tasks.requireActive(Tasks.load(record.id, in: baseStore))
+                        let current = try Tasks.load(record.id, in: baseStore)
+                        if current.status == "interrupted" { return }
+                        try Tasks.requireActive(current)
                         try await Task.sleep(nanoseconds: 80_000_000)
                     } catch {
                         if !Task.isCancelled { worker.cancel() }
@@ -56,20 +72,24 @@ import CryptoKit
         }
         return try await Engine(store: store, baseStore: baseStore, cursorID: cursor, transport: transport).execute(tool, arguments: input)
     }
-    private func execute(_ tool: String, arguments: [String: Any]) async throws -> [String: Any] {
+    private func execute(_ tool: String, arguments: [String: Any], reuseLease:Bool = false) async throws -> [String: Any] {
         let requestedPID = auditPID(arguments)
         var leases: [StateLease] = []
-        defer { withExtendedLifetime(leases) {} }
+        var enteredDispatch = false
+        var trace: TraceScope?, tracePreparationError: String?
+        var actionStarted = DispatchTime.now().uptimeNanoseconds
+        defer { inputMonitor = nil; withExtendedLifetime(leases) {} }
         do {
             try Task.checkCancellation()
-            leases.append(try store.lease(".execution.lock"))
+            if !reuseLease { leases.append(try store.lease(".execution.lock")) }
             if let pid = requestedPID {
                 if let expected = taskRecord?.pid, expected != pid { throw ToolFailure("task_target_mismatch", "Observation belongs to a different target") }
                 // PID-level serialization is conservative across relaunches. The
                 // operation validates its full arguments and start identity itself.
-                leases.append(try baseStore.lease(".target-\(pid).lock"))
+                if !reuseLease { leases.append(try baseStore.lease(".target-\(pid).lock")) }
             }
             let foregroundAction = arguments["route"] as? String == "global" || tool == "mac_activate" || tool == "mac_focus"
+                || (tool == "mac_workflow" && arguments["allowGlobalInput"] as? Bool == true)
                 || tool == "mac_permission"
                 || (tool == "mac_browser_developer" && arguments["operation"] as? String != "status")
                 || (tool == "mac_app" && arguments["action"] as? String == "activate")
@@ -78,26 +98,57 @@ import CryptoKit
                foregroundAction || tool == "mac_script" || (tool == "mac_shortcuts" && arguments["operation"] as? String != "list") {
                 throw ToolFailure("foreground_required", "Use a task with preserveForeground=false for foreground input, activation or unrestricted scripts")
             }
-            if foregroundAction || tool == "mac_script" || tool == "mac_shortcuts" {
+            if !reuseLease, foregroundAction || tool == "mac_script" || tool == "mac_shortcuts" {
                 leases.append(try baseStore.lease(".system-input.lock"))
             }
             try Task.checkCancellation()
             let foreground = NSWorkspace.shared.frontmostApplication?.processIdentifier
+            do { trace = try await Tracing.begin(tool:tool,arguments:arguments,engine:self) }
+            catch { tracePreparationError = (error as? ToolFailure)?.code ?? "trace_preparation_failed" }
+            try Task.checkCancellation()
+            actionStarted = DispatchTime.now().uptimeNanoseconds
+            enteredDispatch = true
             var result = try await dispatch(tool, Arguments(arguments))
+            if let reason = result["reasonCode"] as? String,
+               ["user_input_interrupted","input_monitor_lost"].contains(reason), let taskRecord {
+                try Tasks.interrupt(taskRecord.id, reason: reason, store: baseStore)
+                result["taskStatus"] = "interrupted"
+            }
             if taskRecord?.preserveForeground == true, foreground != NSWorkspace.shared.frontmostApplication?.processIdentifier {
                 throw ToolFailure("foreground_changed", "Foreground changed during this background operation; reconcile user activity and the target before retrying")
             }
             result["verification"] = result["verification"] ?? "Only the operation-specific status is verified; observe the requested business postcondition"
+            result = Outcomes.attach(tool, arguments: arguments, value: result)
+            if let trace {
+                do {
+                    let id = try await Tracing.finish(trace,tool:tool,status:result["status"] as? String ?? "unknown",
+                                                      outcome:Outcomes.result(tool,arguments:arguments,value:result),
+                                                      elapsedMilliseconds:Int((DispatchTime.now().uptimeNanoseconds-actionStarted)/1_000_000),
+                                                      skipAfterCapture:inputMonitor?.reason != nil,engine:self)
+                    result["traceID"] = id
+                } catch { result["trace"] = ["status":"recording_failed","code":(error as? ToolFailure)?.code ?? "trace_failed","actionMustNotBeRepeated":true] }
+            } else if let tracePreparationError { result["trace"] = ["status":"preparation_failed","code":tracePreparationError] }
             let resultPID = (result["pid"] as? NSNumber)?.int32Value
             store.audit(tool: tool, status: result["status"] as? String ?? "ok", pid: resultPID ?? requestedPID)
             return result
         } catch {
             let status = error is CancellationError ? "cancelled" : (error as? ToolFailure)?.code ?? "error"
             store.audit(tool: tool, status: status, pid: requestedPID)
-            if let requestID=await Improvements.capture(error,tool:tool,task:taskRecord,store:baseStore){
-                throw ToolFailure((error as? ToolFailure)?.code ?? "native_error",(error as? ToolFailure)?.description ?? error.localizedDescription,improvementRequestID:requestID)
+            let requestID = await Improvements.capture(error,tool:tool,task:taskRecord,store:baseStore)
+            let failure = error as? ToolFailure
+            if let trace {
+                _ = try? await Tracing.finish(trace,tool:tool,status:status,
+                                              outcome:failure?.outcome ?? Outcomes.failure(tool,arguments:arguments,beforeDispatch:!enteredDispatch),
+                                              elapsedMilliseconds:Int((DispatchTime.now().uptimeNanoseconds-actionStarted)/1_000_000),
+                                              skipAfterCapture:inputMonitor?.reason != nil,engine:self)
             }
-            throw error
+            if let reason = failure?.code, ["user_input_interrupted","input_monitor_lost"].contains(reason), let taskRecord {
+                try? Tasks.interrupt(taskRecord.id, reason: reason, store: baseStore)
+            }
+            if error is CancellationError { throw error }
+            throw ToolFailure(failure?.code ?? "native_error", failure?.description ?? error.localizedDescription,
+                              improvementRequestID: requestID ?? failure?.improvementRequestID,
+                              outcome: failure?.outcome ?? Outcomes.failure(tool, arguments: arguments, beforeDispatch: !enteredDispatch))
         }
     }
     private func auditPID(_ arguments: [String: Any]) -> Int32? {
@@ -107,6 +158,15 @@ import CryptoKit
         }
         guard let id = arguments["observation"] as? String else { return nil }
         return (try? store.load(id))?.pid
+    }
+    func checkWorkflowState() throws {
+        try Task.checkCancellation(); try inputMonitor?.verify()
+        if let taskRecord { try Tasks.requireActive(Tasks.load(taskRecord.id,in:baseStore)) }
+    }
+    func executeWorkflowStep(_ tool:String,arguments:[String:Any]) async throws -> [String:Any] {
+        guard ["mac_ax","mac_key"].contains(tool) else { throw ToolFailure("invalid_workflow","Unsupported nested tool") }
+        try checkWorkflowState()
+        return try await execute(tool,arguments:arguments,reuseLease:true)
     }
     public func windowRows(pid: Int32? = nil) -> [[String: Any]] {
         (CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []).compactMap { row in
@@ -128,7 +188,7 @@ import CryptoKit
         try Geometry.validateAge(observation)
         let metadata = try ProcessIdentity.withStableIdentity(pid: observation.pid, expected: observation.processStartID) {
             guard let app = NSRunningApplication(processIdentifier: observation.pid), !app.isTerminated else {
-                throw ToolFailure("app_unavailable", "Target PID is not running")
+                throw ToolFailure("app_metadata_unavailable", "AppKit metadata is temporarily unavailable for this process identity; reobserve before input")
             }
             return (bundleID: app.bundleIdentifier ?? "", launchTime: app.launchDate?.timeIntervalSince1970 ?? 0)
         }.value
@@ -141,10 +201,10 @@ import CryptoKit
         return observation
     }
     public func observe(pid: Int32, processStartID: String, windowID: UInt32?, screenshot: Bool, maxNodes: Int, maxDepth: Int,
-                        captureTimeoutMilliseconds: Int = 10_000, privateAPI: Bool = false) async throws -> Observation {
+                        captureTimeoutMilliseconds: Int = 10_000, privateAPI: Bool = false, collectionTimeoutMilliseconds: Int = 5000) async throws -> Observation {
         let metadata = try ProcessIdentity.withStableIdentity(pid: pid, expected: processStartID) {
             guard let app = NSRunningApplication(processIdentifier: pid), !app.isTerminated else {
-                throw ToolFailure("app_unavailable", "Target PID is not running")
+                throw ToolFailure("app_metadata_unavailable", "AppKit metadata is temporarily unavailable for this process identity; reobserve before input")
             }
             return (bundleID: app.bundleIdentifier ?? "", launchTime: app.launchDate?.timeIntervalSince1970 ?? 0)
         }.value
@@ -173,7 +233,7 @@ import CryptoKit
         guard matches.count == 1, let matched = matches.first else {
             throw ToolFailure("ambiguous_ax_window", "Cannot uniquely match window \(id) frame \(cgFrame.object) to AX frames \(windows.map { AX.frame($0)?.object ?? [:] }); reobserve after the window settles or choose a distinct visible window")
         }
-        let (nodes, coverage, diagnostics) = AX.collect(matched.element, maxNodes: maxNodes, maxDepth: maxDepth)
+        let (nodes, coverage, diagnostics) = AX.collect(matched.element, maxNodes: maxNodes, maxDepth: maxDepth, timeoutMilliseconds: collectionTimeoutMilliseconds)
         var result = Observation(id: UUID().uuidString.lowercased(), created: Date(), pid: pid, processStartID: processStartID,
             launchTime: metadata.launchTime, bundleID: metadata.bundleID,
             windowID: id, windowFrame: cgFrame, windowTitle: AX.string(matched.element, kAXTitleAttribute), axWindowIndex: matched.offset,
@@ -210,11 +270,13 @@ import CryptoKit
         let o = try fresh(a); try Input.preflight()
         let route = try a.string("route", default: "process"); try Input.route(route, observation: o)
         if keyboard { _ = try AX.checkFocused(o, nodeID: a.string("node")) }
+        if route == "global" { inputMonitor = try UserInputMonitor() }
         return (o, route)
     }
     private func revalidateKeyboardTarget(_ observation: Observation, nodeID: String, route: String) throws {
         try ProcessIdentity.require(pid: observation.pid, expected: observation.processStartID)
         try Input.preflight()
+        try inputMonitor?.verify()
         try Input.route(route, observation: observation)
         _ = try AX.checkFocused(observation, nodeID: nodeID, requireStableValue: false)
     }
@@ -409,6 +471,10 @@ import CryptoKit
     }
     private func dispatch(_ tool: String, _ a: Arguments) async throws -> [String: Any] {
         switch tool {
+        case "mac_workflow": return try await Workflows.call(a,engine:self)
+        case "mac_image_search": return try await ImageSearch.call(a,engine:self)
+        case "mac_trace": return try Tracing.call(a,store:store)
+        case "mac_wait_for": return try await Conditions.call(a, engine: self)
         case "mac_private": return try PrivateAPI.call(a)
         case "mac_improvement": return try await Improvements.call(a,store:baseStore)
         case "mac_browser_developer": return try await BrowserDeveloperSettings.call(a, engine: self)
@@ -437,6 +503,7 @@ import CryptoKit
                     "systemCursor":cursorObject(), "foregroundPID":NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0,
                     "displays":ids.prefix(Int(count)).map { ["id":$0, "frame":Rect(CGDisplayBounds($0)).object] as [String: Any] },
                     "runtimeDependencies":["macOS 14+ Apple system frameworks"], "networkRequired":false,
+                    "optionalRuntimeDependencies":["imageSearch":"explicit local Python environment and pinned EmbeddingGemma 2 model; disabled by default"],
                     "capabilities":["virtualPointer":"task-scoped named cursors, annotated live preview and click-through overlays; no second OS cursor",
                         "tasks":"isolated state, cancellation, deadlines and target/input leases",
                         "preview":"SCStream live window frames with hide/show/pause/resume/stop",
@@ -447,7 +514,11 @@ import CryptoKit
                         "privateAPI":"opt-in _AXUIElementGetWindow; other catalog entries are research-only",
                         "improvements":"local queue; configured Codex app-server delivery requires Codex model connectivity",
                         "processInput":"public CGEvent.postToPid; app compatibility requires verification",
-                        "globalInput":"explicit route=global; requires foreground and visible target",
+                        "globalInput":"explicit route=global; foreground, visible target and Input Monitoring required; yields on external input",
+                        "conditionWaits":"same-process/window AX predicates; notifications plus bounded polling",
+                        "traces":"opt-in bounded before/after records; text and screenshots are separate opt-ins",
+                        "workflows":"explicit bounded native recipes; declared postconditions and durable runID replay protection",
+                        "imageSearch":"optional VisionKit and local EmbeddingGemma 2; ranked candidates, cached vectors, no automatic click",
                         "systemActions":"typed app lifecycle, URL/file open, Finder reveal, and NSWorkspace Trash operations",
                         "clipboard":"explicit bounded plain-text read/write only; never read implicitly",
                         "shortcuts":"fixed /usr/bin/shortcuts executable with bounded time and output",
@@ -456,7 +527,7 @@ import CryptoKit
                         "menus":"bounded exact Accessibility menu list and press; no fuzzy title matching",
                         "windows":"fresh-observation state, raise, close, minimize, full-screen toggle, move, and resize operations",
                         "virtualHID":"not installed; entitlement/driver path is documented in research",
-                        "languageModel":"none; deterministic tools accept explicit actions"]]
+                        "languageModel":"none for base control; optional local EmbeddingGemma 2 for image search"]]
         case "mac_apps":
             try a.only([])
             let applications = NSWorkspace.shared.runningApplications.compactMap { application -> [String: Any]? in
@@ -720,6 +791,7 @@ import CryptoKit
                     try Task.checkCancellation()
                     try ProcessIdentity.require(pid: o.pid, expected: o.processStartID)
                     try Input.preflight()
+                    try inputMonitor?.verify()
                     try activity?.verify()
                     if route == "global" {
                         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == o.pid else {

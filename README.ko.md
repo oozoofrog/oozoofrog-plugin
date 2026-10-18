@@ -26,9 +26,11 @@ Standalone `local-ai-studio/`와 byte-identical skills-only Plugin `0.2.1`을 �
 $macpilot로 macOS·브라우저 작업과 화면·시스템 오디오 녹화를 수행하고 결과를 검증하세요.
 ```
 
-원본은 [macpilot/](macpilot/), 배포 사본은 [Plugin 스킬](plugins/macpilot/skills/macpilot/SKILL.md)에서 관리합니다. `3.3.0`은 Swift 코어·CLI·MCP, 작업 격리·취소·포커스, 라이브 캡처·오버레이, 파일·Finder 태그·CoreAudio, Chromium 확장과 Safari Apple Events, 로컬 개선 요청 대기열·Codex app-server 전송을 포함합니다. 실제 OS 커서와 키보드 포커스는 공유하며, 모든 앱·모든 브라우저 기능의 성공을 보장하지 않습니다. [작업별 지원 범위](macpilot/references/workflows.md)에 백엔드별 제약을 명시합니다.
+원본은 [macpilot/](macpilot/), 배포 사본은 [Plugin 스킬](plugins/macpilot/skills/macpilot/SKILL.md)에서 관리합니다. `3.4.0`은 Swift 코어·CLI·MCP, 작업 격리·취소·포커스, 라이브 캡처·오버레이, 파일·Finder 태그·CoreAudio, Chromium 확장과 Safari Apple Events, 로컬 개선 요청 대기열·Codex app-server 전송을 포함합니다. 실제 OS 커서와 키보드 포커스는 공유하며, 모든 앱·모든 브라우저 기능의 성공을 보장하지 않습니다. [작업별 지원 범위](macpilot/references/workflows.md)에 백엔드별 제약을 명시합니다.
 
-macOS 14 이상과 Apple Swift 개발 도구가 필요합니다. `macpilot/scripts/macpilot`는 첫 실행에서 로컬 앱을 빌드·ad-hoc 서명합니다. Python·Node.js는 개발 검증용이며 외부 SwiftPM 패키지는 없습니다. Chromium 확장·사이트 접근과 Safari Automation·JavaScript from Apple Events는 별도 활성화가 필요합니다. 화면·시스템 오디오는 [`mac_record`](macpilot/references/recording.md)로 MP4에 녹화하고 검사합니다(macOS 15+). Safari·Chrome 개발자 설정은 [`mac_browser_developer`](macpilot/references/browser-developer-settings.md)로 조회·준비하고 사용자 승인 후 켤 수 있습니다. Codex 개선 요청 전송에는 명시적 목적지 설정과 로그인·모델 연결이 필요합니다. 일반 로컬 제어는 모델을 요구하지 않습니다.
+3.4는 AX 조건 대기, 범위를 명시한 공통 결과, 다른 입력 출처 감지 시 중단, 선택적 동작 추적, 후조건과 재실행 차단이 있는 명시적 재사용 작업을 추가합니다. 이미지 검색은 기본 비활성이며 VisionKit과 로컬 EmbeddingGemma 2를 사용합니다. 후보 벡터를 재사용하고 낮은 점수나 중복 후보는 선택하지 않습니다. [사용법과 검증 범위](macpilot/references/capabilities.md)를 확인하세요.
+
+macOS 14 이상과 Apple Swift 개발 도구가 필요합니다. `macpilot/scripts/macpilot`는 첫 실행에서 로컬 앱을 빌드·ad-hoc 서명합니다. 기본 제어에는 Python·Node.js 런타임과 외부 SwiftPM 패키지가 없습니다. 선택적 VisionKit·EmbeddingGemma 2 검색은 별도로 설정한 로컬 Python 환경과 모델을 사용합니다. Chromium 확장·사이트 접근과 Safari Automation·JavaScript from Apple Events는 별도 활성화가 필요합니다. 화면·시스템 오디오는 [`mac_record`](macpilot/references/recording.md)로 MP4에 녹화하고 검사합니다(macOS 15+). Safari·Chrome 개발자 설정은 [`mac_browser_developer`](macpilot/references/browser-developer-settings.md)로 조회·준비하고 사용자 승인 후 켤 수 있습니다. Codex 개선 요청 전송에는 명시적 목적지 설정과 로그인·모델 연결이 필요합니다. 일반 로컬 제어는 모델을 요구하지 않습니다.
 
 [`mac_connection`](macpilot/references/mcp-recovery.md)으로 서버·부모 프로세스 신원, 권한과 CLI/MCP 호출 경로를 확인합니다. CLI `connection-check`는 기존 서버·Codex를 재시작하지 않고 격리된 새 MCP를 검사합니다. 별도 검사 성공을 현재 대화의 재연결 성공으로 취급하지 않습니다.
 
@@ -60,6 +62,8 @@ codex plugin add macpilot@oozoofrog-plugin
 다른 Plugin의 요구 사항과 standalone 설치는 [Plugin 설치 안내](docs/plugin-installation.md)를 참고하세요.
 
 ## 검증
+
+버전 변경·검증한 커밋·GitHub 게시·선택 설치는 [Plugin 배포 절차](docs/plugin-release.md)를 사용합니다.
 
 ```bash
 python3 -m unittest discover -s scripts/tests -v

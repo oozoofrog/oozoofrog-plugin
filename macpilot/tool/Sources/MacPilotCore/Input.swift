@@ -37,6 +37,7 @@ import Carbon
         }
     }
     public static func post(_ event: CGEvent, route: String, pid: Int32) {
+        InputOwnership.stamp(event)
         if route == "process" { event.postToPid(pid) } else { event.post(tap: .cghidEventTap) }
     }
     public static func keyEvents(key: String, modifiers: [String], stateID: CGEventSourceStateID = .privateState) throws -> [CGEvent] {

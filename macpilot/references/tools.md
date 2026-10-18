@@ -12,7 +12,7 @@
 ./scripts/build.sh
 ```
 
-빌드에는 Xcode 또는 Swift를 포함한 Apple 개발 도구가 필요하다. SwiftPM의 외부 의존성은 없다. 빌드한 실행 파일은 `bin/MacPilot.app/Contents/MacOS/macpilot`에 있다. 런처는 실행 파일이 없거나 `Package.swift`, `build.sh`, Swift 소스가 설치된 실행 파일보다 새로우면 원자적으로 다시 빌드한다. 릴리스 검증은 타임스탬프 판단에 의존하지 않고 `build.sh`를 직접 실행한다.
+빌드에는 Xcode 또는 Swift를 포함한 Apple 개발 도구가 필요하다. SwiftPM의 외부 의존성은 없다. 빌드한 실행 파일은 `bin/MacPilot.app/Contents/MacOS/macpilot`에 있다. 런처는 실행 파일이 없거나 `Package.swift`, `build.sh`, Swift 소스나 `runtime/` 자료가 설치된 실행 파일보다 새롭거나 bundled worker가 없으면 원자적으로 다시 빌드한다. 릴리스 검증은 타임스탬프 판단에 의존하지 않고 `build.sh`를 직접 실행한다.
 
 CLI는 성공 시 JSON을 stdout에 출력한다. 인수·권한·대상 오류는 JSON 오류와 종료 코드 2를 반환한다. 도움말은 일반 텍스트다. 빌드 로그는 stderr로 출력한다.
 
@@ -23,6 +23,8 @@ CLI는 성공 시 JSON을 stdout에 출력한다. 인수·권한·대상 오류�
 ```sh
 printf '%s\n' '{}' | ./scripts/macpilot call mac_apps --json -
 ```
+
+조건 대기·공통 결과·사용자 입력 중단·선택적 추적·이미지 검색·재사용 작업은 [검증과 재사용 기능](capabilities.md)을 따른다.
 
 큰 JSON과 사용자 문자열은 파일이나 stdin으로 전달한다. 셸 명령 문자열에 보간하지 않는다. `call TOOL --json /absolute/request.json`도 지원한다. 모든 도구의 정확한 schema는 `tools` 출력으로 확인한다.
 

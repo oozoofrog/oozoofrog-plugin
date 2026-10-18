@@ -10,15 +10,24 @@ import subprocess
 import sys
 import time
 import tempfile
+import argparse
 
 skill = Path(__file__).resolve().parent.parent
 binary = skill / "bin/MacPilot.app/Contents/MacOS/macpilot"
-# Build, install, sign, and strictly verify the exact binary exercised below.
-subprocess.run([str(skill / "scripts/build.sh")], check=True)
-subprocess.run(["/usr/bin/xcrun","swift","build","--package-path",str(skill/"tool"),"--product","macpilot-fixture"],check=True)
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--skip-build', action='store_true', help='Use an already built and signed repository binary')
+parser.add_argument('--evidence', type=Path, help='New evidence directory; existing directories are refused')
+options = parser.parse_args()
+# The caller can reuse a separately completed source build without rebuilding it.
+if not options.skip_build:
+    subprocess.run([str(skill / "scripts/build.sh")], check=True)
+    subprocess.run(["/usr/bin/xcrun","swift","build","--package-path",str(skill/"tool"),"--product","macpilot-fixture"],check=True)
+subprocess.run(['/usr/bin/codesign','--verify','--strict',str(binary.parents[2])],check=True)
 fixture_dir = Path(subprocess.check_output(["/usr/bin/xcrun","swift","build","--package-path",str(skill/"tool"),"--show-bin-path"],text=True).strip())
 fixture = fixture_dir / "macpilot-fixture"
-out = skill / "evidence/runtime-current"
+out = options.evidence.resolve() if options.evidence else skill / "evidence/runtime-current"
+if out.exists() and options.evidence:
+    raise FileExistsError(out)
 if out.exists():
     shutil.rmtree(out)
 out.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -79,7 +88,11 @@ log = (out / "fixture-process.log").open("w")
 p = subprocess.Popen([str(fixture)], env=env, stdout=log, stderr=log)
 p2 = None
 preview = None
-source_paths = list((skill / "tool/Sources").rglob("*.swift")) + [skill / "tool/Package.swift", skill / "scripts/build.sh", skill / "assets/app-icon.png"]
+source_paths = (list((skill / "tool/Sources/MacPilot").rglob("*.swift"))
+                + list((skill / "tool/Sources/MacPilotCore").rglob("*.swift"))
+                + list((skill / "runtime").glob("*.*"))
+                + [skill / "tool/Package.swift", skill / "scripts/build.sh", skill / "assets/app-icon.png"])
+fixture_sources = list((skill / "tool/Sources/MacPilotFixture").rglob("*.swift")) + [skill / "tool/Package.swift"]
 report = {
     "checks":checks,
     "networkPolicy":"sandbox deny network*",
@@ -88,7 +101,9 @@ report = {
         "path": str(binary),
         "sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
         "builtAfterMaintainedSources": binary.stat().st_mtime >= max(path.stat().st_mtime for path in source_paths),
-        "buildPolicy": "scripts/build.sh rebuilt, installed, ad-hoc signed, and strictly verified this binary before runtime checks"
+        "buildPolicy": "reused prior repository build; signature strictly verified in this run" if options.skip_build else "scripts/build.sh rebuilt and ad-hoc signed the repository bundle in this run",
+        "freshnessScope": "File modification times only; actual build evidence is in the separate build log",
+        "sourceSHA256": {str(path.relative_to(skill)):hashlib.sha256(path.read_bytes()).hexdigest() for path in source_paths}
     }
 }
 try:
@@ -99,8 +114,11 @@ try:
             raise RuntimeError("Fixture exited; inspect fixture-process.log")
         time.sleep(0.1)
     doctor = call("mac_doctor", {})
-    check("installed_binary_rebuilt_from_current_sources", report["installedBinary"]["builtAfterMaintainedSources"], report["installedBinary"])
-    check("required_permissions", all(doctor["permissions"][k] for k in ("accessibility","screenCapture","postEvent")), doctor["permissions"])
+    check("repository_binary_is_newer_than_controller_inputs", report["installedBinary"]["builtAfterMaintainedSources"], report["installedBinary"])
+    check("fixture_binary_is_newer_than_its_sources",fixture.stat().st_mtime >= max(path.stat().st_mtime for path in fixture_sources))
+    resources = skill / 'bin/MacPilot.app/Contents/Resources/ImageSearch'
+    check("optional_image_resources_match_maintained_sources",all((resources/name).read_bytes()==(skill/'runtime'/name).read_bytes() for name in ['image_search_worker.py','embeddinggemma2-manifest.json','requirements-image-search.txt']))
+    check("required_permissions", all(doctor["permissions"][k] for k in ("accessibility","screenCapture","postEvent","inputMonitoring")), doctor["permissions"])
     apps = call("mac_apps", {})
     fixture_app = next(app for app in apps["apps"] if app["pid"] == p.pid)
     process_start_id = fixture_app.get("processStartID")
@@ -281,7 +299,8 @@ try:
         cancel_request={"jsonrpc":"2.0","id":101,"method":"tools/call","params":{"name":"mac_drag","arguments":{
             "observation":o["id"],"x":100,"y":350,"toX":250,"toY":350,"duration":2.0,"route":"global"}}}
         cancel_rpc.stdin.write(json.dumps(cancel_request)+"\n"); cancel_rpc.stdin.flush()
-        time.sleep(0.16)
+        check("cancelled_drag_started_before_cancellation",wait_state(lambda s:s["events"].get("mouseDown",0)>pointer_events_before.get("mouseDown",0),seconds=5),state())
+        time.sleep(0.12)
         cancel_rpc.stdin.write(json.dumps({"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":101}})+"\n")
         cancel_rpc.stdin.flush()
         balanced=wait_state(lambda s:
@@ -297,7 +316,7 @@ try:
               and after_events.get("mouseUp",0)-pointer_events_before.get("mouseUp",0) == 1
               and followup is not None and followup.get("id") == 102
               and not followup.get("result",{}).get("isError",False),
-              {"before":pointer_events_before,"after":after_events,"followup":followup})
+              {"before":pointer_events_before,"after":after_events,"followup":followup,"pointerReceipts":state().get("pointerReceipts",[]),"controllerPID":cancel_rpc.pid})
         focus_observation=observe(p.pid)
         action(focus_observation,node(focus_observation,"literal-text"),"focus")
         key_observation=observe(p.pid)

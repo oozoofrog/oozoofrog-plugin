@@ -15,6 +15,16 @@ public enum ToolCatalog {
     private static let x: [String: Any] = ["type":"number", "minimum":-1e7, "maximum":1e7]
     private static let space = str("Coordinate units. Default window. All origins top-left.", choices:["screen","window","image","normalized"])
     private static let strings: [String: Any] = ["type":"array", "items":["type":"string"], "maxItems":8]
+    private static var selectorSchema: [String: Any] {
+        ["type":"object", "additionalProperties":false,
+         "properties":["role":str("Exact AX role"), "identifier":str("Exact accessibility identifier"), "title":str("Exact AX title")]]
+    }
+    private static var conditionSchema: [String: Any] {
+        ["type":"object", "additionalProperties":false, "required":["predicate"],
+         "properties":["selector":selectorSchema,
+                       "predicate":str("Exact condition; only stable may omit selector to inspect the whole window", choices:["exists","absent","enabled","disabled","focused","equals","contains","stable"]),
+                       "text":str("Required only for equals or contains"), "stableMs":int("Stable geometry interval, default 200ms",min:100,max:2000)]]
+    }
     private static func stringArray(_ description: String, maxItems: Int = 16) -> [String: Any] {
         ["type":"array", "description":description, "items":["type":"string"], "minItems":1, "maxItems":maxItems]
     }
@@ -64,6 +74,35 @@ public enum ToolCatalog {
         scroll["vertical"] = int("Lines; positive up, negative down",min:-100,max:100)
         scroll["horizontal"] = int("Horizontal lines",min:-100,max:100)
         return [
+            spec("mac_workflow", "Validate/save or explicitly run bounded native recipes. Steps are set_value, AXPress, physical key or wait, with exact selectors and postconditions. Validates the entire plan and parameters before any mutation. Uses one exact process/window, journals progress, never replays a runID, and stops on failed postconditions/cancellation. No background triggers or scripts.",
+                 ["operation":str("Workflow operation",choices:["validate","save","list","read","remove","run","runs","run_status","remove_run"]),
+                  "definition":["type":"object","description":"name, optional parameters (up to 8 names), steps (1–24). Every mutation requires selector and postcondition; wait requires condition. Conditions use AX predicates and may use textParameter instead of text."],
+                  "name":str("Saved short workflow name"),"overwrite":["type":"boolean","default":false],
+                  "parameters":["type":"object","maxProperties":8,"additionalProperties":["type":"string"]],
+                  "pid":int("Exact target PID",min:1),"processStartID":processStartID,"windowID":int("Exact target window",min:1,max:Int(UInt32.max)),
+                  "runID":str("Optional caller-generated UUID; repeated identical requests inspect the existing run without replay"),
+                  "allowGlobalInput":["type":"boolean","default":false],"privateAPI":["type":"boolean","default":false],
+                  "timeoutMs":int("Whole-run deadline, default 60000ms",min:100,max:60000)], ["operation"]),
+            spec("mac_image_search", "Optional VisionKit + local EmbeddingGemma 2 candidate search. Disabled by default. Configure an explicit local Python environment and pinned model; no automatic install/download or remote inference. Returns ranked image regions and abstains on ambiguity; never clicks. Exact-pixel stability and observation lifetime still apply.",
+                 ["operation":str("Image search operation",choices:["configure","status","search","cache_clear"]),
+                  "enabled":["type":"boolean","default":false], "pythonPath":str("Absolute local venv interpreter path; keep its symlink path"),
+                  "modelPath":str("Absolute pinned google/embeddinggemma-2 snapshot"), "device":str("Optional model device, default mps",choices:["mps","cpu"]),
+                  "observation":observation,"query":str("Literal text query, at most 4096 UTF-8 bytes"),"templatePath":str("Explicit bounded local reference image; mutually exclusive with query"),
+                  "regions":["type":"array","minItems":1,"maxItems":24,"items":["type":"object","additionalProperties":false,"required":["x","y","width","height"],"properties":["x":x,"y":x,"width":x,"height":x]]],
+                  "maxCandidates":int("Candidate budget, default 24",min:1,max:24),"minimumScore":["type":"number","minimum":0,"maximum":1],
+                  "minimumMargin":["type":"number","minimum":0.001,"maximum":1],"timeoutMs":int("Read-only inference deadline, default 25000ms",min:100,max:28000)], ["operation"]),
+            spec("mac_trace", "Opt in to bounded per-task action traces. Text and selected-window screenshots are separate opt-ins. Records operation outcomes and before/after state; export creates a local HTML view. Trace storage failures never authorize repeating an action.",
+                 ["operation":str("Trace operation",choices:["configure","status","list","read","export","clear"]),
+                  "enabled":["type":"boolean","default":false], "captureText":["type":"boolean","default":false],
+                  "captureScreenshots":["type":"boolean","default":false], "maxEntries":int("Retention count, default 50",min:1,max:200),
+                  "maxBytes":int("Retention bytes including images, default 32 MiB",min:1_048_576,max:67_108_864),
+                  "traceID":str("Trace UUID from list or an action result")], ["operation"]),
+            spec("mac_wait_for", "Wait for one declared AX condition in an exact process generation and window. Reacquires replaced nodes using an exact selector, uses AX notifications plus bounded polling, refuses partial/ambiguous trees, and never repeats an action.",
+                 ["pid":int("Exact target PID",min:1), "processStartID":processStartID, "windowID":int("Exact target window",min:1,max:Int(UInt32.max)),
+                  "condition":conditionSchema, "timeoutMs":int("Wait deadline, default 5000ms",min:50,max:30000),
+                  "pollMs":int("Fallback polling interval, default 100ms",min:50,max:1000),
+                  "maxNodes":int("AX node budget, default 500",min:1,max:1000), "maxDepth":int("AX depth budget, default 20",min:1,max:30),
+                  "privateAPI":["type":"boolean","default":false]], ["pid","processStartID","windowID","condition"],read:true),
             spec("mac_connection", "Diagnose this server's process identity, parent, permissions and CLI/MCP scope, or probe a separate isolated MCP. Never kills existing servers, reloads the host or retries mutations. Probe success is not host reconnection.",
                  ["operation":str("status reads this process; probe starts and cleans up one owned MCP subprocess",choices:["status","probe"]),
                   "previousServerPID":int("Previous server PID; requires previousServerStartID",min:1),
@@ -72,7 +111,7 @@ public enum ToolCatalog {
                   "previousParentStartID":str("Previous parent processStartID from connection status"),
                   "timeoutMs":int("Probe-only deadline; default 10000, plus bounded child cleanup",min:500,max:30000)], ["operation"],read:true),
             spec("mac_task", "Begin, inspect, cancel or finish isolated MacPilot work. Background preservation is the default. Cancellation interrupts active task calls.",
-                 ["operation":str("Task operation", choices:["begin","list","status","cancel","finish"]),
+                 ["operation":str("Task operation; resume is explicit after user-input interruption", choices:["begin","list","status","cancel","finish","resume"]),
                   "taskID":str("Task UUID for status, cancel and finish"), "goal":str("Explicit task intent; up to 4096 UTF-8 bytes"),
                   "expected":str("Explicit expected postcondition; up to 4096 UTF-8 bytes"), "pid":int("Optional bound PID",min:1),
                   "processStartID":processStartID, "windowID":int("Optional bound window",min:1,max:Int(UInt32.max)),

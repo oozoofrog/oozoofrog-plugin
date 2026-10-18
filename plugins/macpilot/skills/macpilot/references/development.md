@@ -1,6 +1,6 @@
 # 개발과 검증
 
-실행 코어·CLI·MCP·AX·캡처·CoreAudio·private API·Codex app-server 연결은 Swift다. 브라우저 확장은 JavaScript다. Python과 Node.js는 개발 검증 스크립트에서만 사용한다. 패키지는 외부 SwiftPM 의존성이 없다.
+실행 코어·CLI·MCP·AX·캡처·CoreAudio·private API·Codex app-server 연결은 Swift다. 브라우저 확장은 JavaScript다. 기본 제어에서 Python과 Node.js는 개발 검증용이다. 선택적 이미지 검색만 명시적으로 설정한 로컬 Python 모델 worker를 사용한다. 패키지는 외부 SwiftPM 의존성이 없다.
 
 ## 검증 명령
 
@@ -84,3 +84,24 @@ ASCII 입력 소스 전환은 별도 IME AX utility 창을 만들 수 있다. pr
 다른 앱의 전체 화면에서는 `fullScreenAuxiliary`만으로 안내의 실제 노출을 보장할 수 없다. UI 호스트를 `.accessory`로 실행하고 `canJoinAllApplications`도 지정한다. 패널 생성 직후부터 반복 생성하지 말고 다음 tick에서 실제 표시 상태가 정착할 시간을 둔다. 안내 패널의 active Space와 WindowServer onscreen 목록을 함께 확인한다. `NSWindow.isVisible`이나 내부 상태만으로 전체 화면 표시 성공을 판정하지 않는다. 실제 게임의 디스플레이 캡처로 별도 확인한다.
 
 안내 호스트의 시작·응답 지연 검사는 격리된 소유 호스트만 2.4초 정지한다. 실제 표시 확인 전 입력이 없고, 대기 중 소유 레코드가 갱신되며, 호스트 재개 후 입력과 종료 시 해제가 이루어지는지 확인한다. 시작 대기는 최대 5초다. 실제 화면·위치·피해에 변화가 없으면 전송 결과와 무관하게 현재 게임 입력 경로는 실패로 기록한다.
+
+
+## 조건 대기와 선택 기능 회귀
+
+`xcrun swift build --package-path macpilot/tool --product macpilot-capability-fixture` 후 다음 명령을 실행한다. 검증 창과 제어기 상태는 실행별 내부 임시 경로에 격리한다. 실제 앱에 입력하거나 설치된 MCP를 교체하지 않는다.
+
+```sh
+python3 macpilot/scripts/verify_capabilities.py --binary /absolute/MacPilot.app/Contents/MacOS/macpilot --fixture /absolute/macpilot-capability-fixture --evidence /absolute/new-evidence-directory --python /absolute/optional-venv/bin/python --model /absolute/pinned-model-snapshot
+```
+
+Python·모델 인수를 생략하면 실제 모델 검사는 `NOT_RUN`이다. 기본 비활성 경로 검사는 계속 실행한다. 조건 변화·부분 수집·중복, 무반응 결과, 추적 전후 이미지 해시·보안값 제외·보존 한도·추적 오류, 전체 작업 사전 검사·중복 실행·실패 후 중단·취소 기록, 다른 프로세스 이벤트 감지와 키 해제를 검사한다. 실제 모델 검사에는 후보 위치·캐시 재사용·임계값·중복·검색 중 화면 변경이 포함된다. 제어한 합성 외부 이벤트는 물리 키보드·트랙패드 검증을 대신하지 않는다. 저장된 PNG를 직접 검수하며 arbitrary app 지원이나 사용자 수락과 구분한다.
+
+`verify_runtime.py --skip-build --evidence /absolute/new-directory`는 이미 별도로 빌드·서명한 저장소 바이너리를 재사용한다. 지정한 증거 디렉터리가 있으면 중단하므로 앞선 실행 결과를 덮어쓰지 않는다.
+
+입력 회귀의 MCP 제어기 상태도 fixture별 임시 디렉터리에 둔다. 실제 사용자 상태 디렉터리의 설정·추적·감사 로그와 섞지 않는다. 이미지 검증 fixture는 AppKit 프로세스 신원을 확인할 수 있도록 실행별 ID의 임시 `.app` 번들을 LaunchServices로 실행한다. 프로세스가 살아 있는 상태의 AppKit 메타데이터 조회 실패와 실제 프로세스 종료를 같은 오류로 분류하지 않는다.
+
+드래그 취소 검사는 fixture가 실제 `mouseDown`을 받은 뒤 취소를 보낸다. 고정 지연만으로 입력 시작을 추정하지 않는다. fixture의 제한된 `pointerReceipts`에 이벤트 출처 PID·표식·유형·시각을 남겨 OS/다른 입력과 제어기 입력을 구분한다.
+
+LaunchServices가 실행하는 fixture의 stdout·stderr도 내부 임시 경로에 둔다. 외장 볼륨의 증거 경로를 직접 넘기면 새 앱의 파일 접근 동의와 실행 실패가 섞일 수 있다. 종료 후 호스트가 로그를 증거 경로로 옮긴다. 외부 입력 송신기는 별도 프로세스의 기존 호스트 권한을 사전 확인하며 새 fixture 권한을 자동 요청하지 않는다.
+
+기존 빌드를 재사용할 때는 제어기와 fixture의 소스 범위를 따로 확인한다. 제어기 mtime 검사에 별도 검증용 실행 파일의 소스를 섞지 않는다. mtime은 빌드 증명이 아니므로 실제 빌드 로그·바이너리 해시·서명 검사·런타임 판정을 구분한다.

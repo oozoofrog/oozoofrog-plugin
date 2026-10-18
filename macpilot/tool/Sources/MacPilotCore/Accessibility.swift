@@ -139,12 +139,12 @@ public struct AXMenuItemInfo: Codable, Equatable {
                     identityTruncated: role.truncated || subrole.truncated || title.truncated || identifier.truncated,
                     actionsTruncated: exposedActions.truncated)
     }
-    public static func collect(_ root: AXUIElement, maxNodes: Int, maxDepth: Int) -> ([Node], String, [String]) {
+    public static func collect(_ root: AXUIElement, maxNodes: Int, maxDepth: Int, timeoutMilliseconds: Int = 5000) -> ([Node], String, [String]) {
         var nodes: [Node] = [], diagnostics: [String] = []
         var visited: [AXUIElement] = []
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(max(1, min(5000, timeoutMilliseconds))) * 1_000_000
         func walk(_ e: AXUIElement, _ path: [Int], _ secure: Bool) {
-            guard nodes.count < maxNodes, Date() < deadline else { diagnostics.append("node_or_time_budget"); return }
+            guard nodes.count < maxNodes, DispatchTime.now().uptimeNanoseconds < deadline, !Task.isCancelled else { diagnostics.append("node_or_time_budget"); return }
             guard !visited.contains(where: { CFEqual($0, e) }) else { diagnostics.append("cycle_or_shared_child"); return }
             visited.append(e)
             let n = node(e, path: path, secureAncestor: secure); nodes.append(n)
