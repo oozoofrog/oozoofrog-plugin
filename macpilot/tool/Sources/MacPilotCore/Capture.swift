@@ -98,6 +98,10 @@ private final class OCRRequestBox: @unchecked Sendable {
         config.height = max(1, Int((size.height * scale).rounded()))
         config.showsCursor = false
         config.ignoreShadowsSingleWindow = true
+        // Keep the returned pixels in the selected window's coordinate space.
+        // SCK includes child/grouped windows by default, which can expand the
+        // captured composition while metadata still describes this one window.
+        if #available(macOS 14.2, *) { config.includeChildWindows = false }
         config.captureResolution = .best
         return try validatedCapture(
             try await capture(filter: filter, configuration: config, deadline: deadline),

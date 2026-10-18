@@ -41,17 +41,49 @@ import Carbon
     }
     public static func keyEvents(key: String, modifiers: [String]) throws -> [CGEvent] {
         guard let code = keyCodes[key.lowercased()] else { throw ToolFailure("invalid_argument", "Unknown key name; use keyCode from the documented map") }
-        let flags = try flags(modifiers)
+        _ = try flags(modifiers) // Validate before creating any events.
         let source = CGEventSource(stateID: .privateState)
-        return try [true, false].map { down in
-            guard let event = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: down) else { throw ToolFailure("event_failed", "Cannot create key event") }
-            event.flags = flags; return event
+        // GHOST and other event-driven clients track modifier transitions, rather
+        // than reconstructing held keys from the flags on the printable key.
+        let selected = modifierKeys.filter { modifiers.contains($0.name) }
+        var held: CGEventFlags = [], events: [CGEvent] = []
+        func event(_ code: CGKeyCode, down: Bool, flags: CGEventFlags, modifier: Bool = false) throws -> CGEvent {
+            guard let event = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: down) else {
+                throw ToolFailure("event_failed", "Cannot create key event")
+            }
+            if modifier { event.type = .flagsChanged }
+            event.flags = flags
+            return event
         }
+        for item in selected {
+            held.insert(item.flag)
+            events.append(try event(item.code, down:true, flags:held, modifier:true))
+        }
+        events.append(try event(code, down:true, flags:held))
+        events.append(try event(code, down:false, flags:held))
+        for item in selected.reversed() {
+            held.remove(item.flag)
+            events.append(try event(item.code, down:false, flags:held, modifier:true))
+        }
+        return events
+    }
+    private static let modifierKeys: [(name:String, code:CGKeyCode, flag:CGEventFlags)] = [
+        ("control",59,.maskControl), ("option",58,.maskAlternate),
+        ("shift",56,.maskShift), ("command",55,.maskCommand)
+    ]
+    public static func isKeyPress(_ event: CGEvent) -> Bool {
+        if event.type == .keyDown { return true }
+        guard event.type == .flagsChanged,
+              let item = modifierKeys.first(where: { Int64($0.code) == event.getIntegerValueField(.keyboardEventKeycode) }) else { return false }
+        return event.flags.contains(item.flag)
     }
     public static func textEvents(_ text: String) throws -> [CGEvent] {
         let source = CGEventSource(stateID: .privateState)
-        return try Geometry.unicodeChunks(text).flatMap { units -> [CGEvent] in
-            try [true, false].map { down in
+        // One Unicode scalar per event: clients may consume only the first
+        // scalar. Keep a non-BMP scalar's UTF-16 surrogate pair together.
+        return try text.unicodeScalars.flatMap { scalar -> [CGEvent] in
+            let units = Array(String(scalar).utf16)
+            return try [true, false].map { down in
                 guard let event = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: down) else { throw ToolFailure("event_failed", "Cannot create Unicode event") }
                 event.flags = []; units.withUnsafeBufferPointer { event.keyboardSetUnicodeString(stringLength: $0.count, unicodeString: $0.baseAddress) }
                 return event
@@ -82,5 +114,42 @@ import Carbon
         guard hit == Int(observation.windowID) else {
             throw ToolFailure("occluded_target", "Hit window \(hit) differs from target \(observation.windowID); global input was not sent")
         }
+    }
+}
+
+/// Explicit, foreground-only temporary selection; never enables a new input source.
+@MainActor public final class KeyboardInputSourceScope {
+    private let original: TISInputSource
+    private let selected: TISInputSource
+    private var finished = false
+    private static func identifier(_ source:TISInputSource) -> String {
+        guard let p = TISGetInputSourceProperty(source,kTISPropertyInputSourceID) else { return "" }
+        return Unmanaged<CFString>.fromOpaque(p).takeUnretainedValue() as String
+    }
+    public static func currentID() -> String { identifier(TISCopyCurrentKeyboardInputSource().takeRetainedValue()) }
+    public init() throws {
+        original = TISCopyCurrentKeyboardInputSource().takeRetainedValue()
+        selected = TISCopyCurrentASCIICapableKeyboardLayoutInputSource().takeRetainedValue()
+        guard !Self.identifier(original).isEmpty, !Self.identifier(selected).isEmpty else {
+            throw ToolFailure("input_source_unavailable","Cannot identify current and ASCII keyboard sources")
+        }
+        guard TISSelectInputSource(selected) == noErr else {
+            throw ToolFailure("input_source_unavailable","Cannot select the existing ASCII keyboard layout")
+        }
+    }
+    public func verify() throws {
+        guard Self.currentID() == Self.identifier(selected) else {
+            throw ToolFailure("input_source_changed","Keyboard input source changed; input stopped")
+        }
+    }
+    @discardableResult public func restore() -> [String:Any] {
+        guard !finished else { return ["restored":Self.currentID() == Self.identifier(original)] }
+        finished = true
+        let current = Self.currentID()
+        // Do not replace a user's intervening selection.
+        if current == Self.identifier(selected) { _ = TISSelectInputSource(original) }
+        return ["original":Self.identifier(original),"selected":Self.identifier(selected),
+                "restored":Self.currentID() == Self.identifier(original),
+                "verification":"Input source was reread; a concurrent different selection is preserved"]
     }
 }

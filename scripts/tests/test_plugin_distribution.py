@@ -72,7 +72,8 @@ class PluginDistributionTests(unittest.TestCase):
                          "tool/Sources/MacPilotCore/PermissionSetup.swift", "tool/Sources/MacPilotCore/PermissionCenter.swift",
                          "tool/Sources/MacPilotCore/PermissionGuide.swift",
                          "tool/Sources/MacPilotCore/PermissionDragOnboarding.swift",
-                         "scripts/verify_permissions_none.py", "scripts/permission_unprivileged_probe.swift",
+                         "scripts/verify_permissions_none.py", "scripts/verify_input.py",
+                         "scripts/permission_unprivileged_probe.swift",
                          "scripts/permission_probe_launcher.swift", "scripts/permission_probe_control.py",
                          "references/permission-validation.md",
                          "tool/Tests/MacPilotCoreTests/PermissionSetupTests.swift",
@@ -90,7 +91,7 @@ class PluginDistributionTests(unittest.TestCase):
             self.assertFalse((mirror / relative).exists(), relative)
         manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text())
         self.assertEqual(source.name, manifest["name"])
-        self.assertEqual("3.2.0", manifest["version"])
+        self.assertEqual("3.2.1", manifest["version"])
         self.assertEqual(manifest["version"], json.loads((source / "browser/extension/manifest.json").read_text())["version"])
         frontmatter = (source / "SKILL.md").read_text().split("---", 2)[1]
         self.assertEqual({"name", "description"}, {line.split(":", 1)[0] for line in frontmatter.splitlines() if ":" in line})

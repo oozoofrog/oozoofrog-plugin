@@ -63,3 +63,11 @@ WindowServer 인벤토리의 alpha=1이 전체 사각형의 불투명도를 뜻�
 `NSVisualEffectView`의 behind-window 재질에는 레이어의 `cornerRadius`만 적용하지 않는다. `maskImage`의 알파 채널로 재질과 창 그림자의 라운드 윤곽을 지정한다. `PermissionSetupTests`는 마스크의 네 모서리가 투명하고 중앙이 불투명한지 검사한다. 실제 WindowServer 합성 결과는 실행한 패널로 별도 확인한다.
 
 드래그 시연은 `PermissionDragOnboarding.swift`가 담당한다. 투명 창은 입력을 통과시키며 실제 앱 아이콘은 고정한다. 사용자 입력 중지·동작 줄이기·두 번 제한은 소스 검사와 실제 무권한 앱의 드래그 근거를 구분해 확인한다. [무권한 검증](permission-validation.md)의 실행기는 별도 bundle ID로 동일 실행 코어를 빌드한다. 앱과 실시간 로그는 내부 임시 경로에 둔다. 외장 볼륨의 로그 접근 자체가 별도 동의를 요구하므로 그 동의를 초기 권한 검증과 섞지 않는다.
+
+
+## Blender 저장 입력 회귀
+
+조합키는 modifier flagsChanged down/up·키 해제를 함께 검사한다. Unicode scalar 단위 이벤트는 surrogate pair를 보존한다. 캡처의 선택 창과 실제 이미지 범위, 클릭 전 mouse-move, 전송 시각과 down/up 간격을 각각 분리해 확인한다. 한글 IME에서 일반 문자 이벤트가 소비되면 명시적 `mac_key|mac_type inputSource=ascii`의 원래 입력 소스 복구까지 검증한다. fixture 성공은 실제 Blender Save As 성공을 대신하지 않는다. 기존 파일·dirty 상태를 먼저 보존하고 새 경로로 저장한 뒤 디스크 파일과 fresh Blender 상태를 교차 확인한다. bpy 저장은 MacPilot 성공 근거로 사용하지 않는다.
+
+
+입력 fixture 회귀는 `python3 macpilot/scripts/verify_input.py --binary /absolute/MacPilot.app/Contents/MacOS/macpilot --fixture /absolute/macpilot-fixture --evidence /absolute/new-evidence-directory`로 실행한다. fixture는 같은 저장소의 `xcrun swift build --package-path macpilot/tool --product macpilot-fixture`로 만든다. 새 증거 디렉터리만 허용하고 일반 종료만 요청한다. 입력 소스 변경으로 AXWindows 순서가 달라져도 기존 frame/title의 유일성·정확한 포커스·프로세스 정체성을 유지해야 한다. 배열 index를 창 정체성으로 사용하지 않는다.

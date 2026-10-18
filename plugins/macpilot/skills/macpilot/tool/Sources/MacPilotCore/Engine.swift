@@ -686,6 +686,9 @@ import CryptoKit
             if tool == "mac_click" {
                 let button = try a.string("button", default: "left"), clicks = try a.integer("clicks", default: 1, range: 1...2)
                 guard ["left","right"].contains(button) else { throw ToolFailure("invalid_argument", "button must be left or right") }
+                // Blender/GHOST chooses the active UI region from cursor-move
+                // events. A button event at a new point alone leaves that stale.
+                events.append(try Input.mouseEvent(.mouseMoved, point:p, observation:o))
                 for n in 1...clicks {
                     events += try [Input.mouseEvent(button == "left" ? .leftMouseDown : .rightMouseDown, point: p, observation: o, clicks: n),
                                    Input.mouseEvent(button == "left" ? .leftMouseUp : .rightMouseUp, point: p, observation: o, clicks: n)]
@@ -739,6 +742,7 @@ import CryptoKit
                     }
                     return result
                 }
+                event.timestamp = DispatchTime.now().uptimeNanoseconds
                 Input.post(event, route: route, pid: o.pid)
                 posted += 1
                 if [.leftMouseDown,.rightMouseDown].contains(event.type) {
@@ -748,7 +752,7 @@ import CryptoKit
                 } else if [.leftMouseUp,.rightMouseUp].contains(event.type) {
                     pendingRelease = nil
                 }
-                try? await Task.sleep(nanoseconds: duration > 0 ? UInt64(duration / Double(events.count) * 1e9) : 8_000_000)
+                try? await Task.sleep(nanoseconds: duration > 0 ? UInt64(duration / Double(events.count) * 1e9) : 30_000_000)
             }
             // Quartz dispatch is asynchronous. Keep a one-shot CLI alive through queue delivery.
             try await Task.sleep(nanoseconds: 100_000_000)
@@ -762,24 +766,42 @@ import CryptoKit
             return result
         case "mac_key", "mac_type":
             if tool == "mac_key" {
-                try a.only(["observation", "node", "route", "key", "modifiers"])
+                try a.only(["observation", "node", "route", "key", "modifiers", "inputSource"])
             } else {
-                try a.only(["observation", "node", "route", "text"])
+                try a.only(["observation", "node", "route", "text", "inputSource"])
             }
             let nodeID = try a.string("node")
             let (o, route) = try inputContext(a, keyboard: true)
             let events = tool == "mac_key" ? try Input.keyEvents(key: a.string("key", limit: 64), modifiers: a.strings("modifiers")) : try Input.textEvents(a.string("text", limit: 8192))
+            let sourceMode = try a.string("inputSource", default:"current")
+            guard ["current","ascii"].contains(sourceMode) else { throw ToolFailure("invalid_argument","inputSource must be current or ascii") }
+            if sourceMode == "ascii", route != "global" {
+                throw ToolFailure("invalid_argument","Temporary ASCII selection requires route=global and the selected foreground app")
+            }
             try Task.checkCancellation()
             try store.consume(o)
+            let sourceScope = sourceMode == "ascii" ? try KeyboardInputSourceScope() : nil
+            defer { sourceScope?.restore() }
+            if sourceScope != nil { try await Task.sleep(nanoseconds:100_000_000) }
+            func restoredResult(_ value:[String:Any]) -> [String:Any] {
+                var result = value
+                if let sourceScope {
+                    let restoration = sourceScope.restore()
+                    result["keyboardInputSource"] = restoration
+                    if restoration["restored"] as? Bool != true { result["warning"] = "Original input source was not restored; inspect current state before further input" }
+                }
+                return result
+            }
             var posted = 0
-            var pendingRelease: CGEvent?
+            var pendingReleases: [CGEvent] = []
             for (index, event) in events.enumerated() {
                 do {
                     try Task.checkCancellation()
+                    try sourceScope?.verify()
                     try revalidateKeyboardTarget(o, nodeID: nodeID, route: route)
                 } catch {
                     if error is CancellationError {
-                        if let release = pendingRelease {
+                        for release in pendingReleases.reversed() {
                             _ = postCleanupRelease(release, route:route, observation:o, pointer:false)
                         }
                         throw error
@@ -790,22 +812,28 @@ import CryptoKit
                             "reasonCode":failure?.code ?? "native_error",
                             "reason":failure?.description ?? error.localizedDescription,
                             "verification":"A prefix may have reached the original target; observe its value and focus before any retry"]
-                    if let release = pendingRelease {
-                        result["cleanupRelease"] = postCleanupRelease(release, route:route, observation:o, pointer:false)
+                    if !pendingReleases.isEmpty {
+                        result["cleanupReleases"] = pendingReleases.reversed().map { postCleanupRelease($0, route:route, observation:o, pointer:false) }
                     }
-                    return result
+                    return restoredResult(result)
                 }
+                event.timestamp = DispatchTime.now().uptimeNanoseconds
                 Input.post(event, route: route, pid: o.pid)
                 posted += 1
-                if event.type == .keyDown {
-                    pendingRelease = events.dropFirst(index + 1).first { $0.type == .keyUp }
-                } else if event.type == .keyUp {
-                    pendingRelease = nil
-                    try? await Task.sleep(nanoseconds: 15_000_000)
+                let code = event.getIntegerValueField(.keyboardEventKeycode)
+                if Input.isKeyPress(event) {
+                    if let release = events.dropFirst(index + 1).first(where: {
+                        $0.getIntegerValueField(.keyboardEventKeycode) == code && !Input.isKeyPress($0)
+                    }) { pendingReleases.append(release) }
+                } else {
+                    pendingReleases.removeAll { $0.getIntegerValueField(.keyboardEventKeycode) == code }
                 }
+                // Allow the app's event loop to observe down before up, including
+                // modifier transitions. Keep revalidation before every event.
+                try? await Task.sleep(nanoseconds: 15_000_000)
             }
             try await Task.sleep(nanoseconds: 100_000_000)
-            return ["status":"dispatched_unverified", "route":route, "eventsPosted":posted, "verification":"Observe the focused value; Unicode events do not emulate IME composition"]
+            return restoredResult(["status":"dispatched_unverified", "route":route, "eventsPosted":posted, "verification":"Observe the focused value; Unicode events do not emulate IME composition"])
         case "mac_find":
             try a.only(["observation", "role", "title", "identifier", "valueContains", "maxResults"])
             let role = try a.values["role"].map { _ in try a.string("role", limit: 256) }

@@ -176,7 +176,7 @@ final class CoreTests: XCTestCase {
         let current=RPC.initialize(["protocolVersion":"2024-11-05"])
         XCTAssertEqual(current["protocolVersion"] as? String,"2024-11-05")
         XCTAssertEqual((current["serverInfo"] as? [String:Any])?["name"] as? String,"macpilot")
-        XCTAssertEqual((current["serverInfo"] as? [String:Any])?["version"] as? String,"3.2.0")
+        XCTAssertEqual((current["serverInfo"] as? [String:Any])?["version"] as? String,"3.2.1")
         XCTAssertEqual(RPC.initialize(["protocolVersion":"future"])["protocolVersion"] as? String,"2025-11-25")
     }
     func testSystemActionSchemasArePresentAndStrict() throws {
@@ -542,12 +542,17 @@ final class CoreTests: XCTestCase {
     }
     @MainActor func testKeyEventsBalanceAndPrivateModifierFlags() async throws {
         let events=try Input.keyEvents(key:"a",modifiers:["command","shift"])
-        XCTAssertEqual(events.map(\.type),[.keyDown,.keyUp])
-        XCTAssertTrue(events.allSatisfy { $0.flags.contains([.maskCommand,.maskShift]) })
+        XCTAssertEqual(events.map(\.type),[.flagsChanged,.flagsChanged,.keyDown,.keyUp,.flagsChanged,.flagsChanged])
+        XCTAssertEqual(events.map { $0.getIntegerValueField(.keyboardEventKeycode) },[56,55,0,0,55,56])
+        XCTAssertTrue(events[2].flags.contains([.maskCommand,.maskShift]))
+        XCTAssertTrue(events.last!.flags.isEmpty)
+        XCTAssertEqual(events.map { Input.isKeyPress($0) },[true,true,true,false,false,false])
+        XCTAssertEqual(try Input.keyEvents(key:"a",modifiers:[]).map(\.type),[.keyDown,.keyUp])
+        XCTAssertEqual(try Input.keyEvents(key:"s",modifiers:["shift","shift"]).count,4)
         XCTAssertThrowsError(try Input.keyEvents(key:"a",modifiers:["typo"]))
         XCTAssertThrowsError(try Input.keyEvents(key:"unknown",modifiers:[]))
         let text=try Input.textEvents("한글😀")
-        XCTAssertEqual(text.count % 2,0); XCTAssertTrue(text.allSatisfy { $0.flags.isEmpty })
+        XCTAssertEqual(text.count,6); XCTAssertTrue(text.allSatisfy { $0.flags.isEmpty })
     }
     func testCallbackDeadlineReturnsWithoutAFrameworkCallback() async {
         let started=DispatchTime.now().uptimeNanoseconds
