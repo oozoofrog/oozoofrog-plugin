@@ -17,7 +17,12 @@ elif [ "$skill_dir/scripts/build.sh" -nt "$executable" ] || \
      [ "$skill_dir/tool/Package.swift" -nt "$executable" ] || \
      [ "$skill_dir/assets/app-icon.png" -nt "$executable" ]; then
     needs_build=true
-elif /usr/bin/find "$skill_dir/tool/Sources" -type f -name '*.swift' -newer "$executable" -print -quit | /usr/bin/grep -q .; then
+elif /usr/bin/find "$skill_dir/tool/Sources/MacPilot" "$skill_dir/tool/Sources/MacPilotCore" -type f -name '*.swift' -newer "$executable" -print -quit | /usr/bin/grep -q .; then
+    needs_build=true
+elif [ ! -f "$skill_dir/bin/MacPilot.app/Contents/Resources/ImageSearch/image_search_worker.py" ] || \
+     [ ! -f "$skill_dir/bin/MacPilot.app/Contents/Resources/ImageSearch/embeddinggemma2-manifest.json" ] || \
+     [ ! -f "$skill_dir/bin/MacPilot.app/Contents/Resources/ImageSearch/requirements-image-search.txt" ] || \
+     /usr/bin/find "$skill_dir/runtime" -type f \( -name '*.py' -o -name '*.json' -o -name '*.txt' \) -newer "$executable" -print -quit | /usr/bin/grep -q .; then
     needs_build=true
 fi
 if [ "$needs_build" = true ]; then

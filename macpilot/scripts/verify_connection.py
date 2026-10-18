@@ -87,6 +87,10 @@ def main():
             check("host call has MCP transport scope", a["transport"] == "mcp_stdio" and a["hostConnectionVerified"])
             check("parent identifies this harness, not an assumed Codex process", a["parent"]["pid"] == os.getpid())
             catalog = first.request("tools/list", {})["tools"]
+            check("fresh MCP exposes condition/trace/image/workflow APIs",
+                  {"mac_wait_for", "mac_trace", "mac_image_search", "mac_workflow"}.issubset({item["name"] for item in catalog}))
+            task_schema = next(item for item in catalog if item["name"] == "mac_task")["inputSchema"]
+            check("fresh MCP exposes explicit interrupted-task resume", "resume" in task_schema["properties"]["operation"]["enum"])
             tool = next(item for item in catalog if item["name"] == "mac_connection")
             check("diagnostics schema exposes only read-only operations", tool["annotations"]["readOnlyHint"] and
                   tool["inputSchema"]["properties"]["operation"]["enum"] == ["status", "probe"] and

@@ -28,7 +28,7 @@ def send(obj):
 def call(name,args,label=None,check=True):
  global rpc,seq
  if rpc is None:
-  rpc=subprocess.Popen([BIN,'mcp'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=rpc_log,text=True)
+  rpc=subprocess.Popen([BIN,'mcp'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=rpc_log,text=True,env=controller_environment)
   send({'jsonrpc':'2.0','id':0,'method':'initialize','params':{'protocolVersion':'2024-11-05','capabilities':{},'clientInfo':{'name':'macpilot-input-validation','version':'1'}}})
   rpc.stdin.write(json.dumps({'jsonrpc':'2.0','method':'notifications/initialized'})+'\n');rpc.stdin.flush()
   atexit.register(lambda:rpc.stdin.close())
@@ -45,6 +45,7 @@ def call(name,args,label=None,check=True):
  if check and failed:raise RuntimeError(r)
  return r
 base=Path(tempfile.mkdtemp(prefix='macpilot-input-fixture-'));env=dict(os.environ,MACPILOT_FIXTURE_DIR=str(base/'fixture'))
+controller_environment=dict(os.environ,MACPILOT_STATE_DIR=str(base/'controller'))
 log=(OUT/'fixture-events.log').open('w');p=subprocess.Popen([str(fixture)],env=env,stdout=log,stderr=log)
 checks=[]
 def state():return json.loads((base/'fixture/state.json').read_text())

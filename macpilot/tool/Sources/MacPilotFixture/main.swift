@@ -2,6 +2,12 @@ import AppKit
 
 final class FixtureApplication: NSApplication {
     override func sendEvent(_ event:NSEvent) {
+        if [.leftMouseDown,.leftMouseUp,.leftMouseDragged].contains(event.type), let fixture = delegate as? Fixture {
+            fixture.pointerReceipts.append(["type":event.type.rawValue,"timestamp":event.timestamp,"eventNumber":event.eventNumber,
+                                            "sourcePID":event.cgEvent?.getIntegerValueField(.eventSourceUnixProcessID) ?? 0,
+                                            "sourceTag":event.cgEvent?.getIntegerValueField(.eventSourceUserData) ?? 0])
+            if fixture.pointerReceipts.count > 128 { fixture.pointerReceipts.removeFirst() }
+        }
         if [.keyDown,.keyUp,.flagsChanged].contains(event.type) {
             if let fixture=delegate as? Fixture {
                 let name = event.type == .keyDown ? "keyDown" : event.type == .keyUp ? "keyUp" : "flagsChanged"
@@ -50,6 +56,7 @@ final class Fixture: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
     let field = NSTextField(string:"초기 값"), secure = NSSecureTextField(string:"synthetic-secret")
     let counter = NSTextField(labelWithString:"0"), canvas = Canvas(frame:NSRect(x:24,y:36,width:590,height:120))
     var clicks = 0, events: [String:Int] = [:]
+    var pointerReceipts: [[String:Any]] = []
     var heldKeys: Set<UInt16> = []
     var maximumHeldKeys = 0
     var keyDownTimes: [UInt16: Double] = [:]
@@ -112,7 +119,7 @@ final class Fixture: NSObject, NSApplicationDelegate, NSTextFieldDelegate {
     func save() {
         let cg = CGEvent(source:nil)?.location ?? .zero
         let selection=field.currentEditor()?.selectedRange ?? NSRange(location:0,length:0)
-        let state:[String:Any] = ["heldKeys":Array(heldKeys).sorted(),"maximumHeldKeys":maximumHeldKeys,"lastHoldSeconds":lastHoldSeconds,"pid":getpid(),"text":field.stringValue,"buttonCount":clicks,"events":events,"selection":["start":selection.location,"length":selection.length],
+        let state:[String:Any] = ["pointerReceipts":pointerReceipts,"heldKeys":Array(heldKeys).sorted(),"maximumHeldKeys":maximumHeldKeys,"lastHoldSeconds":lastHoldSeconds,"pid":getpid(),"text":field.stringValue,"buttonCount":clicks,"events":events,"selection":["start":selection.location,"length":selection.length],
             "secureUnchanged":secure.stringValue == "synthetic-secret","focusShiftArmed":focusShiftArmed,
             "active":NSApp.isActive,"sheetOpen":window.attachedSheet != nil,"windowNumber":window.windowNumber,"twinWindowNumber":twin?.windowNumber ?? 0,"systemCursor":["x":cg.x,"y":cg.y]]
         if let data=try? JSONSerialization.data(withJSONObject:state,options:[.sortedKeys,.prettyPrinted]) { try? data.write(to:directory.appendingPathComponent("state.json"),options:.atomic) }

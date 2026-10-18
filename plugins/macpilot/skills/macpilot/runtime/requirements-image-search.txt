@@ -1,0 +1,9 @@
+# Optional local image search only; not dependencies of the Swift core.
+sentence-transformers[image]==6.1.0
+transformers==5.20.1
+torch==2.14.1
+torchvision==0.29.1
+numpy==2.5.4
+pillow==13.0.0
+huggingface_hub==1.33.0
+safetensors==0.8.0

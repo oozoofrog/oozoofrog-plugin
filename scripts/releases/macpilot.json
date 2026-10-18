@@ -1,0 +1,42 @@
+{
+  "display_name": "MacPilot",
+  "marketplace": "oozoofrog-plugin",
+  "marketplace_sources": [
+    "git@github.com:oozoofrog/oozoofrog-plugin",
+    "https://github.com/oozoofrog/oozoofrog-plugin"
+  ],
+  "remote": "origin",
+  "branch": "main",
+  "binary": "macpilot/bin/MacPilot.app/Contents/MacOS/macpilot",
+  "commit_paths": [
+    "macpilot",
+    "plugins/macpilot",
+    "scripts/release_plugin.py",
+    "scripts/releases/macpilot.json",
+    "scripts/tests/test_release_plugin.py",
+    "scripts/tests/test_plugin_distribution.py",
+    "README.md",
+    "README.ko.md",
+    "CHANGELOG.md",
+    "docs/plugin-installation.md",
+    "docs/plugin-release.md"
+  ],
+  "checks": [
+    [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts/tests",
+      "-v"
+    ],
+    [
+      "python3",
+      "scripts/sync_skill_mirrors.py",
+      "--package",
+      "macpilot"
+    ]
+  ],
+  "github_repository": "oozoofrog/oozoofrog-plugin"
+}

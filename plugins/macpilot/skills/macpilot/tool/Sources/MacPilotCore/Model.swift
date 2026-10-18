@@ -10,8 +10,10 @@ public struct ToolFailure: Error, LocalizedError, CustomStringConvertible, Senda
     public let description: String
     public var errorDescription: String? { description }
     public let improvementRequestID: String?
-    public init(_ code: String, _ description: String, improvementRequestID: String? = nil) {
+    public let outcome: OperationOutcome?
+    public init(_ code: String, _ description: String, improvementRequestID: String? = nil, outcome: OperationOutcome? = nil) {
         self.code = code; self.description = description; self.improvementRequestID = improvementRequestID
+        self.outcome = outcome
     }
 }
 
@@ -630,6 +632,17 @@ public final class Store {
         // Enumerated names are untrusted until the anchored no-follow read validates them.
         try FileManager.default.contentsOfDirectory(atPath: root.path)
             .filter { $0.hasPrefix(prefix) }.sorted()
+    }
+    public func byteCount(_ name: String) throws -> Int? {
+        _ = try validatedName(for:root.appendingPathComponent(name))
+        var info = stat()
+        guard fstatat(rootFD,name,&info,AT_SYMLINK_NOFOLLOW) == 0 else {
+            if errno == ENOENT { return nil }
+            throw ToolFailure("state_read_failed","Cannot inspect private state file size")
+        }
+        guard (info.st_mode & S_IFMT) == S_IFREG, info.st_uid == geteuid(), (info.st_mode & 0o077) == 0,
+              info.st_size >= 0, info.st_size <= Int.max else { throw ToolFailure("state_read_failed","State file is not a private regular file") }
+        return Int(info.st_size)
     }
     public func remove(_ name: String) throws {
         _ = try validatedName(for: root.appendingPathComponent(name))

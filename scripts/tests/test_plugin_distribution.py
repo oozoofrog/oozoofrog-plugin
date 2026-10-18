@@ -83,7 +83,14 @@ class PluginDistributionTests(unittest.TestCase):
                          "tool/Tests/MacPilotCoreTests/BrowserDeveloperTests.swift",
                          "scripts/verify_browser_developer.py", "references/browser-developer-settings.md",
                          "tool/Sources/MacPilotCore/Recording.swift", "tool/Tests/MacPilotCoreTests/RecordingTests.swift",
-                         "scripts/verify_recording_chrome.mjs", "scripts/verify_recording_lifecycle.py", "references/recording.md"):
+                         "scripts/verify_recording_chrome.mjs", "scripts/verify_recording_lifecycle.py", "references/recording.md",
+                         "references/capabilities.md", "scripts/verify_capabilities.py",
+                         "runtime/image_search_worker.py", "runtime/embeddinggemma2-manifest.json", "runtime/requirements-image-search.txt",
+                         "tool/Sources/MacPilotCapabilityFixture/main.swift",
+                         "tool/Sources/MacPilotCore/Conditions.swift", "tool/Sources/MacPilotCore/OperationOutcome.swift",
+                         "tool/Sources/MacPilotCore/UserInputMonitor.swift", "tool/Sources/MacPilotCore/Tracing.swift",
+                         "tool/Sources/MacPilotCore/ImageSearch.swift", "tool/Sources/MacPilotCore/ImageSearchPipeline.swift",
+                         "tool/Sources/MacPilotCore/Workflows.swift"):
             self.assertTrue((mirror / relative).is_file(), relative)
         for relative in ("scripts/macpilot", "scripts/build.sh"):
             self.assertTrue((mirror / relative).stat().st_mode & 0o111, relative)
@@ -91,7 +98,7 @@ class PluginDistributionTests(unittest.TestCase):
             self.assertFalse((mirror / relative).exists(), relative)
         manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text())
         self.assertEqual(source.name, manifest["name"])
-        self.assertEqual("3.3.0", manifest["version"])
+        self.assertEqual("3.4.0", manifest["version"])
         self.assertEqual(manifest["version"], json.loads((source / "browser/extension/manifest.json").read_text())["version"])
         frontmatter = (source / "SKILL.md").read_text().split("---", 2)[1]
         self.assertEqual({"name", "description"}, {line.split(":", 1)[0] for line in frontmatter.splitlines() if ":" in line})
