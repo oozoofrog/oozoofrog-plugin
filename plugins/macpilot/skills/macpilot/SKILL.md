@@ -1,11 +1,11 @@
 ---
 name: macpilot
-description: macOS 앱·창·메뉴·파일·시스템과 브라우저를 제어하고 화면·시스템 오디오를 녹화·검증한다. 조건 대기·동작 추적·명시적 재사용 작업·선택적 이미지 검색, 사용자 입력 시 중단과 전역 입력 중 화면 안내, 게임의 제한 시간 키 유지·동시 입력, 시스템 설정 부착 안내·아이콘 드래그·선택적 자동 등록·권한 요청, MCP 연결 진단, 작업별 멀티 가상 커서, 백그라운드 제어, 라이브 프리뷰, 선택적 private API와 Codex 개선 요청 전송이 필요한 데스크톱 워크플로에 사용한다.
+description: macOS 앱·창·메뉴·파일·시스템과 브라우저·iOS Simulator를 분석·제어하고 화면·시스템 오디오를 녹화·검증한다. 조건 대기·동작 추적·명시적 재사용 작업·선택적 이미지 검색, 사용자 입력 시 중단과 전역 입력 중 화면 안내, 게임의 제한 시간 키 유지·동시 입력, 시스템 설정 부착 안내·아이콘 드래그·선택적 자동 등록·권한 요청, MCP 연결 진단, 작업별 멀티 가상 커서, 백그라운드 제어, 라이브 프리뷰, 선택적 private API와 Codex 개선 요청 전송이 필요한 데스크톱 워크플로에 사용한다.
 ---
 
 # MacPilot
 
-이 폴더의 `scripts/macpilot`를 사용한다. macOS 14 이상과 Apple Swift 개발 도구가 필요하다. 실행 코어는 Swift이며 외부 SwiftPM 패키지가 없다. 기본 제어에는 Python·Node.js가 필요 없다. 선택적 VisionKit·EmbeddingGemma 2 이미지 검색은 명시적으로 설정한 로컬 Python 환경과 모델을 사용한다. Chromium 확장은 JavaScript를 사용한다. Codex 진단 전송을 설정할 때만 별도 Codex 실행 파일·로그인·모델 연결이 필요하다.
+이 폴더의 `scripts/macpilot`를 사용한다. macOS 14 이상에서 실행한다. 첫 실행은 공개 릴리스의 Universal 앱을 내려받아 고정 SHA-256과 서명을 확인한다. 일반 macOS 제어에는 Swift·Xcode 설치가 필요 없다. 소스 빌드는 명시적으로 `scripts/build.sh`를 실행한다. Simulator 기능에는 선택한 Xcode와 해당 런타임이 필요하다. 외부 SwiftPM 패키지는 없다. 기본 제어에는 Python·Node.js가 필요 없다. 선택적 VisionKit·EmbeddingGemma 2 이미지 검색은 명시적으로 설정한 로컬 Python 환경과 모델을 사용한다. Chromium 확장은 JavaScript를 사용한다. Codex 진단 전송을 설정할 때만 별도 Codex 실행 파일·로그인·모델 연결이 필요하다.
 
 현재 채팅의 `mac_*` MCP 도구에 필요한 기능이 있으면 직접 호출한다. 설치된 서버가 구버전이면 이 스킬의 CLI를 사용한다. Plugin은 기존 MCP 설정이나 전역 스킬을 자동 교체하지 않는다. 정확한 인수는 `tools` 출력과 [도구 사용법](references/tools.md)에서 확인한다.
 
@@ -18,6 +18,8 @@ description: macOS 앱·창·메뉴·파일·시스템과 브라우저를 제어
 - 게임 방향키 유지·동시 입력은 `mac_game_input`을 사용한다. `keys` 유지와 `tapKeys` 반복 누르기를 함께 실행한다. 20–10000ms 뒤 모든 키를 해제하고 각 동작 후 실제 게임 상태를 확인한다. [게임 키 유지](references/tools.md#게임-키-유지)를 참고한다.
 - HID·VM·저수준 입력을 검토할 때: [입력 기술 조사](references/macos-input-research.md).
 - 조건 대기·공통 결과·사용자 입력 중단·추적·재사용 작업·선택적 VisionKit/EmbeddingGemma 2 검색: [검증과 재사용 기능](references/capabilities.md). 이미지 후보 점수는 클릭 승인이나 업무 완료가 아니다.
+- 읽기 전용 AX 계층·검색·속성/액션·UTF-16 범위·텍스트 레이아웃·hit test: [네이티브 UI 분석](references/ui-analysis.md). 분석은 창을 활성화하거나 클릭하지 않는다.
+- UDID·부팅 식별자를 고정한 Simulator 앱 생명주기·캡처·녹화·UI 분석과 선택적 IndigoHID 입력: [Simulator 백엔드](references/simulator.md). 입력마다 `privateAPI=true`가 필요하며 macOS 전역 입력으로 전환하지 않는다.
 - 소스 변경·실제 검증: [개발과 검증](references/development.md).
 - MCP `Transport closed`·권한 차이·연결 복구: [연결 진단과 복구](references/mcp-recovery.md). `mac_connection status`로 현재 연결을 확인하고, 호출할 수 없으면 CLI `connection-check`로 격리된 새 MCP를 검사한다. 별도 검사 성공과 현재 대화의 재연결 성공을 구분한다.
 

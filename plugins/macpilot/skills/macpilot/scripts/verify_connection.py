@@ -12,10 +12,11 @@ import time
 
 
 class Server:
-    def __init__(self, binary, state):
+    def __init__(self, binary, state, environment=None, timeout=15):
         self.process = subprocess.Popen([str(binary), "mcp"], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                         stderr=subprocess.DEVNULL, bufsize=0,
-                                        env=dict(os.environ, MACPILOT_STATE_DIR=str(state)))
+                                        env={**os.environ, **(environment or {}), "MACPILOT_STATE_DIR":str(state)})
+        self.timeout = timeout
         self.buffer = b""
         self.sequence = 0
         self.request("initialize", {"protocolVersion": "2025-11-25"})
@@ -24,7 +25,7 @@ class Server:
         self.sequence += 1
         message = {"jsonrpc": "2.0", "id": self.sequence, "method": method, "params": params}
         self.process.stdin.write((json.dumps(message) + "\n").encode())
-        deadline = time.monotonic() + 15
+        deadline = time.monotonic() + self.timeout
         while time.monotonic() < deadline:
             if b"\n" in self.buffer:
                 line, self.buffer = self.buffer.split(b"\n", 1)
@@ -88,7 +89,7 @@ def main():
             check("parent identifies this harness, not an assumed Codex process", a["parent"]["pid"] == os.getpid())
             catalog = first.request("tools/list", {})["tools"]
             check("fresh MCP exposes condition/trace/image/workflow APIs",
-                  {"mac_wait_for", "mac_trace", "mac_image_search", "mac_workflow"}.issubset({item["name"] for item in catalog}))
+                  {"mac_wait_for", "mac_trace", "mac_image_search", "mac_workflow", "mac_analyze"}.issubset({item["name"] for item in catalog}))
             task_schema = next(item for item in catalog if item["name"] == "mac_task")["inputSchema"]
             check("fresh MCP exposes explicit interrupted-task resume", "resume" in task_schema["properties"]["operation"]["enum"])
             tool = next(item for item in catalog if item["name"] == "mac_connection")

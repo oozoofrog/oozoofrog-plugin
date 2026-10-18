@@ -606,6 +606,8 @@ import CryptoKit
         case "mac_shortcuts": return try await SystemActions.shortcuts(a)
         case "mac_script": return try await SystemActions.script(a)
         case "mac_permission": return try await SystemActions.permission(a)
+        case "mac_simulator": return try await simulator(a)
+        case "mac_analyze": return try await analyzeUI(a)
         case "mac_observe":
             try a.only(["pid", "processStartID", "windowID", "screenshot", "maxNodes", "maxDepth", "captureTimeoutMs", "privateAPI"])
             let pid = Int32(try a.integer("pid", range: 1...Int(Int32.max)))

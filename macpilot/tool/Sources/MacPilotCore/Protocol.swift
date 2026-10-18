@@ -66,6 +66,7 @@ public enum ToolCatalog {
                                "idempotentHint":idempotent ?? read, "openWorldHint":openWorld]]
     }
     public static var tools: [[String: Any]] {
+        let normalized: [String:Any] = ["type":"number","minimum":0,"maximum":1]
         let coords: [String: Any] = ["observation":observation, "x":x, "y":x, "space":space]
         var click = coords; click["route"] = str("Default accessibility invokes one AXPress control at this point without cursor movement. process/global send raw events.",choices:["accessibility","process","global"]); click["button"] = str("Default left; accessibility route supports only left", choices:["left","right"]); click["clicks"] = int("Single or double click; accessibility route supports only single", min:1,max:2)
         var drag = coords; drag["route"] = route; drag["toX"] = x; drag["toY"] = x
@@ -74,6 +75,17 @@ public enum ToolCatalog {
         scroll["vertical"] = int("Lines; positive up, negative down",min:-100,max:100)
         scroll["horizontal"] = int("Horizontal lines",min:-100,max:100)
         return [
+            spec("mac_simulator", "Optional Xcode backend for exact-UDID Simulator lifecycle, apps, PNG, bounded video, and iOSContentGroup analysis. Status returns deviceIdentity and bootID required for every operation. IndigoHID is a separate optional driver; input requires privateAPI=true per call. Never falls back to host input or a different device. Dispatch acknowledgement does not verify app behavior.",
+                 ["operation":str("Simulator operation",choices:SimulatorModel.operations),"udid":str("Exact UUID; no booted/default aliases"),
+                  "deviceIdentity":str("Exact device generation from status"),"bootID":str("Exact launchd_sim generation from status"),
+                  "bundleID":str("Explicit app bundle ID"),"path":str("Absolute .app directory for install"),"url":str("Explicit URL with scheme"),
+                  "pid":int("Simulator.app PID for observe",min:1),"processStartID":processStartID,"windowID":int("Exact Simulator.app window",min:1,max:Int(UInt32.max)),
+                  "maxNodes":int("AX collection budget",min:1,max:1000),"maxDepth":int("AX depth budget",min:1,max:30),
+                  "ocr":["type":"boolean","default":false],"languages":strings,
+                  "durationSeconds":["type":"number","minimum":1,"maximum":10],"privateAPI":["type":"boolean","default":false],
+                  "gesture":str("Optional Indigo input",choices:["tap","long_press","swipe","drag","pinch","button","key"]),
+                  "x":normalized,"y":normalized,"toX":normalized,"toY":normalized,"x2":normalized,"y2":normalized,"toX2":normalized,"toY2":normalized,
+                  "duration":["type":"number","minimum":0.02,"maximum":2],"key":str("button: home/lock; key: return/escape/backspace/tab/space/arrows")], ["operation"]),
             spec("mac_workflow", "Validate/save or explicitly run bounded native recipes. Steps are set_value, AXPress, physical key or wait, with exact selectors and postconditions. Validates the entire plan and parameters before any mutation. Uses one exact process/window, journals progress, never replays a runID, and stops on failed postconditions/cancellation. No background triggers or scripts.",
                  ["operation":str("Workflow operation",choices:["validate","save","list","read","remove","run","runs","run_status","remove_run"]),
                   "definition":["type":"object","description":"name, optional parameters (up to 8 names), steps (1–24). Every mutation requires selector and postcondition; wait requires condition. Conditions use AX predicates and may use textParameter instead of text."],
@@ -256,6 +268,22 @@ public enum ToolCatalog {
                   "screenshot":["type":"boolean", "default":true], "maxNodes":int("Default 200",min:1,max:1000), "maxDepth":int("Default 10",min:1,max:30),
                   "privateAPI":["type":"boolean","default":false,"description":"Explicitly use private _AXUIElementGetWindow to disambiguate overlapping windows."],
                   "captureTimeoutMs":int("ScreenCaptureKit discovery and window-capture timeout; default 10000",min:100,max:60000)], ["pid","processStartID"], read:true),
+            spec("mac_analyze", "Read-only native AX analysis of one observed window. Summary/search recollect a bounded tree and return a new observation. Inspect attribute/action metadata, read UTF-16 text ranges, or hit-test an observed node. Never activates or clicks.",
+                 ["observation":observation,"operation":str("Default summary",choices:["summary","search","inspect","read_text","text_layout","hit_test"]),
+                  "attribute":str("Native text layout",choices:["bounds_for_range","line_for_index","range_for_line"]),
+                  "node":node,"query":str("Nonempty literal text for search; max 512 UTF-8 bytes"),"role":str("Exact AX role"),
+                  "interactiveOnly":["type":"boolean"],"inWindowOnly":["type":"boolean","description":"Frame intersects window; does not test occlusion"],
+                  "offset":int("Result offset; default 0",max:1000),"limit":int("Page size; default 50",min:1,max:100),
+                  "maxNodes":int("Collection budget; default 500",min:1,max:1000),"maxDepth":int("Collection depth; default 20",min:1,max:30),
+                  "start":int("UTF-16 range start"),"length":int("UTF-16 range length",max:4096),"x":x,"y":x], ["observation"], read:true,
+                 variants:[
+                    ["properties":["operation":["const":"summary"]]],
+                    ["properties":["operation":["const":"search"]],"required":["operation","query"]],
+                    ["properties":["operation":["const":"inspect"]],"required":["operation","node"]],
+                    ["properties":["operation":["const":"read_text"]],"required":["operation","node","start","length"]],
+                    ["properties":["operation":["const":"text_layout"]],"required":["operation","node","attribute","start"]],
+                    ["properties":["operation":["const":"hit_test"]],"required":["operation","x","y"]]
+                 ]),
             spec("mac_activate", "Explicitly bring the observed app to foreground. Consumes observation.", ["observation":observation], ["observation"]),
             spec("mac_focus", "Activate one observed app, restore and select its exact window and optional input node; verify all three focus states. Consumes observation.",
                  ["observation":observation, "node":node, "timeoutMs":int("Focus verification deadline; default 2000",min:100,max:10000)], ["observation"]),

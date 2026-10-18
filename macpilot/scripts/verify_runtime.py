@@ -90,7 +90,8 @@ p2 = None
 preview = None
 source_paths = (list((skill / "tool/Sources/MacPilot").rglob("*.swift"))
                 + list((skill / "tool/Sources/MacPilotCore").rglob("*.swift"))
-                + list((skill / "runtime").glob("*.*"))
+                + [p for p in (skill / "runtime").glob("*.*") if p.name != "distribution.json"]
+                + list((skill / "tool/Sources/MacPilotSimulatorHID").rglob("*.m"))
                 + [skill / "tool/Package.swift", skill / "scripts/build.sh", skill / "assets/app-icon.png"])
 fixture_sources = list((skill / "tool/Sources/MacPilotFixture").rglob("*.swift")) + [skill / "tool/Package.swift"]
 report = {

@@ -195,7 +195,7 @@ private final class RecordingEvents: NSObject, SCRecordingOutputDelegate, SCStre
     private static func fourCC(_ value: FourCharCode) -> String {
         String(bytes: [24, 16, 8, 0].map { UInt8((value >> $0) & 255) }, encoding: .ascii) ?? String(value)
     }
-    private static func inspect(_ url: URL, store: Store, frames: Int) async throws -> [String: Any] {
+    static func inspect(_ url: URL, store: Store, frames: Int) async throws -> [String: Any] {
         let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
         guard attributes[.type] as? FileAttributeType == .typeRegular,
               let bytes = attributes[.size] as? NSNumber, bytes.int64Value > 0, bytes.int64Value <= 1_073_741_824 else {

@@ -99,6 +99,12 @@ def bump_macpilot(root, version):
         text = replace_once(text, r'(<key>CFBundleVersion</key><string>)(\d+)(</string>)',
                             lambda m: m[1] + str(int(m[2]) + 1) + m[3])
     changes[build] = text
+    distribution = root / 'macpilot/runtime/distribution.json'
+    if distribution.exists():
+        pins = json.loads(distribution.read_text())
+        if pins.get('version') != version:
+            pins.update(version=version, asset=f'MacPilot-{version}-macos-universal.zip', mainSHA256='', helperSHA256='')
+            changes[distribution] = json.dumps(pins, indent=2) + '\n'
     for name in ('README.md', 'README.ko.md', 'docs/plugin-installation.md'):
         path = root / name
         text = path.read_text()
@@ -240,6 +246,27 @@ class Release:
                 raise ReleaseError(f'Source changed since verification: {prefix}')
         return commit
 
+    def pin_runtime(self):
+        """Pin final signed executable bytes before mirroring/staging runtime evidence."""
+        binary = ROOT / self.profile['binary']
+        helper = binary.with_name('macpilot-simulator-hid')
+        import plistlib
+        app = binary.parents[2]
+        self.command(['codesign', '--verify', '--deep', '--strict', str(app)])
+        actual = plistlib.loads((app / 'Contents/Info.plist').read_bytes())['CFBundleShortVersionString']
+        if actual != self.version:
+            raise ReleaseError('Build the requested version before pin-runtime')
+        expected = set(self.profile.get('architectures', ['arm64']))
+        for path in (binary, helper):
+            if set(self.command(['lipo', '-archs', str(path)]).split()) != expected:
+                raise ReleaseError('Runtime architecture mismatch')
+        manifest = dict(version=self.version,
+                        asset=f'{self.profile["display_name"]}-{self.version}-{self.profile.get("asset_platform", "macos-arm64")}.zip',
+                        mainSHA256=digest(binary), helperSHA256=digest(helper))
+        path = ROOT / self.name / 'runtime/distribution.json'
+        path.write_text(json.dumps(manifest, indent=2) + '\n')
+        self.receipt['runtime_pins'] = manifest
+
     def package(self):
         commit = self.frozen()
         assets = self.output / 'assets'
@@ -252,12 +279,16 @@ class Release:
             raise ReleaseError('Exact tested binary required; supply --runtime-evidence during verify')
         app = binary.parents[2]
         self.command(['codesign', '--verify', '--strict', str(app)])
-        if self.command(['lipo', '-archs', str(binary)]).strip() != 'arm64':
-            raise ReleaseError('macos-arm64 archive requires an arm64 executable')
+        for path in (binary, binary.with_name('macpilot-simulator-hid')):
+            if set(self.command(['lipo', '-archs', str(path)]).split()) != set(self.profile.get('architectures', ['arm64'])):
+                raise ReleaseError('Runtime archive architecture mismatch')
+        pins = json.loads((ROOT / self.name / 'runtime/distribution.json').read_text())
+        if pins['mainSHA256'] != digest(binary) or pins['helperSHA256'] != digest(binary.with_name('macpilot-simulator-hid')):
+            raise ReleaseError('Runtime pins differ from packaged executables')
         import plistlib
         if plistlib.loads((app / 'Contents/Info.plist').read_bytes())['CFBundleShortVersionString'] != self.version:
             raise ReleaseError('App bundle version mismatch')
-        archive = assets / f'{self.profile["display_name"]}-{self.version}-macos-arm64.zip'
+        archive = assets / f'{self.profile["display_name"]}-{self.version}-{self.profile.get("asset_platform", "macos-arm64")}.zip'
         self.command(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', str(app), str(archive)])
         hashes = {p.name: digest(p) for p in (plugin, archive)}
         (assets / 'SHA256SUMS.txt').write_text(''.join(f'{sha}  {name}\n' for name, sha in hashes.items()))
@@ -368,7 +399,7 @@ class Release:
                 raise ReleaseError(f'Installed bytes/mode mismatch: {actual}')
         # Install the exact tested app from the published asset, rather than building a
         # different binary at first launch. No original cache or process is stopped.
-        asset_name = f'{self.profile["display_name"]}-{self.version}-macos-arm64.zip'
+        asset_name = f'{self.profile["display_name"]}-{self.version}-{self.profile.get("asset_platform", "macos-arm64")}.zip'
         with tempfile.TemporaryDirectory(prefix='plugin-installed-app-') as temporary:
             self.command(['gh', 'release', 'download', self.tag, '--repo', self.profile['github_repository'],
                           '--pattern', asset_name, '--dir', temporary])
@@ -390,9 +421,7 @@ class Release:
                 destination.parent.mkdir(exist_ok=True)
                 self.command(['ditto', str(app), str(destination)])
             self.command(['codesign', '--verify', '--strict', str(destination)])
-            # The source files were copied by the installer after this binary was built.
-            # Mark their verified app current for the launcher's mtime invalidation.
-            os.utime(destination / relative, None)
+            # The launcher verifies pinned runtime bytes; source timestamps do not trigger compilation.
         if self.args.launcher:
             launcher = self.args.launcher.expanduser()
             target = installed / f'skills/{self.name}/scripts/{self.name}'
@@ -421,7 +450,7 @@ class Release:
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('phase', choices=['prepare', 'verify', 'commit', 'package', 'publish', 'install'])
+    parser.add_argument('phase', choices=['prepare', 'pin-runtime', 'verify', 'commit', 'package', 'publish', 'install'])
     parser.add_argument('--plugin', required=True, choices=['macpilot'])
     parser.add_argument('--version', required=True)
     parser.add_argument('--evidence', type=Path, required=True)
@@ -444,7 +473,7 @@ def main(argv=None):
     except FileExistsError:
         raise SystemExit(f'Another release phase owns {lock}; reconcile it before retrying')
     try:
-        getattr(release, args.phase)()
+        getattr(release, args.phase.replace('-', '_'))()
         release.receipt['last_successful_phase'] = args.phase
         release.receipt.pop('error', None)
         release.save()

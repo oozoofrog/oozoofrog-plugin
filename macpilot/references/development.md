@@ -1,6 +1,6 @@
 # 개발과 검증
 
-실행 코어·CLI·MCP·AX·캡처·CoreAudio·private API·Codex app-server 연결은 Swift다. 브라우저 확장은 JavaScript다. 기본 제어에서 Python과 Node.js는 개발 검증용이다. 선택적 이미지 검색만 명시적으로 설정한 로컬 Python 모델 worker를 사용한다. 패키지는 외부 SwiftPM 의존성이 없다.
+실행 코어·CLI·MCP·AX·캡처·CoreAudio·Codex app-server 연결은 Swift다. 선택적 SimulatorKit 입력 helper는 Objective-C이며 private ABI 실패를 별도 프로세스로 격리한다. 일반 실행은 Universal 배포 앱을 사용하며 Swift 설치가 필요 없다. 브라우저 확장은 JavaScript다. 기본 제어에서 Python과 Node.js는 개발 검증용이다. 선택적 이미지 검색만 명시적으로 설정한 로컬 Python 모델 worker를 사용한다. 패키지는 외부 SwiftPM 의존성이 없다.
 
 ## 검증 명령
 
@@ -8,7 +8,7 @@
 
 ```sh
 xcrun swift test --package-path macpilot/tool
-macpilot/scripts/build.sh
+MACPILOT_UNIVERSAL=1 macpilot/scripts/build.sh
 python3 macpilot/scripts/verify_mcp.py
 python3 macpilot/scripts/verify_connection.py --binary macpilot/bin/MacPilot.app/Contents/MacOS/macpilot
 python3 macpilot/scripts/verify_browser_developer.py
@@ -105,3 +105,20 @@ Python·모델 인수를 생략하면 실제 모델 검사는 `NOT_RUN`이다. �
 LaunchServices가 실행하는 fixture의 stdout·stderr도 내부 임시 경로에 둔다. 외장 볼륨의 증거 경로를 직접 넘기면 새 앱의 파일 접근 동의와 실행 실패가 섞일 수 있다. 종료 후 호스트가 로그를 증거 경로로 옮긴다. 외부 입력 송신기는 별도 프로세스의 기존 호스트 권한을 사전 확인하며 새 fixture 권한을 자동 요청하지 않는다.
 
 기존 빌드를 재사용할 때는 제어기와 fixture의 소스 범위를 따로 확인한다. 제어기 mtime 검사에 별도 검증용 실행 파일의 소스를 섞지 않는다. mtime은 빌드 증명이 아니므로 실제 빌드 로그·바이너리 해시·서명 검사·런타임 판정을 구분한다.
+
+
+## 네이티브 AX 분석 검증
+
+`python3 macpilot/scripts/verify_analysis.py --binary /absolute/MacPilot.app/Contents/MacOS/macpilot --fixture /absolute/macpilot-capability-fixture --evidence /absolute/new-evidence-directory`는 두 개의 소유한 합성 창으로 분석·보안 노드 거부·UTF-16·부분 수집·중복·소비한 관찰·MCP 노출·백그라운드 전경 보존을 검사한다. 개인 앱이나 전역 입력을 사용하지 않는다. Swift 단위 검사는 `xcrun swift test --package-path macpilot/tool`로 실행한다. RPC version 협상 검사는 고정 릴리스 문자열 대신 `MacPilotRuntime.version`과 실제 응답의 연결을 확인한다. 버전 변경 때의 불필요한 테스트 실패를 막되 메타데이터 일치는 별도 배포 검사로 확인한다.
+
+Simulator 기능은 [전용 기기 검증](simulator.md#개발-검증)을 사용한다. 일반 macOS UI 분석에는 `verify_analysis.py`를 사용하며 텍스트 bounds·행 조회도 실제 AppKit 필드에서 검사한다. 배포 전에는 최종 서명 앱을 빌드하고 `release_plugin.py pin-runtime`으로 실행 파일 해시를 고정한 다음 미러·스테이지·실행 근거를 맞춘다.
+
+Simulator 검증 계약의 불변식은 다음과 같다. 새 실행은 새 근거 디렉터리를 사용한다. 기존 전용 기기를 재사용하면 그 기기만 재부팅해 이전 시스템 확인창을 제거한다. 앱의 합성 상태 파일뿐 아니라 활성 scene도 확인한 뒤 첫 입력을 보낸다. URL 확인은 테스트 앱 이름과 유일한 열기 버튼을 현재 Vision OCR에서 확인하고 실행한다. 전체 시퀀스가 끝나지 않거나 예외가 발생한 보고서는 `failed`다. 지원 GUI가 없으면 `notRun`에 남기며 다른 창이나 합성 AX 결과로 대체하지 않는다. 결과 판정은 `checks`, `notRun`, 실제 게스트 상태·PNG·동영상, 최종 실행 파일 SHA를 함께 읽는다. 실패 후에는 남은 확인창·접점·부팅 정체성을 확인하며 같은 동작을 자동 재실행하지 않는다.
+
+공개 후 `verify_bootstrap.py --skill /installed/skill --evidence /new/evidence`는 실행 파일이 없는 전용 사본에서 실제 릴리스 다운로드·고정 해시·MCP를 검사한다. 개발 도구 PATH·DEVELOPER_DIR·SDKROOT를 사용할 수 없게 설정하고 기본 실행의 컴파일 전환이 없음을 확인한다. 시스템의 Swift 설치를 삭제하지 않는다. Intel 실행은 해당 하드웨어에서 별도 검사한다.
+
+부팅 정체성은 명시적 `user/UID/com.apple.CoreSimulator.SimDevice.UDID` 호스트 launchd 작업의 단일 PID·bootstrap 경로와 `proc_pidinfo` 시작 시각으로 읽는다. cold boot의 `simctl spawn` 지연을 대상 판정과 분리한다. 작업이 준비되지 않으면 status는 `ready=false`이며 다른 작업이나 기기로 대체하지 않는다. PNG 크기와 OCR 좌표는 NSImage 논리 크기가 아니라 실제 인코딩한 픽셀 크기를 사용한다.
+
+URL 전송 수락 뒤에는 scene의 실제 URL 수신 또는 해당 테스트 앱의 확인창이 나타날 때까지 읽기 관찰만 반복한다. 첫 캡처가 이전 화면이면 실패나 업무 완료로 판정하지 않고 제한 시간 안에서 다시 읽는다. URL 요청 자체는 재전송하지 않는다.
+
+전용 UIKit fixture에는 별도 화면 유지 assertion을 걸지 않는다. Home 검사는 복귀 후 앱 상태로 확인하고, Lock 검사는 UI·캡처 검사 뒤에 실행한다. Lock은 scene 변화 또는 실제 PNG의 명확한 어두워짐으로 확인하며 두 값을 따로 기록한다. Lock 이후 scene 활성만으로 화면이 깨어났다고 판정하지 않는다. OCR은 대소문자가 다른 앱 이름을 같은 문자열로 비교하지만, 앱 이름과 유일한 열기 버튼이 모두 현재 캡처에 있어야 입력한다. 검사 중 화면이 흐려지거나 확인창이 없으면 다른 버튼을 추측하지 않는다.

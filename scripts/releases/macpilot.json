@@ -38,5 +38,10 @@
       "macpilot"
     ]
   ],
-  "github_repository": "oozoofrog/oozoofrog-plugin"
+  "github_repository": "oozoofrog/oozoofrog-plugin",
+  "asset_platform": "macos-universal",
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ]
 }
