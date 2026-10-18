@@ -176,11 +176,12 @@ public struct AXMenuItemInfo: Codable, Equatable {
             }
             return root
         }
-        guard list.filter({ frame($0) == observation.windowFrame }).count == 1 else { throw ToolFailure("stale_observation", "AX window mapping is no longer unique") }
-        guard list.indices.contains(observation.axWindowIndex) else { throw ToolFailure("stale_observation", "AX window disappeared") }
-        let root = list[observation.axWindowIndex]
-        guard frame(root) == observation.windowFrame,
-              string(root, kAXTitleAttribute) == observation.windowTitle else { throw ToolFailure("stale_observation", "AX window moved, changed, or reordered") }
+        // AXWindows order can change after an input-source switch or sheet
+        // closure. Follow only the same unique frame/title; an index is not an
+        // identity. Overlapping twins remain ambiguous and are rejected.
+        let matches = list.filter { frame($0) == observation.windowFrame }
+        guard matches.count == 1, let root = matches.first else { throw ToolFailure("stale_observation", "AX window mapping is no longer unique") }
+        guard string(root, kAXTitleAttribute) == observation.windowTitle else { throw ToolFailure("stale_observation", "AX window geometry or title changed") }
         return root
     }
     public static func resolve(_ observation: Observation, nodeID: String, requireEnabled: Bool = true,

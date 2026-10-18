@@ -69,7 +69,7 @@ AX 트리는 선택한 창 내부만 수집한다. 메뉴 막대의 전역 트�
 | `mac_wait` | `{"observation":"UUID","node":"0.2","equals":"완료","timeoutMs":5000}` | 선택한 live AX 텍스트 값의 후조건을 제한 시간 동안 확인 |
 | `mac_verify` | `{"observation":"UUID","node":"0.2","equals":"한글 😀"}` | 선택한 AX 문자열만 정확히 검사 |
 
-`mac_key`의 modifier는 `command`, `shift`, `option`, `control`이다. 키 이름은 소문자 영문·숫자·기호와 `return`, `tab`, `space`, `delete`, `forwarddelete`, `escape`, `left`, `right`, `up`, `down`, `home`, `end`, `pageup`, `pagedown`, `f1`부터 `f12`까지 지원한다. 물리 키 위치는 미국식 키 코드다. 문자는 현재 입력 소스에 영향을 받을 수 있으므로 정확한 문자열에는 `set_value`나 `mac_type`을 사용한다.
+`mac_key`의 modifier는 `command`, `shift`, `option`, `control`이다. 키 이름은 소문자 영문·숫자·기호와 `return`, `tab`, `space`, `delete`, `forwarddelete`, `escape`, `left`, `right`, `up`, `down`, `home`, `end`, `pageup`, `pagedown`, `f1`부터 `f12`까지 지원한다. 키 코드는 미국식 물리 위치다. IME에서 영문 키 식별이 달라지면 `inputSource=ascii`를 명시한다. 정확한 문자열에는 `set_value`나 `mac_type`을 사용한다.
 
 합성 키는 down/up을 한 호출에서 짝으로 보낸다. 다음 호출까지 키를 누른 상태로 유지하지 않는다. `mac_type`은 각 Unicode 묶음 전에 프로세스 정체성, 현재 AX 포커스와 Secure Event Input을 다시 확인한다. 전송 중 포커스나 보안 입력 상태가 바뀌면 `dispatch_interrupted`와 전송된 이벤트 수를 반환한다. 일부 접두 문자열은 이미 입력됐을 수 있으므로 값을 관찰한 뒤에만 재시도한다. Unicode 전송은 IME 조합, 받아쓰기, 하드웨어 장치의 모든 기능을 재현하지 않는다. 일부 앱은 합성 입력을 무시한다.
 
@@ -177,3 +177,11 @@ python3 ./scripts/verify_mcp.py
 [개발과 검증](development.md)에 단계별 실행과 증거 범위를 설명한다. 개발 검증용 `scripts/verify_runtime.py`는 먼저 현재 소스의 release 앱을 다시 빌드·설치·ad-hoc 서명하고 strict 서명을 확인한다. 그 정확한 설치 바이너리를 Apple 개발 도구의 Python 표준 라이브러리와 전용 앱으로 검사한다. 이 스크립트는 CLI·MCP의 실행 의존성이 아니다. 입력 테스트 중에는 전용 앱을 활성화하고 명시적 global 경로의 포인터를 이동한다. 테스트 앱은 종료하며 사용자 커서를 과거 위치로 되돌리지 않는다.
 
 `mac_record`의 창·디스플레이·영역 및 오디오 범위, 완료·무음·취소 결과와 파일 검사는 [화면과 시스템 오디오 녹화](recording.md)에 있다.
+
+### Blender 등 IME에 민감한 저장 입력
+
+`mac_key`·`mac_type`의 기본 `inputSource=current`는 현재 입력 소스를 유지한다. 한글 IME에서 문자 key down이 소비되는 앱에는 `route=global, inputSource=ascii`를 명시할 수 있다. 이미 존재하는 ASCII 키보드 레이아웃만 호출 중 선택하고, 완료·중단·취소 때 원래 소스로 복구한다. 응답의 `keyboardInputSource.restored`를 확인한다. 입력 중 사용자가 다른 소스를 선택했으면 이를 덮어쓰지 않고 중단한다. 입력 소스 설치·영구 설정·클립보드 사용은 하지 않는다.
+
+단일 창 관찰은 macOS 14.2 이상에서 `includeChildWindows=false`로 창 픽셀과 메타데이터 범위를 일치시킨다. Blender File View가 새 창이면 새 windowID로 관찰한다. 파일명 클릭 전 mouse-move를 보내 UI 영역을 갱신한다. 좌표는 `screen|window|normalized|image` 중 명시하며, 화면 전체 캡처와 작은 창 이미지를 혼용하지 않는다.
+
+저장은 고유 새 경로에만 시도한다. 이름 입력 후 새 화면에서 정확한 전체 파일명과 Save As 버튼을 확인하고 저장한다. 입력 수신·파일 생성·Blender filepath/dirty와 파일 크기/mtime/SHA는 서로 다른 검증이다. 전송이 불확실하면 실제 창과 파일을 재조회하며 입력이나 저장을 바로 반복하지 않는다.

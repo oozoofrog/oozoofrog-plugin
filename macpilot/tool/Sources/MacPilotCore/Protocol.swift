@@ -248,9 +248,9 @@ public enum ToolCatalog {
                     ["properties":["horizontal":["type":"integer","minimum":1,"maximum":100]],"required":["horizontal"]]
                  ]),
             spec("mac_key", "Send one physical key shortcut with balanced down/up to a currently focused observed AX node. No persistent held keys.",
-                 ["observation":observation,"node":node,"route":route,"key":str("US physical key name: a, return, left, f1, etc."),"modifiers":strings],["observation","node","key"]),
+                 ["observation":observation,"node":node,"route":route,"key":str("US physical key name: a, return, left, f1, etc."),"modifiers":strings,"inputSource":str("current (default), or ascii: temporarily select the existing ASCII layout; restore afterward; requires global foreground route",choices:["current","ascii"])],["observation","node","key"]),
             spec("mac_type", "Send literal Unicode without clipboard access or IME composition. Requires the current focused AX node. Prefer mac_ax set_value where supported.",
-                 ["observation":observation,"node":node,"route":route,"text":str("Literal text, maximum 8192 UTF-8 bytes")],["observation","node","text"]),
+                 ["observation":observation,"node":node,"route":route,"text":str("Literal text, maximum 8192 UTF-8 bytes"),"inputSource":str("current (default), or ascii: temporarily select the existing ASCII layout for IME-sensitive clients, restore afterward; requires global foreground route",choices:["current","ascii"])],["observation","node","text"]),
             spec("mac_find", "Filter the bounded nodes already stored in one fresh observation snapshot. Partial observation coverage still applies.",
                  ["observation":observation, "role":str("Exact AX role"), "title":str("Exact title"),
                   "identifier":str("Exact accessibility identifier"), "valueContains":str("Literal substring in the captured nonsecure value"),
