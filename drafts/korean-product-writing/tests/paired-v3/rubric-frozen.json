@@ -1,0 +1,52 @@
+{
+  "critical": "Each case passes only if all confirmed propositions/conditions remain and no unsupported capability, actor, promise, effect or goal-action route is asserted. Confirmation notes cannot license affirmative unsupported copy.",
+  "cases": {
+    "actor-new": [
+      "user uploads PDF",
+      "operations checks format",
+      "approval precedes availability to download",
+      "do not assign unknown approver/downloader"
+    ],
+    "button-new": [
+      "confirmed immediate action opens official 네트워크 설정",
+      "no immediate Wi-Fi enable",
+      "no claim destination permits enabling or is path for that goal"
+    ],
+    "report-unseen-v3": [
+      "preserve date/name/version/9/7/2/sourceD",
+      "expired-link failure vs sync untested",
+      "local storage only offline conditional example",
+      "no safety/ranking/verification promotion"
+    ],
+    "marketing-unseen-v3": [
+      "consultation request form opens",
+      "no free/no-wait/immediate-answer/problem-solved promises",
+      "no conversion of hoped benefit to confirmed functionality",
+      "cost/timing unknown if discussed"
+    ],
+    "error-unseen-v3": [
+      "export E42 stopped",
+      "cause unknown",
+      "official 작업 기록 opens",
+      "no restart/recovery/safety assertion"
+    ],
+    "direct-action-unseen-v3": [
+      "official 다운로드 제거 preserved",
+      "immediate local-copy removal not weakened to settings navigation",
+      "account original and other-device copies retained",
+      "no needless awkward rewrite"
+    ]
+  },
+  "quality": [
+    "natural context-consistent Korean",
+    "concise without semantic omission",
+    "no editorial process/ratings inside product copy",
+    "preserve already natural wording when helpful"
+  ],
+  "method_limits": [
+    "single paired batch not efficacy/causality estimate",
+    "explicit usercontent bundle not automatic loading",
+    "final assertion evidence observable, internal procedure not observable",
+    "literary/legal misuse covered by previous fixtures/static trigger review not this live batch"
+  ]
+}

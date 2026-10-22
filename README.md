@@ -2,6 +2,10 @@
 
 English | [한국어](README.ko.md)
 
+[Korean Product Writing](korean-product-writing/SKILL.md) edits Korean product copy while preserving facts, conditions and requested components. Its skills-only Plugin is opt-in guidance without runtime/hooks. One reused six-case regression passed after earlier failures; [validation history and limits](drafts/korean-product-writing/tests/regression-v4/results.md) remain public. Installation and automatic loading were not tested.
+
+After installation, invoke explicitly: `Use $korean-product-writing to edit this screen’s title, description and button while preserving facts and conditions.` This is an invocation example, not a completed installation or automatic-loading test.
+
 [Audit](audit/SKILL.md) reviews skill, repository and task instructions within the requested scope. [Choice Interview](choice-interview/SKILL.md) conducts adaptive interviews with single, multiple and text responses; its mixed-form template is included. Both are available as matching skills-only Plugins, without hooks or runtime installation.
 
 ## JEV Native stable source
@@ -12,7 +16,7 @@ The [stable native controller source](tools/jev-native/README.md) and [companion
 
 Skills-only packages now include [Korean Travel Guidebook](korean-travel-guidebook/SKILL.md), [Obsidian Projects](obsidian-projects/SKILL.md), [Outcome Brief](outcome-brief/SKILL.md) and [Verify Work](verify-work/SKILL.md). They preserve user-selected scope and project-owned verification. The travel package includes an OFL-licensed unmodified Nanum Gothic font and fictional example; no real trip data is bundled. Machine-specific agreements and project state are omitted from the portable copies.
 
-The [user-skill inventory](docs/user-skill-inventory.md) distinguishes current packages, external dependencies and unresolved source revisions. [Korean product writing](drafts/korean-product-writing/STATUS.md) remains an inactive, non-discoverable draft with behavioral validation NOT PASSED. It is not included in the marketplace or default install.
+The [user-skill inventory](docs/user-skill-inventory.md) distinguishes current packages, external dependencies and unresolved source revisions. [The historical Korean-writing draft](drafts/korean-product-writing/STATUS.md) preserves failed trials separately from the current canonical skill.
 
 ## Team harness migration
 
