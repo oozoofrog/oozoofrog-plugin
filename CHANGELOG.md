@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — team harness 0.2.0
+
+- Add explicit session model/effort inspection, pending next-turn configuration changes and later default-turn verification. Keep runtime identity unavailable when official telemetry does not expose it.
+- Add project-scoped unmanaged-to-managed handoff with real packet receipt, atomic ownership transfer, source dispatch disabling and a separate committed-revision owner ACK. Preserve native endpoint and external-dispatch limits; no automatic global application.
+
 ## Unreleased — instruction audits and interviews
 
 - Add user-confirmed Audit and Choice Interview with complete mirrors, metadata and the original mixed-response form. Preserve bounded audit permissions and explicit interview submission.

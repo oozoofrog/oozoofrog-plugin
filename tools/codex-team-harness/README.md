@@ -2,7 +2,7 @@
 
 An opt-in coordination policy and read-only managed-run pilot for Codex. A leader assigns bounded work; execution owners hold canonical write claims; independent reviewers inspect current evidence. One project record stores decisions, instruction revisions, acknowledgements, runs and recovery state.
 
-Public release `0.1.1-public.1` is a sanitized portable derivative of a separately tested local0.1.1 package. It has a generic policy/guide and a plan-bound installer. Its bytes and hashes differ from that local package. It contains no machine-specific baselines, personal paths, project data, session logs or authentication. No prior repository history is imported.
+Runtime `0.2.0` builds on the sanitized portable `0.1.1-public.1` derivative. It has a generic policy/guide and a plan-bound installer. Its bytes and hashes differ from the separately installed private package. It contains no machine-specific baselines, personal paths, project data, session logs or authentication. No prior repository history is imported.
 
 ## Obtain and verify the migrated source
 
@@ -67,3 +67,7 @@ python3 -I -S -B -m unittest discover -s tests -v
 Tests use temporary projects and synthetic JSON-RPC fixtures. They cover stale acknowledgements, resume/compaction, conflicting canonical paths, duplicate/uncertain runs, budgets, exact model mismatch, current artifact reviews, installer plans, preservation and rollback. They do not prove all native clients enforce this policy or that a Mac was actually erased.
 
 The managed adapter is read-only. Direct clients that bypass it receive advisory policy only. Registration is a provenance claim; server receipts are observations, not cryptographic model attestation. Reservations are conservative planning controls, not guaranteed within-turn billing caps. The byte/4 estimate covers the explicit packet only; native injected context and exact billing are not measured separately. A tiny response can still consume substantial context tokens. No repeated model comparisons are required for restoration.
+
+## Session model control and requested handoff
+
+Use `python3 -I -S -B run.py session-control --help` and the [session-control procedure](payload/team-coordination/references/session-control.md) for exact live model/effort inspection, explicit pending changes and next-turn verification, or a user-requested unmanaged-to-managed handoff. New recipient creation, actual packet receipt, atomic ownership transfer, source dispatch disabling and committed-revision owner ACK are separate states. The native proxy requires an authorized supplied endpoint; current native-app availability is not inferred. Runtime/provider identity remains unverified, and outside clients are not intercepted. No global installation or existing project migration occurs automatically.
