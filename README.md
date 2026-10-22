@@ -2,6 +2,8 @@
 
 English | [한국어](README.ko.md)
 
+[Audit](audit/SKILL.md) reviews skill, repository and task instructions within the requested scope. [Choice Interview](choice-interview/SKILL.md) conducts adaptive interviews with single, multiple and text responses; its mixed-form template is included. Both are available as matching skills-only Plugins, without hooks or runtime installation.
+
 ## JEV Native stable source
 
 The [stable native controller source](tools/jev-native/README.md) and [companion skill](jev-native/SKILL.md) are included from a pinned public commit. No binary or installed runtime is replaced. [Provenance and deferred newer revisions](docs/jev-native-source.md) distinguish source/unit verification from live desktop behavior.

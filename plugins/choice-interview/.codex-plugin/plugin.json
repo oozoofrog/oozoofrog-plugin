@@ -1,0 +1,25 @@
+{
+  "name": "choice-interview",
+  "version": "0.1.0",
+  "description": "Conduct adaptive user or stakeholder interviews with automatically chosen single-answer, multiple-answer, and free-text UI to identify usability barriers, needs, and product priorities. Use when the user requests an interview, especially with choices; do not use for ordinary implementation clarification or authorization.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "skills": "./skills/",
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
+  "interface": {
+    "displayName": "Choice Interview",
+    "shortDescription": "Interview with adaptive single, multiple and text answers",
+    "longDescription": "Conduct adaptive user or stakeholder interviews with automatically chosen single-answer, multiple-answer, and free-text UI to identify usability barriers, needs, and product priorities. Use when the user requests an interview, especially with choices; do not use for ordinary implementation clarification or authorization.",
+    "developerName": "oozoofrog",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $choice-interview to understand user needs through an adaptive selectable interview."
+    ]
+  }
+}

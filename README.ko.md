@@ -2,6 +2,8 @@
 
 [English](README.md) | 한국어
 
+[Audit](audit/SKILL.md)은 요청한 범위의 스킬·저장소·작업 지침을 감사합니다. [Choice Interview](choice-interview/SKILL.md)는 단일·복수·직접 응답을 구성하는 인터뷰를 진행하며 혼합형 응답 폼을 포함합니다. 두 스킬은 hooks나 런타임 설치 없이 skills-only Plugin으로도 제공합니다.
+
 ## JEV Native 고정 소스
 
 공개 commit으로 고정한 [네이티브 제어기 소스](tools/jev-native/README.md)와 [동반 스킬](jev-native/SKILL.md)을 포함합니다. 바이너리·기존 설치본은 교체하지 않습니다. [출처와 보류한 최신 변경](docs/jev-native-source.md)에서 소스·단위 검사와 실제 데스크톱 동작을 구분합니다.
