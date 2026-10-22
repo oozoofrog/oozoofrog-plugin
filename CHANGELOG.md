@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — team harness 0.2.0
+
+- Add explicit session model/effort inspection, pending next-turn configuration changes and later default-turn verification. Keep runtime identity unavailable when official telemetry does not expose it.
+- Add project-scoped unmanaged-to-managed handoff with real packet receipt, atomic ownership transfer, source dispatch disabling and a separate committed-revision owner ACK. Preserve native endpoint and external-dispatch limits; no automatic global application.
+
 ## Unreleased — Korean product writing
 
 - Add the tested Korean-writing guide and matching skills-only package after a six-case reused-input regression. Preserve original failures, raw generated text and bounded runtime/loading limits separately from current source.
