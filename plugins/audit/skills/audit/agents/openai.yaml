@@ -1,0 +1,3 @@
+interface:
+  display_name: "Audit"
+  short_description: "스킬·AGENTS.md·프롬프트의 과도한 지침과 완료 기준 점검"

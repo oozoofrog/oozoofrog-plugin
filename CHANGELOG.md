@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased — instruction audits and interviews
+
+- Add user-confirmed Audit and Choice Interview with complete mirrors, metadata and the original mixed-response form. Preserve bounded audit permissions and explicit interview submission.
+
 ## Unreleased — JEV Native stable source
 
 - Import only the pinned public controller/companion source, original icon assets and NOTICE. Keep binaries, evidence and newer dirty revisions out; runtime source routing now uses this repository.
