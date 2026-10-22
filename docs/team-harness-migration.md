@@ -21,3 +21,7 @@ Follow [the source README](../tools/codex-team-harness/README.md) for anonymous 
 Preserve unmanaged instructions and exact original bytes. Keep plans/journals local. To restore after rollback, make a fresh plan from the same verified source, apply, and run doctor. Concurrent edits, unknown files and symlinks are refused. Migration verification must use a temporary Codex home, never an existing personal home.
 
 Fresh tests and isolated installation/recovery results are reported in the PR. After push, anonymous public destination-commit archive verification is required before claiming premerge downloadable restoration. No merge, clean-Mac erase, automatic loading or universal native enforcement is implied. The legacy URL's future archival/deletion requires a separate decision after migration is proven.
+
+## 0.2.0 followup
+
+The separately reviewed followup adds session model/effort control and explicit project handoff. Its [procedure](../tools/codex-team-harness/payload/team-coordination/references/session-control.md) distinguishes requested, accepted, pending, live/persisted configuration and unavailable execution telemetry. Source/mirror/manifest changes belong to this followup; the original public release remains unchanged. Global installation and existing-project adoption remain separate, checkpointed operations.

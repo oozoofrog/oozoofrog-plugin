@@ -9,7 +9,7 @@ MODELS={role:item['model'] for role,item in POLICY['roles'].items()}
 def digest(value):return hashlib.sha256(json.dumps(value,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
 def effective_contract():
  root=Path(__file__).resolve().parents[1]
- return {'policy':json.loads((root/'policy.json').read_text()),'roles':{p.stem:p.read_text()for p in sorted((root/'roles').glob('*.md'))},'schema':json.loads((root/'schema/project-state.schema.json').read_text()),'implementation_sha256':{name:hashlib.sha256((root/'scripts'/name).read_bytes()).hexdigest()for name in ('harness.py','managed_run.py','team_ledger.py')}}
+ return {'policy':json.loads((root/'policy.json').read_text()),'roles':{p.stem:p.read_text()for p in sorted((root/'roles').glob('*.md'))},'schema':json.loads((root/'schema/project-state.schema.json').read_text()),'implementation_sha256':{name:hashlib.sha256((root/'scripts'/name).read_bytes()).hexdigest()for name in ('harness.py','managed_run.py','team_ledger.py','session_control.py')}}
 
 def initial(goal,budget=None,concurrency=None):
  limits=effective_contract()['policy']['limits'];budget=limits['project_token_budget']if budget is None else budget;concurrency=limits['concurrency']if concurrency is None else concurrency
@@ -33,7 +33,10 @@ def ack_current(s,member):
 
 def apply(state,e):
  s=copy.deepcopy(state);h=s['harness'];op=e['op']
- if op=='register':
+ if op.startswith('control_'):
+  import session_control
+  s=session_control.apply(s,e)
+ elif op=='register':
   m=e['member'];role=e['role'];require(m not in s['members'] and role in MODELS,'Duplicate member or unknown role')
   # Identity is a file-backed claim. Only adapter runtime receipt is observed transport data.
   s['members'][m]={'role':role,'identity_claim':ledger.evidence(e['identity']),'runtime_id_claim':e.get('runtime_id',m)}
@@ -41,7 +44,9 @@ def apply(state,e):
  elif op=='assign':
   require(e['task'] not in s['tasks'],'Duplicate task')
   require(e['member'] in s['members'] and s['members'][e['member']]['role'] not in ('leader','reviewer'),'Execution owner required')
-  s['tasks'][e['task']]={'owner':e['member'],'purpose':e['purpose'],'context':e['context'],'state':'assigned','paths':[],'resources':[],'reviews':[]}
+  import session_control
+  kind=e.get('kind','implementation');session_control.typed_task(s['members'][e['member']]['role'],kind)
+  s['tasks'][e['task']]={'owner':e['member'],'purpose':e['purpose'],'context':e['context'],'kind':kind,'state':'assigned','paths':[],'resources':[],'reviews':[]}
  elif op=='claim':
   t=s['tasks'][e['task']];require(t['state'] in ('assigned','running'),'Claim in invalid state')
   require(not any(r['task']==e['task']and r['state']in ('active','uncertain')for r in h['runs'].values()),'Unresolved run freezes write claims')
@@ -77,14 +82,18 @@ def apply(state,e):
   require(t['owner']==m and t['state'] in ('assigned','running'),'Wrong task owner/state')
   require(ledger.fresh(s['members'][m]['identity_claim']),'Stale identity claim')
   require(p['role'] not in ('leader','reviewer') and p['model'] is not None,'Requested role model unresolved or nonexecuting role')
+  import session_control
+  session_control.typed_task(p['role'],t.get('kind','implementation'))
+  if m in h.get('sessions',{}):require(h['sessions'][m]['execution']=='enabled','Source/recipient execution paused or disabled')
   ack_current(s,m);require(t['paths'],'Write ownership required')
   require(e['run'] not in h['runs'],'Duplicate run id')
   require(not any(r['state']=='uncertain' for r in h['runs'].values()),'Uncertain run must be reconciled')
   active=[r for r in h['runs'].values() if r['state']=='active']
-  require(len(active)<h['concurrency'],'Concurrency exhausted')
+  packets=[r for r in h.get('controls',{}).values()if r.get('packet_reserve')and r['state']in ('request_pending','outcome_unknown')]
+  require(len(active)+len(packets)<h['concurrency'],'Concurrency exhausted')
   require(not any(r['task']==e['task'] for r in active),'Task already executing')
   reserve=e['reserve'];require(type(reserve)is int and reserve>0,'Positive integer reservation required')
-  require(h['spent']+sum(r['reserve'] for r in active)+reserve<=h['budget'],'Budget exhausted')
+  require(h['spent']+sum(r['reserve'] for r in active)+sum(r['packet_reserve']for r in packets)+reserve<=h['budget'],'Budget exhausted')
   h['runs'][e['run']]={'task':e['task'],'member':m,'model':p['model'],'revision':h['revision'],'epoch':p['epoch'],'state':'active','reserve':reserve,'stale':False,'phase':'reserved','observed':{},'packet':packet(s,m)}
   t['state']='running'
  elif op=='observe':

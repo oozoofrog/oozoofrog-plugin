@@ -4,7 +4,7 @@ from pathlib import Path,PurePosixPath
 import hashlib,json,runpy,sys
 root=Path(__file__).resolve().parent
 manifest=json.loads((root/'manifest.json').read_text())
-if manifest.get('version')!='0.1.1-public.1':raise SystemExit('Wrong release version')
+if manifest.get('version')!='0.2.0':raise SystemExit('Wrong release version')
 for relative,expected in manifest['files'].items():
  name=PurePosixPath(relative)
  if name.is_absolute()or '..'in name.parts or not name.parts or '\\'in relative:raise SystemExit('Unsafe manifest path')
@@ -13,6 +13,6 @@ for relative,expected in manifest['files'].items():
   if ancestor==root.parent:break
   if ancestor.is_symlink():raise SystemExit('Symlink refused')
  if not path.is_file()or not path.resolve().is_relative_to(root)or hashlib.sha256(path.read_bytes()).hexdigest()!=expected:raise SystemExit('Release integrity failed')
-if len(sys.argv)<2 or sys.argv[1]not in ('harness','managed-run'):raise SystemExit('Choose harness or managed-run')
-script='harness.py'if sys.argv.pop(1)=='harness'else 'managed_run.py'
+if len(sys.argv)<2 or sys.argv[1]not in ('harness','managed-run','session-control'):raise SystemExit('Choose harness, managed-run or session-control')
+script={'harness':'harness.py','managed-run':'managed_run.py','session-control':'session_control.py'}[sys.argv.pop(1)]
 scripts=root/'payload/team-coordination/scripts';sys.path.insert(0,str(scripts));sys.argv[0]=str(scripts/script);runpy.run_path(sys.argv[0],run_name='__main__')
