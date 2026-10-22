@@ -39,6 +39,78 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Productivity"
+    },
+    {
+      "name": "team-coordination",
+      "source": {
+        "source": "local",
+        "path": "./plugins/team-coordination"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "korean-travel-guidebook",
+      "source": {
+        "source": "local",
+        "path": "./plugins/korean-travel-guidebook"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "obsidian-projects",
+      "source": {
+        "source": "local",
+        "path": "./plugins/obsidian-projects"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "outcome-brief",
+      "source": {
+        "source": "local",
+        "path": "./plugins/outcome-brief"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "verify-work",
+      "source": {
+        "source": "local",
+        "path": "./plugins/verify-work"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "jev-native",
+      "source": {
+        "source": "local",
+        "path": "./plugins/jev-native"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
     }
   ]
 }

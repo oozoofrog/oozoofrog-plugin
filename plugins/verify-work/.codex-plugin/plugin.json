@@ -1,0 +1,25 @@
+{
+  "name": "verify-work",
+  "version": "0.1.0",
+  "description": "Turn a repeated work failure into a small enforceable invariant, run the project-owned verification contract, and record evidence, unresolved judgment, and recovery. Use for adopting or rerunning an evidence workflow, not every small edit.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "skills": "./skills/",
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
+  "interface": {
+    "displayName": "Verify Work",
+    "shortDescription": "Record project-owned verification and recovery",
+    "longDescription": "Turn a repeated work failure into a small enforceable invariant, run the project-owned verification contract, and record evidence, unresolved judgment, and recovery. Use for adopting or rerunning an evidence workflow, not every small edit.",
+    "developerName": "oozoofrog",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $verify-work to apply the project verification contract and record evidence and limits."
+    ]
+  }
+}

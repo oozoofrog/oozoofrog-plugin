@@ -1,0 +1,25 @@
+{
+  "name": "obsidian-projects",
+  "version": "0.1.0",
+  "description": "Manage project notes, status indexes, wiki links, and file or folder organization in an Obsidian vault when the user asks to update or clean that vault. Do not use for ordinary project implementation without an Obsidian record-management request.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "skills": "./skills/",
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
+  "interface": {
+    "displayName": "Obsidian Projects",
+    "shortDescription": "Maintain existing project notes and vault links",
+    "longDescription": "Manage project notes, status indexes, wiki links, and file or folder organization in an Obsidian vault when the user asks to update or clean that vault. Do not use for ordinary project implementation without an Obsidian record-management request.",
+    "developerName": "oozoofrog",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $obsidian-projects to update the requested project records in the specified vault."
+    ]
+  }
+}

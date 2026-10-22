@@ -2,6 +2,20 @@
 
 English | [한국어](README.ko.md)
 
+## JEV Native stable source
+
+The [stable native controller source](tools/jev-native/README.md) and [companion skill](jev-native/SKILL.md) are included from a pinned public commit. No binary or installed runtime is replaced. [Provenance and deferred newer revisions](docs/jev-native-source.md) distinguish source/unit verification from live desktop behavior.
+
+## Portable personal workflows
+
+Skills-only packages now include [Korean Travel Guidebook](korean-travel-guidebook/SKILL.md), [Obsidian Projects](obsidian-projects/SKILL.md), [Outcome Brief](outcome-brief/SKILL.md) and [Verify Work](verify-work/SKILL.md). They preserve user-selected scope and project-owned verification. The travel package includes an OFL-licensed unmodified Nanum Gothic font and fictional example; no real trip data is bundled. Machine-specific agreements and project state are omitted from the portable copies.
+
+The [user-skill inventory](docs/user-skill-inventory.md) distinguishes current packages, external dependencies and unresolved source revisions. [Korean product writing](drafts/korean-product-writing/STATUS.md) remains an inactive, non-discoverable draft with behavioral validation NOT PASSED. It is not included in the marketplace or default install.
+
+## Team harness migration
+
+The opt-in [team-coordination skill](team-coordination/SKILL.md) and skills-only Plugin use the public payload. The installer, managed runtime, recovery tools and tests now live in [tools/codex-team-harness](tools/codex-team-harness/README.md). Runtime version `0.1.1-public.1` is retained; relocation changes source manifest bytes. Plugin installation does not install global instructions or runtime. Follow the [migration and verification record](docs/team-harness-migration.md), pinning the reviewed PR commit before merge. Destination main is migrated only after merge. The former dedicated release is retained; no replacement release is published.
+
 Codex plugins for Swift code navigation (`swift-intelligence`), local model setup and execution (`local-ai-studio`), and macOS and browser automation with screen and system audio recording (`macpilot`).
 
 ## Local AI Studio

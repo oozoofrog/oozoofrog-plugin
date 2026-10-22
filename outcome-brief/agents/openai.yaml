@@ -1,0 +1,4 @@
+interface:
+  display_name: "Outcome Brief"
+  short_description: "Improve task instructions with bounded criteria"
+  default_prompt: "Use $outcome-brief to improve this task brief and define observable completion criteria."

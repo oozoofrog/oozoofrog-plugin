@@ -1,0 +1,11 @@
+.build/
+.swiftpm/
+.DS_Store
+dist/
+jev-run-*/
+.env
+.env.*
+.typesafeai
+*.p12
+*.p8
+*.pem
