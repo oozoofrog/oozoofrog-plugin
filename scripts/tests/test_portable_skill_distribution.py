@@ -3,7 +3,7 @@ import json
 import unittest
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
-PACKAGES = ('korean-travel-guidebook','obsidian-projects','outcome-brief','verify-work','audit','choice-interview')
+PACKAGES = ('korean-travel-guidebook','obsidian-projects','outcome-brief','verify-work','audit','choice-interview','korean-product-writing')
 class PortableSkillDistributionTests(unittest.TestCase):
     def test_complete_sources_mirrors_metadata_and_font_license(self):
         for name in PACKAGES:
@@ -19,14 +19,14 @@ class PortableSkillDistributionTests(unittest.TestCase):
                 for key in ('hooks','mcpServers','apps'):self.assertNotIn(key,package)
         self.assertIn('SIL OPEN FONT LICENSE', (ROOT/'korean-travel-guidebook/assets/OFL.txt').read_text().upper())
         self.assertFalse((ROOT/'obsidian-projects/references/local-vault.md').exists())
-    def test_failed_draft_cannot_be_discovered_or_distributed(self):
+    def test_historical_draft_stays_inactive_and_current_source_matches_reviewed_guide(self):
         draft=ROOT/'drafts/korean-product-writing'
         self.assertTrue((draft/'SKILL.draft.md').is_file())
         self.assertEqual([],list(draft.rglob('SKILL.md')))
         self.assertFalse((draft/'agents').exists())
         self.assertIn('NOT PASSED',(draft/'STATUS.md').read_text())
-        marketplace=json.loads((ROOT/'.agents/plugins/marketplace.json').read_text())
-        self.assertNotIn('korean-product-writing',[p['name'] for p in marketplace['plugins']])
-        self.assertFalse((ROOT/'plugins/korean-product-writing').exists())
-        self.assertNotIn('"korean-product-writing"',(ROOT/'scripts/sync_skill_mirrors.py').read_text())
+        current=ROOT/'korean-product-writing'
+        for old,new in [('SKILL.draft.md','SKILL.md'),('references/examples.md','references/examples.md'),('references/sources.md','references/sources.md')]:
+            self.assertEqual((draft/old).read_bytes(),(current/new).read_bytes())
+        self.assertIn('regression-v4/results.md',(draft/'STATUS.md').read_text())
 if __name__=='__main__':unittest.main()
