@@ -3,6 +3,8 @@
 import argparse,fcntl,json,os,selectors,subprocess,sys,time
 from pathlib import Path
 import harness as h
+class RPCError(h.Invalid):
+ def __init__(self,method,error):self.code=error.get('code');self.error=error;super().__init__('Server rejected '+method+': '+json.dumps(error))
 class RPC:
  def __init__(self,command):
   self.p=subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,bufsize=0)
@@ -23,7 +25,8 @@ class RPC:
    o=self.next()
    if o is None:continue
    if o.get('id')==request_id and 'method'not in o:
-    h.require('error'not in o,'Server request failed: '+method);return o['result']
+    if 'error'in o:raise RPCError(method,o['error'])
+    return o['result']
    self.handle_request(o);on_event(o)
   raise TimeoutError('Request outcome unknown: '+method)
  def handle_request(self,o):
@@ -44,6 +47,8 @@ def dispatch(rpc,path,run,thread_id,prompt,model):
   h.require(s['harness']['policy_hash']==h.digest(h.effective_contract()),'Effective policy changed before dispatch')
   h.require(r['state']=='active' and not r['stale'] and r['revision']==s['harness']['revision'] and r['epoch']==p['epoch'],'Instruction/epoch changed before dispatch')
   h.require(r['model']==model and s['tasks'][r['task']]['owner']==r['member'],'Owner/model changed')
+  import session_control as control
+  control.gate(s,r['member'],s['tasks'][r['task']].get('kind','implementation'))
   # Persist before sending: a crash here is uncertain, never an automatic retry.
   s=h.apply(s,{'op':'observe','run':run,'phase':'dispatch_uncertain','receipt':{'thread_id':thread_id,'model':model}});h.save(path,s)
   rpc.seq+=1;i=rpc.seq;rpc.send({'id':i,'method':'turn/start','params':{'threadId':thread_id,'model':model,'input':[{'type':'text','text':prompt,'text_elements':[]}]}})
@@ -60,8 +65,11 @@ def run(path,member,task,run_id,reserve,command,cwd,timeout=120):
    if not cursor:break
   s=read(path);r=s['harness']['runs'][run_id];model=r['model']
   h.require(any(m.get('model')==model for m in catalog),'Exact model absent from live catalog')
-  response=rpc.request('thread/start',{'model':model,'cwd':str(Path(cwd).resolve()),'sandbox':'read-only','approvalPolicy':'never'})
+  import session_control as control
+  entry=next(m for m in catalog if m.get('model')==model);effort=entry.get('defaultReasoningEffort');control.validate_choice(catalog,model,effort)
+  response=rpc.request('thread/start',{'model':model,'config':{'model_reasoning_effort':effort},'cwd':str(Path(cwd).resolve()),'sandbox':'read-only','approvalPolicy':'never'})
   thread_id=response['thread']['id'];h.check_model(model,catalog,response)
+  ctl=control.Controller(path,rpc,'managed-run:'+run_id,'local','official-owned-stdio');ctl.bind(member,thread_id,owned=True,effort=effort,managed=True,replacement_run=run_id);ctl.inspect(member)
   h.transaction(path,{'op':'observe','run':run_id,'phase':'thread_verified','receipt':{'thread_id':thread_id,'model':response['model'],'catalog_models':[m.get('model') for m in catalog]}})
   s=read(path);prompt=json.dumps(s['harness']['runs'][run_id]['packet'],ensure_ascii=False)+'\nPerform only the assigned task within read-only capability; return evidence and limits.'
   # Set uncertain before invocation, because send may succeed then throw.
@@ -80,7 +88,7 @@ def run(path,member,task,run_id,reserve,command,cwd,timeout=120):
    method=o.get('method');params=o.get('params',{})
    if method=='model/rerouted':raise h.Invalid('Server model reroute; continuation blocked')
    if method=='thread/tokenUsage/updated' and params.get('threadId')==thread_id:
-    value=params['tokenUsage'].get('total',{}).get('totalTokens')
+    value=control.turn_usage(params)
     if type(value)is int:usage=value
     if usage is not None and usage>=reserve:raise h.Invalid('Reported usage reached reservation; interrupt required')
    if method in ('thread/compacted','item/completed') and (method=='thread/compacted' or params.get('item',{}).get('type')=='contextCompaction'):
