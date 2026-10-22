@@ -1,0 +1,4 @@
+interface:
+  display_name: "JEV Native"
+  short_description: "Native macOS automation with a virtual cursor and target preview"
+  default_prompt: "Use $jev-native to operate the requested macOS app with JEV and verify the final window state."

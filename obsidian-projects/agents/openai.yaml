@@ -1,0 +1,4 @@
+interface:
+  display_name: "Obsidian Projects"
+  short_description: "Maintain existing project notes and vault links"
+  default_prompt: "Use $obsidian-projects to update the requested project records in the specified vault."

@@ -1,0 +1,89 @@
+<div id="choice-interview-form">
+  <div data-form role="form" aria-label="인터뷰 답변">
+    <div data-questions></div>
+    <div class="viz-row"><button type="button" data-send class="btn btn-primary">답변 보내기</button><span data-status role="status" aria-live="polite"></span></div>
+    <div data-fallback hidden><label class="form-label" for="choice-answer-copy">복사할 답변</label><textarea id="choice-answer-copy" class="form-control" rows="8" readonly></textarea></div>
+  </div>
+  <script type="application/json" data-config>
+  {"roundId":"interview-example","questions":[{"id":"q1","type":"single","title":"먼저 해결할 과제 하나를 골라 주세요.","options":[{"id":"understand","label":"무엇을 할 수 있는지 이해하기"},{"id":"begin","label":"첫 작업 시작하기"}]},{"id":"q2","type":"multiple","title":"함께 필요한 도움을 모두 골라 주세요.","options":[{"id":"example","label":"실제 작업 예시"},{"id":"progress","label":"현재 진행 상황"},{"id":"result","label":"결과를 확인하는 방법"}]},{"id":"q3","type":"text","title":"최근에 겪은 상황을 짧게 적어 주세요."}]}
+  </script>
+</div>
+<style>
+#choice-interview-form fieldset { border:0; padding:0; margin:0 0 1.5rem; min-width:0; }
+#choice-interview-form legend { margin-bottom:0.5rem; font-weight:500; }
+#choice-interview-form .answer-note { margin-top:0.5rem; }
+#choice-interview-form [data-fallback] { margin-top:1rem; }
+</style>
+<script>
+(() => {
+  const root = document.getElementById('choice-interview-form');
+  const config = JSON.parse(root.querySelector('[data-config]').textContent);
+  const form = root.querySelector('[data-form]');
+  const list = root.querySelector('[data-questions]');
+  const status = root.querySelector('[data-status]');
+  const send = form.querySelector('[data-send]');
+  const fallback = root.querySelector('[data-fallback]');
+  const copy = fallback.querySelector('textarea');
+  let sending = false;
+  const fields = new Map();
+  const signature = JSON.stringify(config.questions.map(q => [q.id,q.type,q.options || [],q.maxSelections || null]));
+  const element = (tag,cls,text) => { const el=document.createElement(tag); if(cls)el.className=cls; if(text)el.textContent=text; return el; };
+  for (const [index,q] of config.questions.entries()) {
+    if (!['single','multiple','text'].includes(q.type)) throw new Error('Unsupported answer type');
+    const field = element('fieldset');
+    const legend = element('legend','',q.title); field.append(legend);
+    const hint = element('div','text-small',q.type==='multiple' ? (q.maxSelections ? `복수 선택 · 최대 ${q.maxSelections}개` : '복수 선택 · 해당 항목 모두') : q.type==='single' ? '단일 선택 · 하나' : '직접 답변');
+    field.append(hint);
+    const inputs=[];
+    for (const option of q.options || []) {
+      const label = element('label','form-check');
+      const input = element('input','form-check-input');
+      input.type=q.type==='multiple'?'checkbox':'radio'; input.name=`answer-${index}`; input.value=option.id;
+      label.append(input,element('span','form-check-label',option.label)); field.append(label); inputs.push(input);
+    }
+    const noteLabel=element('label','form-label answer-note',q.type==='text'?'답변':'직접 답변·보충 (선택)');
+    const note=element('textarea','form-control'); note.id=`interview-note-${index}`; note.rows=2; noteLabel.htmlFor=note.id;
+    field.append(noteLabel,note); list.append(field); fields.set(q.id,{q,inputs,note});
+  }
+  function answers() {
+    return [...fields.values()].map(({q,inputs,note}) => ({id:q.id,type:q.type,question:q.title,selected:inputs.filter(i=>i.checked).map(i=>({id:i.value,label:q.options.find(o=>o.id===i.value).label})),text:note.value.trim()}));
+  }
+  function payload() { return {roundId:config.roundId,answers:answers().filter(a=>a.selected.length || a.text)}; }
+  function restore(snapshot) {
+    if(sending)return;
+    const data=snapshot?.privateContent;
+    if(data?.roundId!==config.roundId || data.signature!==signature || !Array.isArray(data.answers))return;
+    for(const a of data.answers) {
+      const entry=fields.get(a.id); if(!entry || a.type!==entry.q.type)continue;
+      const ids=new Set((a.selected || []).map(s=>s.id));
+      let used=false;
+      for(const input of entry.inputs) { input.checked=ids.has(input.value) && (entry.q.type!=='single' || !used); if(input.checked)used=true; }
+      entry.note.value=typeof a.text==='string'?a.text:'';
+    }
+  }
+  function save() {
+    const state={modelContent:{interviewDraft:true,...payload()},privateContent:{roundId:config.roundId,signature,answers:answers()}};
+    if(new TextEncoder().encode(JSON.stringify(state)).length>16000){state.modelContent={interviewDraft:true,roundId:config.roundId,draftTooLarge:true};state.privateContent=null;}
+    try { const result=window.openai?.setWidgetState?.(state); result?.catch?.(()=>{}); } catch (_) {}
+  }
+  restore(window.openai?.widgetState);
+  window.addEventListener('openai:set_globals',event=>restore(event.detail?.globals?.widgetState));
+  form.addEventListener('input',()=>{status.textContent='';fallback.hidden=true;save();});
+  send.addEventListener('click',async event=>{
+    event.preventDefault(); if(sending)return;
+    const data=payload();
+    if(!data.answers.length){ status.textContent='항목을 선택하거나 답변을 입력해 주세요.'; return; }
+    for(const entry of fields.values()) {
+      if(entry.q.maxSelections && entry.inputs.filter(i=>i.checked).length>entry.q.maxSelections){status.textContent=`선택은 최대 ${entry.q.maxSelections}개까지 가능합니다.`;return;}
+    }
+    copy.value=JSON.stringify(data,null,2);
+    if(typeof window.openai?.sendFollowUpMessage!=='function'){ fallback.hidden=false;status.textContent='답변을 복사해 이 대화에 보내 주세요.';return; }
+    sending=true;send.disabled=true;save();
+    try {
+      await window.openai.sendFollowUpMessage({prompt:'선택형 인터뷰 답변입니다. 선택과 직접 입력을 보존하고 이 답변에 따라 인터뷰를 이어가 주세요.\n'+copy.value,title:'인터뷰 답변 보내기'});
+      status.textContent='전송 요청을 열었습니다. 대화에 답변이 도착하면 인터뷰를 계속합니다.';
+    } catch (_) {fallback.hidden=false;status.textContent='전송하지 못했습니다. 답변을 복사해 이 대화에 보내 주세요.';}
+    finally {sending=false;send.disabled=false;}
+  });
+})();
+</script>

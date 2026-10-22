@@ -1,0 +1,11 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"Single project ledger with managed harness metadata",
+  "type":"object",
+  "required":["version","members","tasks","history","harness"],
+  "properties":{
+    "version":{"const":1},"members":{"type":"object"},"tasks":{"type":"object"},"history":{"type":"array"},
+    "harness":{"type":"object","required":["schema","revision","goal","constraints","decisions","changes","profiles","runs","budget","spent","policy_hash"],"properties":{"schema":{"const":1},"revision":{"type":"integer","minimum":1},"goal":{"type":"string"},"constraints":{"type":"array","items":{"type":"string"}},"decisions":{"type":"array","items":{"type":"string"}},"changes":{"type":"array"},"profiles":{"type":"object"},"runs":{"type":"object"},"budget":{"type":"integer","minimum":0},"spent":{"type":"integer","minimum":0},"policy_hash":{"type":"string"}}}
+  },
+  "$comment":"Descriptive schema. CLI validates operation invariants; this schema is not a proof of runtime or identity. Do not let legacy CLI mutate managed projects."
+}

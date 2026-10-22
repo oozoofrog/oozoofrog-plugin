@@ -1,0 +1,25 @@
+{
+  "name": "jev-native",
+  "version": "0.6.3+source.e88caaa",
+  "description": "Operate native macOS apps and windows with a Swift controller, JEV action selection, a separate virtual cursor, and a hideable target-window preview. Use for requested desktop app workflows; Codex delegates original text and image interpretation when needed.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "skills": "./skills/",
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
+  "interface": {
+    "displayName": "JEV Native",
+    "shortDescription": "Native macOS automation with a virtual cursor and target preview",
+    "longDescription": "Operate native macOS apps and windows with a Swift controller, JEV action selection, a separate virtual cursor, and a hideable target-window preview. Use for requested desktop app workflows; Codex delegates original text and image interpretation when needed. Stable source snapshot; runtime and credentials are separate. No app, hook or MCP is installed by this Plugin.",
+    "developerName": "oozoofrog",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $jev-native to operate the requested macOS app with JEV and verify the final window state."
+    ]
+  }
+}

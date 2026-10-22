@@ -1,0 +1,4 @@
+interface:
+  display_name: "Korean Travel Guidebook"
+  short_description: "Korean HTML travel guides with verified sources"
+  default_prompt: "Use $korean-travel-guidebook to create the requested Korean HTML travel guide."
