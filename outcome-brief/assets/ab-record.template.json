@@ -1,0 +1,6 @@
+{
+  "status": "planned",
+  "environment": {"model": "", "product": "", "settings": "", "input_id": "", "criteria_id": "", "tool_access": "", "budget": "", "team_policy": ""},
+  "A": {"prompt": "", "elapsed_seconds": null, "tool_calls": null, "input_tokens": null, "output_tokens": null, "required_checks_passed": null, "required_checks_total": null, "quality_scores": {"action_identification": null, "hierarchy": null, "layout_integrity": null}, "evidence": []},
+  "B": {"prompt": "", "elapsed_seconds": null, "tool_calls": null, "input_tokens": null, "output_tokens": null, "required_checks_passed": null, "required_checks_total": null, "quality_scores": {"action_identification": null, "hierarchy": null, "layout_integrity": null}, "evidence": []}
+}

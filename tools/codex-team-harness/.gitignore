@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+dist/
+.codex-team/
+plan.json
+team-coordination-install*.json

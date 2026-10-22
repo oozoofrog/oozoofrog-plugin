@@ -1,0 +1,34 @@
+{
+  "version": "0.1.1-public.1",
+  "roles": {
+    "leader": {
+      "model": null,
+      "execution": false
+    },
+    "core": {
+      "model": "gpt-6.1-sol",
+      "execution": true
+    },
+    "support": {
+      "model": "gpt-6-luna",
+      "execution": true
+    },
+    "advisor": {
+      "model": "gpt-6-astra",
+      "execution": true
+    },
+    "reviewer": {
+      "model": "gpt-6.1-sol",
+      "execution": false
+    }
+  },
+  "limits": {
+    "concurrency": 1,
+    "project_token_budget": 100000,
+    "context_estimate_limit": 16000,
+    "review_passes": 2
+  },
+  "runtime": "Defaults are explicit configuration examples. Verify each exact ID through official model/list and thread receipts; fail closed if unavailable.",
+  "identity": "CLI registration is a recorded claim; adapter captures server observations.",
+  "direct_clients": "Advisory only when bypassing managed adapter."
+}

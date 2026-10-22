@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased — JEV Native stable source
+
+- Import only the pinned public controller/companion source, original icon assets and NOTICE. Keep binaries, evidence and newer dirty revisions out; runtime source routing now uses this repository.
+
+## Unreleased — portable personal workflows
+
+- Add portable travel, vault-record, task-brief and project-verification skills with matching skills-only Plugin packages. Preserve the font OFL; omit private local agreements and project receipts.
+- Record all inspected candidates, external sources and deferred moving revisions. Keep Korean product writing only as an inactive non-discoverable draft because behavioral validation failed.
+
+## Unreleased — team harness migration
+
+- Move the portable public team harness source, installer/recovery documentation and opt-in skill/catalog into this repository. Retain the legacy release; do not install globally or claim main migrated before merge.
+
+
 이 저장소의 의미 있는 패키지 변경을 기록합니다.
 
 ## MacPilot [3.5.0] — 2026-10-18

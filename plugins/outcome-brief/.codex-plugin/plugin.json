@@ -1,0 +1,25 @@
+{
+  "name": "outcome-brief",
+  "version": "0.1.0",
+  "description": "Improve a user's task instructions through an outcome brief, concrete completion criteria, bounded autonomy, and a small measured comparison. Use for requested instruction coaching or reusable task briefs, not to rewrite every ordinary request.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "skills": "./skills/",
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
+  "interface": {
+    "displayName": "Outcome Brief",
+    "shortDescription": "Improve task instructions with bounded criteria",
+    "longDescription": "Improve a user's task instructions through an outcome brief, concrete completion criteria, bounded autonomy, and a small measured comparison. Use for requested instruction coaching or reusable task briefs, not to rewrite every ordinary request.",
+    "developerName": "oozoofrog",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $outcome-brief to improve this task brief and define observable completion criteria."
+    ]
+  }
+}
