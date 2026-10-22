@@ -2,6 +2,10 @@
 
 [English](README.md) | 한국어
 
+[한국어 제품 글쓰기](korean-product-writing/SKILL.md)는 사실·조건·요청한 구성요소를 보존하며 제품 문구를 다듬습니다. skills-only Plugin에는 런타임이나 hooks가 없습니다. 앞선 실패 뒤 같은 6개 입력의 회귀 검사를 통과했으며 [이력과 한계](drafts/korean-product-writing/tests/regression-v4/results.md)를 보존합니다. 설치와 자동 로딩은 시험하지 않았습니다.
+
+설치 후 호출 예: `$korean-product-writing로 이 화면의 제목·설명·버튼을 사실과 조건을 유지해 다듬어 주세요.` 실제 설치나 자동 호출을 시험했다는 뜻은 아닙니다.
+
 [Audit](audit/SKILL.md)은 요청한 범위의 스킬·저장소·작업 지침을 감사합니다. [Choice Interview](choice-interview/SKILL.md)는 단일·복수·직접 응답을 구성하는 인터뷰를 진행하며 혼합형 응답 폼을 포함합니다. 두 스킬은 hooks나 런타임 설치 없이 skills-only Plugin으로도 제공합니다.
 
 ## JEV Native 고정 소스
@@ -12,7 +16,7 @@
 
 Skills-only 패키지로 [한국어 여행 가이드북](korean-travel-guidebook/SKILL.md), [Obsidian 프로젝트 기록](obsidian-projects/SKILL.md), [Outcome Brief](outcome-brief/SKILL.md), [Verify Work](verify-work/SKILL.md)를 제공합니다. 사용자가 선택한 범위와 프로젝트 검증을 유지합니다. 여행 패키지의 예시는 가상이며 수정하지 않은 나눔고딕과 OFL 원문을 보존합니다. 기기별 합의·개인 프로젝트 상태는 공개본에서 제외했습니다.
 
-[전체 후보 목록](docs/user-skill-inventory.md)은 현재 패키지·외부 의존성·미확인 소스를 구분합니다. [한국어 제품 글쓰기](drafts/korean-product-writing/STATUS.md)는 행동 검증을 통과하지 못한 비활성 초안이며 자동 발견 이름·marketplace·기본 설치 대상에서 제외했습니다.
+[전체 후보 목록](docs/user-skill-inventory.md)은 현재 패키지·외부 의존성·미확인 소스를 구분합니다. [한국어 글쓰기의 과거 초안](drafts/korean-product-writing/STATUS.md)은 이전 실패 이력을 최신 원본과 구별해 보존합니다.
 
 ## 팀 하네스 이전
 

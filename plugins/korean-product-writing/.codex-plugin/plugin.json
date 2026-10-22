@@ -1,0 +1,25 @@
+{
+  "name": "korean-product-writing",
+  "version": "0.1.0",
+  "description": "Use when writing or editing Korean website copy, UI labels and buttons, product guidance, or explanatory reports, especially when wording feels translated, repetitive, abstract, or centered on the creator. 한국어 제품 문구와 안내 글에 사용한다. 문학 창작과 법률 계약 원문은 제외한다.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "skills": "./skills/",
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
+  "interface": {
+    "displayName": "한국어 제품 글쓰기",
+    "shortDescription": "Preserve facts and conditions in natural Korean copy",
+    "longDescription": "Use when writing or editing Korean website copy, UI labels and buttons, product guidance, or explanatory reports, especially when wording feels translated, repetitive, abstract, or centered on the creator. 한국어 제품 문구와 안내 글에 사용한다. 문학 창작과 법률 계약 원문은 제외한다.",
+    "developerName": "oozoofrog",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $korean-product-writing to edit this Korean product copy while preserving facts and conditions."
+    ]
+  }
+}

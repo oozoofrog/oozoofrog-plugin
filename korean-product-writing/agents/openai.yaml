@@ -1,0 +1,4 @@
+interface:
+  display_name: "한국어 제품 글쓰기"
+  short_description: "사실과 조건을 보존하며 한국어 제품 문구 다듬기"
+  default_prompt: "$korean-product-writing을 사용해 이 한국어 제품 문구를 다듬어 주세요."
