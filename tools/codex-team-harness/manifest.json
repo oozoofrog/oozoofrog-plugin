@@ -24,6 +24,6 @@
     "tests/test_adapter.py": "cf8421126bcf2ee309598748bc9a1a43d12cb68b3a574506cc6d2d996acda020",
     "tests/fake_server.py": "0cc3ade13972d18984ab6e46ec70685bc2f7a39e3af3ef88e207325ad6edfa1f",
     "tests/test_bootstrap.py": "bcf6b67737d3a1bd1535aef0f39b0253bdc421f5ef97d57f539734517fa6e953",
-    "tests/test_session_control.py": "4ded90ea6a14b5b9ba6e7cdd96558a60b570deb3a514df87571456415df03536"
+    "tests/test_session_control.py": "c5f638f1f7f77c939ec0c35dff5388d8f22de0aa2006ec234da79ba0c1e9a065"
   }
 }

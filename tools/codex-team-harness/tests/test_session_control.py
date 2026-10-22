@@ -32,6 +32,13 @@ class Sessions(unittest.TestCase):
   c.validate_choice(CATALOG,'gpt-6.1-sol','low')
   with self.assertRaises(c.ControlError):c.validate_choice(CATALOG,'picker-sol','low')
   with self.assertRaises(c.ControlError):c.validate_choice(CATALOG,'gpt-6.1-sol','ultra')
+ def test_unapplied_request_does_not_turn_matching_configuration_into_drift(self):
+  state=self.controller.state();value=state['harness']['sessions']['source-owner'];value['managed']=True;value['policy_expected']['reasoning_effort']='low';h.save(self.path,state)
+  requested_model='gpt-6-astra'
+  observation=self.controller.inspect('source-owner')
+  self.assertFalse(c.matches(observation,requested_model,'low'))
+  self.assertTrue(c.matches(observation,'gpt-6.1-sol','low'))
+  c.gate(self.controller.state(),'source-owner','implementation',observation)
  def test_advisor_implementation_refused_at_assignment(self):
   s=json.loads(self.path.read_text());s=h.apply(s,{'op':'register','member':'advisor','role':'advisor','identity':str(self.proof)})
   with self.assertRaises(h.Invalid):h.apply(s,{'op':'assign','task':'bad','member':'advisor','purpose':'code','context':'x','kind':'implementation'})
