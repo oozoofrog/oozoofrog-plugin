@@ -1,0 +1,4 @@
+interface:
+  display_name: "Verify Work"
+  short_description: "Record project-owned verification and recovery"
+  default_prompt: "Use $verify-work to apply the project verification contract and record evidence and limits."

@@ -2,6 +2,22 @@
 
 [English](README.md) | 한국어
 
+[Audit](audit/SKILL.md)은 요청한 범위의 스킬·저장소·작업 지침을 감사합니다. [Choice Interview](choice-interview/SKILL.md)는 단일·복수·직접 응답을 구성하는 인터뷰를 진행하며 혼합형 응답 폼을 포함합니다. 두 스킬은 hooks나 런타임 설치 없이 skills-only Plugin으로도 제공합니다.
+
+## JEV Native 고정 소스
+
+공개 commit으로 고정한 [네이티브 제어기 소스](tools/jev-native/README.md)와 [동반 스킬](jev-native/SKILL.md)을 포함합니다. 바이너리·기존 설치본은 교체하지 않습니다. [출처와 보류한 최신 변경](docs/jev-native-source.md)에서 소스·단위 검사와 실제 데스크톱 동작을 구분합니다.
+
+## 재사용 가능한 개인 작업 스킬
+
+Skills-only 패키지로 [한국어 여행 가이드북](korean-travel-guidebook/SKILL.md), [Obsidian 프로젝트 기록](obsidian-projects/SKILL.md), [Outcome Brief](outcome-brief/SKILL.md), [Verify Work](verify-work/SKILL.md)를 제공합니다. 사용자가 선택한 범위와 프로젝트 검증을 유지합니다. 여행 패키지의 예시는 가상이며 수정하지 않은 나눔고딕과 OFL 원문을 보존합니다. 기기별 합의·개인 프로젝트 상태는 공개본에서 제외했습니다.
+
+[전체 후보 목록](docs/user-skill-inventory.md)은 현재 패키지·외부 의존성·미확인 소스를 구분합니다. [한국어 제품 글쓰기](drafts/korean-product-writing/STATUS.md)는 행동 검증을 통과하지 못한 비활성 초안이며 자동 발견 이름·marketplace·기본 설치 대상에서 제외했습니다.
+
+## 팀 하네스 이전
+
+선택적으로 사용하는 [team-coordination 스킬](team-coordination/SKILL.md)과 skills-only Plugin은 공개 payload를 사용합니다. 설치·관리 실행·복구 도구와 검사는 [tools/codex-team-harness](tools/codex-team-harness/README.md)에 있습니다. 런타임 버전 `0.1.1-public.1`은 유지하고 소스 이전으로 달라진 manifest 해시를 검증합니다. Plugin 설치는 전역 지침이나 런타임을 설치하지 않습니다. 병합 전에는 검토한 PR commit을 고정해 [이전·검증 안내](docs/team-harness-migration.md)를 따릅니다. 목적지 main으로의 이전 완료는 병합 후에만 성립합니다. 기존 전용 저장소와 릴리스는 보존하며 새 릴리스를 만들지 않습니다.
+
 Swift 의미론 탐색용 `swift-intelligence`, 로컬 모델 설치·실행용 `local-ai-studio`, macOS·브라우저 제어와 화면·시스템 오디오 녹화용 `macpilot`를 제공합니다.
 
 ## Local AI Studio

@@ -1,0 +1,283 @@
+{
+  "upstream_repository": "https://github.com/oozoofrog/jev-native",
+  "upstream_commit": "e88caaa76d36c703bfaa72dd8896a253b7b20fc1",
+  "source_files": {
+    ".gitignore": {
+      "upstream_sha256": "ab399a3a89cc4e088981d7d3fd9ec3a2f58385551261880a805449dcb19b1279",
+      "imported_sha256": "ab399a3a89cc4e088981d7d3fd9ec3a2f58385551261880a805449dcb19b1279"
+    },
+    "Assets/AppIcon.iconset/icon_128x128.png": {
+      "upstream_sha256": "b49703516b582bead0f8fc315928a59f0f7efc1a6fe80e9755f880bcd123baf1",
+      "imported_sha256": "b49703516b582bead0f8fc315928a59f0f7efc1a6fe80e9755f880bcd123baf1"
+    },
+    "Assets/AppIcon.iconset/icon_128x128@2x.png": {
+      "upstream_sha256": "55c880586f8fa71e11f5faa3ba71e06f9625ba44a22324dc5106259b1bf9aa30",
+      "imported_sha256": "55c880586f8fa71e11f5faa3ba71e06f9625ba44a22324dc5106259b1bf9aa30"
+    },
+    "Assets/AppIcon.iconset/icon_16x16.png": {
+      "upstream_sha256": "8ffcc3c873cd260b4c74fda44cb16682d57e1c97f166a1569ce564baea90eb58",
+      "imported_sha256": "8ffcc3c873cd260b4c74fda44cb16682d57e1c97f166a1569ce564baea90eb58"
+    },
+    "Assets/AppIcon.iconset/icon_16x16@2x.png": {
+      "upstream_sha256": "4fb8cac6bdb177bc21e1e9a60af7ef073cd25165340dd84138f24e1246208363",
+      "imported_sha256": "4fb8cac6bdb177bc21e1e9a60af7ef073cd25165340dd84138f24e1246208363"
+    },
+    "Assets/AppIcon.iconset/icon_256x256.png": {
+      "upstream_sha256": "55c880586f8fa71e11f5faa3ba71e06f9625ba44a22324dc5106259b1bf9aa30",
+      "imported_sha256": "55c880586f8fa71e11f5faa3ba71e06f9625ba44a22324dc5106259b1bf9aa30"
+    },
+    "Assets/AppIcon.iconset/icon_256x256@2x.png": {
+      "upstream_sha256": "fb58e4d53d377fdddeb9f0c6940d9ecb44dbb79f58d29830574d568f1ff51dfd",
+      "imported_sha256": "fb58e4d53d377fdddeb9f0c6940d9ecb44dbb79f58d29830574d568f1ff51dfd"
+    },
+    "Assets/AppIcon.iconset/icon_32x32.png": {
+      "upstream_sha256": "4fb8cac6bdb177bc21e1e9a60af7ef073cd25165340dd84138f24e1246208363",
+      "imported_sha256": "4fb8cac6bdb177bc21e1e9a60af7ef073cd25165340dd84138f24e1246208363"
+    },
+    "Assets/AppIcon.iconset/icon_32x32@2x.png": {
+      "upstream_sha256": "52154ba7850254e38b620d44728c7aef4c8b2e7ee6a96cb525a313b9597ed7b0",
+      "imported_sha256": "52154ba7850254e38b620d44728c7aef4c8b2e7ee6a96cb525a313b9597ed7b0"
+    },
+    "Assets/AppIcon.iconset/icon_512x512.png": {
+      "upstream_sha256": "fb58e4d53d377fdddeb9f0c6940d9ecb44dbb79f58d29830574d568f1ff51dfd",
+      "imported_sha256": "fb58e4d53d377fdddeb9f0c6940d9ecb44dbb79f58d29830574d568f1ff51dfd"
+    },
+    "Assets/AppIcon.iconset/icon_512x512@2x.png": {
+      "upstream_sha256": "0e30001ab132806452121b68f7958e93da33348042b8725d4bbe12f0b6f7d41c",
+      "imported_sha256": "0e30001ab132806452121b68f7958e93da33348042b8725d4bbe12f0b6f7d41c"
+    },
+    "Assets/JevNative-icon-preview.png": {
+      "upstream_sha256": "55c880586f8fa71e11f5faa3ba71e06f9625ba44a22324dc5106259b1bf9aa30",
+      "imported_sha256": "55c880586f8fa71e11f5faa3ba71e06f9625ba44a22324dc5106259b1bf9aa30"
+    },
+    "Assets/JevNative.icns": {
+      "upstream_sha256": "8507ac03b198256f50a879763bd26e73bafa72a4e3438af35c2f5f4c63fe2298",
+      "imported_sha256": "8507ac03b198256f50a879763bd26e73bafa72a4e3438af35c2f5f4c63fe2298"
+    },
+    "NOTICE.md": {
+      "upstream_sha256": "48d41fcce9c0cf4fcf0cf121476d4da89e0a759378a159312033d7276c25d4f5",
+      "imported_sha256": "48d41fcce9c0cf4fcf0cf121476d4da89e0a759378a159312033d7276c25d4f5"
+    },
+    "Package.swift": {
+      "upstream_sha256": "3f2849f797b0032c3481b4f3f0e5574e3a54f31842dcffa121619bbadf71ff8e",
+      "imported_sha256": "3f2849f797b0032c3481b4f3f0e5574e3a54f31842dcffa121619bbadf71ff8e"
+    },
+    "README.md": {
+      "upstream_sha256": "b1a4a82502e48f026d402cf84105df6e6388b3f3d2c6ca3670c68512464f5950",
+      "imported_sha256": "5ead39745864a2d1c151f3e7e681cbfe968f71f8c1406d075ffa21f4c28c29ed"
+    },
+    "Scripts/build.sh": {
+      "upstream_sha256": "b18d083bab3d99e1d9770a9d3c34a1e02a8bdfeec078561a21ed41cf65155caf",
+      "imported_sha256": "b18d083bab3d99e1d9770a9d3c34a1e02a8bdfeec078561a21ed41cf65155caf"
+    },
+    "Scripts/render-app-icon.swift": {
+      "upstream_sha256": "9212b2779fc975a4bbcea6cee2cfb36c0e0931d5891085625ef324d3a87b3d69",
+      "imported_sha256": "9212b2779fc975a4bbcea6cee2cfb36c0e0931d5891085625ef324d3a87b3d69"
+    },
+    "Sources/JevComputerUse/AXCommands.swift": {
+      "upstream_sha256": "a48e68bd6f2b3a20d7335eef398690d2cd51a959f3f449fffe2c8f04cd3c4c6d",
+      "imported_sha256": "a48e68bd6f2b3a20d7335eef398690d2cd51a959f3f449fffe2c8f04cd3c4c6d"
+    },
+    "Sources/JevComputerUse/AXFreshness.swift": {
+      "upstream_sha256": "e2b0a8ace8e2e74372441e500ca387255c71175660fe9afd247eb626fb10887c",
+      "imported_sha256": "e2b0a8ace8e2e74372441e500ca387255c71175660fe9afd247eb626fb10887c"
+    },
+    "Sources/JevComputerUse/AXInvalidation.swift": {
+      "upstream_sha256": "44a4fcd5ea4e24fbc9e987fe183431960e2261f7ba0df08b14b79f8ec6b3a146",
+      "imported_sha256": "44a4fcd5ea4e24fbc9e987fe183431960e2261f7ba0df08b14b79f8ec6b3a146"
+    },
+    "Sources/JevComputerUse/AXStore.swift": {
+      "upstream_sha256": "681d8553552da7d6cb031d6eb161c341233999206430b70d20c6cd592bb03aab",
+      "imported_sha256": "681d8553552da7d6cb031d6eb161c341233999206430b70d20c6cd592bb03aab"
+    },
+    "Sources/JevComputerUse/AppCatalog.swift": {
+      "upstream_sha256": "acae3bbd208f67c5e393c3b2e2bab2e7ea2d84ac944ec262fe76552c3b0e9da1",
+      "imported_sha256": "acae3bbd208f67c5e393c3b2e2bab2e7ea2d84ac944ec262fe76552c3b0e9da1"
+    },
+    "Sources/JevComputerUse/AppPickerWindow.swift": {
+      "upstream_sha256": "3d46d48121773096478d541a4530112111cb0d6c43a88df56351004eb1b93de9",
+      "imported_sha256": "3d46d48121773096478d541a4530112111cb0d6c43a88df56351004eb1b93de9"
+    },
+    "Sources/JevComputerUse/AppResolution.swift": {
+      "upstream_sha256": "4c8533fee3ffd5a77211d47cbfc59dc531794160c713e145ce9c81df604c30d0",
+      "imported_sha256": "4c8533fee3ffd5a77211d47cbfc59dc531794160c713e145ce9c81df604c30d0"
+    },
+    "Sources/JevComputerUse/CLI.swift": {
+      "upstream_sha256": "ffe709dd4111af80f1c48ec2d750ab2ec8b8ebdce232c8354936868273e3c8db",
+      "imported_sha256": "ffe709dd4111af80f1c48ec2d750ab2ec8b8ebdce232c8354936868273e3c8db"
+    },
+    "Sources/JevComputerUse/Codex.swift": {
+      "upstream_sha256": "d317feafd4351a9e7916558526fc52d3b1c5c566a7370e8f69833cade5d416b8",
+      "imported_sha256": "d317feafd4351a9e7916558526fc52d3b1c5c566a7370e8f69833cade5d416b8"
+    },
+    "Sources/JevComputerUse/ConnectionWindow.swift": {
+      "upstream_sha256": "a1e6a34fec5c4edc5d23a195941db4a86b0b334bb5c85d26374beaa59aa7a40f",
+      "imported_sha256": "a1e6a34fec5c4edc5d23a195941db4a86b0b334bb5c85d26374beaa59aa7a40f"
+    },
+    "Sources/JevComputerUse/CredentialSetup.swift": {
+      "upstream_sha256": "25b3e45d0d6aadced234d727f5965d2e65fb4875d5b468290f673dfde626adc3",
+      "imported_sha256": "25b3e45d0d6aadced234d727f5965d2e65fb4875d5b468290f673dfde626adc3"
+    },
+    "Sources/JevComputerUse/DelegateProvenance.swift": {
+      "upstream_sha256": "23d10f1c41720c1325b019225c9376367d06f65fcd96db608b8d364614b7f885",
+      "imported_sha256": "23d10f1c41720c1325b019225c9376367d06f65fcd96db608b8d364614b7f885"
+    },
+    "Sources/JevComputerUse/DocumentSource.swift": {
+      "upstream_sha256": "3126d60f1fa768e4e41dfa1b0d526217f7454e637dadf427101f9cbc8453d64b",
+      "imported_sha256": "3126d60f1fa768e4e41dfa1b0d526217f7454e637dadf427101f9cbc8453d64b"
+    },
+    "Sources/JevComputerUse/FollowUpWindow.swift": {
+      "upstream_sha256": "cad210b6fe02152b2f9d07e6cd741889fccc8c7836fbd0ac21592807a2e2cdf1",
+      "imported_sha256": "cad210b6fe02152b2f9d07e6cd741889fccc8c7836fbd0ac21592807a2e2cdf1"
+    },
+    "Sources/JevComputerUse/GUIOptions.swift": {
+      "upstream_sha256": "2038bff734dd5781535bcf78e3267ddcb3ab51bed8ac27b982e7e2cf997dfa4f",
+      "imported_sha256": "2038bff734dd5781535bcf78e3267ddcb3ab51bed8ac27b982e7e2cf997dfa4f"
+    },
+    "Sources/JevComputerUse/GoalWindow.swift": {
+      "upstream_sha256": "7e78b0843e764e52629aeb9447ff95428f67a1efe114ee6a28532c222ffab212",
+      "imported_sha256": "7e78b0843e764e52629aeb9447ff95428f67a1efe114ee6a28532c222ffab212"
+    },
+    "Sources/JevComputerUse/Jev.swift": {
+      "upstream_sha256": "2569e140f7b932c388be11e90eafa63ba67d1b18417ad38681d112bdcd87f30f",
+      "imported_sha256": "2569e140f7b932c388be11e90eafa63ba67d1b18417ad38681d112bdcd87f30f"
+    },
+    "Sources/JevComputerUse/Models.swift": {
+      "upstream_sha256": "fc0e05170e2a80491ee0b6b3cdaeacadb14af3d01af54ca952406ddadcee74b1",
+      "imported_sha256": "fc0e05170e2a80491ee0b6b3cdaeacadb14af3d01af54ca952406ddadcee74b1"
+    },
+    "Sources/JevComputerUse/Native.swift": {
+      "upstream_sha256": "21c8a62bea11dd62fdcebdb234ea2aaba8bacaf38d035a34bec75dabda73408a",
+      "imported_sha256": "21c8a62bea11dd62fdcebdb234ea2aaba8bacaf38d035a34bec75dabda73408a"
+    },
+    "Sources/JevComputerUse/NaturalTaskRunner.swift": {
+      "upstream_sha256": "a9a135b5b08088b23406d70ec91dd913fb77a5c53e8c01dcea57c2ff39d9c623",
+      "imported_sha256": "a9a135b5b08088b23406d70ec91dd913fb77a5c53e8c01dcea57c2ff39d9c623"
+    },
+    "Sources/JevComputerUse/Preview.swift": {
+      "upstream_sha256": "41a19e3eaddfc5a8a716be64695a8ceef062e82ad83ab6ef30252dd51889a2ff",
+      "imported_sha256": "41a19e3eaddfc5a8a716be64695a8ceef062e82ad83ab6ef30252dd51889a2ff"
+    },
+    "Sources/JevComputerUse/RequestIntent.swift": {
+      "upstream_sha256": "9db23061f9c1025d4200100ad4970bd6f7508814e2eb662ae5ecce6d5efa2444",
+      "imported_sha256": "9db23061f9c1025d4200100ad4970bd6f7508814e2eb662ae5ecce6d5efa2444"
+    },
+    "Sources/JevComputerUse/RequestSpans.swift": {
+      "upstream_sha256": "3a3c3a6484c8c6ce885e46d0134e50460061d7afe6edb9dadcd6158af3546e63",
+      "imported_sha256": "3a3c3a6484c8c6ce885e46d0134e50460061d7afe6edb9dadcd6158af3546e63"
+    },
+    "Sources/JevComputerUse/RunPresentation.swift": {
+      "upstream_sha256": "0a602f4b0ebfdc442a17be11a46ee948269521ff39b5ecc73db943b7e871514b",
+      "imported_sha256": "0a602f4b0ebfdc442a17be11a46ee948269521ff39b5ecc73db943b7e871514b"
+    },
+    "Sources/JevComputerUse/RunRequest.swift": {
+      "upstream_sha256": "901ab862cdf223cb4661abe7fcb2b0ac2b68a4b7aa0403669a2e6e21987a8421",
+      "imported_sha256": "901ab862cdf223cb4661abe7fcb2b0ac2b68a4b7aa0403669a2e6e21987a8421"
+    },
+    "Sources/JevComputerUse/SkillInstallation.swift": {
+      "upstream_sha256": "f2acea92125da10ba7a7ce72a1a537b61848ac388d4d7ee2697eb5cd6292c00b",
+      "imported_sha256": "f2acea92125da10ba7a7ce72a1a537b61848ac388d4d7ee2697eb5cd6292c00b"
+    },
+    "Sources/JevComputerUse/SpatialWorkspace.swift": {
+      "upstream_sha256": "1f79ef7933476c785859964b469f1cfdfc8ac520abe8a061820db2338c63c648",
+      "imported_sha256": "1f79ef7933476c785859964b469f1cfdfc8ac520abe8a061820db2338c63c648"
+    },
+    "Sources/JevComputerUse/Startup.swift": {
+      "upstream_sha256": "d8c3775d32b9f0af412ca35b1bd4c67b0a1a68fbb909dd996bf6fd1f8ed33ed9",
+      "imported_sha256": "d8c3775d32b9f0af412ca35b1bd4c67b0a1a68fbb909dd996bf6fd1f8ed33ed9"
+    },
+    "Sources/JevComputerUse/TaskRunner.swift": {
+      "upstream_sha256": "cd6636df9814cbf973eedbdee3035c66d673ffa6afaefccc7ed7a667dbcd8406",
+      "imported_sha256": "cd6636df9814cbf973eedbdee3035c66d673ffa6afaefccc7ed7a667dbcd8406"
+    },
+    "Sources/JevComputerUse/UserStatus.swift": {
+      "upstream_sha256": "ec338165e255e72b16a3d31f0d5669751eb7d7e38252d05b8c802a698c6edbc4",
+      "imported_sha256": "ec338165e255e72b16a3d31f0d5669751eb7d7e38252d05b8c802a698c6edbc4"
+    },
+    "Sources/JevComputerUse/WindowEvents.swift": {
+      "upstream_sha256": "507f62ed17348c513e0c4218c39ffefff5590f46678e16452eea4a0e1ab449f9",
+      "imported_sha256": "507f62ed17348c513e0c4218c39ffefff5590f46678e16452eea4a0e1ab449f9"
+    },
+    "Sources/JevComputerUse/Workflow.swift": {
+      "upstream_sha256": "a2608af48b2c395bb88bd1c602aac76a79ee00680372e55dea36bb9782d67dfb",
+      "imported_sha256": "a2608af48b2c395bb88bd1c602aac76a79ee00680372e55dea36bb9782d67dfb"
+    },
+    "Sources/JevNativeFixture/QueryFixture.swift": {
+      "upstream_sha256": "04cd2517fcb3ebe8ffd8905bfbf2fc6a6f5182a626ac8d09c759b1b27e7da3d1",
+      "imported_sha256": "04cd2517fcb3ebe8ffd8905bfbf2fc6a6f5182a626ac8d09c759b1b27e7da3d1"
+    },
+    "Sources/JevNativeFixture/main.swift": {
+      "upstream_sha256": "c6f9c1d1c2a8535167e30bf9d0ffad583fec64681ee9f557b9a4625ae760677a",
+      "imported_sha256": "c6f9c1d1c2a8535167e30bf9d0ffad583fec64681ee9f557b9a4625ae760677a"
+    },
+    "Tests/JevComputerUseTests/AXFreshnessTests.swift": {
+      "upstream_sha256": "74380e1a7e38a3880dff8cb6dcda1a45410c1ca1b7dd453ad247a57b3cda44c5",
+      "imported_sha256": "74380e1a7e38a3880dff8cb6dcda1a45410c1ca1b7dd453ad247a57b3cda44c5"
+    },
+    "Tests/JevComputerUseTests/AXStoreTests.swift": {
+      "upstream_sha256": "1f6f3f34539c3ed5d2ce34a48eb8013dc8def988c174d9a3310c8ac846d16f57",
+      "imported_sha256": "1f6f3f34539c3ed5d2ce34a48eb8013dc8def988c174d9a3310c8ac846d16f57"
+    },
+    "Tests/JevComputerUseTests/AppSelectionTests.swift": {
+      "upstream_sha256": "13ed4c29ff45e22ed540f1d4abe02a32709565a0ca34148472fa012b8efd09a3",
+      "imported_sha256": "13ed4c29ff45e22ed540f1d4abe02a32709565a0ca34148472fa012b8efd09a3"
+    },
+    "Tests/JevComputerUseTests/CoreTests.swift": {
+      "upstream_sha256": "d594fdad164e9ec41003d2d940cbf9dd6639a43b03eab33d38dced6896a9b11b",
+      "imported_sha256": "d594fdad164e9ec41003d2d940cbf9dd6639a43b03eab33d38dced6896a9b11b"
+    },
+    "Tests/JevComputerUseTests/CredentialSetupTests.swift": {
+      "upstream_sha256": "566ed8650a094e2e24e6ae98ed63edc35919e64332a1cb1c8b062a184ecc99ec",
+      "imported_sha256": "566ed8650a094e2e24e6ae98ed63edc35919e64332a1cb1c8b062a184ecc99ec"
+    },
+    "Tests/JevComputerUseTests/ExplicitCompletionTests.swift": {
+      "upstream_sha256": "8fc8e568f74b63ea350bb9f0f3b92967f8e767af6f1fc2ef276c5379ebfe659d",
+      "imported_sha256": "8fc8e568f74b63ea350bb9f0f3b92967f8e767af6f1fc2ef276c5379ebfe659d"
+    },
+    "Tests/JevComputerUseTests/NaturalTaskRunnerTests.swift": {
+      "upstream_sha256": "5c3fb12f9296a040760dfb882a5e3bbae142f68ae275a05b5574fcb3bdc6bd05",
+      "imported_sha256": "5c3fb12f9296a040760dfb882a5e3bbae142f68ae275a05b5574fcb3bdc6bd05"
+    },
+    "Tests/JevComputerUseTests/RequestIntentTests.swift": {
+      "upstream_sha256": "659938c35cff66d55bba4de61de00768383a12ccb4eb1c53ced8cf51c5def4bc",
+      "imported_sha256": "659938c35cff66d55bba4de61de00768383a12ccb4eb1c53ced8cf51c5def4bc"
+    },
+    "Tests/JevComputerUseTests/RunPresentationTests.swift": {
+      "upstream_sha256": "0c1e4d6ffdc7b6208b4e739af89764fce49336bdcab21097124b20ff9fd74c86",
+      "imported_sha256": "0c1e4d6ffdc7b6208b4e739af89764fce49336bdcab21097124b20ff9fd74c86"
+    },
+    "Tests/JevComputerUseTests/SkillInstallationTests.swift": {
+      "upstream_sha256": "5c36d089bbfa839ff58f456056f39ea20a1ef3d6da86d73b5873c802d3fe9673",
+      "imported_sha256": "5c36d089bbfa839ff58f456056f39ea20a1ef3d6da86d73b5873c802d3fe9673"
+    },
+    "Tests/JevComputerUseTests/StartupTests.swift": {
+      "upstream_sha256": "6e19f930e102528a6af8c68a871de0e75546398202c05b9eaada83880e14f8a4",
+      "imported_sha256": "6e19f930e102528a6af8c68a871de0e75546398202c05b9eaada83880e14f8a4"
+    },
+    "Tests/JevComputerUseTests/TaskRunnerTests.swift": {
+      "upstream_sha256": "8572bb1be9b31535d7c9a42f01dae995448195405d88d4f2d7d8d81d5793b2b9",
+      "imported_sha256": "8572bb1be9b31535d7c9a42f01dae995448195405d88d4f2d7d8d81d5793b2b9"
+    },
+    "skill/jev-native/SKILL.md": {
+      "upstream_sha256": "4494c1a303a931178859677398ce8d27ad3415983dbb2275233739793822e645",
+      "imported_sha256": "cb8469443e2486b5f9a2b7643043edccbc73f40beb59839c003734d7f6b586b7"
+    },
+    "skill/jev-native/agents/openai.yaml": {
+      "upstream_sha256": "0a520b3a83c29cef8b5d27e03ff2851cbd427b6641c9a93dd0c3393ffdf83e3f",
+      "imported_sha256": "0a520b3a83c29cef8b5d27e03ff2851cbd427b6641c9a93dd0c3393ffdf83e3f"
+    }
+  },
+  "modified_scope": [
+    "README source routing and historical-evidence links",
+    "companion skill source-routing paragraph"
+  ],
+  "excluded": [
+    "artifacts",
+    "evidence",
+    "PUBLICATION.md",
+    "working-tree changes",
+    "installed binaries",
+    "credentials"
+  ],
+  "license": "Upstream NOTICE retained verbatim; no open-source license grant invented."
+}

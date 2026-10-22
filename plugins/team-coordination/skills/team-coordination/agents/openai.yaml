@@ -1,0 +1,4 @@
+interface:
+  display_name: "Team Coordination"
+  short_description: "Opt-in roles, ownership, evidence and recovery"
+  default_prompt: "Use $team-coordination for the enabled team workflow and verify current context and ownership."

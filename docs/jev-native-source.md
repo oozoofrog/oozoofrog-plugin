@@ -1,0 +1,9 @@
+# JEV Native stable source import
+
+The canonical integration snapshot is `tools/jev-native/` in `oozoofrog/oozoofrog-plugin`. Its companion standalone/skills-only Plugin is `jev-native`. The original dedicated repository remains at https://github.com/oozoofrog/jev-native; no release, binary, signature or live checkout is overwritten.
+
+The allowlist contains66 committed files from upstream `e88caaa76d36c703bfaa72dd8896a253b7b20fc1`: Package.swift/README/NOTICE/.gitignore,34 source files,12 test files,2 source scripts,12 original icon assets and2 companion files. `source-manifest.json` records original/imported hashes. Only README and companion source-routing text change. The project-authored NOTICE is retained verbatim and grants no additional open-source license. SwiftPM declares no third-party package dependency. Apple frameworks/toolchain, TypeSafe service credentials and authenticated Codex CLI remain separate dependencies.
+
+Assets are original vector-rendered JEV icon sources/derived icon sizes, not user photos or desktop screenshots. The renderer identifies the original mark and computes vector paths. No upstream artifacts/evidence/history, compiled executable/app, credentials, personal app catalogue, project state, signing backups or current dirty tool revisions are imported. Synthetic unit-test credential strings are not service credentials.
+
+Build/unit checks use a separate scratch/cache directory and one compiler job. They do not launch desktop automation, grant OS permissions, set up real credentials, replace an installed runtime or establish live UI compatibility. Runtime consent and unsupported private event routing limits remain in the source README/NOTICE. Newer local controller, CLI, UI and signing revisions are deferred pending a separate frozen public handoff; this is not a claim that the latest local tool has been centralized.

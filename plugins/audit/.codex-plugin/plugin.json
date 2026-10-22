@@ -1,0 +1,25 @@
+{
+  "name": "audit",
+  "version": "0.1.0",
+  "description": "Audit skills, AGENTS.md, and task prompts for excessive or conflicting instructions and unclear completion criteria. Use for instruction audits or prompt cleanup, not general code or security reviews.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "skills": "./skills/",
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
+  "interface": {
+    "displayName": "Audit",
+    "shortDescription": "Audit instruction scope and completion criteria",
+    "longDescription": "Audit skills, AGENTS.md, and task prompts for excessive or conflicting instructions and unclear completion criteria. Use for instruction audits or prompt cleanup, not general code or security reviews.",
+    "developerName": "oozoofrog",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $audit to review these instructions and propose bounded improvements."
+    ]
+  }
+}

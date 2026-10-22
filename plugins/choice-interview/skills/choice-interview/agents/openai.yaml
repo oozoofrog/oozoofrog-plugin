@@ -1,0 +1,4 @@
+interface:
+  display_name: "선택형 사용자 인터뷰"
+  short_description: "단일·복수 응답과 질문 수를 자동 구성하는 선택형 인터뷰"
+  default_prompt: "$choice-interview를 사용해 대상 사용자의 어려움과 제품 개선 방향을 선택 UI로 인터뷰해 주세요."
