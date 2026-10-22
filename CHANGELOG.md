@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased — Korean product writing
+
+- Add the tested Korean-writing guide and matching skills-only package after a six-case reused-input regression. Preserve original failures, raw generated text and bounded runtime/loading limits separately from current source.
+
 ## Unreleased — instruction audits and interviews
 
 - Add user-confirmed Audit and Choice Interview with complete mirrors, metadata and the original mixed-response form. Preserve bounded audit permissions and explicit interview submission.
