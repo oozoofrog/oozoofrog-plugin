@@ -1,0 +1,38 @@
+{
+  "fixture": "synthetic-checkpoint-integrity-cases",
+  "source_ref": "archive/snapshot.json",
+  "cases": [
+    {
+      "id": "missing-archive",
+      "archive_state": "missing",
+      "expected": "block_restore_and_preserve_checkpoint_metadata"
+    },
+    {
+      "id": "corrupt-archive",
+      "archive_state": "bytes_differ_from_pinned_sha256",
+      "expected": "reject_restore_and_report_digest_mismatch"
+    },
+    {
+      "id": "path-traversal",
+      "archive_ref": "../../outside/snapshot.json",
+      "expected": "reject_ref_before_reading_outside_checkpoint_root"
+    },
+    {
+      "id": "repeated-failure",
+      "history_refs": [
+        "failure-attempt-001",
+        "failure-attempt-002"
+      ],
+      "expected": "preserve_both_distinct_failure_occurrences"
+    },
+    {
+      "id": "duplicate-delivery",
+      "history_refs": [
+        "recovery-attempt-001",
+        "recovery-attempt-001"
+      ],
+      "expected": "do_not_infer_safe_retry_or_hide_unresolved_operation"
+    }
+  ],
+  "note": "Expected results state safety properties only; exact runtime error wording is intentionally unspecified."
+}
