@@ -38,6 +38,35 @@ def view_valid(source,view):
  require(isinstance(view['remaining_work'],list)and all(isinstance(v,str)and v.strip()for v in view['remaining_work'])and view['remaining_work'],'Remaining obligations required')
  require(set(view['task_contexts'])==set(source['tasks'])and all(isinstance(v,str)and v.strip()for v in view['task_contexts'].values()),'Every existing task needs a reviewed working context')
 
+def capture_parent(source,directory,files):
+ cp=source['harness'].get('checkpoint')
+ if not cp:return []
+ parent,_=active(source);old=Path(cp['directory'])
+ def capture(relative,expected):
+  data=safe(old,relative).read_bytes();require(sha(data)==expected,'Parent archive changed during capture');key='objects/'+sha(data);immutable(safe(directory,key),data);files[key]=sha(data);return key
+ mapping={rel:capture(rel,value)for rel,value in parent['files'].items()}
+ proposal_bytes=safe(old,'proposal.json').read_bytes();proposal_key='objects/'+sha(proposal_bytes);immutable(safe(directory,proposal_key),proposal_bytes);files[proposal_key]=sha(proposal_bytes)
+ proof=cp['approval_object'];approval_key=capture(proof['relative'],proof['sha256'])
+ entry={'proposal_sha256':digest(parent),'proposal_object':proposal_key,'source_sha256':parent['source_sha256'],'files':mapping,'approval_object':approval_key}
+ return parent.get('lineage',[])+[entry]
+
+def verify_lineage(directory,p,source):
+ lineage=p.get('lineage',[]);parent_id=p['parent_checkpoint'];require(bool(lineage)==bool(parent_id),'Missing parent checkpoint closure')
+ prior=[]
+ for entry in lineage:
+  def blob(relative):
+   require(relative in p['files']and re.fullmatch(r'objects/[0-9a-f]{64}',relative),'Missing lineage object');return safe(directory,relative).read_bytes()
+  parent=json.loads(blob(entry['proposal_object']));require(digest(parent)==entry['proposal_sha256'],'Parent proposal digest changed')
+  require(parent.get('lineage',[])==prior,'Checkpoint lineage truncated/reordered')
+  require(set(parent['files'])==set(entry['files']),'Parent object closure incomplete')
+  for relative,value in parent['files'].items():require(sha(blob(entry['files'][relative]))==value,'Parent evidence object changed')
+  snapshot=json.loads(blob(entry['files']['snapshot.json']));require(digest(snapshot)==parent['source_sha256']==entry['source_sha256'],'Parent source digest changed')
+  approved=json.loads(blob(entry['approval_object']))
+  for role in ['leader','reviewer']:
+   ack=approved[role];require(ack['proposal_sha256']==digest(parent)and ack['source_sha256']==parent['source_sha256']and ack['target_policy_hash']==parent['target_policy_hash']and ack['approved']is True,'Parent approval binding changed')
+  prior.append(entry)
+ if lineage:require(lineage[-1]['proposal_sha256']==parent_id==source['harness']['checkpoint']['proposal_sha256'],'Checkpoint parent identity mismatch')
+
 def prepare(state_path,identifier,working_view,required_evidence):
  state_path=Path(state_path);require(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}',identifier)is not None,'Invalid checkpoint ID')
  source=json.loads(state_path.read_text());view_valid(source,working_view)
@@ -46,7 +75,8 @@ def prepare(state_path,identifier,working_view,required_evidence):
  # Only explicitly selected evidence is opened. No recursive filesystem or credential scan.
  for name in required_evidence:
   p=Path(name);require(p.is_file()and not p.is_symlink(),'Required evidence must be a regular non-symlink file');data=p.read_bytes();key='objects/'+sha(data);immutable(safe(directory,key),data);files[key]=sha(data);evidence.append({'original_path':str(p.resolve()),'relative':key,'sha256':sha(data)})
- proposal={'schema':1,'id':identifier,'source_sha256':digest(source),'source_revision':source['harness']['revision'],'source_policy_hash':source['harness']['policy_hash'],'target_policy_hash':digest(h.effective_contract()),'parent_checkpoint':source['harness'].get('checkpoint',{}).get('proposal_sha256'),'working_view':working_view,'required_evidence':evidence,'files':files,'coverage':{field:[{'index':i,'sha256':digest(v),'carry_verbatim':i in working_view[key]}for i,v in enumerate(source['harness'][field])]for key,field in [('constraint_indices','constraints'),('decision_indices','decisions')]},'semantic_limit':'Coverage hashes prove references only; owner and independent reviewer must approve all current obligations retained inline.'}
+ lineage=capture_parent(source,directory,files)
+ proposal={'schema':1,'lineage':lineage,'id':identifier,'source_sha256':digest(source),'source_revision':source['harness']['revision'],'source_policy_hash':source['harness']['policy_hash'],'target_policy_hash':digest(h.effective_contract()),'parent_checkpoint':source['harness'].get('checkpoint',{}).get('proposal_sha256'),'working_view':working_view,'required_evidence':evidence,'files':files,'coverage':{field:[{'index':i,'sha256':digest(v),'carry_verbatim':i in working_view[key]}for i,v in enumerate(source['harness'][field])]for key,field in [('constraint_indices','constraints'),('decision_indices','decisions')]},'semantic_limit':'Coverage hashes prove references only; owner and independent reviewer must approve all current obligations retained inline.'}
  path=safe(directory,'proposal.json');immutable(path,encoded(proposal));durable_directory(directory);return path
 
 def verify(directory,expected=None):
@@ -58,6 +88,7 @@ def verify(directory,expected=None):
    require(rel=='snapshot.json'or re.fullmatch(r'objects/[0-9a-f]{64}',rel),'Unexpected checkpoint object')
    require(sha(safe(directory,rel).read_bytes())==value,'Checkpoint object missing/corrupt')
   source=json.loads(safe(directory,'snapshot.json').read_text());require(digest(source)==p['source_sha256'],'Snapshot source digest mismatch');view_valid(source,p['working_view'])
+  verify_lineage(directory,p,source)
   for e in p['required_evidence']:require(p['files'].get(e['relative'])==e['sha256'],'Required evidence manifest mismatch')
   return p,source
  except (OSError,ValueError,KeyError,TypeError)as e:raise h.Invalid('Checkpoint verification failed: '+str(e))from e

@@ -87,8 +87,8 @@ class Checkpoints(unittest.TestCase):
  def test_replacement_cannot_hide_corrupt_previous_archive(self):
   candidate=self.prepare();self.commit(candidate);(candidate.parent/'snapshot.json').write_text('{}')
   import checkpoints as c
-  state=json.loads(self.path.read_text());view=json.loads(candidate.read_text())['working_view'];next_candidate=c.prepare(self.path,'checkpoint2',view,[str(self.proof)])
-  with self.assertRaises(h.Invalid):self.commit(next_candidate)
+  state=json.loads(self.path.read_text());view=json.loads(candidate.read_text())['working_view']
+  with self.assertRaises(h.Invalid):c.prepare(self.path,'checkpoint2',view,[str(self.proof)])
  def test_commit_rejects_conflicting_claims_and_budget_state(self):
   for kind in ['ownership','budget']:
    original=json.loads(self.path.read_text());state=copy.deepcopy(original)
@@ -147,5 +147,11 @@ class Checkpoints(unittest.TestCase):
   try:
    with self.assertRaises(h.Invalid):h.transaction(self.path,{'op':'checkpoint_commit','candidate':str(candidate),'approvals':str(approval),'policy_refresh':True,'reason':'migration'})
   finally:h.effective_contract=original
+
+ def test_successor_captures_portable_parent_approval_and_evidence_closure(self):
+  import checkpoints as c
+  first=self.prepare();self.commit(first);view=json.loads(first.read_text())['working_view'];second=c.prepare(self.path,'checkpoint2',view,[]);new=self.commit(second);self.assertTrue(json.loads(second.read_text())['lineage']);shutil.rmtree(first.parent);(self.root/'approval.json').unlink();h.packet(new,'worker')
+  lineage=json.loads(second.read_text())['lineage'];approval=second.parent/lineage[-1]['approval_object'];approval.unlink()
+  with self.assertRaises(h.Invalid):h.packet(new,'worker')
 
 if __name__=='__main__':unittest.main()
