@@ -20,3 +20,7 @@ When managed packets exceed the unchanged context guard or a reset needs portabl
 For Astra leader/advisor defaults, read [profiles](references/profiles.md). Model, reasoning and requested service mode are separate. Core Sol and support Luna remain unchanged. Desired defaults and configured observations do not attest current provider execution.
 
 For a failed-review correction under the same owner while retaining claims, read [same-owner rework](references/rework.md). Use the explicit CAS/idempotent transition and fresh packet receipt; do not release/reassign merely to reset task state or review counts.
+
+For a human-authorized project budget increase, read [budget administration](references/budget.md). Preserve defaults, reviews and accounting; use exact project/CAS approvals and actual fresh packet ACKs.
+
+For human-authorized source instrumentation after a retained failed review, read [bounded diagnostics](references/diagnostics.md). Keep the original task, owner, failed reviews and budget; use one exact approved diagnostic cycle and fresh packet ACK. Stop after its separate evidence result.

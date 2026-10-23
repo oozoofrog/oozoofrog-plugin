@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Team harness 0.4.1 adds explicitly approved per-project budget administration and bounded same-task source diagnostics. Full-state CAS, copied approval evidence, fresh packet ACKs and one consumed diagnostic cycle preserve failures, claims, reviews and accounting.
+
 - MacPilot now keeps help, tool catalogs, MCP metadata, and connection diagnostics available when the current invocation cannot establish a WindowServer session. Desktop operations return a pre-dispatch session error; skipped permission probes remain unknown instead of appearing denied.
 
 ## Unreleased — team harness 0.4.0

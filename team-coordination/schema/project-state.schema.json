@@ -119,6 +119,14 @@
         "reworks": {
           "type": "object",
           "description": "Optional immutable request-ID/event-digest receipts for same-owner rework. Original transition is distinct from current task state."
+        },
+        "budget_changes": {
+          "type": "object",
+          "description": "Append-only exact per-project budget approval, copied evidence, and idempotent request receipts; no global default increase."
+        },
+        "diagnostics": {
+          "type": "object",
+          "description": "One same-task diagnostic cycle with copied approvals, original failure/task snapshot and separately retained diagnostic result. No correction or acceptance authority."
         }
       }
     }
