@@ -138,23 +138,29 @@ final class AXConditionObserver {
     }
     static func wait(_ condition: AXCondition, pid: Int32, identity: String, windowID: UInt32, timeoutMs: Int,
                      pollMs: Int = 100, maxNodes: Int = 500, maxDepth: Int = 20, privateAPI: Bool = false,
-                     engine: Engine, checkState:() throws -> Void = {}) async throws -> [String: Any] {
+                     engine: Engine, checkState:() throws -> Void = {},
+                     observationProvider: ((Int) async throws -> Observation)? = nil) async throws -> [String: Any] {
+        // The internal provider tests the real polling loop without exposing a tool override.
         let started = DispatchTime.now().uptimeNanoseconds
         let deadline = started + UInt64(timeoutMs) * 1_000_000
         var observer: AXConditionObserver?, latest: Observation?, previousFrame: Rect?, stableSince: UInt64?
         var attempts = 0, wakes = 0, lastGeometryError: String?
+        var pendingPartial: ToolFailure?
         repeat {
             try Task.checkCancellation(); try checkState(); try ProcessIdentity.require(pid: pid, expected: identity)
             attempts += 1
+            var collected: Observation?
             do {
                 let beforeRead = DispatchTime.now().uptimeNanoseconds
                 if beforeRead >= deadline { break }
-                let observation = try await engine.observe(pid: pid, processStartID: identity, windowID: windowID, screenshot: false,
+                let observation: Observation
+                let remainingMilliseconds = max(1, Int((deadline - beforeRead) / 1_000_000))
+                if let observationProvider { observation = try await observationProvider(remainingMilliseconds) }
+                else { observation = try await engine.observe(pid: pid, processStartID: identity, windowID: windowID, screenshot: false,
                                                            maxNodes: maxNodes, maxDepth: maxDepth, privateAPI: privateAPI,
-                                                           collectionTimeoutMilliseconds: max(1, Int((deadline - beforeRead) / 1_000_000)))
-                if let previous = latest { try? engine.store.remove(previous.id + ".json") }
-                latest = observation
-                if observer == nil { observer = AXConditionObserver(pid: pid, window: try AX.root(observation)) }
+                                                           collectionTimeoutMilliseconds: remainingMilliseconds) }
+                collected = observation
+                if observer == nil, observationProvider == nil { observer = AXConditionObserver(pid: pid, window: try AX.root(observation)) }
                 var matched = try condition.evaluate(observation)
                 let now = DispatchTime.now().uptimeNanoseconds
                 if condition.predicate == .stable {
@@ -166,15 +172,28 @@ final class AXConditionObserver {
                         matched = now - stableSince! >= UInt64(condition.stableMs) * 1_000_000
                     }
                 }
+                if let previous = latest { try? engine.store.remove(previous.id + ".json") }
+                latest = observation
+                collected = nil
+                // Only a fully evaluated current observation resolves partial-read uncertainty.
+                pendingPartial = nil
                 if matched, now <= deadline {
                     return ["status": "predicate_verified", "matches": true, "attempts": attempts, "notificationWakes": wakes,
                             "elapsedMilliseconds": Int((now - started) / 1_000_000), "observation": observation.object,
                             "scope": "Exactly the declared condition in the selected process generation and window"]
                 }
                 lastGeometryError = nil
+            } catch let failure as ToolFailure where failure.code == "partial_coverage" {
+                if let collected { try? engine.store.remove(collected.id + ".json") }
+                pendingPartial = failure
+                stableSince = nil; previousFrame = nil
             } catch let failure as ToolFailure where ["stale_observation", "ambiguous_ax_window", "app_metadata_unavailable"].contains(failure.code) {
+                if let collected { try? engine.store.remove(collected.id + ".json") }
                 // Read again in the same explicit window while it moves. Never repeat an action.
                 lastGeometryError = failure.code; stableSince = nil; previousFrame = nil
+            } catch {
+                if let collected { try? engine.store.remove(collected.id + ".json") }
+                throw error
             }
             if DispatchTime.now().uptimeNanoseconds >= deadline { break }
             let seen = observer?.changes ?? 0
@@ -184,6 +203,10 @@ final class AXConditionObserver {
                 if (observer?.changes ?? 0) != seen { wakes += 1; break }
             }
         } while DispatchTime.now().uptimeNanoseconds < deadline
+        if let pendingPartial {
+            if let latest { try? engine.store.remove(latest.id + ".json") }
+            throw pendingPartial
+        }
         var result: [String: Any] = ["status": "predicate_timeout", "matches": false, "attempts": attempts,
                                     "notificationWakes": wakes, "elapsedMilliseconds": Int((DispatchTime.now().uptimeNanoseconds - started) / 1_000_000),
                                     "scope": "Only the declared condition; no mutation was sent"]

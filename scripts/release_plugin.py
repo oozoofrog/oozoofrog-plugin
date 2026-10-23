@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -34,7 +35,30 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def runtime_receipt(root, evidence, binary, name, feature_report, runtime_report):
+def package_runtime(app, archive, command=run):
+    """Exclude filesystem metadata and verify both supported extraction paths."""
+    command(['codesign', '--verify', '--deep', '--strict', str(app)])
+    command(['ditto', '--norsrc', '-c', '-k', '--keepParent', str(app), str(archive)])
+    expected = {str(p.relative_to(app)): (digest(p), bool(p.stat().st_mode & 0o111))
+                for p in app.rglob('*') if p.is_file()}
+    for extractor in ('ditto', 'unzip'):
+        with tempfile.TemporaryDirectory(prefix='plugin-archive-check-') as temporary:
+            if extractor == 'ditto':
+                command(['ditto', '-x', '-k', str(archive), temporary])
+            else:
+                command(['unzip', '-q', str(archive), '-d', temporary])
+            extracted = Path(temporary) / app.name
+            if any(p.name.startswith('._') or p.name == '__MACOSX'
+                   for p in Path(temporary).rglob('*')):
+                raise ReleaseError('Runtime archive contains AppleDouble metadata')
+            actual = {str(p.relative_to(extracted)): (digest(p), bool(p.stat().st_mode & 0o111))
+                      for p in extracted.rglob('*') if p.is_file()}
+            if actual != expected:
+                raise ReleaseError(f'{extractor} changed runtime bytes or executable modes')
+            command(['codesign', '--verify', '--deep', '--strict', str(extracted)])
+
+
+def runtime_receipt(root, evidence, binary, name, feature_report, runtime_report, feature_contract):
     manifest = json.loads((evidence / 'source-manifest.json').read_text())
     selected = {p: sha for p, sha in manifest.items() if p.startswith((name + '/', f'plugins/{name}/'))}
     if not selected:
@@ -54,8 +78,14 @@ def runtime_receipt(root, evidence, binary, name, feature_report, runtime_report
     sha = digest(binary)
     if feature.get('binarySHA256') != sha or runtime.get('installedBinary', {}).get('sha256') != sha:
         raise ReleaseError('Tested binary hash differs from packaged binary')
-    if not feature.get('checks') or any(x.get('status') != 'PASS' for x in feature['checks']):
-        raise ReleaseError('Feature runtime checks did not all pass')
+    contract_path = root / feature_contract
+    spec = importlib.util.spec_from_file_location('release_capability_contract', contract_path)
+    contract = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(contract)
+    try:
+        contract.validate_report(feature, required_stage='all')
+    except ValueError as error:
+        raise ReleaseError(str(error)) from error
     if runtime.get('status') != 'passed' or not runtime.get('checks') or any(x.get('passed') is not True for x in runtime['checks']):
         raise ReleaseError('Runtime regression did not pass')
     return dict(path=str(evidence.resolve()), source_files=len(selected), binary_sha256=sha,
@@ -212,7 +242,8 @@ class Release:
             if not self.args.feature_report or not self.args.runtime_report:
                 raise ReleaseError('Supply --feature-report and --runtime-report relative to --runtime-evidence')
             self.receipt['runtime_evidence'] = runtime_receipt(
-                ROOT, runtime, ROOT / self.profile['binary'], self.name, self.args.feature_report, self.args.runtime_report)
+                ROOT, runtime, ROOT / self.profile['binary'], self.name, self.args.feature_report, self.args.runtime_report,
+                self.profile['feature_contract'])
         self.receipt['verified_tree'] = tree
         self.receipt['verified_at'] = time.time()
 
@@ -289,7 +320,7 @@ class Release:
         if plistlib.loads((app / 'Contents/Info.plist').read_bytes())['CFBundleShortVersionString'] != self.version:
             raise ReleaseError('App bundle version mismatch')
         archive = assets / f'{self.profile["display_name"]}-{self.version}-{self.profile.get("asset_platform", "macos-arm64")}.zip'
-        self.command(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', str(app), str(archive)])
+        package_runtime(app, archive, self.command)
         hashes = {p.name: digest(p) for p in (plugin, archive)}
         (assets / 'SHA256SUMS.txt').write_text(''.join(f'{sha}  {name}\n' for name, sha in hashes.items()))
         self.receipt['assets'] = {**hashes, 'SHA256SUMS.txt': digest(assets / 'SHA256SUMS.txt')}

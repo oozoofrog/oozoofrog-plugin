@@ -3,7 +3,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'payload/team-coordination/scripts'))
 class Overlay(unittest.TestCase):
  def setUp(self):
-  self.temp=tempfile.TemporaryDirectory();self.home=Path(self.temp.name).resolve();self.agents=self.home/'AGENTS.md';self.before=b'Original user guidance\n<!-- team-coordination:v3:begin -->\nOriginal managed instructions\n<!-- team-coordination:v3:end -->\n';self.agents.write_bytes(self.before);(self.home/'team-coordination-install.json').write_text('{"version":"0.3.0","preserve":true}\n');self.payload={'schema':1,'requested_scope':'all_existing_and_future_projects','roles':{'leader':{'model':'gpt-6-astra','reasoning_effort':'ultra','service_tier':'fast'},'advisor':{'model':'gpt-6-astra','reasoning_effort':'ultra','service_tier':'fast'},'core':{'model':'gpt-6.1-sol'},'support':{'model':'gpt-6-luna'}},'adoption':'pending_explicit_owner_safe_boundary','execution_authorized':False}
+  self.temp=tempfile.TemporaryDirectory();self.home=Path(self.temp.name).resolve();self.agents=self.home/'AGENTS.md';self.before=b'Original user guidance\n<!-- team-coordination:v3:begin -->\nOriginal managed instructions\n<!-- team-coordination:v3:end -->\n';self.agents.write_bytes(self.before);(self.home/'team-coordination-install.json').write_text('{"version":"0.3.0","preserve":true}\n');self.payload={'schema':1,'requested_scope':'all_existing_and_future_projects','roles':{role:{'model':model,'reasoning_effort':effort,'service_tier':'normal'}for role,model,effort in [('leader','gpt-6-astra','high'),('advisor','gpt-6-astra','high'),('core','gpt-6.1-sol','high'),('reviewer','gpt-6.1-sol','high'),('support','gpt-6-luna','medium')]},'adoption':'pending_explicit_owner_safe_boundary','execution_authorized':False}
  def tearDown(self):self.temp.cleanup()
  def test_plan_readonly_then_idempotent_apply_and_exact_rollback(self):
   import profile_overlay as p
@@ -25,6 +25,15 @@ class Overlay(unittest.TestCase):
   import profile_overlay as p
   self.payload['roles']['leader']['service_tier']='ultrafast'
   with self.assertRaises(p.OverlayError):p.plan(self.home,self.payload)
+ def test_obsolete_blanket_defaults_and_missing_roles_refused(self):
+  import profile_overlay as p,copy
+  for role in self.payload['roles']:
+   for key,value in [('service_tier','fast'),('reasoning_effort','ultra'),('model','other')]:
+    payload=copy.deepcopy(self.payload);payload['roles'][role][key]=value
+    with self.subTest(role=role,key=key):
+     with self.assertRaises(p.OverlayError):p.plan(self.home,payload)
+   payload=copy.deepcopy(self.payload);del payload['roles'][role]
+   with self.assertRaises(p.OverlayError):p.plan(self.home,payload)
  def test_legacy_journal_change_refuses_apply(self):
   import profile_overlay as p
   p.apply(self.home,self.payload);(self.home/'team-coordination-install.json').write_text('changed')
