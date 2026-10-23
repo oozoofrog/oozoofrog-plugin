@@ -264,7 +264,7 @@ def main():
             ck('image','changed_pixels_invalidate',r.get('code')=='image_changed_during_search',result=r)
             f.call('mac_image_search',{'operation':'configure','enabled':False})
         else: checks.append(dict(feature='image',id='real_model_checks',status='NOT_RUN',reason='Explicit local Python/model not supplied'))
-    print(json.dumps(dict(passed=sum(c['status']=='PASS' for c in checks),failed=sum(c['status']=='FAIL' for c in checks),notRun=sum(c['status']=='NOT_RUN' for c in checks))))
+        print(json.dumps(dict(passed=sum(c['status']=='PASS' for c in checks),failed=sum(c['status']=='FAIL' for c in checks),notRun=sum(c['status']=='NOT_RUN' for c in checks))), flush=True)
 
 
 if __name__=='__main__': main()
