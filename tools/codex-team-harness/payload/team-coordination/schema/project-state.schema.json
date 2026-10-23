@@ -115,6 +115,10 @@
               "type": "string"
             }
           }
+        },
+        "reworks": {
+          "type": "object",
+          "description": "Optional immutable request-ID/event-digest receipts for same-owner rework. Original transition is distinct from current task state."
         }
       }
     }
