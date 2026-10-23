@@ -6,9 +6,9 @@ VERSION='0.4.0'
 ROOT=Path(__file__).resolve().parent
 FILES=['.gitignore','README.md','bootstrap.py','run.py','make_release.py','global-block.md','payload/team-coordination/SKILL.md','payload/team-coordination/policy.json','payload/team-coordination/schema/project-state.schema.json']
 FILES += ['payload/team-coordination/scripts/'+name for name in ['harness.py','managed_run.py','team_ledger.py','session_control.py','checkpoints.py','profile_defaults.py','profile_overlay.py']]
-FILES += ['payload/team-coordination/references/session-control.md','payload/team-coordination/references/checkpoints.md','payload/team-coordination/references/profiles.md']
+FILES += ['payload/team-coordination/references/session-control.md','payload/team-coordination/references/checkpoints.md','payload/team-coordination/references/profiles.md','payload/team-coordination/references/rework.md']
 FILES += ['payload/team-coordination/roles/'+name+'.md' for name in ['leader','core','support','advisor','reviewer']]
-FILES += ['tests/'+name for name in ['test_harness.py','test_adapter.py','fake_server.py','test_bootstrap.py','test_session_control.py','test_checkpoints.py','test_profile_defaults.py','test_profile_overlay.py']]
+FILES += ['tests/'+name for name in ['test_harness.py','test_adapter.py','fake_server.py','test_bootstrap.py','test_session_control.py','test_checkpoints.py','test_profile_defaults.py','test_profile_overlay.py','test_rework.py']]
 FILES += ['tests/fixtures/checkpoint/'+name for name in ['canonical-history.json','compact-view.json','integrity-cases.json','lineage-restart.json']]
 def sha(data):return hashlib.sha256(data).hexdigest()
 def scan(data):
