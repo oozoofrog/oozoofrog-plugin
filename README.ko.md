@@ -20,7 +20,7 @@ Skills-only 패키지로 [한국어 여행 가이드북](korean-travel-guidebook
 
 ## 팀 하네스 이전
 
-선택적으로 사용하는 [team-coordination 스킬](team-coordination/SKILL.md)과 skills-only Plugin은 공개 payload를 사용합니다. 설치·관리 실행·복구 도구와 검사는 [tools/codex-team-harness](tools/codex-team-harness/README.md)에 있습니다. 현재 소스 런타임 버전은 `0.3.0`이며, 기존 `0.1.1-public.1` 릴리스는 복구 참조로 보존합니다. Plugin 설치는 전역 지침이나 런타임을 설치하지 않습니다. 병합 전에는 검토한 PR commit을 고정해 [이전·검증 안내](docs/team-harness-migration.md)를 따릅니다. 목적지 main으로의 이전 완료는 병합 후에만 성립합니다. 기존 전용 저장소와 릴리스는 보존하며 새 릴리스를 만들지 않습니다.
+선택적으로 사용하는 [team-coordination 스킬](team-coordination/SKILL.md)과 skills-only Plugin은 공개 payload를 사용합니다. 설치·관리 실행·복구 도구와 검사는 [tools/codex-team-harness](tools/codex-team-harness/README.md)에 있습니다. 현재 소스 런타임 버전은 `0.3.1`이며, 기존 `0.1.1-public.1` 릴리스는 복구 참조로 보존합니다. Plugin 설치는 전역 지침이나 런타임을 설치하지 않습니다. 병합 전에는 검토한 PR commit을 고정해 [이전·검증 안내](docs/team-harness-migration.md)를 따릅니다. 목적지 main으로의 이전 완료는 병합 후에만 성립합니다. 기존 전용 저장소와 릴리스는 보존하며 새 릴리스를 만들지 않습니다.
 
 Swift 의미론 탐색용 `swift-intelligence`, 로컬 모델 설치·실행용 `local-ai-studio`, macOS·브라우저 제어와 화면·시스템 오디오 녹화용 `macpilot`를 제공합니다.
 
