@@ -9,7 +9,7 @@ MODELS={role:item['model'] for role,item in POLICY['roles'].items()}
 def digest(value):return hashlib.sha256(json.dumps(value,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
 def effective_contract():
  root=Path(__file__).resolve().parents[1]
- return {'policy':json.loads((root/'policy.json').read_text()),'roles':{p.stem:p.read_text()for p in sorted((root/'roles').glob('*.md'))},'schema':json.loads((root/'schema/project-state.schema.json').read_text()),'implementation_sha256':{name:hashlib.sha256((root/'scripts'/name).read_bytes()).hexdigest()for name in ('harness.py','managed_run.py','team_ledger.py','session_control.py')}}
+ return {'policy':json.loads((root/'policy.json').read_text()),'roles':{p.stem:p.read_text()for p in sorted((root/'roles').glob('*.md'))},'schema':json.loads((root/'schema/project-state.schema.json').read_text()),'implementation_sha256':{name:hashlib.sha256((root/'scripts'/name).read_bytes()).hexdigest()for name in ('harness.py','managed_run.py','team_ledger.py','session_control.py','checkpoints.py','profile_defaults.py')}}
 
 def initial(goal,budget=None,concurrency=None):
  limits=effective_contract()['policy']['limits'];budget=limits['project_token_budget']if budget is None else budget;concurrency=limits['concurrency']if concurrency is None else concurrency
@@ -23,6 +23,14 @@ def packet(s,member):
  require(h['policy_hash']==digest(contract),'Effective policy/role/schema changed; explicit policy_refresh required')
  tasks=[{'id':k,'purpose':v['purpose'],'context':v.get('context',''),'paths':v['paths'],'state':v['state']} for k,v in s['tasks'].items() if v['owner']==member]
  result={'schema':1,'revision':h['revision'],'epoch':p['epoch'],'policy_hash':h['policy_hash'],'policy_version':contract['policy']['version'],'role_contract':contract['roles'][p['role']],'limits':contract['policy']['limits'],'goal':h['goal'],'constraints':h['constraints'],'decisions':h['decisions'],'role':p['role'],'tasks':tasks,'changes':[c for c in h['changes'] if c['revision']>p.get('last_revision',0)],'unresolved_runs':[k for k,v in h['runs'].items() if v['state'] in ('active','uncertain')]}
+ import checkpoints
+ working=checkpoints.projection(s)
+ if working:
+  contexts=working.pop('task_contexts');result.update(working)
+  for task in result['tasks']:
+   if task['id']in contexts:task['context']=contexts[task['id']]
+  result['task_obligations']={k:{field:value for field,value in v.items()if field!='context'}for k,v in s['tasks'].items()if v['state']!='accepted'or v.get('block')}
+  result['accounting']={'budget':h['budget'],'spent':h['spent'],'meaning':'reservation ledger, not billing'}
  require(math.ceil(len(json.dumps(result,ensure_ascii=False).encode())/4)<=h['context_limit'],'Context estimate exceeds limit; leader must reduce irrelevant context, preserve decisions')
  return result
 
@@ -31,8 +39,17 @@ def ack_current(s,member):
  require(s['harness']['policy_hash']==digest(effective_contract()),'Policy changed; leader must migrate project policy and refresh ACKs')
  require(a is not None and a=={'revision':s['harness']['revision'],'epoch':p['epoch'],'digest':digest(packet(s,member))},'Latest context acknowledgement required')
 
-def apply(state,e):
+def apply(state,e,state_root=None):
  s=copy.deepcopy(state);h=s['harness'];op=e['op']
+ if op=='rework'and e.get('request_id')in h.get('reworks',{}):
+  require(h['reworks'][e['request_id']]['event_digest']==digest(e),'Conflicting rework request ID; inspect committed receipt')
+  return s  # Readback only: never rewrite later state or repeat the transition.
+ if op in ('checkpoint_commit','checkpoint_restore'):
+  import checkpoints
+  return checkpoints.apply(s,e,state_root)
+ if op in ('begin','control_intent')and h.get('checkpoint'):
+  import checkpoints
+  checkpoints.active(s)
  if op.startswith('control_'):
   import session_control
   s=session_control.apply(s,e)
@@ -118,6 +135,27 @@ def apply(state,e):
   require(e.get('safe_boundary')is True,'Confirmed safe boundary required')
   require(not any(r['task']==e['task'] and r['state']in ('active','uncertain')for r in h['runs'].values()),'Run still unresolved')
   t['paths']=[];t['resources']=[]
+ elif op=='rework':
+  identifier=e.get('request_id');require(isinstance(identifier,str)and bool(identifier.strip())and len(identifier)<=128,'Stable rework request ID required')
+  require(e.get('source_sha256')==digest(state),'Stale full-state canonical digest; inspect before retry')
+  require(h['policy_hash']==digest(effective_contract()),'Explicit policy migration required before rework')
+  require(not any(r['state']in ('active','uncertain')for r in h['runs'].values()),'Drain all active/uncertain project runs before rework')
+  import session_control
+  require(not any(v.get('state')in session_control.UNRESOLVED+('configuration_pending_turn',)for v in h.get('controls',{}).values()),'Resolve pending/uncertain session controls before rework')
+  require(not any(v.get('state')not in ('resumed','blocked')for v in h.get('handoffs',{}).values()),'Resolve in-flight handoff before rework')
+  t=s['tasks'][e['task']];member=e['member'];require(t['owner']==member and t['state']=='ready_for_review','Rework requires same owner and ready_for_review task')
+  requester=e.get('requester');require(requester in s['members']and s['members'][requester]['role']=='leader','Registered leader must request rework')
+  require(ledger.fresh(s['members'][requester]['identity_claim']),'Stale leader identity claim')
+  require(isinstance(e.get('reason'),str)and bool(e['reason'].strip()),'Explicit scoped rework reason required')
+  proof=ledger.evidence(e['evidence']);require(ledger.fresh(proof),'Fresh leader decision evidence required')
+  reviews=t['reviews'];require(bool(reviews)and reviews[-1]['verdict']=='fail','Latest actual failed review required')
+  require(ledger.fresh(reviews[-1]['evidence']),'Failed review report changed or missing')
+  require(len(reviews)<h['review_limit'],'Review allowance exhausted; separate leader decision required')
+  failure=digest({'task':e['task'],'index':len(reviews)-1,'review':reviews[-1]})
+  require(not any(value['failed_review_digest']==failure for value in h.get('reworks',{}).values()),'Failed review already consumed by rework; fresh failed review required')
+  h['revision']+=1;t['state']='assigned';h['profiles'][member].pop('ack',None)
+  h.setdefault('reworks',{})[identifier]={'event_digest':digest(e),'source_sha256':e['source_sha256'],'failed_review_digest':failure,'decision_evidence':proof,'reason':e['reason'],'original_transition':{'task':e['task'],'owner':member,'state':'assigned','revision':h['revision']}}
+  h['changes'].append({'revision':h['revision'],'rework_request':identifier,'task':e['task'],'owner':member,'reason':e['reason'],'decision_evidence':proof})
  elif op=='reassign':
   t=s['tasks'][e['task']];require(not t['paths'] and not t['resources'],'Release ownership before reassignment')
   require(e['member']in s['members'] and s['members'][e['member']]['role']not in ('leader','reviewer'),'Execution owner required')
@@ -144,6 +182,11 @@ def apply(state,e):
  s['history'].append({'at':ledger.now(),'event':e})
  return s
 
+def rework_receipt(state,request_id):
+ require(request_id in state['harness'].get('reworks',{}),'Unknown rework request ID')
+ record=state['harness']['reworks'][request_id];task=state['tasks'][record['original_transition']['task']]
+ return {'request_id':request_id,'original_transition':record['original_transition'],'current_observation':{'state':task['state'],'owner':task['owner'],'revision':state['harness']['revision']},'scope':'Committed transition receipt, not a new transition or execution permission'}
+
 def check_model(model,catalog,receipt):
  require(any(m.get('model')==model for m in catalog),'Exact model absent from live catalog')
  require(receipt.get('model')==model,'Observed thread model mismatch')
@@ -155,6 +198,9 @@ def save(path,state):
  try:
   with os.fdopen(fd,'w')as f:json.dump(state,f,ensure_ascii=False,indent=2);f.write('\n');f.flush();os.fsync(f.fileno())
   os.replace(tmp,path)
+  directory=os.open(str(path.parent),os.O_RDONLY)
+  try:os.fsync(directory)
+  finally:os.close(directory)
  finally:
   if os.path.exists(tmp):os.unlink(tmp)
 
@@ -168,17 +214,29 @@ def transaction(path,event):
  path=Path(path);path.parent.mkdir(parents=True,exist_ok=True)
  require(not path.is_symlink() and not Path(str(path)+'.lock').is_symlink(),'State/lock symlink refused')
  with open(str(path)+'.lock','a') as lock:
-  fcntl.flock(lock,fcntl.LOCK_EX);s=json.loads(path.read_text());s=apply(s,event);save(path,s);return s
+  fcntl.flock(lock,fcntl.LOCK_EX);before=json.loads(path.read_text());s=apply(before,event,path.parent)
+  if s!=before:save(path,s)
+  return s
 
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--state',type=Path,required=True)
  sub=p.add_subparsers(dest='command',required=True)
  i=sub.add_parser('init');i.add_argument('--goal',required=True);i.add_argument('--budget',type=int)
  a=sub.add_parser('apply');a.add_argument('--event',type=Path,required=True)
+ c=sub.add_parser('checkpoint-prepare');c.add_argument('--id',required=True);c.add_argument('--view',type=Path,required=True);c.add_argument('--evidence',action='append',default=[])
+ c=sub.add_parser('checkpoint-verify');c.add_argument('--directory',type=Path,required=True)
  q=sub.add_parser('packet');q.add_argument('--member',required=True);sub.add_parser('status')
  args=p.parse_args()
  if args.command=='init':initialize(args.state,args.goal,args.budget)
- elif args.command=='apply':transaction(args.state,json.loads(args.event.read_text()))
+ elif args.command=='apply':
+  event=json.loads(args.event.read_text());result=transaction(args.state,event)
+  if event['op']=='rework':print(json.dumps(rework_receipt(result,event['request_id']),ensure_ascii=False,indent=2))
+ elif args.command=='checkpoint-prepare':
+  import checkpoints
+  print(json.dumps({'candidate':str(checkpoints.prepare(args.state,args.id,json.loads(args.view.read_text()),args.evidence))}))
+ elif args.command=='checkpoint-verify':
+  import checkpoints
+  proposal,_=checkpoints.verify(args.directory);print(json.dumps({'verified':True,'proposal_sha256':digest(proposal),'source_sha256':proposal['source_sha256']}))
  elif args.command=='packet':print(json.dumps(packet(json.loads(args.state.read_text()),args.member),ensure_ascii=False,indent=2))
  else:
   s=json.loads(args.state.read_text());h=s['harness'];print(json.dumps({'revision':h['revision'],'budget':h['budget'],'spent':h['spent'],'members':h['profiles'],'tasks':s['tasks'],'runs':h['runs'],'limits':'Managed boundary only; identities claimed unless receipt observed'},ensure_ascii=False,indent=2))

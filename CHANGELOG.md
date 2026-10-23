@@ -4,6 +4,18 @@
 
 - MacPilot now keeps help, tool catalogs, MCP metadata, and connection diagnostics available when the current invocation cannot establish a WindowServer session. Desktop operations return a pre-dispatch session error; skipped permission probes remain unknown instead of appearing denied.
 
+## Unreleased — team harness 0.4.0
+
+- Request distinct Astra leader/advisor model, ultra reasoning and Fast mode; resolve the current catalogue wire tier without fallback. Preserve Sol/Luna roles, configured versus execution evidence, and active project contracts. Add a separately journaled requested-default overlay with ordered rollback.
+
+## Unreleased — team harness 0.3.1
+
+- Add atomic same-owner rework after a failed review, preserving claims, review allowance, evidence and reservation history. Full-state CAS, consume-once failed-review receipts and exact duplicate readback require fresh context ACK before execution. No automatic installation or project migration.
+
+## Unreleased — team harness 0.3.0
+
+- Add reviewed compact checkpoint working views, immutable full-history snapshots and explicitly allowlisted portable evidence. Administrative checkpoint/policy migration keeps the context guard, ownership and accounting intact and requires fresh member ACKs before execution. Missing or corrupt archives fail closed; native clients remain advisory.
+
 ## Unreleased — team harness 0.2.0
 
 - Add explicit session model/effort inspection, pending next-turn configuration changes and later default-turn verification. Keep runtime identity unavailable when official telemetry does not expose it.
