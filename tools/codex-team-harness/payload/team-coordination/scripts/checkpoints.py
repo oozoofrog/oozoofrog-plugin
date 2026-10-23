@@ -46,7 +46,7 @@ def prepare(state_path,identifier,working_view,required_evidence):
  # Only explicitly selected evidence is opened. No recursive filesystem or credential scan.
  for name in required_evidence:
   p=Path(name);require(p.is_file()and not p.is_symlink(),'Required evidence must be a regular non-symlink file');data=p.read_bytes();key='objects/'+sha(data);immutable(safe(directory,key),data);files[key]=sha(data);evidence.append({'original_path':str(p.resolve()),'relative':key,'sha256':sha(data)})
- proposal={'schema':1,'id':identifier,'source_sha256':digest(source),'source_revision':source['harness']['revision'],'source_policy_hash':source['harness']['policy_hash'],'parent_checkpoint':source['harness'].get('checkpoint',{}).get('proposal_sha256'),'working_view':working_view,'required_evidence':evidence,'files':files,'coverage':{field:[{'index':i,'sha256':digest(v),'carry_verbatim':i in working_view[key]}for i,v in enumerate(source['harness'][field])]for key,field in [('constraint_indices','constraints'),('decision_indices','decisions')]},'semantic_limit':'Coverage hashes prove references only; owner and independent reviewer must approve all current obligations retained inline.'}
+ proposal={'schema':1,'id':identifier,'source_sha256':digest(source),'source_revision':source['harness']['revision'],'source_policy_hash':source['harness']['policy_hash'],'target_policy_hash':digest(h.effective_contract()),'parent_checkpoint':source['harness'].get('checkpoint',{}).get('proposal_sha256'),'working_view':working_view,'required_evidence':evidence,'files':files,'coverage':{field:[{'index':i,'sha256':digest(v),'carry_verbatim':i in working_view[key]}for i,v in enumerate(source['harness'][field])]for key,field in [('constraint_indices','constraints'),('decision_indices','decisions')]},'semantic_limit':'Coverage hashes prove references only; owner and independent reviewer must approve all current obligations retained inline.'}
  path=safe(directory,'proposal.json');immutable(path,encoded(proposal));durable_directory(directory);return path
 
 def verify(directory,expected=None):
@@ -92,7 +92,7 @@ def approval(s,p,path):
  proof=h.ledger.evidence(path);data=Path(path).read_bytes();require(sha(data)==proof['sha256'],'Approval changed during capture');value=json.loads(data);members=[]
  for role in ['leader','reviewer']:
   x=value[role];m=x['member'];require(s['members'][m]['role']==role,'Checkpoint approval role mismatch');require(h.ledger.fresh(s['members'][m]['identity_claim']),'Stale approval identity claim')
-  require(x['proposal_sha256']==digest(p)and x['source_sha256']==p['source_sha256']and x.get('approved')is True and x.get('safe_boundary')is True and x.get('all_current_obligations_retained')is True,'Exact reviewed checkpoint and safe boundary approval required');members.append(m)
+  require(x['proposal_sha256']==digest(p)and x['source_sha256']==p['source_sha256']and x.get('target_policy_hash')==p['target_policy_hash']and x.get('approved')is True and x.get('safe_boundary')is True and x.get('all_current_obligations_retained')is True,'Exact reviewed checkpoint and safe boundary approval required');members.append(m)
  require(members[0]!=members[1]and s['members'][members[0]]['runtime_id_claim']!=s['members'][members[1]]['runtime_id_claim'],'Independent checkpoint review required');return proof,data
 
 def apply(state,e,state_root=None):
@@ -105,6 +105,7 @@ def apply(state,e,state_root=None):
   quiescent(s)
   if current:active(s)
   require(digest(s)==p['source_sha256'],'Checkpoint full source state changed; prepare again')
+  require(p['target_policy_hash']==digest(h.effective_contract()),'Target contract changed after proposal; prepare and approve again')
   proof,approval_data=approval(s,p,e['approvals']);approval_relative='objects/'+sha(approval_data);immutable(safe(candidate.parent,approval_relative),approval_data);old_contract=a['policy_hash']
   require(old_contract==digest(h.effective_contract())or e.get('policy_refresh')is True,'Explicit policy migration required')
   if e.get('policy_refresh'):
