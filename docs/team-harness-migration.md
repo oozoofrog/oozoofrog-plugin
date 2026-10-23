@@ -25,3 +25,7 @@ Fresh tests and isolated installation/recovery results are reported in the PR. A
 ## 0.2.0 followup
 
 The separately reviewed followup adds session model/effort control and explicit project handoff. Its [procedure](../tools/codex-team-harness/payload/team-coordination/references/session-control.md) distinguishes requested, accepted, pending, live/persisted configuration and unavailable execution telemetry. Source/mirror/manifest changes belong to this followup; the original public release remains unchanged. Global installation and existing-project adoption remain separate, checkpointed operations.
+
+## 0.3.0 compact checkpoints
+
+The additive checkpoint API preserves canonical history, ownership, reviews and reservation accounting while selecting an owner- and independently reviewed compact working view. Its proposal pins both the whole source-state canonical digest and target effective contract. Quiescent administrative activation can atomically migrate the policy without requiring an oversized old-packet ACK; new execution still requires fresh real packet receipts. Required evidence and ancestor approvals are copied as portable content-addressed objects. Archive verification/root restoration does not rebind old absolute task claims, establish native runtime identity, or resume work. See [the checkpoint contract](../tools/codex-team-harness/payload/team-coordination/references/checkpoints.md). Existing private overlays require a separately reviewed preservation migration; do not replace them with the generic public installer.
