@@ -7,6 +7,7 @@ callers need an owner checkpoint; this wrapper cannot lock another dispatcher.
 import argparse,copy,fcntl,hashlib,json,secrets,sys,time
 from pathlib import Path
 import harness as h
+import profile_defaults as profiles
 
 KINDS=('implementation','design','review','support','coordination')
 UNRESOLVED=('request_pending','outcome_unknown','accepted_pending_observation','queued','pending_turn_application')
@@ -48,6 +49,8 @@ def gate(s,member,kind,observation=None):
  h.require(not any(v.get('member')==member and v['state']in UNRESOLVED for v in s['harness'].get('controls',{}).values()),'Pending/unknown control blocks execution')
  o=observation or x.get('configured_observed',{});expected=x.get('policy_expected',{})
  h.require(matches(o,expected.get('model'),expected.get('reasoning_effort')),'Fresh matching live configuration required')
+ if expected.get('service_tier') is not None:
+  tier=x.get('service_tier_observed',{});h.require(profiles.tier_matches(tier,expected['tier_resolution'],expected.get('model'),expected.get('reasoning_effort'))and tier.get('generation')==x.get('configuration_generation')and tier.get('authorized_configured_receipt')is True,'Matching configured service tier required; thread/read cannot verify tier');h.require(time.time()-x.get('tier_observed_wall',0)<=30,'Service-tier observation expired')
  h.require(o.get('status')=='idle','Idle snapshot required; it is not an external lock')
  h.require(time.time()-x.get('observed_monotonic_wall',0)<=30,'Configuration observation expired')
 
@@ -63,7 +66,12 @@ def apply(s,e):
    h.require(not any(key!=run and value['member']==m and value['state']in ('active','uncertain')for key,value in a['runs'].items()),'Prior run unresolved')
    h.require(not any(v.get('member')==m and v['state']in UNRESOLVED for v in controls.values()),'Prior session operation unresolved')
   identity=e['identity'];h.require(all(isinstance(identity.get(k),str)and identity[k]for k in ('host','transport','thread','controller')),'Exact session identity required')
-  sessions[m]={'identity':identity,'managed':e.get('managed',False),'execution':'enabled','policy_expected':{'model':a['profiles'][m]['model'],'reasoning_effort':e.get('effort')},'runtime_observed':runtime_unknown()}
+  sessions[m]={'identity':identity,'managed':e.get('managed',False),'configuration_generation':e.get('generation',secrets.token_hex(16)),'execution':'enabled','policy_expected':{'model':a['profiles'][m]['model'],'reasoning_effort':e.get('effort')},'runtime_observed':runtime_unknown()}
+  if e.get('service_tier') is not None:sessions[m]['policy_expected'].update(service_tier=e['service_tier'],tier_resolution=e['tier_resolution'])
+ elif op=='control_tier_observe':
+  x=session(s,e['member']);h.require(e['observation'].get('thread_id')==x['identity']['thread'],'Tier observation identity mismatch');h.require(e.get('generation')==x['configuration_generation'],'Stale configuration generation');observation=dict(e['observation'],generation=e['generation'],authorized_configured_receipt=e.get('response_bound')is True and e['observation'].get('source')in ('thread/start','thread/resume'))
+  if observation['authorized_configured_receipt']:x['service_tier_observed']=observation;x['tier_observed_wall']=time.time()
+  else:x['settings_notification_observed']=observation;x.pop('service_tier_observed',None);x.pop('tier_observed_wall',None)
  elif op=='control_observe':
   x=session(s,e['member']);x['configured_observed']=e['observation'];x['observed_monotonic_wall']=time.time();x['runtime_observed']=runtime_unknown()
  elif op=='control_intent':
@@ -75,7 +83,9 @@ def apply(s,e):
    h.require(type(reservation)is int and reservation>0,'Positive packet reservation required')
    h.require(len(active)+len(runs)<a['concurrency'],'Concurrency exhausted by packet receipt')
    h.require(a['spent']+sum(v['packet_reserve']for v in active)+sum(v['reserve']for v in runs)+reservation<=a['budget'],'Packet receipt budget exhausted')
-  session(s,e['member']);controls[e['operation']]={'member':e['member'],'state':e['state'],'requested':requested,'at':now(),'intent_time_ns':time.time_ns(),'source':'controller_before_rpc','pending_next_turn':True,'packet_reserve':reservation}
+  target=session(s,e['member'])
+  if requested.get('model')is not None:target['configuration_generation']=e['operation'];target.pop('service_tier_observed',None);target.pop('tier_observed_wall',None)
+  controls[e['operation']]={'member':e['member'],'state':e['state'],'requested':requested,'at':now(),'intent_time_ns':time.time_ns(),'source':'controller_before_rpc','pending_next_turn':True,'packet_reserve':reservation}
  elif op=='control_result':
   x=controls[e['operation']];x['state']=e['state'];x.update(e.get('evidence',{}));x['updated_at']=now()
   if x.get('packet_reserve')and e['state']=='completed'and not x.get('charged'):
@@ -110,7 +120,8 @@ def apply(s,e):
   x=handoffs[e['handoff']];h.require(x['state']=='creation_pending','Recipient creation not pending');m=x['recipient'];h.require(e['model']==x['selected_model'],'Recipient model substitution')
   s['members'][m]={'role':x['role'],'identity_claim':x['checkpoint'],'runtime_id_claim':e['identity']['thread']}
   a['profiles'][m]={'role':x['role'],'epoch':0,'model':e['model'],'last_revision':0}
-  sessions[m]={'identity':e['identity'],'managed':False,'execution':'paused','policy_expected':{'model':e['model'],'reasoning_effort':e['effort']},'runtime_observed':runtime_unknown()}
+  sessions[m]={'identity':e['identity'],'managed':False,'configuration_generation':secrets.token_hex(16),'execution':'paused','policy_expected':{'model':e['model'],'reasoning_effort':e['effort']},'runtime_observed':runtime_unknown()}
+  if e.get('service_tier')is not None:sessions[m]['policy_expected'].update(service_tier=e['service_tier'],tier_resolution=e['tier_resolution']);sessions[m].update(service_tier_observed=dict(e['tier_observation'],generation=sessions[m]['configuration_generation'],authorized_configured_receipt=True),tier_observed_wall=time.time())
   x['state']='recipient_created'
  elif op=='control_packet_received':
   x=handoffs[e['handoff']];h.require(x['state']=='delivery_pending','Delivery not pending')
@@ -153,8 +164,13 @@ class Controller:
  def __init__(self,path,rpc,controller,host,transport):self.path=Path(path);self.rpc=rpc;self.identity={'controller':controller,'host':host,'transport':transport}
  def state(self):return json.loads(self.path.read_text())
  def event(self,op,**values):return h.transaction(self.path,dict(op=op,**values))
- def bind(self,member,thread,owned=False,effort=None,managed=False,replacement_run=None):
-  return self.event('control_bind',member=member,identity=dict(self.identity,thread=thread,owned=owned),effort=effort,managed=managed,replacement_run=replacement_run)
+ def bind(self,member,thread,owned=False,effort=None,managed=False,replacement_run=None,service_tier=None,tier_resolution=None):
+  return self.event('control_bind',member=member,identity=dict(self.identity,thread=thread,owned=owned),effort=effort,managed=managed,replacement_run=replacement_run,service_tier=service_tier,tier_resolution=tier_resolution,generation=secrets.token_hex(16))
+ def observe_settings(self,member,notification):
+  identity=self.require_control(member);value=profiles.settings(notification,identity['thread']);self.event('control_tier_observe',member=member,observation=value,generation=session(self.state(),member)['configuration_generation'],response_bound=False);return value
+ def refresh_owned_configuration(self,member):
+  identity=self.require_control(member);h.require(identity.get('owned'),'Configuration refresh requires exclusively owned session');before=self.inspect(member);h.require(before['status']=='idle'and before['scope']=='live','Owned idle boundary required')
+  generation=session(self.state(),member)['configuration_generation'];response=self.rpc.request('thread/resume',{'threadId':identity['thread'],'excludeTurns':True});value=profiles.configured(response,'thread/resume');h.require(value['thread_id']==identity['thread'],'Configuration refresh identity mismatch');self.event('control_tier_observe',member=member,observation=value,generation=generation,response_bound=True);return value
  def require_control(self,member,checkpoint=None):
   x=session(self.state(),member);identity=x['identity']
   if any(identity[k]!=self.identity[k]for k in self.identity):raise ControlError('ownership_conflict','Host/transport/controller mismatch')
@@ -171,11 +187,12 @@ class Controller:
    page=self.rpc.request('model/list',{'limit':100,'includeHidden':True,'cursor':cursor});models.extend(page['data']);cursor=page.get('nextCursor')
    if not cursor:return models
    h.require(cursor not in seen,'Catalog pagination cycle');seen.add(cursor)
- def change(self,member,operation,model,effort,checkpoint=None):
+ def change(self,member,operation,model,effort,checkpoint=None,service_tier=None):
   identity=self.require_control(member,checkpoint);profile=self.state()['harness']['profiles'][member]
   h.require(session(self.state(),member)['execution']=='enabled','Paused/disabled source cannot request model change')
   h.require(model==(h.MODELS[profile['role']]or profile['model']),'Requested model violates role policy; no silent substitution')
-  validate_choice(self.catalog(),model,effort);before=self.inspect(member);requested={'model':model,'reasoning_effort':effort,'source':'explicit_request','at':now()}
+  catalog=self.catalog();validate_choice(catalog,model,effort);resolution=profiles.resolve_service_tier(catalog,model,service_tier);before=self.inspect(member);requested={'model':model,'reasoning_effort':effort,'source':'explicit_request','at':now()}
+  if service_tier is not None:requested.update(service_tier=service_tier,tier_resolution=resolution)
   state='pending_turn_application'if before['status']=='idle'and before['scope']=='live'else 'queued'
   self.event('control_intent',member=member,operation=operation,state=state,requested=requested)
   self.event('control_result',operation=operation,state=state,evidence={'accepted':None,'configured_observed':self.inspect(member),'runtime_observed':runtime_unknown(),'pending_next_turn':True,'reason':'Explicit apply-change sends official turn/start model+effort at idle boundary; resume is not used as a loaded-session setter'})
@@ -184,25 +201,30 @@ class Controller:
   h.require(type(reserve)is int and reserve>0,'Positive configuration-turn reservation required')
   x=self.state()['harness']['controls'][operation];h.require(x['member']==member and x['state']in ('pending_turn_application','queued'),'Change is not pending or has uncertain outcome')
   h.require(session(self.state(),member)['execution']=='enabled','Paused/disabled source cannot apply configuration')
-  self.require_control(member,checkpoint);validate_choice(self.catalog(),x['requested']['model'],x['requested']['reasoning_effort'])
+  self.require_control(member,checkpoint);catalog=self.catalog();validate_choice(catalog,x['requested']['model'],x['requested']['reasoning_effort'])
+  if x['requested'].get('service_tier')is not None:
+   current=profiles.resolve_service_tier(catalog,x['requested']['model'],x['requested']['service_tier']);h.require(current['wire_id']==x['requested']['tier_resolution']['wire_id'],'Catalogue tier mapping changed; no stale wire dispatch')
   return self.turn(member,'Do not use tools, delegate, edit files or perform implementation. Return exactly HARNESS_CONFIGURATION_CHECK.',reserve=reserve,configuration_operation=operation,checkpoint=checkpoint)
  def verify_after_turn(self,member,operation,turn):
   state=self.state();x=state['harness']['controls'][operation];h.require(x['state']=='configuration_pending_turn','Configuration change not ready for next-turn verification')
   h.require(any(v.get('member')==member and v.get('turn')==turn and v.get('state')=='completed'and v['intent_time_ns']>x['configuration_time_ns']for v in state['harness']['controls'].values()),'Observed completed controlled turn after configuration required')
   after=self.inspect(member)
   h.require(matches(after,x['requested']['model'],x['requested']['reasoning_effort']),'Configuration mismatch after turn')
+  if x['requested'].get('service_tier') is not None:
+   tier=self.refresh_owned_configuration(member);h.require(profiles.tier_matches(tier,x['requested']['tier_resolution'],x['requested']['model'],x['requested']['reasoning_effort']),'Configured service tier unavailable/mismatched after next turn')
   self.event('control_result',operation=operation,state='configuration_verified_after_turn',evidence={'configured_observed':after,'turn':turn,'pending_next_turn':False,'runtime_observed':runtime_unknown()});return after
  def prepare_handoff(self,hid,source,recipient,role,tasks,packet,checkpoint,explicit_request=False,selected_model=None):
   self.require_control(source,checkpoint)
   snapshot=self.inspect(source);h.require(snapshot['scope']=='live'and snapshot['status']=='idle','Source must be loaded and quiescent at owner checkpoint')
   s=self.event('control_handoff_prepare',handoff=hid,source=source,recipient=recipient,role=role,selected_model=selected_model,tasks=tasks,packet=packet,checkpoint=checkpoint,explicit_request=explicit_request,drained=True,nonce=secrets.token_hex(16));return s['harness']['handoffs'][hid]['packet']
  def create_recipient(self,hid,effort,cwd):
-  x=self.state()['harness']['handoffs'][hid];model=x['selected_model'];validate_choice(self.catalog(),model,effort)
+  x=self.state()['harness']['handoffs'][hid];model=x['selected_model'];catalog=self.catalog();requested=profiles.role_request(h.effective_contract()['policy'],x['role']);entry=next((m for m in catalog if m.get('model')==model),{});effort=effort or requested.get('reasoning_effort',entry.get('defaultReasoningEffort'));requested.update(model=model,reasoning_effort=effort);params,resolution=profiles.start_parameters(catalog,requested)
   self.event('control_handoff_intent',handoff=hid,phase='creation_pending')
   try:
-   r=self.rpc.request('thread/start',{'model':model,'cwd':str(Path(cwd).resolve()),'sandbox':'read-only','approvalPolicy':'never','config':{'model_reasoning_effort':effort}})
+   r=self.rpc.request('thread/start',dict(params,cwd=str(Path(cwd).resolve()),sandbox='read-only',approvalPolicy='never'))
    tid=r['thread']['id']
-   self.event('control_recipient',handoff=hid,identity=dict(self.identity,thread=tid,owned=True),model=r.get('model'),effort=r.get('reasoningEffort'))
+   self.event('control_recipient',handoff=hid,identity=dict(self.identity,thread=tid,owned=True),model=r.get('model'),effort=r.get('reasoningEffort'),service_tier=requested.get('service_tier'),tier_resolution=resolution,tier_observation=profiles.configured(r,'thread/start'))
+   if requested.get('service_tier')is not None:h.require(profiles.tier_matches(profiles.configured(r,'thread/start'),resolution),'Recipient configured service tier unavailable/substituted')
    o=self.inspect(x['recipient']);h.require(matches(o,model,effort),'Recipient configuration unavailable/mismatched');return tid
   except Exception as exc:
    self.event('control_handoff_failure',handoff=hid,reason=str(exc),unknown=not hasattr(exc,'code'));raise
@@ -214,6 +236,9 @@ class Controller:
    self.event('control_handoff_intent',handoff=packet_handoff,phase='delivery_pending')
   elif configuration_operation:
    change=self.state()['harness']['controls'][configuration_operation];h.require(change['member']==member and change['state']in ('pending_turn_application','queued')and before['status']=='idle'and before['scope']=='live','Configuration application requires owned idle boundary')
+   catalog=self.catalog();validate_choice(catalog,change['requested']['model'],change['requested']['reasoning_effort'])
+   if change['requested'].get('service_tier')is not None:
+    resolved=profiles.resolve_service_tier(catalog,change['requested']['model'],change['requested']['service_tier']);h.require(resolved['wire_id']==change['requested']['tier_resolution']['wire_id'],'Current catalogue no longer supports requested tier mapping')
   else:
    state=self.state();h.require(task in state['tasks'],'Explicit owned task required');gate(state,member,state['tasks'][task].get('kind','implementation'),before)
   operation='turn-'+secrets.token_hex(16)
@@ -231,10 +256,12 @@ class Controller:
      h.require(state['harness']['controls'][configuration_operation]['state']in ('pending_turn_application','queued'),'Configuration intent changed')
     state=h.apply(state,{'op':'control_intent','member':member,'operation':operation,'state':'request_pending','requested':{'kind':'turn','packet_handoff':packet_handoff,'application_for':configuration_operation,'packet_reserve':reserve if receipt_only else 0,'source':'turn/start','at':now()}});h.save(self.path,state)
     params={'threadId':identity['thread'],'input':[{'type':'text','text':prompt,'text_elements':[]}]}
-    if configuration_operation:params.update(model=change['requested']['model'],effort=change['requested']['reasoning_effort'])
+    if configuration_operation:
+     params.update(model=change['requested']['model'],effort=change['requested']['reasoning_effort'])
+     if change['requested'].get('service_tier')is not None:params['serviceTier']=change['requested']['tier_resolution']['wire_id']
     r=self.rpc.request('turn/start',params)
    turn=r['turn']['id'];text=[];end=time.monotonic()+timeout;usage=None
-   if configuration_operation:self.event('control_result',operation=configuration_operation,state='accepted_pending_observation',evidence={'accepted':{'model':params['model'],'reasoning_effort':params['effort'],'turn':turn,'source':'turn/start_parameter_acknowledgement','at':now()}})
+   if configuration_operation:self.event('control_result',operation=configuration_operation,state='accepted_pending_observation',evidence={'accepted':{'model':params['model'],'reasoning_effort':params['effort'],'turn':turn,'requested_service_tier':change['requested'].get('service_tier'),'wire_service_tier':params.get('serviceTier'),'source':'turn/start_parameter_acknowledgement','at':now()}})
    start_revision=self.state()['harness']['revision']
    while time.monotonic()<end:
     current=self.state()
@@ -247,6 +274,7 @@ class Controller:
     if event is None:continue
     self.rpc.handle_request(event);method=event.get('method');p=event.get('params',{})
     if p.get('threadId')!=identity['thread']:continue
+    if method=='thread/settings/updated':self.observe_settings(member,p)
     if method=='model/rerouted':raise ControlError('substitution','Server reported model reroute: '+json.dumps(p))
     if method=='thread/tokenUsage/updated':
      usage=turn_usage(p)
@@ -260,6 +288,8 @@ class Controller:
      if packet_handoff:self.event('control_packet_received',handoff=packet_handoff,turn=turn,text=body,observation=after)
      elif configuration_operation:
       h.require(matches(after,params['model'],params['effort']),'Configuration application substituted or unavailable')
+      if change['requested'].get('service_tier')is not None:
+       tier=self.refresh_owned_configuration(member);h.require(profiles.tier_matches(tier,change['requested']['tier_resolution'],params['model'],params['effort']),'Configuration service tier unavailable/substituted')
       self.event('control_result',operation=configuration_operation,state='configuration_pending_turn',evidence={'configured_observed':after,'runtime_observed':runtime_unknown(),'pending_next_turn':True})
      else:
       event={'op':'finish','run':operation,'outcome':'completed','evidence':'Observed turn/completed '+turn}
@@ -297,10 +327,10 @@ def main():
  sub=p.add_subparsers(dest='operation',required=True)
  for name in ('inspect','change'):
   q=sub.add_parser(name);q.add_argument('--member',required=True)
-  if name=='change':q.add_argument('--operation-id',required=True);q.add_argument('--model',required=True);q.add_argument('--effort',required=True);q.add_argument('--owner-checkpoint')
+  if name=='change':q.add_argument('--operation-id',required=True);q.add_argument('--model',required=True);q.add_argument('--effort',required=True);q.add_argument('--owner-checkpoint');q.add_argument('--service-tier',choices=('fast',))
  q=sub.add_parser('bind');q.add_argument('--member',required=True);q.add_argument('--thread',required=True)
  q=sub.add_parser('prepare');q.add_argument('--handoff',required=True);q.add_argument('--source',required=True);q.add_argument('--recipient',required=True);q.add_argument('--role',choices=tuple(h.MODELS),required=True);q.add_argument('--model',help='Required explicit choice for null-model leader; never inferred');q.add_argument('--tasks',nargs='+',required=True);q.add_argument('--packet',type=Path,required=True);q.add_argument('--owner-stop-ack',required=True);q.add_argument('--explicit-user-request',action='store_true')
- q=sub.add_parser('create');q.add_argument('--handoff',required=True);q.add_argument('--effort',required=True);q.add_argument('--cwd',type=Path,required=True)
+ q=sub.add_parser('create');q.add_argument('--handoff',required=True);q.add_argument('--effort');q.add_argument('--cwd',type=Path,required=True)
  for name in ('deliver','transfer','resume'):
   q=sub.add_parser(name);q.add_argument('--handoff',required=True)
   if name=='deliver':q.add_argument('--reserve',type=int,required=True)
@@ -314,7 +344,7 @@ def main():
  try:
   rpc.request('initialize',{'clientInfo':{'name':'team-session-control','version':'0.2.0'}});rpc.send({'method':'initialized'});ctl=Controller(a.state,rpc,a.controller,a.host,'official-'+a.transport+(':'+a.socket if a.transport=='native-proxy'else ''))
   if a.operation=='inspect':result=ctl.inspect(a.member)
-  elif a.operation=='change':result=ctl.change(a.member,a.operation_id,a.model,a.effort,a.owner_checkpoint)
+  elif a.operation=='change':result=ctl.change(a.member,a.operation_id,a.model,a.effort,a.owner_checkpoint,a.service_tier)
   elif a.operation=='bind':result=ctl.bind(a.member,a.thread)
   elif a.operation=='prepare':result=ctl.prepare_handoff(a.handoff,a.source,a.recipient,a.role,a.tasks,json.loads(a.packet.read_text()),a.owner_stop_ack,a.explicit_user_request,a.model)
   elif a.operation=='create':result=ctl.create_recipient(a.handoff,a.effort,a.cwd)

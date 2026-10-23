@@ -1,0 +1,28 @@
+{
+  "fixture": "synthetic-checkpoint-lineage-restart",
+  "lineage": [
+    {
+      "checkpoint_id": "cp-synthetic-001",
+      "source_revision": 73,
+      "source_state_sha256": "e60cd958fb57c103c649a02b02e9fd0b6821612620749d810ce5e10bde38bb8b",
+      "archive_ref": "archive/cp-synthetic-001.json",
+      "archive_sha256": "fixture:archive-digest-001",
+      "supersedes": null
+    },
+    {
+      "checkpoint_id": "cp-synthetic-002",
+      "source_revision": 74,
+      "source_state_sha256": "fixture:state-digest-074",
+      "archive_ref": "archive/cp-synthetic-002.json",
+      "archive_sha256": "fixture:archive-digest-002",
+      "supersedes": "cp-synthetic-001"
+    }
+  ],
+  "restart_expectations": [
+    "verify both state and archive digests",
+    "confirm each predecessor link before selecting the latest checkpoint",
+    "retain the predecessor archive after creating a successor",
+    "resume with unresolved obligations from cp-synthetic-001 until new canonical evidence resolves them"
+  ],
+  "note": "Synthetic lineage oracle; digests prefixed with fixture: are symbolic test values."
+}

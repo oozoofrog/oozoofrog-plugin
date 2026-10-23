@@ -1,0 +1,132 @@
+{
+  "fixture": "synthetic-compact-continuation-view",
+  "source_revision": 73,
+  "source_state_sha256": "e60cd958fb57c103c649a02b02e9fd0b6821612620749d810ce5e10bde38bb8b",
+  "carry_forward": [
+    {
+      "ref": "decision-scope-001",
+      "status": "accepted",
+      "summary": "Use deterministic parsing for stable replay.",
+      "rationale": "Stable replay across restarts."
+    },
+    {
+      "ref": "approval-proposal-001",
+      "status": "approved",
+      "summary": "Owner approval is recorded for this exact proposal digest.",
+      "evidence": [
+        "ev-approval-001"
+      ]
+    },
+    {
+      "ref": "denial-publication-001",
+      "status": "denied",
+      "summary": "Publication remains denied until independent review requirements are satisfied.",
+      "rationale": "The earlier evidence package was incomplete.",
+      "evidence": [
+        "ev-denial-001"
+      ]
+    },
+    {
+      "ref": "review-independent-001",
+      "status": "pass_with_open_blocker",
+      "summary": "Independent review confirms coverage but leaves one operation unresolved.",
+      "reviewer": "synthetic-reviewer-b",
+      "evidence": [
+        "ev-review-001"
+      ]
+    },
+    {
+      "ref": "failure-attempt-001",
+      "status": "failed",
+      "summary": "Attempt one timed out and its outcome remains unknown.",
+      "evidence": [
+        "ev-failure-001"
+      ]
+    },
+    {
+      "ref": "recovery-attempt-001",
+      "status": "still_unknown",
+      "summary": "Reconcile the original operation before retrying.",
+      "evidence": [
+        "ev-recovery-001"
+      ]
+    },
+    {
+      "ref": "failure-attempt-002",
+      "status": "failed_before_execution",
+      "summary": "A separate validation failure occurred; retain it as a distinct occurrence.",
+      "evidence": [
+        "ev-failure-002"
+      ]
+    },
+    {
+      "ref": "constraint-approval-001",
+      "status": "approved",
+      "summary": "Read-only scope is approved; publication and destructive actions remain outside scope.",
+      "evidence": [
+        "ev-constraint-001"
+      ]
+    }
+  ],
+  "remaining_work": [
+    "Reconcile the timed-out operation using fresh evidence.",
+    "Keep publication blocked until its required independent review is complete."
+  ],
+  "unresolved_blockers": [
+    "operation attempt-001 outcome remains unknown",
+    "publication remains denied"
+  ],
+  "archived_oracle_refs": [
+    "change-001",
+    "change-002",
+    "change-003",
+    "change-004",
+    "change-005",
+    "change-006",
+    "change-007",
+    "change-008",
+    "change-009",
+    "change-010",
+    "change-011",
+    "change-012",
+    "change-013",
+    "change-014",
+    "change-015",
+    "change-016",
+    "change-017",
+    "change-018",
+    "change-019",
+    "change-020",
+    "change-021",
+    "change-022",
+    "change-023",
+    "change-024",
+    "change-025",
+    "change-026",
+    "change-027",
+    "change-028",
+    "change-029",
+    "change-030",
+    "change-031",
+    "change-032",
+    "change-033",
+    "change-034",
+    "change-035",
+    "change-036",
+    "change-037",
+    "change-038",
+    "change-039",
+    "change-040",
+    "change-041",
+    "change-042",
+    "change-043",
+    "change-044",
+    "change-045",
+    "change-046",
+    "change-047",
+    "change-048",
+    "change-049",
+    "change-050"
+  ],
+  "note": "This is a semantic oracle, not a product command payload. All identifiers and evidence are invented."
+}

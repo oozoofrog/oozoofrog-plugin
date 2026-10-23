@@ -88,6 +88,37 @@
         },
         "handoffs": {
           "type": "object"
+        },
+        "checkpoint": {
+          "type": "object",
+          "required": [
+            "id",
+            "directory",
+            "proposal_sha256",
+            "approval",
+            "source_policy_hash"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "directory": {
+              "type": "string"
+            },
+            "proposal_sha256": {
+              "type": "string"
+            },
+            "approval": {
+              "type": "object"
+            },
+            "source_policy_hash": {
+              "type": "string"
+            }
+          }
+        },
+        "reworks": {
+          "type": "object",
+          "description": "Optional immutable request-ID/event-digest receipts for same-owner rework. Original transition is distinct from current task state."
         }
       }
     }

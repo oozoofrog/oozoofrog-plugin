@@ -1,9 +1,11 @@
 {
-  "version": "0.2.0",
+  "version": "0.4.0",
   "roles": {
     "leader": {
-      "model": null,
-      "execution": false
+      "model": "gpt-6-astra",
+      "execution": false,
+      "reasoning_effort": "ultra",
+      "service_tier": "fast"
     },
     "core": {
       "model": "gpt-6.1-sol",
@@ -15,7 +17,9 @@
     },
     "advisor": {
       "model": "gpt-6-astra",
-      "execution": true
+      "execution": true,
+      "reasoning_effort": "ultra",
+      "service_tier": "fast"
     },
     "reviewer": {
       "model": "gpt-6.1-sol",
