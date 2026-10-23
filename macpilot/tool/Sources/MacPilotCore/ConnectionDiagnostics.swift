@@ -62,12 +62,15 @@ public enum InvocationTransport: String {
             parentIdentity["comparison"] = comparison(current: (parent, parentIdentity["processStartID"] as? String), previous: previousParent,
                                                        previousLiveStart: ProcessIdentity.startID(pid: previousParent.0))
         }
-        let permissions = ["accessibility": AXIsProcessTrusted(), "screenCapture": CGPreflightScreenCaptureAccess(),
-                           "postEvent": CGPreflightPostEventAccess(), "inputMonitoring": CGPreflightListenEventAccess()]
+        let session = DesktopSession.current()
+        let permissions: [String: Any] = session.available ? ["accessibility": AXIsProcessTrusted(), "screenCapture": CGPreflightScreenCaptureAccess(),
+                           "postEvent": CGPreflightPostEventAccess(), "inputMonitoring": CGPreflightListenEventAccess()] : DesktopSession.unknownPermissions
         return ["status": "connection_responding", "version": MacPilotRuntime.version,
                 "transport": transport.rawValue, "server": server, "parent": parentIdentity,
-                "permissions": permissions, "allPermissionsGranted": permissions.values.allSatisfy { $0 },
-                "foregroundPID": NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0,
+                "permissions": permissions, "permissionsStatus": session.available ? "probed" : "not_probed",
+                "allPermissionsGranted": session.available ? permissions.values.allSatisfy { ($0 as? Bool) == true } as Any : NSNull(),
+                "desktopSession": session.object,
+                "foregroundPID": session.available ? (NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0) as Any : NSNull(),
                 "hostConnectionVerified": transport == .mcpStdio,
                 "parentRole": "Parent process identity only; this does not identify its product or prove other chats are progressing",
                 "verification": transport == .mcpStdio ? "This MCP call returned; GUI actions and business outcomes require separate verification" : "One-shot CLI responded; the host's MCP connection was not tested",
