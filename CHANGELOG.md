@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- MacPilot now keeps help, tool catalogs, MCP metadata, and connection diagnostics available when the current invocation cannot establish a WindowServer session. Desktop operations return a pre-dispatch session error; skipped permission probes remain unknown instead of appearing denied.
+
 ## Unreleased — team harness 0.4.0
 
 - Request distinct Astra leader/advisor model, ultra reasoning and Fast mode; resolve the current catalogue wire tier without fallback. Preserve Sol/Luna roles, configured versus execution evidence, and active project contracts. Add a separately journaled requested-default overlay with ordered rollback.

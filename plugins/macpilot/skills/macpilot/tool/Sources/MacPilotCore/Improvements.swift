@@ -47,7 +47,7 @@ public struct ImprovementConfiguration: Codable {
         let expected:Set<String>=["invalid_argument","stale_observation","stale_app_identity","busy","foreground_required","foreground_mismatch",
                                  "foreground_changed","task_cancelled","task_finished","task_expired","missing_task","missing_observation",
                                  "accessibility_denied","screen_capture_denied","post_event_denied","private_api_disabled","secure_or_inert_node",
-                                 "permission_required","browser_not_connected","ambiguous_browser","destination_exists","codex_not_configured"]
+                                 "permission_required","gui_session_unavailable","browser_not_connected","ambiguous_browser","destination_exists","codex_not_configured"]
         guard !(error is CancellationError),!expected.contains(code),!tool.hasPrefix("mac_improvement") else{return nil}
         // Do not copy tool arguments, source text, DOM/AX contents, clipboard or screenshots.
         var record:ImprovementRequest?
