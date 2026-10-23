@@ -88,6 +88,33 @@
         },
         "handoffs": {
           "type": "object"
+        },
+        "checkpoint": {
+          "type": "object",
+          "required": [
+            "id",
+            "directory",
+            "proposal_sha256",
+            "approval",
+            "source_policy_hash"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "directory": {
+              "type": "string"
+            },
+            "proposal_sha256": {
+              "type": "string"
+            },
+            "approval": {
+              "type": "object"
+            },
+            "source_policy_hash": {
+              "type": "string"
+            }
+          }
         }
       }
     }

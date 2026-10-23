@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased — team harness 0.3.0
+
+- Add reviewed compact checkpoint working views, immutable full-history snapshots and explicitly allowlisted portable evidence. Administrative checkpoint/policy migration keeps the context guard, ownership and accounting intact and requires fresh member ACKs before execution. Missing or corrupt archives fail closed; native clients remain advisory.
+
 ## Unreleased — team harness 0.2.0
 
 - Add explicit session model/effort inspection, pending next-turn configuration changes and later default-turn verification. Keep runtime identity unavailable when official telemetry does not expose it.
