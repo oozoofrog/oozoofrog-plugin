@@ -5,6 +5,7 @@
 - MacPilot now keeps help, tool catalogs, MCP metadata, and connection diagnostics available when the current invocation cannot establish a WindowServer session. Desktop operations return a pre-dispatch session error; skipped permission probes remain unknown instead of appearing denied.
 
 - Retry transient partial AX reads within the original condition-wait deadline without replaying a workflow mutation. A final unresolved partial read remains unknown, and partial reads reset the stable-frame interval.
+- Reject incomplete, aborted, image-only or incomplete-inventory acceptance reports at the release gate. Versioned reports become complete only after all 45 required checks and fixture cleanup succeed; original failure prefixes remain available.
 - Package runtime ZIPs without AppleDouble/resource-fork metadata so extraction preserves the signed app on clean installation paths.
 
 ## Unreleased — team harness 0.4.0

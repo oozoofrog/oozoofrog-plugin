@@ -19,7 +19,7 @@ python3 scripts/release_plugin.py verify --plugin macpilot --version 3.5.0 --evi
 python3 scripts/release_plugin.py commit --plugin macpilot --version 3.5.0 --evidence macpilot/evidence/release-3.5.0
 ```
 
-`verify`는 인덱스의 정확한 Git tree를 임시 디렉터리에 펼쳐 배포·미러·릴리스 스크립트 검사를 실행한다. 작업 트리의 다른 변경은 커밋하지 않는다. 실제 실행 검사는 `source-manifest.json`의 선택 패키지 해시가 작업 트리와 인덱스에 모두 일치할 때 재사용한다. 기능 보고서의 모든 `checks[].status`는 `PASS`여야 한다. 런타임 보고서는 `status=passed`, 모든 `checks[].passed=true`여야 한다. 두 보고서의 실행 파일 SHA-256도 실제 패키징할 앱과 같아야 한다. 소스가 달라졌으면 실제 실행 검사를 다시 수행하고 새 보고서를 사용한다. 이 검사는 물리 기기나 임의 앱의 성공을 추가로 증명하지 않는다.
+`verify`는 인덱스의 정확한 Git tree를 임시 디렉터리에 펼쳐 배포·미러·릴리스 스크립트 검사를 실행한다. 작업 트리의 다른 변경은 커밋하지 않는다. 실제 실행 검사는 `source-manifest.json`의 선택 패키지 해시가 작업 트리와 인덱스에 모두 일치할 때 재사용한다. 기능 보고서는 `macpilot-capability-check/2`, `stage=all`, `suiteStatus=passed`, `completed=true`이며 본문/정리 오류가 없어야 한다. 검토한 `macpilot/scripts/capability_report.py`의 필수 45개 `(feature, id)`가 각각 한 번씩 있어야 하며 모든 `checks[].status`는 `PASS`여야 한다. 호출 프로세스의 실제 종료 코드 0도 별도로 확인한다. 중단된 실행의 통과 접두 항목이나 image 단계만의 보고서는 허용하지 않는다. 런타임 보고서는 `status=passed`, 모든 `checks[].passed=true`여야 한다. 두 보고서의 실행 파일 SHA-256도 실제 패키징할 앱과 같아야 한다. 소스가 달라졌으면 실제 실행 검사를 다시 수행하고 새 보고서를 사용한다. 이 검사는 물리 기기나 임의 앱의 성공을 추가로 증명하지 않는다.
 
 검증 후 인덱스가 바뀌면 `commit`은 중단한다. 검증 실패 후에는 이전 검증 결과로 커밋할 수 없다. `commit`은 로컬 커밋만 만든다. 커밋과 원격 게시를 분리한다. 공개 전 수정으로 다시 검증했다면 `commit --amend`로 같은 receipt의 미게시 HEAD만 갱신할 수 있다.
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -57,7 +58,7 @@ def package_runtime(app, archive, command=run):
             command(['codesign', '--verify', '--deep', '--strict', str(extracted)])
 
 
-def runtime_receipt(root, evidence, binary, name, feature_report, runtime_report):
+def runtime_receipt(root, evidence, binary, name, feature_report, runtime_report, feature_contract):
     manifest = json.loads((evidence / 'source-manifest.json').read_text())
     selected = {p: sha for p, sha in manifest.items() if p.startswith((name + '/', f'plugins/{name}/'))}
     if not selected:
@@ -77,8 +78,14 @@ def runtime_receipt(root, evidence, binary, name, feature_report, runtime_report
     sha = digest(binary)
     if feature.get('binarySHA256') != sha or runtime.get('installedBinary', {}).get('sha256') != sha:
         raise ReleaseError('Tested binary hash differs from packaged binary')
-    if not feature.get('checks') or any(x.get('status') != 'PASS' for x in feature['checks']):
-        raise ReleaseError('Feature runtime checks did not all pass')
+    contract_path = root / feature_contract
+    spec = importlib.util.spec_from_file_location('release_capability_contract', contract_path)
+    contract = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(contract)
+    try:
+        contract.validate_report(feature, required_stage='all')
+    except ValueError as error:
+        raise ReleaseError(str(error)) from error
     if runtime.get('status') != 'passed' or not runtime.get('checks') or any(x.get('passed') is not True for x in runtime['checks']):
         raise ReleaseError('Runtime regression did not pass')
     return dict(path=str(evidence.resolve()), source_files=len(selected), binary_sha256=sha,
@@ -235,7 +242,8 @@ class Release:
             if not self.args.feature_report or not self.args.runtime_report:
                 raise ReleaseError('Supply --feature-report and --runtime-report relative to --runtime-evidence')
             self.receipt['runtime_evidence'] = runtime_receipt(
-                ROOT, runtime, ROOT / self.profile['binary'], self.name, self.args.feature_report, self.args.runtime_report)
+                ROOT, runtime, ROOT / self.profile['binary'], self.name, self.args.feature_report, self.args.runtime_report,
+                self.profile['feature_contract'])
         self.receipt['verified_tree'] = tree
         self.receipt['verified_at'] = time.time()
 
