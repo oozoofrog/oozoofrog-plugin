@@ -75,8 +75,8 @@ done
 <key>CFBundleName</key><string>MacPilot</string>
 <key>CFBundleIconFile</key><string>MacPilot.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>3.5.0</string>
-<key>CFBundleVersion</key><string>36</string>
+<key>CFBundleShortVersionString</key><string>3.5.1</string>
+<key>CFBundleVersion</key><string>37</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>

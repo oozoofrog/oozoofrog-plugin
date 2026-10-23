@@ -1,8 +1,10 @@
 # Changelog
 
-## Unreleased
+## MacPilot [3.5.1] — 2026-10-23
 
 - MacPilot now keeps help, tool catalogs, MCP metadata, and connection diagnostics available when the current invocation cannot establish a WindowServer session. Desktop operations return a pre-dispatch session error; skipped permission probes remain unknown instead of appearing denied.
+
+- Package runtime ZIPs without AppleDouble/resource-fork metadata so extraction preserves the signed app on clean installation paths.
 
 ## Unreleased — team harness 0.4.0
 
