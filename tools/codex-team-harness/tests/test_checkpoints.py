@@ -19,7 +19,7 @@ class Checkpoints(unittest.TestCase):
   return c.prepare(self.path,'checkpoint1',view,[str(self.proof)])
  def approve(self,candidate):
   import checkpoints as c
-  p=json.loads(candidate.read_text());a=self.root/'approval.json';a.write_text(json.dumps({role:{'member':role,'proposal_sha256':c.digest(p),'source_sha256':p['source_sha256'],'approved':True,'safe_boundary':True,'all_current_obligations_retained':True}for role in ['leader','reviewer']}));return a
+  p=json.loads(candidate.read_text());a=self.root/'approval.json';a.write_text(json.dumps({role:{'member':role,'proposal_sha256':c.digest(p),'source_sha256':p['source_sha256'],'target_policy_hash':p['target_policy_hash'],'approved':True,'safe_boundary':True,'all_current_obligations_retained':True}for role in ['leader','reviewer']}));return a
  def commit(self,candidate,**kwargs):return h.transaction(self.path,{'op':'checkpoint_commit','candidate':str(candidate),'approvals':str(self.approve(candidate)),**kwargs})
  def test_feature_api_present(self):
   self.assertTrue((ROOT/'payload/team-coordination/scripts/checkpoints.py').exists(),'checkpoint implementation missing')
@@ -138,5 +138,14 @@ class Checkpoints(unittest.TestCase):
   finally:h.save=save
  def test_created_archive_data_is_private_mode(self):
   candidate=self.prepare();self.assertEqual(0o600,candidate.stat().st_mode&0o777);self.assertEqual(0o700,candidate.parent.stat().st_mode&0o777)
+
+ def test_target_contract_cannot_drift_after_semantic_approval(self):
+  candidate=self.prepare();approval=self.approve(candidate);original=h.effective_contract
+  def drift():
+   contract=original();contract['unexpected_target_change']=True;return contract
+  h.effective_contract=drift
+  try:
+   with self.assertRaises(h.Invalid):h.transaction(self.path,{'op':'checkpoint_commit','candidate':str(candidate),'approvals':str(approval),'policy_refresh':True,'reason':'migration'})
+  finally:h.effective_contract=original
 
 if __name__=='__main__':unittest.main()
