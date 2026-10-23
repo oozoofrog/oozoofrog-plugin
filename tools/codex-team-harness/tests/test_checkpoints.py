@@ -130,4 +130,13 @@ class Checkpoints(unittest.TestCase):
   candidate=self.prepare();new=self.commit(candidate);cp=new['harness']['checkpoint'];self.assertIn('approval_object',cp);(self.root/'approval.json').unlink();h.packet(new,'worker');(candidate.parent/cp['approval_object']['relative']).write_text('{}')
   with self.assertRaises(h.Invalid):h.packet(new,'worker')
 
+ def test_committed_retry_does_not_rewrite_canonical_state(self):
+  candidate=self.prepare();self.commit(candidate);save=h.save
+  def fail(*args):raise AssertionError('Idempotent readback must not write')
+  h.save=fail
+  try:self.commit(candidate)
+  finally:h.save=save
+ def test_created_archive_data_is_private_mode(self):
+  candidate=self.prepare();self.assertEqual(0o600,candidate.stat().st_mode&0o777);self.assertEqual(0o700,candidate.parent.stat().st_mode&0o777)
+
 if __name__=='__main__':unittest.main()
