@@ -23,10 +23,10 @@ def durable_directory(path):
  finally:os.close(fd)
 
 def immutable(path,data):
- path.parent.mkdir(parents=True,exist_ok=True)
+ path.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
  require(not path.is_symlink(),'Checkpoint symlink refused')
  if path.exists():require(path.read_bytes()==data,'Conflicting immutable checkpoint object');return
- with path.open('xb')as f:f.write(data);f.flush();os.fsync(f.fileno())
+ with os.fdopen(os.open(str(path),os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600),'wb')as f:f.write(data);f.flush();os.fsync(f.fileno())
  durable_directory(path.parent)
 
 def view_valid(source,view):
@@ -41,7 +41,7 @@ def view_valid(source,view):
 def prepare(state_path,identifier,working_view,required_evidence):
  state_path=Path(state_path);require(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}',identifier)is not None,'Invalid checkpoint ID')
  source=json.loads(state_path.read_text());view_valid(source,working_view)
- directory=safe(state_path.parent,'checkpoints/'+identifier);directory.mkdir(parents=True,exist_ok=True);durable_directory(directory.parent);durable_directory(state_path.parent)
+ parent=safe(state_path.parent,'checkpoints');parent.mkdir(mode=0o700,exist_ok=True);directory=safe(state_path.parent,'checkpoints/'+identifier);directory.mkdir(mode=0o700,exist_ok=True);durable_directory(directory.parent);durable_directory(state_path.parent)
  snapshot=encoded(source);immutable(safe(directory,'snapshot.json'),snapshot);files={'snapshot.json':sha(snapshot)};evidence=[]
  # Only explicitly selected evidence is opened. No recursive filesystem or credential scan.
  for name in required_evidence:

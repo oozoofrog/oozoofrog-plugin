@@ -185,7 +185,9 @@ def transaction(path,event):
  path=Path(path);path.parent.mkdir(parents=True,exist_ok=True)
  require(not path.is_symlink() and not Path(str(path)+'.lock').is_symlink(),'State/lock symlink refused')
  with open(str(path)+'.lock','a') as lock:
-  fcntl.flock(lock,fcntl.LOCK_EX);s=json.loads(path.read_text());s=apply(s,event,path.parent);save(path,s);return s
+  fcntl.flock(lock,fcntl.LOCK_EX);before=json.loads(path.read_text());s=apply(before,event,path.parent)
+  if s!=before:save(path,s)
+  return s
 
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--state',type=Path,required=True)
