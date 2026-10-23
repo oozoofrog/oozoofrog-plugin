@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -222,6 +223,35 @@ class RuntimeEvidenceTests(unittest.TestCase):
         (self.evidence / 'runtime.json').write_text(json.dumps(data))
         with self.assertRaisesRegex(release.ReleaseError, 'did not pass'):
             self.verify()
+
+
+@unittest.skipUnless(sys.platform == 'darwin', 'macOS signing and archive tools required')
+class RuntimeArchiveTests(unittest.TestCase):
+    def test_signed_app_with_filesystem_metadata_survives_both_extractors(self):
+        import plistlib
+        import zipfile
+        with tempfile.TemporaryDirectory(prefix='runtime-archive-test-') as temporary:
+            root = Path(temporary)
+            app = root / 'Fixture.app'
+            executable = app / 'Contents/MacOS/fixture'
+            executable.parent.mkdir(parents=True)
+            shutil.copyfile('/usr/bin/true', executable)
+            executable.chmod(0o755)
+            (app / 'Contents/Info.plist').write_bytes(plistlib.dumps(dict(
+                CFBundleIdentifier='local.macpilot.archive-fixture', CFBundleExecutable='fixture',
+                CFBundleName='Fixture', CFBundlePackageType='APPL', CFBundleVersion='1')))
+            release.run(['xattr', '-w', 'com.apple.metadata:kMDItemFinderComment',
+                         'archive regression fixture', str(app)])
+            release.run(['codesign', '--force', '--sign', '-', str(app)])
+            before = release.digest(executable)
+            archive = root / 'fixture.zip'
+            release.package_runtime(app, archive)
+            self.assertEqual(before, release.digest(executable))
+            self.assertEqual('archive regression fixture', release.run(
+                ['xattr', '-p', 'com.apple.metadata:kMDItemFinderComment', str(app)]).strip())
+            with zipfile.ZipFile(archive) as contents:
+                self.assertFalse(any('__MACOSX' in name or Path(name).name.startswith('._')
+                                     for name in contents.namelist()))
 
 class PublishTests(unittest.TestCase):
     def setUp(self):

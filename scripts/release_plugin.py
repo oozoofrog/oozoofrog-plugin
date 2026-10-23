@@ -34,6 +34,29 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def package_runtime(app, archive, command=run):
+    """Exclude filesystem metadata and verify both supported extraction paths."""
+    command(['codesign', '--verify', '--deep', '--strict', str(app)])
+    command(['ditto', '--norsrc', '-c', '-k', '--keepParent', str(app), str(archive)])
+    expected = {str(p.relative_to(app)): (digest(p), bool(p.stat().st_mode & 0o111))
+                for p in app.rglob('*') if p.is_file()}
+    for extractor in ('ditto', 'unzip'):
+        with tempfile.TemporaryDirectory(prefix='plugin-archive-check-') as temporary:
+            if extractor == 'ditto':
+                command(['ditto', '-x', '-k', str(archive), temporary])
+            else:
+                command(['unzip', '-q', str(archive), '-d', temporary])
+            extracted = Path(temporary) / app.name
+            if any(p.name.startswith('._') or p.name == '__MACOSX'
+                   for p in Path(temporary).rglob('*')):
+                raise ReleaseError('Runtime archive contains AppleDouble metadata')
+            actual = {str(p.relative_to(extracted)): (digest(p), bool(p.stat().st_mode & 0o111))
+                      for p in extracted.rglob('*') if p.is_file()}
+            if actual != expected:
+                raise ReleaseError(f'{extractor} changed runtime bytes or executable modes')
+            command(['codesign', '--verify', '--deep', '--strict', str(extracted)])
+
+
 def runtime_receipt(root, evidence, binary, name, feature_report, runtime_report):
     manifest = json.loads((evidence / 'source-manifest.json').read_text())
     selected = {p: sha for p, sha in manifest.items() if p.startswith((name + '/', f'plugins/{name}/'))}
@@ -289,7 +312,7 @@ class Release:
         if plistlib.loads((app / 'Contents/Info.plist').read_bytes())['CFBundleShortVersionString'] != self.version:
             raise ReleaseError('App bundle version mismatch')
         archive = assets / f'{self.profile["display_name"]}-{self.version}-{self.profile.get("asset_platform", "macos-arm64")}.zip'
-        self.command(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', str(app), str(archive)])
+        package_runtime(app, archive, self.command)
         hashes = {p.name: digest(p) for p in (plugin, archive)}
         (assets / 'SHA256SUMS.txt').write_text(''.join(f'{sha}  {name}\n' for name, sha in hashes.items()))
         self.receipt['assets'] = {**hashes, 'SHA256SUMS.txt': digest(assets / 'SHA256SUMS.txt')}
