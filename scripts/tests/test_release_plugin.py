@@ -15,6 +15,9 @@ SOURCE = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location('release_plugin', SOURCE / 'scripts/release_plugin.py')
 release = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(release)
+contract_spec = importlib.util.spec_from_file_location('capability_report', SOURCE / 'macpilot/scripts/capability_report.py')
+capability_report = importlib.util.module_from_spec(contract_spec)
+contract_spec.loader.exec_module(capability_report)
 
 
 class VersionTests(unittest.TestCase):
@@ -179,17 +182,22 @@ class RuntimeEvidenceTests(unittest.TestCase):
         (self.root / 'macpilot').mkdir()
         self.source = self.root / 'macpilot/source.swift'
         self.source.write_text('source\n')
+        self.contract = self.root / 'macpilot/scripts/capability_report.py'
+        self.contract.parent.mkdir()
+        shutil.copyfile(SOURCE / 'macpilot/scripts/capability_report.py', self.contract)
         subprocess.run(['git', 'add', '.'], cwd=self.root, check=True)
         self.evidence = self.root / 'evidence'
         self.evidence.mkdir()
         self.binary = self.root / 'binary'
         self.binary.write_bytes(b'tested binary')
-        (self.evidence / 'source-manifest.json').write_text(json.dumps({'macpilot/source.swift': release.digest(self.source)}))
-        (self.evidence / 'features.json').write_text(json.dumps({'binarySHA256': release.digest(self.binary), 'checks': [{'status': 'PASS'}]}))
+        (self.evidence / 'source-manifest.json').write_text(json.dumps({str(p.relative_to(self.root)): release.digest(p) for p in (self.source, self.contract)}))
+        (self.evidence / 'features.json').write_text(json.dumps(dict(schema='macpilot-capability-check/2', stage='all',
+            suiteStatus='passed', completed=True, binarySHA256=release.digest(self.binary),
+            checks=[dict(feature=feature, id=name, status='PASS') for feature, name in capability_report.FULL_CHECKS])))
         (self.evidence / 'runtime.json').write_text(json.dumps({'status': 'passed', 'installedBinary': {'sha256': release.digest(self.binary)}, 'checks': [{'passed': True}]}))
 
     def verify(self):
-        return release.runtime_receipt(self.root, self.evidence, self.binary, 'macpilot', Path('features.json'), Path('runtime.json'))
+        return release.runtime_receipt(self.root, self.evidence, self.binary, 'macpilot', Path('features.json'), Path('runtime.json'), self.contract.relative_to(self.root))
 
     def test_exact_runtime_evidence_is_reused(self):
         self.assertEqual(1, self.verify()['runtime_checks'])
@@ -223,6 +231,121 @@ class RuntimeEvidenceTests(unittest.TestCase):
         (self.evidence / 'runtime.json').write_text(json.dumps(data))
         with self.assertRaisesRegex(release.ReleaseError, 'did not pass'):
             self.verify()
+
+    def test_aborted_all_pass_prefix_is_not_complete_feature_evidence(self):
+        data = json.loads((self.evidence / 'features.json').read_text())
+        data.update(schema='macpilot-capability-check/2', stage='all', suiteStatus='failed', completed=False)
+        data['checks'] = [dict(feature='image', id=f'prefix_{n}', status='PASS') for n in range(40)]
+        (self.evidence / 'features.json').write_text(json.dumps(data))
+        with self.assertRaises(release.ReleaseError):
+            self.verify()
+
+    def test_image_only_pass_is_not_full_feature_evidence(self):
+        data = json.loads((self.evidence / 'features.json').read_text())
+        data.update(schema='macpilot-capability-check/2', stage='image', suiteStatus='passed', completed=True)
+        (self.evidence / 'features.json').write_text(json.dumps(data))
+        with self.assertRaises(release.ReleaseError):
+            self.verify()
+
+    def test_missing_duplicate_unexpected_and_legacy_feature_reports_refuse(self):
+        original = json.loads((self.evidence / 'features.json').read_text())
+        for failure in ('missing', 'duplicate', 'unexpected', 'legacy', 'incomplete', 'cleanup'):
+            with self.subTest(failure=failure):
+                data = json.loads(json.dumps(original))
+                if failure == 'missing': data['checks'].pop()
+                elif failure == 'duplicate': data['checks'][-1] = data['checks'][0]
+                elif failure == 'unexpected': data['checks'][-1]['id'] = 'not_in_the_trusted_contract'
+                elif failure == 'legacy': data.pop('completed')
+                elif failure == 'incomplete': data['suiteStatus'] = 'incomplete'
+                else: data['cleanupError'] = dict(type='RuntimeError')
+                (self.evidence / 'features.json').write_text(json.dumps(data))
+                with self.assertRaises(release.ReleaseError): self.verify()
+
+
+class CapabilityReportTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.path = Path(self.temporary.name) / 'result.json'
+
+    def checks(self, stage='all'):
+        return [dict(feature=feature, id=name, status='PASS') for feature, name in capability_report.required_checks(stage)]
+
+    def test_canonical_inventory_requires_intentional_contract_updates(self):
+        from collections import Counter
+        self.assertEqual(45, len(capability_report.FULL_CHECKS))
+        self.assertEqual(45, len(set(capability_report.FULL_CHECKS)))
+        self.assertEqual(12, len(capability_report.required_checks('image')))
+        self.assertEqual(dict(wait=11, outcome=2, trace=8, workflow=7, interrupt=5, image=12),
+                         dict(Counter(feature for feature, _ in capability_report.FULL_CHECKS)))
+
+    def test_checkpoint_is_incomplete_until_body_and_cleanup_finish(self):
+        report = capability_report.CapabilityReport(self.path, 'all', 'binary', self.checks())
+        with report.run(cleanup=lambda: None):
+            report.checkpoint()
+            self.assertEqual('incomplete', json.loads(self.path.read_text())['suiteStatus'])
+            with self.assertRaises(ValueError): capability_report.validate_report(json.loads(self.path.read_text()))
+        capability_report.validate_report(json.loads(self.path.read_text()))
+
+    def test_all_pass_then_body_error_cannot_leave_passed_report(self):
+        report = capability_report.CapabilityReport(self.path, 'all', 'binary', self.checks())
+        with self.assertRaises(RuntimeError):
+            with report.run(cleanup=lambda: None): raise RuntimeError('must not copy private exception arguments')
+        data = json.loads(self.path.read_text())
+        self.assertEqual('failed', data['suiteStatus'])
+        self.assertFalse(data['completed'])
+        self.assertEqual(dict(type='RuntimeError'), data['bodyError'])
+        self.assertNotIn('private exception', self.path.read_text())
+
+    def test_cleanup_error_fails_and_does_not_mask_body_error(self):
+        def cleanup(): raise ValueError('cleanup failure')
+        for body_fails in (False, True):
+            with self.subTest(body_fails=body_fails):
+                report = capability_report.CapabilityReport(self.path, 'all', 'binary', self.checks())
+                expected = RuntimeError if body_fails else ValueError
+                with self.assertRaises(expected):
+                    with report.run(cleanup=cleanup):
+                        if body_fails: raise RuntimeError('primary failure')
+                data = json.loads(self.path.read_text())
+                self.assertEqual('failed', data['suiteStatus'])
+                self.assertFalse(data['completed'])
+                self.assertEqual(dict(type='ValueError'), data['cleanupError'])
+                if body_fails: self.assertEqual(dict(type='RuntimeError'), data['bodyError'])
+
+    def test_terminal_base_exceptions_cannot_leave_passed_report(self):
+        for error in (KeyboardInterrupt(), SystemExit(5)):
+            report = capability_report.CapabilityReport(self.path, 'all', 'binary', self.checks())
+            with self.assertRaises(type(error)):
+                with report.run(cleanup=lambda: None): raise error
+            data = json.loads(self.path.read_text())
+            self.assertEqual('failed', data['suiteStatus'])
+            self.assertFalse(data['completed'])
+
+    def test_missing_tail_or_not_run_never_completes(self):
+        checks = self.checks()[:40]
+        report = capability_report.CapabilityReport(self.path, 'all', 'binary', checks)
+        with report.run(cleanup=lambda: None): pass
+        self.assertEqual('incomplete', json.loads(self.path.read_text())['suiteStatus'])
+        checks = self.checks(); checks[-1]['status'] = 'NOT_RUN'
+        report = capability_report.CapabilityReport(self.path, 'all', 'binary', checks)
+        with report.run(cleanup=lambda: None): pass
+        self.assertFalse(json.loads(self.path.read_text())['completed'])
+
+    def test_aborted_prefix_preserves_nonzero_process_exit(self):
+        code = """import importlib.util, pathlib
+spec=importlib.util.spec_from_file_location('report', %r)
+module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+checks=[dict(feature=f,id=n,status='PASS') for f,n in module.FULL_CHECKS[:40]]
+report=module.CapabilityReport(pathlib.Path(%r),'all','binary',checks)
+with report.run(cleanup=lambda: None): raise RuntimeError('synthetic abort')
+""" % (str(SOURCE / 'macpilot/scripts/capability_report.py'), str(self.path))
+        process = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True)
+        self.assertNotEqual(0, process.returncode)
+        data = json.loads(self.path.read_text())
+        self.assertEqual(40, len(data['checks']))
+        self.assertTrue(all(item['status'] == 'PASS' for item in data['checks']))
+        self.assertEqual('failed', data['suiteStatus'])
+        with self.assertRaises(ValueError): capability_report.validate_report(data)
 
 
 @unittest.skipUnless(sys.platform == 'darwin', 'macOS signing and archive tools required')

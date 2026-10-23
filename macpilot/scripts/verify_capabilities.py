@@ -18,6 +18,8 @@ import plistlib
 import time
 import uuid
 
+from capability_report import CapabilityReport
+
 
 def dump(path, value):
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n')
@@ -140,9 +142,11 @@ def main():
     def ck(feature, name, condition, **detail):
         checks.append(dict(feature=feature, id=name, status='PASS' if condition else 'FAIL', **detail))
         dump(args.evidence / 'checks.json', checks)
+        report.checkpoint()
         if not condition: raise AssertionError((feature, name, detail))
     def condition(identifier, predicate, **kw): return dict(selector={'identifier': identifier}, predicate=predicate, **kw)
-    try:
+    report = CapabilityReport(args.evidence / 'result.json', args.stage, hashlib.sha256(args.binary.read_bytes()).hexdigest(), checks)
+    with report.run(cleanup=lambda: f.close() if f else None):
         f = Fixture(args)
         if args.stage == 'all':
             def wait(c, **kw): return f.call('mac_wait_for', dict(f.identity, condition=c, timeoutMs=2500, **kw))
@@ -260,9 +264,6 @@ def main():
             ck('image','changed_pixels_invalidate',r.get('code')=='image_changed_during_search',result=r)
             f.call('mac_image_search',{'operation':'configure','enabled':False})
         else: checks.append(dict(feature='image',id='real_model_checks',status='NOT_RUN',reason='Explicit local Python/model not supplied'))
-    finally:
-        if f: f.close()
-        dump(args.evidence/'result.json',dict(schema='macpilot-capability-check/1',checks=checks,physicalInput='NOT_RUN',binarySHA256=hashlib.sha256(args.binary.read_bytes()).hexdigest()))
     print(json.dumps(dict(passed=sum(c['status']=='PASS' for c in checks),failed=sum(c['status']=='FAIL' for c in checks),notRun=sum(c['status']=='NOT_RUN' for c in checks))))
 
 
