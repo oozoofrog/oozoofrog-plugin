@@ -116,6 +116,39 @@ final class ConditionTests: XCTestCase {
         }
     }
 
+    @MainActor func testTimeoutScenarioSeparatesOneIntervalFromBudgetLimitedTailRead() async throws {
+        for (poll, firstPartial) in [(100, false), (200, false), (200, true)] {
+            try await withEngine { engine in
+                let condition = try AXCondition(["selector":["identifier":"field"], "predicate":"exists"])
+                let pid = ProcessInfo.processInfo.processIdentifier, identity = try XCTUnwrap(ProcessIdentity.startID(pid: pid))
+                var budgets: [Int] = []
+                do {
+                    let result = try await Conditions.wait(condition, pid: pid, identity: identity, windowID: 1,
+                        timeoutMs: 200, pollMs: poll, engine: engine, observationProvider: { remaining in
+                            budgets.append(remaining)
+                            var value = self.observation([])
+                            // Model a collector that can finish the initial read but cannot
+                            // finish a later scan with less than 150ms left in the same deadline.
+                            if firstPartial || remaining < 150 { value.coverage = "partial"; value.diagnostics = ["node_or_time_budget"] }
+                            return value
+                        })
+                    XCTAssertEqual(poll, 200, "A final partial read must remain unknown")
+                    XCTAssertFalse(firstPartial)
+                    XCTAssertEqual(result["status"] as? String, "predicate_timeout")
+                    XCTAssertEqual(result["matches"] as? Bool, false)
+                    XCTAssertEqual((result["observation"] as? [String: Any])?["coverage"] as? String, "collected_window_tree")
+                } catch {
+                    XCTAssertTrue(poll == 100 || firstPartial)
+                    XCTAssertEqual((error as? ToolFailure)?.code, "partial_coverage")
+                    if !firstPartial { XCTAssertLessThan(try XCTUnwrap(budgets.last), 150) }
+                }
+                XCTAssertGreaterThanOrEqual(try XCTUnwrap(budgets.first), 150)
+            }
+        }
+        // The real observer may wake before pollMs; one interval does not guarantee
+        // a single read when notifications occur. Partial coverage still fails closed.
+    }
+
     @MainActor func testToleratedGeometryFailureCannotClearPendingPartialRead() async throws {
         try await withEngine { engine in
             let condition = try AXCondition(["selector":["identifier":"field"], "predicate":"exists"])

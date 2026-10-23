@@ -23,6 +23,8 @@ python3 scripts/release_plugin.py commit --plugin macpilot --version 3.5.0 --evi
 
 검증 후 인덱스가 바뀌면 `commit`은 중단한다. 검증 실패 후에는 이전 검증 결과로 커밋할 수 없다. `commit`은 로컬 커밋만 만든다. 커밋과 원격 게시를 분리한다. 공개 전 수정으로 다시 검증했다면 `commit --amend`로 같은 receipt의 미게시 HEAD만 갱신할 수 있다.
 
+기능 검사의 `timeout_is_not_success`는 200ms 기한과 200ms poll 간격으로 완전한 false 관측의 정상 타임아웃을 검사한다. AX 알림은 poll 간격 전에 깨울 수 있으며, 불완전한 관측이나 읽기 오류는 통과로 인정하지 않는다. 이 시나리오는 이전 실행의 `partial_coverage` 원인을 확정하거나 운영 기한을 늘리는 수정이 아니다.
+
 ## 패키징과 게시
 
 ```sh
