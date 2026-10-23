@@ -110,13 +110,45 @@ class Sessions(unittest.TestCase):
  def test_usage_is_last_turn_not_cumulative(self):
   self.assertEqual(7,c.turn_usage({'tokenUsage':{'last':{'totalTokens':7},'total':{'totalTokens':100007}}}))
   self.assertIsNone(c.turn_usage({'tokenUsage':{'total':{'totalTokens':100007}}}))
- def test_new_leader_needs_explicit_model_and_coordination_only(self):
+ def test_new_leader_defaults_astra_and_coordination_only(self):
   packet={'goal':'coordinate','decisions':[],'constraints':[],'remaining_work':[],'permission_ceiling':{'sandbox':'read-only','publication':False}}
   with self.assertRaises(h.Invalid):self.controller.prepare_handoff('leader','source-owner','leader','leader',['task'],packet,str(self.proof),True,'gpt-6.1-sol')
   s=self.controller.state();s['tasks']['task']['kind']='coordination';h.save(self.path,s)
-  with self.assertRaises(h.Invalid):self.controller.prepare_handoff('leader','source-owner','leader','leader',['task'],packet,str(self.proof),True)
-  self.controller.prepare_handoff('leader','source-owner','leader','leader',['task'],packet,str(self.proof),True,'gpt-6.1-sol')
-  self.assertEqual('gpt-6.1-sol',self.controller.state()['harness']['handoffs']['leader']['selected_model'])
+  self.controller.prepare_handoff('leader','source-owner','leader','leader',['task'],packet,str(self.proof),True)
+  self.assertEqual('gpt-6-astra',self.controller.state()['harness']['handoffs']['leader']['selected_model'])
+ def test_tier_missing_substituted_and_stale_fail_gate(self):
+  import time,profile_defaults as profiles
+  state=self.controller.state();value=state['harness']['sessions']['source-owner'];value.update(managed=True,configured_observed=c.configuration(observed()),observed_monotonic_wall=time.time());value['policy_expected'].update(reasoning_effort='low',service_tier='fast',tier_resolution={'wire_id':'priority'})
+  for receipt in ({},{'status':'observed','wire_service_tier':'default'},{'status':'observed','wire_service_tier':'priority'}):
+   receipt.update(model='gpt-6.1-sol',reasoning_effort='low',generation=value['configuration_generation'],authorized_configured_receipt=True);value['service_tier_observed']=receipt;value['tier_observed_wall']=time.time() if receipt.get('wire_service_tier')!='priority' else 0
+   with self.assertRaises(h.Invalid):c.gate(state,'source-owner','implementation')
+  value['tier_observed_wall']=time.time();c.gate(state,'source-owner','implementation')
+ def test_tier_receipt_model_effort_generation_and_notification_do_not_mix(self):
+  import time
+  state=self.controller.state();value=state['harness']['sessions']['source-owner'];value.update(managed=True,configured_observed=c.configuration(observed()),observed_monotonic_wall=time.time());value['policy_expected'].update(reasoning_effort='low',service_tier='fast',tier_resolution={'wire_id':'priority'})
+  good={'thread_id':'source','model':'gpt-6.1-sol','reasoning_effort':'low','status':'observed','wire_service_tier':'priority','source':'thread/resume','generation':value['configuration_generation'],'authorized_configured_receipt':True};value.update(service_tier_observed=good,tier_observed_wall=time.time())
+  c.gate(state,'source-owner','implementation')
+  for key,bad in [('model','gpt-6-astra'),('reasoning_effort','ultra'),('generation','old'),('authorized_configured_receipt',False)]:
+   value['service_tier_observed']=dict(good,**{key:bad})
+   with self.assertRaises(h.Invalid):c.gate(state,'source-owner','implementation')
+  value['service_tier_observed']=good;h.save(self.path,state)
+  self.controller.observe_settings('source-owner',{'threadId':'source','threadSettings':{'model':'gpt-6.1-sol','effort':'low','serviceTier':'priority'}})
+  self.assertNotIn('service_tier_observed',self.controller.state()['harness']['sessions']['source-owner'])
+  with self.assertRaises(h.Invalid):self.controller.event('control_tier_observe',member='source-owner',observation=good,generation='old',response_bound=True)
+ def test_changed_current_catalogue_never_sends_stored_tier(self):
+  import profile_defaults as profiles
+  requested={'model':'gpt-6.1-sol','reasoning_effort':'low','service_tier':'fast','tier_resolution':{'wire_id':'priority'}}
+  state=self.controller.state();state['harness']['controls']['tier']={'member':'source-owner','state':'pending_turn_application','requested':requested};h.save(self.path,state)
+  for options in ([],[{'id':'changed','name':'Fast'}],[{'id':'priority','name':'Other'}]):
+   class RPC:
+    def request(self,method,params):
+     if method=='model/list':return {'data':[dict(CATALOG[0],serviceTiers=options)],'nextCursor':None}
+     raise AssertionError('No turn may dispatch after catalogue change')
+   self.controller.rpc=RPC()
+   with self.assertRaises((h.Invalid,profiles.ProfileError)):self.controller.apply_change('source-owner','tier',100)
+ def test_native_tier_refresh_never_uses_standalone_fallback(self):
+  state=self.controller.state();state['harness']['sessions']['source-owner']['identity']['owned']=False;h.save(self.path,state)
+  with self.assertRaises(c.ControlError):self.controller.refresh_owned_configuration('source-owner')
  def test_pause_cannot_rebind(self):
   self.prepare()
   with self.assertRaises(h.Invalid):self.controller.bind('source-owner','source',owned=True)

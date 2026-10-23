@@ -17,4 +17,6 @@ For session model/effort inspection, explicit change requests, or an unmanaged s
 
 When managed packets exceed the unchanged context guard or a reset needs portable evidence, read [checkpoints](references/checkpoints.md). Preserve canonical history; use an owner- and independently reviewed working view with exact live obligations, hash-pinned snapshots, allowlisted evidence and fresh packet ACKs. Installation, administrative policy migration, archive verification and actual work resumption are separate steps.
 
+For Astra leader/advisor defaults, read [profiles](references/profiles.md). Model, reasoning and requested service mode are separate. Core Sol and support Luna remain unchanged. Desired defaults and configured observations do not attest current provider execution.
+
 For a failed-review correction under the same owner while retaining claims, read [same-owner rework](references/rework.md). Use the explicit CAS/idempotent transition and fresh packet receipt; do not release/reassign merely to reset task state or review counts.

@@ -66,10 +66,13 @@ def run(path,member,task,run_id,reserve,command,cwd,timeout=120):
   s=read(path);r=s['harness']['runs'][run_id];model=r['model']
   h.require(any(m.get('model')==model for m in catalog),'Exact model absent from live catalog')
   import session_control as control
-  entry=next(m for m in catalog if m.get('model')==model);effort=entry.get('defaultReasoningEffort');control.validate_choice(catalog,model,effort)
-  response=rpc.request('thread/start',{'model':model,'config':{'model_reasoning_effort':effort},'cwd':str(Path(cwd).resolve()),'sandbox':'read-only','approvalPolicy':'never'})
+  import profile_defaults as profiles
+  role=s['harness']['profiles'][member]['role'];requested=profiles.role_request(h.effective_contract()['policy'],role);entry=next(m for m in catalog if m.get('model')==model);effort=requested.get('reasoning_effort',entry.get('defaultReasoningEffort'));requested.update(model=model,reasoning_effort=effort);params,resolution=profiles.start_parameters(catalog,requested)
+  response=rpc.request('thread/start',dict(params,cwd=str(Path(cwd).resolve()),sandbox='read-only',approvalPolicy='never'))
   thread_id=response['thread']['id'];h.check_model(model,catalog,response)
-  ctl=control.Controller(path,rpc,'managed-run:'+run_id,'local','official-owned-stdio');ctl.bind(member,thread_id,owned=True,effort=effort,managed=True,replacement_run=run_id);ctl.inspect(member)
+  ctl=control.Controller(path,rpc,'managed-run:'+run_id,'local','official-owned-stdio');ctl.bind(member,thread_id,owned=True,effort=effort,managed=True,replacement_run=run_id,service_tier=requested.get('service_tier'),tier_resolution=resolution);ctl.inspect(member)
+  if requested.get('service_tier')is not None:
+   tier=profiles.configured(response,'thread/start');h.require(profiles.tier_matches(tier,resolution),'Configured service tier unavailable/substituted');ctl.event('control_tier_observe',member=member,observation=tier,generation=ctl.state()['harness']['sessions'][member]['configuration_generation'],response_bound=True)
   h.transaction(path,{'op':'observe','run':run_id,'phase':'thread_verified','receipt':{'thread_id':thread_id,'model':response['model'],'catalog_models':[m.get('model') for m in catalog]}})
   s=read(path);prompt=json.dumps(s['harness']['runs'][run_id]['packet'],ensure_ascii=False)+'\nPerform only the assigned task within read-only capability; return evidence and limits.'
   # Set uncertain before invocation, because send may succeed then throw.
