@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased — team harness 0.4.0
+
+- Request distinct Astra leader/advisor model, ultra reasoning and Fast mode; resolve the current catalogue wire tier without fallback. Preserve Sol/Luna roles, configured versus execution evidence, and active project contracts. Add a separately journaled requested-default overlay with ordered rollback.
+
 ## Unreleased — team harness 0.3.0
 
 - Add reviewed compact checkpoint working views, immutable full-history snapshots and explicitly allowlisted portable evidence. Administrative checkpoint/policy migration keeps the context guard, ownership and accounting intact and requires fresh member ACKs before execution. Missing or corrupt archives fail closed; native clients remain advisory.
