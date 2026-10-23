@@ -158,8 +158,13 @@ def main():
             f.command('hide', .3); ck('wait','disappeared',wait(condition('status','absent'))['matches'])
             f.command('replace', .3); ck('wait','appeared',wait(condition('status','exists'))['matches'])
             f.command('move'); r = wait({'predicate':'stable','stableMs':250}); ck('wait','geometry_settled',r['matches'] and r['elapsedMilliseconds'] >= 400)
-            r = f.call('mac_wait_for',dict(f.identity,condition=condition('not-there','exists'),timeoutMs=200))
-            ck('wait','timeout_is_not_success',not r['matches'] and r['outcome']['effect']=='predicate_not_met')
+            # Use one explicit poll interval to test a completed false predicate at
+            # the same 200ms deadline, rather than relying on a late scan fitting.
+            # AX notifications may still wake early; partial coverage must fail.
+            r = f.call('mac_wait_for',dict(f.identity,condition=condition('not-there','exists'),timeoutMs=200,pollMs=200))
+            ck('wait','timeout_is_not_success',r['status']=='predicate_timeout' and r['matches'] is False
+               and r['outcome']['effect']=='predicate_not_met'
+               and r['observation']['coverage']=='collected_window_tree' and r['observation']['diagnostics']==[])
             r = f.call('mac_wait_for',dict(f.identity,condition=condition('not-there','absent'),maxNodes=1),True)
             ck('wait','partial_cannot_prove_absence',r.get('code')=='partial_coverage')
             f.command('duplicate'); r = f.call('mac_wait_for',dict(f.identity,condition=condition('ready','exists')),True)
