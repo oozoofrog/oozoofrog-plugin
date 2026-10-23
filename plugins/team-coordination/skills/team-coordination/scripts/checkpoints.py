@@ -141,7 +141,7 @@ def apply(state,e,state_root=None):
   proof,approval_data=approval(s,p,e['approvals']);approval_relative='objects/'+sha(approval_data);immutable(safe(candidate.parent,approval_relative),approval_data);old_contract=a['policy_hash']
   require(old_contract==target_hash or e.get('policy_refresh')is True,'Explicit policy migration required')
   if e.get('policy_refresh'):
-   require(bool(e.get('reason')),'Policy migration reason required');limits=contract['policy']['limits'];require(a['spent']<=a['budget']<=limits['project_token_budget'],'Preserve budget; resolve accounting before migration')
+   require(bool(e.get('reason')),'Policy migration reason required');limits=contract['policy']['limits'];require(a['spent']<=a['budget']<=h.budget_ceiling(a,limits['project_token_budget']),'Preserve budget; resolve accounting before migration')
    a.update(policy_hash=target_hash,concurrency=min(a['concurrency'],limits['concurrency']),context_limit=min(a['context_limit'],limits['context_estimate_limit']),review_limit=min(a['review_limit'],limits['review_passes']))
    for x in a['profiles'].values():x['model']=contract['policy']['roles'][x['role']]['model']
   a['checkpoint']={'id':p['id'],'directory':str(candidate.parent.resolve()),'proposal_sha256':digest(p),'approval':proof,'approval_object':{'relative':approval_relative,'sha256':sha(approval_data)},'source_policy_hash':old_contract}

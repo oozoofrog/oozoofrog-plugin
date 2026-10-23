@@ -1,8 +1,10 @@
 # Requested profiles and configured evidence
 
-Leader/advisor defaults request model `gpt-6-astra`, reasoning `ultra`, and service mode `fast` as separate fields. Core remains `gpt-6.1-sol`; support remains `gpt-6-luna`. Advisor implementation is still prohibited. Do not use `ultrafast` or silently substitute a model, effort or tier.
+Leader/design/advisor defaults request `gpt-6-astra` with reasoning `high`; core/reviewer request `gpt-6.1-sol` with reasoning `high`; support requests `gpt-6-luna` with reasoning `medium`. Every role requests service mode `normal`. Model, reasoning effort and service mode are separate fields. Choose supported reasoning effort to fit task difficulty; do not automatically restore ultra or Fast defaults. Advisor implementation is still prohibited.
 
-The official model catalogue advertises tier IDs and labels. The observed Fast label maps to wire ID `priority`; resolve it from current `model/list.serviceTiers`, retaining the requested label, wire ID, catalogue hash and timestamp. Deprecated speed labels alone do not authorize a mapping.
+Resolve `normal` only from an exact model's explicit `Normal` label in current `model/list.serviceTiers`, retaining its wire ID, catalogue hash and timestamp. A catalogue exposing only Fast does not establish Normal: new default dispatch then fails closed before inference. Missing/null tier data, `defaultServiceTier`, inherited Fast, deprecated speed labels and guessed aliases are insufficient. Explicit `fast` remains an opt-in capability resolved from its exact catalogue label, rather than a default.
+
+The official `TurnStartParams.serviceTierForTurn` schema documents `default` as standard speed for one new turn; omitted/null inherits the thread tier. That per-turn contract does not establish a `thread/start` or native-app Normal mapping. This adapter's requested-default path continues to require catalogue evidence; it does not inject unsupported native service-tier arguments.
 
 Session control `change --service-tier fast` records a pending request; `apply-change` sends persistent `turn/start` model, effort and serviceTier at an owned idle boundary. The following controlled default turn omits all overrides; `verify` separately checks configured settings. `thread/read` lacks service-tier data. Only supported start/resume responses or exact-thread settings notifications provide configured tier observations. An owned idle resume refresh is explicit, not a native-session discovery mechanism. Missing or substituted tier blocks verification; RPC rejection, capacity and transport uncertainty never trigger fallback or automatic resend. Current provider execution remains unavailable even after configured verification.
 
@@ -10,7 +12,7 @@ The current native app messaging API exposes model/thinking but no tier setter o
 
 ## Separate requested-default overlay
 
-From a verified bundle use `run.py profile-overlay --codex-home ABS --profile REQUESTED_JSON plan`, then `apply`. The JSON schema is 1, `execution_authorized` is false, and `adoption` is `pending_explicit_owner_safe_boundary`. Leader/advisor role objects contain the three exact fields above; core/support retain their model IDs. Keep catalogue evidence distinct from configured settings.
+From a verified bundle use `run.py profile-overlay --codex-home ABS --profile REQUESTED_JSON plan`, then `apply`. The JSON schema is 1, `execution_authorized` is false, and `adoption` is `pending_explicit_owner_safe_boundary`. All five role objects contain their exact model, reasoning effort and Normal request above. An older installed overlay is not silently replaced; preserve its journal and use an exact reviewed configuration migration. Keep catalogue evidence distinct from configured settings.
 
 The overlay appends a discoverable directive outside the existing managed AGENTS block, writes `team-coordination-desired-profiles.json` outside the installed skill, and uses its own `team-coordination-profile-defaults-install.json` journal. It installs future instruction defaults only. Existing project contracts and actual native session configuration remain pending explicit safe owner adoption; completed projects are not rerun. The source runtime 0.4 is separate from a currently installed 0.3 runtime.
 

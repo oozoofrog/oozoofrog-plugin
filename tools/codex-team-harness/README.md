@@ -2,13 +2,15 @@
 
 An opt-in coordination policy and read-only managed-run pilot for Codex. A leader assigns bounded work; execution owners hold canonical write claims; independent reviewers inspect current evidence. One project record stores decisions, instruction revisions, acknowledgements, runs and recovery state.
 
-Runtime `0.4.0` builds on the sanitized portable `0.1.1-public.1` derivative. It has a generic policy/guide and a plan-bound installer. Its bytes and hashes differ from the separately installed private package. It contains no machine-specific baselines, personal paths, project data, session logs or authentication. No prior repository history is imported.
+Runtime `0.4.1` builds on the sanitized portable `0.1.1-public.1` derivative. It has a generic policy/guide and a plan-bound installer. Its bytes and hashes differ from the separately installed private package. It contains no machine-specific baselines, personal paths, project data, session logs or authentication. No prior repository history is imported.
 
 ## Obtain and verify the migrated source
 
 Canonical source: https://github.com/oozoofrog/oozoofrog-plugin, under `tools/codex-team-harness/`.
 
-This migration is reviewed through a branch/commit before merge. Destination `main` does not contain it until the PR is merged. Select the exact reviewed commit from that PR; do not substitute an unreviewed branch head. No new binary release is required.
+This update is reviewed through a branch/commit before merge. Select the exact reviewed commit from that PR; do not substitute an unreviewed branch head. The portable release is a source archive, with no bundled model runtime or credentials.
+
+Release target: [team-harness-v0.4.1](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.4.1). Until the release is published, use the reviewed source commit below. Published assets are `codex-team-harness-0.4.1.tar.gz` and its `.sha256` file. Download both without signing in, compare the checksum before extraction, and retain the trusted release commit and digest. A checksum authenticates bytes only when obtained through a trusted release record. Existing versioned assets must not be overwritten.
 
 Anonymous source download needs no GitHub account. Replace the placeholder with the trusted reviewed commit:
 
@@ -22,7 +24,7 @@ cd oozoofrog-plugin-source/tools/codex-team-harness
 
 The source manifest is checked before installer/runner actions. A manifest from an untrusted source cannot authenticate itself; obtain the commit and source archive through a trusted review record. Download does not execute code. After merge, pin a reviewed commit on `main` in the same way.
 
-The former dedicated repository/release is retained as a legacy recovery reference, not the current installation source. Migration provenance and unchanged-runtime scope are documented in [the migration record](../../docs/team-harness-migration.md). Do not delete or overwrite the legacy repository/release as part of this migration.
+The former dedicated repository/release is retained as a legacy recovery reference, not the current installation source. Migration provenance is documented in [the migration record](../../docs/team-harness-migration.md). Do not delete or overwrite the legacy repository/release as part of this migration.
 
 ## Restore on a new Mac
 
@@ -74,6 +76,10 @@ Use `python3 -I -S -B run.py session-control --help` and the [session-control pr
 
 For oversized packet recovery and portable checkpoint archives, see [checkpoint governance](payload/team-coordination/references/checkpoints.md). The archive is project-private and must not be committed to public source.
 
-Astra leader/advisor requested defaults are model `gpt-6-astra`, reasoning `ultra` and service mode `fast`, separately. Read [profiles](payload/team-coordination/references/profiles.md) for catalogue translation, configuration limits and the independently reversible requested-default overlay. Existing active contracts are not automatically replaced.
+Requested defaults are Astra `high` for leader/design/advisor, Sol 6.1 `high` for core/reviewer and Luna 6 `medium` for support, with `normal` service mode for every role. Read [profiles](payload/team-coordination/references/profiles.md) for catalogue translation, configuration limits and the independently reversible requested-default overlay. Normal requires an explicit current catalogue label; a catalogue advertising only Fast blocks new default dispatch rather than inheriting Fast. Existing active contracts and native sessions are not automatically replaced or verified.
 
 Patch0.3.1 adds [same-owner failed-review rework](payload/team-coordination/references/rework.md) without releasing claims or resetting reviews/accounting. No installed runtime or active project is automatically migrated.
+
+## 0.4.1 budget and diagnostic governance
+
+Adds [explicit per-project budget changes](payload/team-coordination/references/budget.md) and [single-cycle source diagnostics](payload/team-coordination/references/diagnostics.md). Both require exact state, copied human approval and independent approval. Diagnostic work preserves the original failure, ownership, review counts and budget; it cannot accept the original deliverable. Installation changes no project state.

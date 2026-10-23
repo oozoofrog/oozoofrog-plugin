@@ -1,29 +1,35 @@
 {
-  "version": "0.4.0",
+  "version": "0.4.1",
   "roles": {
     "leader": {
       "model": "gpt-6-astra",
       "execution": false,
-      "reasoning_effort": "ultra",
-      "service_tier": "fast"
+      "reasoning_effort": "high",
+      "service_tier": "normal"
     },
     "core": {
       "model": "gpt-6.1-sol",
-      "execution": true
+      "execution": true,
+      "reasoning_effort": "high",
+      "service_tier": "normal"
     },
     "support": {
       "model": "gpt-6-luna",
-      "execution": true
+      "execution": true,
+      "reasoning_effort": "medium",
+      "service_tier": "normal"
     },
     "advisor": {
       "model": "gpt-6-astra",
       "execution": true,
-      "reasoning_effort": "ultra",
-      "service_tier": "fast"
+      "reasoning_effort": "high",
+      "service_tier": "normal"
     },
     "reviewer": {
       "model": "gpt-6.1-sol",
-      "execution": false
+      "execution": false,
+      "reasoning_effort": "high",
+      "service_tier": "normal"
     }
   },
   "limits": {

@@ -8,11 +8,13 @@ def role_request(policy,role):
  value=policy['roles'][role];return {key:value[key]for key in ('model','reasoning_effort','service_tier')if key in value}
 def resolve_service_tier(catalog,model,label):
  if label is None:return {'requested_label':None,'wire_id':None,'status':'not_requested','at':now()}
- if label!='fast':raise ProfileError('Unsupported requested tier label; never conflate reasoning/tier or infer aliases')
+ if label not in ('normal','fast'):raise ProfileError('Unsupported requested tier label; never conflate reasoning/tier or infer aliases')
  entry=next((m for m in catalog if m.get('model')==model),None)
  if entry is None:raise ProfileError('Exact model absent from catalogue')
- options=[x for x in entry.get('serviceTiers',[])if isinstance(x.get('name'),str)and x['name'].casefold()==label]
- if len(options)!=1 or not isinstance(options[0].get('id'),str)or not options[0]['id']:raise ProfileError('Fast tier absent/ambiguous in current serviceTiers; no fallback from deprecated speed labels')
+ tiers=entry.get('serviceTiers')
+ if not isinstance(tiers,list):raise ProfileError('Explicit current serviceTiers required; null/default/deprecated labels do not establish a tier')
+ options=[x for x in tiers if isinstance(x,dict)and isinstance(x.get('name'),str)and x['name'].casefold()==label]
+ if len(options)!=1 or not isinstance(options[0].get('id'),str)or not options[0]['id']:raise ProfileError(label+' tier absent/ambiguous in current serviceTiers; no fallback or inherited tier')
  return {'requested_label':label,'wire_id':options[0]['id'],'catalog_label':options[0]['name'],'catalog_entry_sha256':digest(entry),'source':'official model/list.serviceTiers','status':'resolved_from_catalogue','at':now()}
 def start_parameters(catalog,requested):
  model=requested['model'];effort=requested['reasoning_effort'];entry=next((x for x in catalog if x.get('model')==model),None)

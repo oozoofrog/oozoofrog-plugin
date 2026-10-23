@@ -32,4 +32,11 @@ class Adapter(unittest.TestCase):
   class NoSend:
    def send(self,x):raise AssertionError('must not send')
   with self.assertRaises(h.Invalid):m.dispatch(NoSend(),self.path,'one','thread','prompt','gpt-6.1-sol')
+ def test_normal_default_absent_from_catalogue_never_creates_thread_or_turn(self):
+  import profile_defaults as profiles
+  with self.assertRaises(profiles.ProfileError):self.run_fake('normal-absent')
+  log=(self.root/'methods').read_text();self.assertNotIn('thread/start',log);self.assertNotIn('turn/start',log);self.assertEqual('not_executed',m.read(self.path)['harness']['runs']['one']['state'])
+ def test_normal_default_cannot_accept_inherited_fast_receipt(self):
+  with self.assertRaises(h.Invalid):self.run_fake('inherited-fast')
+  self.assertNotIn('turn/start',(self.root/'methods').read_text());self.assertEqual('not_executed',m.read(self.path)['harness']['runs']['one']['state'])
 if __name__=='__main__':unittest.main()

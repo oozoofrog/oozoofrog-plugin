@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — team harness 0.4.1
+
+- Team harness 0.4.1 adds explicitly approved per-project budget administration and bounded same-task source diagnostics. Full-state CAS, copied approval evidence, fresh packet ACKs and one consumed diagnostic cycle preserve failures, claims, reviews and accounting.
+
+- Defaults now request Normal for every role, Astra/Sol high and Luna medium. Normal dispatch requires an explicit current catalogue mapping and refuses missing tiers or inherited Fast; explicit Fast remains opt-in. Requested defaults remain separate from native-session configuration and runtime identity.
+
 ## MacPilot [3.5.1] — 2026-10-23
 
 - MacPilot now keeps help, tool catalogs, MCP metadata, and connection diagnostics available when the current invocation cannot establish a WindowServer session. Desktop operations return a pre-dispatch session error; skipped permission probes remain unknown instead of appearing denied.
