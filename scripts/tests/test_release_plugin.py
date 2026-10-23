@@ -347,6 +347,30 @@ with report.run(cleanup=lambda: None): raise RuntimeError('synthetic abort')
         self.assertEqual('failed', data['suiteStatus'])
         with self.assertRaises(ValueError): capability_report.validate_report(data)
 
+    def test_runner_terminal_output_failure_is_inside_completion_guard(self):
+        spec = importlib.util.spec_from_file_location('capability_runner_test', SOURCE / 'macpilot/scripts/verify_capabilities.py')
+        runner = importlib.util.module_from_spec(spec)
+        with patch.dict(sys.modules, {'capability_report': capability_report}): spec.loader.exec_module(runner)
+        closed = []
+        class Fixture:
+            def __init__(self, args): pass
+            def observe(self): return dict(id='synthetic')
+            def call(self, *args): return dict(code='image_search_disabled')
+            def close(self): closed.append(True)
+        binary = Path(self.temporary.name) / 'binary'
+        binary.write_bytes(b'synthetic binary')
+        evidence = Path(self.temporary.name) / 'terminal-output'
+        argv = ['verify_capabilities.py', '--binary', str(binary), '--fixture', str(binary),
+                '--evidence', str(evidence), '--stage', 'image']
+        with patch.object(runner, 'Fixture', Fixture), patch.object(sys, 'argv', argv), \
+             patch('builtins.print', side_effect=BrokenPipeError('synthetic terminal closure')):
+            with self.assertRaises(BrokenPipeError): runner.main()
+        data = json.loads((evidence / 'result.json').read_text())
+        self.assertEqual('failed', data['suiteStatus'])
+        self.assertEqual(dict(type='BrokenPipeError'), data['bodyError'])
+        self.assertFalse(data['completed'])
+        self.assertEqual([True], closed)
+
 
 @unittest.skipUnless(sys.platform == 'darwin', 'macOS signing and archive tools required')
 class RuntimeArchiveTests(unittest.TestCase):
