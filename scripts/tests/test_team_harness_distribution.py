@@ -13,7 +13,7 @@ BUNDLE = ROOT / 'tools/codex-team-harness'
 class TeamHarnessDistributionTests(unittest.TestCase):
     def test_public_payload_manifest_and_complete_skill_copies(self):
         manifest = json.loads((BUNDLE / 'manifest.json').read_text())
-        self.assertEqual('0.4.0', manifest['version'])
+        self.assertEqual('0.4.1', manifest['version'])
         payload = BUNDLE / 'payload/team-coordination'
         for relative, expected in manifest['files'].items():
             path = BUNDLE / relative
@@ -29,6 +29,7 @@ class TeamHarnessDistributionTests(unittest.TestCase):
         self.assertEqual((source / 'agents/openai.yaml').read_bytes(), (mirror / 'agents/openai.yaml').read_bytes())
         package = json.loads((ROOT / 'plugins/team-coordination/.codex-plugin/plugin.json').read_text())
         self.assertEqual('team-coordination', package['name'])
+        self.assertEqual(manifest['version'], package['version'])
         self.assertIn('description: ' + package['description'], (source / 'SKILL.md').read_text())
         for key in ('hooks', 'mcpServers', 'apps'):
             self.assertNotIn(key, package)

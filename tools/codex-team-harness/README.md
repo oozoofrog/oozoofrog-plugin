@@ -2,7 +2,7 @@
 
 An opt-in coordination policy and read-only managed-run pilot for Codex. A leader assigns bounded work; execution owners hold canonical write claims; independent reviewers inspect current evidence. One project record stores decisions, instruction revisions, acknowledgements, runs and recovery state.
 
-Runtime `0.4.0` builds on the sanitized portable `0.1.1-public.1` derivative. It has a generic policy/guide and a plan-bound installer. Its bytes and hashes differ from the separately installed private package. It contains no machine-specific baselines, personal paths, project data, session logs or authentication. No prior repository history is imported.
+Runtime `0.4.1` builds on the sanitized portable `0.1.1-public.1` derivative. It has a generic policy/guide and a plan-bound installer. Its bytes and hashes differ from the separately installed private package. It contains no machine-specific baselines, personal paths, project data, session logs or authentication. No prior repository history is imported.
 
 ## Obtain and verify the migrated source
 
@@ -77,3 +77,7 @@ For oversized packet recovery and portable checkpoint archives, see [checkpoint 
 Astra leader/advisor requested defaults are model `gpt-6-astra`, reasoning `ultra` and service mode `fast`, separately. Read [profiles](payload/team-coordination/references/profiles.md) for catalogue translation, configuration limits and the independently reversible requested-default overlay. Existing active contracts are not automatically replaced.
 
 Patch0.3.1 adds [same-owner failed-review rework](payload/team-coordination/references/rework.md) without releasing claims or resetting reviews/accounting. No installed runtime or active project is automatically migrated.
+
+## 0.4.1 budget and diagnostic governance
+
+Adds [explicit per-project budget changes](payload/team-coordination/references/budget.md) and [single-cycle source diagnostics](payload/team-coordination/references/diagnostics.md). Both require exact state, copied human approval and independent approval. Diagnostic work preserves the original failure, ownership, review counts and budget; it cannot accept the original deliverable. Installation changes no project state.

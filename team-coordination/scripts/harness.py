@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Managed-run gates layered on the existing team ledger; no OS interception."""
-import argparse,copy,fcntl,hashlib,json,math,os,sys,tempfile
+import argparse,base64,copy,fcntl,hashlib,json,math,os,sys,tempfile
 from pathlib import Path
 import team_ledger as ledger
 Invalid,require=ledger.Invalid,ledger.require
@@ -10,6 +10,80 @@ def digest(value):return hashlib.sha256(json.dumps(value,sort_keys=True,ensure_a
 def effective_contract():
  root=Path(__file__).resolve().parents[1]
  return {'policy':json.loads((root/'policy.json').read_text()),'roles':{p.stem:p.read_text()for p in sorted((root/'roles').glob('*.md'))},'schema':json.loads((root/'schema/project-state.schema.json').read_text()),'implementation_sha256':{name:hashlib.sha256((root/'scripts'/name).read_bytes()).hexdigest()for name in ('harness.py','managed_run.py','team_ledger.py','session_control.py','checkpoints.py','profile_defaults.py')}}
+
+def budget_ceiling(a,default):
+ # Validate retained copied approval bytes; later migration does not reauthenticate a human.
+ ceilings=[default]
+ for identifier,record in a.get('budget_changes',{}).items():
+  request=record['request'];transition=record['original_transition']
+  require(request['request_id']==identifier and request['new_budget']==transition['budget']and request['expected_budget']==transition['previous_budget']and request['project']==transition['project']==a['goal'],'Budget receipt binding changed')
+  require(type(transition['budget'])is int and type(transition['previous_budget'])is int and transition['previous_budget']<transition['budget'],'Invalid committed budget bounds')
+  for field,proof in [('approval_bytes_base64','approval_evidence'),('human_approval_bytes_base64','human_approval')]:
+   data=base64.b64decode(record[field],validate=True);require(hashlib.sha256(data).hexdigest()==record[proof]['sha256'],'Copied budget evidence changed')
+  require(record['human_approval']==request['human_approval'],'Human approval binding changed')
+  approvals=json.loads(base64.b64decode(record['approval_bytes_base64']))
+  for role in ('leader','reviewer'):
+   approval=approvals[role];require(approval['request_sha256']==digest(request)and all(approval.get(flag)is True for flag in ('approved','safe_boundary','all_current_obligations_retained','human_approval_verified')),'Retained budget approval changed')
+  if transition['budget']==a['budget']:ceilings.append(transition['budget'])
+ return max(ceilings)
+
+def budget_change_receipt(state,request_id):
+ a=state['harness'];require(request_id in a.get('budget_changes',{}),'Unknown budget request ID')
+ record=a['budget_changes'][request_id]
+ return {'request_id':request_id,'original_transition':record['original_transition'],'current_observation':{'budget':a['budget'],'spent':a['spent'],'revision':a['revision']},'scope':'Committed administrative receipt; no execution permission or native reload'}
+
+def diagnostic_tasks(s):
+ return {record['request']['task'] for record in s['harness'].get('diagnostics',{}).values()}
+
+def diagnostic_provenance(s,task):
+ return digest({'task':s['tasks'][task],'reworks':{k:v for k,v in s['harness'].get('reworks',{}).items()if v['original_transition']['task']==task}})
+
+def diagnostic_invariants(s):
+ for record in s['harness'].get('diagnostics',{}).values():
+  require(s['tasks'][record['request']['task']]==record['original_task'],'Diagnostic task obligations changed; separately authorized transition required')
+  require(all(ledger.canonical(path)==path for path in record['request']['modification_paths']+record['original_task']['paths']),'Diagnostic path aliases changed; inspect before continuation')
+
+def diagnostic_grant(s,e,state_root):
+ h=s['harness'];identifier=e.get('request_id');require(isinstance(identifier,str)and bool(identifier.strip())and len(identifier)<=128,'Stable diagnostic request ID required')
+ require(state_root is not None and Path(e['project_root']).is_absolute()and Path(e['project_root']).resolve()==Path(state_root).resolve(),'Exact canonical state directory required')
+ require(e.get('source_sha256')==digest(s)and e.get('project')==h['goal'],'Exact current state and project required')
+ require(e.get('policy_hash')==h['policy_hash']==digest(effective_contract()),'Current exact policy contract required')
+ import checkpoints
+ checkpoints.quiescent(s)
+ if h.get('checkpoint'):checkpoints.active(s)
+ task=e['task'];t=s['tasks'][task];member=e['member'];require(task not in diagnostic_tasks(s),'Diagnostic cycle already granted for original task; no new-ID retry')
+ require(t['owner']==member and t['state']=='ready_for_review','Same owner and original ready_for_review task required')
+ require(s['members'][member]['role']not in ('leader','reviewer')and ledger.fresh(s['members'][member]['identity_claim']),'Fresh execution owner required')
+ reviews=t['reviews'];require(reviews and reviews[-1]['verdict']=='fail'and ledger.fresh(reviews[-1]['evidence']),'Latest actual fresh failed review required')
+ failure=digest({'task':task,'index':len(reviews)-1,'review':reviews[-1]})
+ require(e.get('failed_review_digest')==failure and e.get('provenance_sha256')==diagnostic_provenance(s,task),'Exact failed-review and retained rework provenance required')
+ require(not any(r['request']['failed_review_digest']==failure for r in h.get('diagnostics',{}).values()),'Failed review already consumed for diagnosis')
+ goal=e.get('evidence_goal');require(isinstance(goal,str)and bool(goal.strip()),'Explicit new diagnostic evidence goal required')
+ paths=e.get('modification_paths');require(isinstance(paths,list)and paths and all(isinstance(path,str)and Path(path).is_absolute()and ledger.canonical(path)==path for path in paths),'Exact canonical diagnostic modification paths required')
+ require(len(set(paths))==len(paths)and all(any(Path(path).is_relative_to(Path(claim))for claim in t['paths'])for path in paths),'Diagnostic paths must remain within retained write claims')
+ reserve=e.get('max_reserve');require(type(reserve)is int and 0<reserve<=h['budget']-h['spent'],'Diagnostic reservation must fit existing remaining budget')
+ requester=e.get('requester');require(requester in s['members']and s['members'][requester]['role']=='leader'and ledger.fresh(s['members'][requester]['identity_claim']),'Fresh registered leader requester required')
+ human=e['human_approval'];require(ledger.fresh(human),'Exact human approval bytes required');human_data=Path(human['path']).read_bytes();require(hashlib.sha256(human_data).hexdigest()==human['sha256'],'Human approval changed during capture')
+ proof=ledger.evidence(e['approvals']);data=Path(e['approvals']).read_bytes();require(hashlib.sha256(data).hexdigest()==proof['sha256'],'Independent approval changed during capture');approvals=json.loads(data);proposal={k:v for k,v in e.items()if k!='approvals'};members=[]
+ for role in ('leader','reviewer'):
+  approval=approvals[role];m=approval['member'];require(m in s['members']and s['members'][m]['role']==role and ledger.fresh(s['members'][m]['identity_claim']),'Diagnostic approval role/identity mismatch')
+  require(approval.get('request_sha256')==digest(proposal)and all(approval.get(flag)is True for flag in ('approved','safe_boundary','all_current_obligations_retained','human_approval_verified','diagnostic_only')),'Exact diagnostic-only request approval required');members.append(m)
+ require(members[0]==requester and members[0]!=members[1]and s['members'][members[0]]['runtime_id_claim']!=s['members'][members[1]]['runtime_id_claim'],'Independent diagnostic review required')
+ require(members[1]!=member and s['members'][members[1]]['runtime_id_claim']!=s['members'][member]['runtime_id_claim'],'Diagnostic reviewer cannot share the execution owner runtime')
+ h['revision']+=1
+ for profile in h['profiles'].values():profile.pop('ack',None)
+ transition={'task':task,'owner':member,'state':'granted','revision':h['revision'],'task_state':t['state']}
+ h.setdefault('diagnostics',{})[identifier]={'event_digest':digest(e),'request':proposal,'original_task':copy.deepcopy(t),'original_transition':transition,'state':'granted','approval_evidence':proof,'approval_bytes_base64':base64.b64encode(data).decode(),'human_approval_bytes_base64':base64.b64encode(human_data).decode(),'authority_limit':'Recorded attestations; one diagnostic run only, no correction or deliverable acceptance; no native permission enforcement'}
+ h['changes'].append({'revision':h['revision'],'diagnostic_request':identifier,'task':task,'evidence_goal':goal,'modification_paths':paths,'max_reserve':reserve})
+
+def diagnostic_result(s,run):
+ r=s['harness']['runs'][run];identifier=r.get('diagnostic_request_id')
+ if identifier:
+  record=s['harness']['diagnostics'][identifier];record['state']='uncertain'if r['state']=='uncertain'else 'closed';record['result']={'run':run,'outcome':r['state'],'evidence':r['evidence'],'charged':r.get('charged'),'task_state':s['tasks'][r['task']]['state']}
+
+def diagnostic_receipt(s,request_id):
+ require(request_id in s['harness'].get('diagnostics',{}),'Unknown diagnostic request ID');r=s['harness']['diagnostics'][request_id]
+ return {'request_id':request_id,'original_transition':r['original_transition'],'current_observation':{'state':r['state'],'result':r.get('result'),'revision':s['harness']['revision']},'scope':'Historical one-cycle diagnostic receipt; original deliverable remains blocked'}
 
 def initial(goal,budget=None,concurrency=None):
  limits=effective_contract()['policy']['limits'];budget=limits['project_token_budget']if budget is None else budget;concurrency=limits['concurrency']if concurrency is None else concurrency
@@ -23,6 +97,7 @@ def packet(s,member):
  require(h['policy_hash']==digest(contract),'Effective policy/role/schema changed; explicit policy_refresh required')
  tasks=[{'id':k,'purpose':v['purpose'],'context':v.get('context',''),'paths':v['paths'],'state':v['state']} for k,v in s['tasks'].items() if v['owner']==member]
  result={'schema':1,'revision':h['revision'],'epoch':p['epoch'],'policy_hash':h['policy_hash'],'policy_version':contract['policy']['version'],'role_contract':contract['roles'][p['role']],'limits':contract['policy']['limits'],'goal':h['goal'],'constraints':h['constraints'],'decisions':h['decisions'],'role':p['role'],'tasks':tasks,'changes':[c for c in h['changes'] if c['revision']>p.get('last_revision',0)],'unresolved_runs':[k for k,v in h['runs'].items() if v['state'] in ('active','uncertain')]}
+ result['accounting']={'budget':h['budget'],'spent':h['spent'],'meaning':'reservation ledger, not billing'}
  import checkpoints
  working=checkpoints.projection(s)
  if working:
@@ -31,6 +106,7 @@ def packet(s,member):
    if task['id']in contexts:task['context']=contexts[task['id']]
   result['task_obligations']={k:{field:value for field,value in v.items()if field!='context'}for k,v in s['tasks'].items()if v['state']!='accepted'or v.get('block')}
   result['accounting']={'budget':h['budget'],'spent':h['spent'],'meaning':'reservation ledger, not billing'}
+ if h.get('diagnostics'):result['diagnostics']={key:{'request':record['request'],'state':record['state'],'run':record.get('run'),'result':record.get('result'),'original_task':{field:value for field,value in record['original_task'].items()if field!='context'},'authority_limit':record['authority_limit']}for key,record in h['diagnostics'].items()}
  require(math.ceil(len(json.dumps(result,ensure_ascii=False).encode())/4)<=h['context_limit'],'Context estimate exceeds limit; leader must reduce irrelevant context, preserve decisions')
  return result
 
@@ -41,9 +117,19 @@ def ack_current(s,member):
 
 def apply(state,e,state_root=None):
  s=copy.deepcopy(state);h=s['harness'];op=e['op']
+ if op=='diagnostic_grant'and e.get('request_id')in h.get('diagnostics',{}):
+  require(h['diagnostics'][e['request_id']]['event_digest']==digest(e),'Conflicting diagnostic request ID; inspect committed receipt');return s
+ if op=='budget_change'and e.get('request_id')in h.get('budget_changes',{}):
+  require(h['budget_changes'][e['request_id']]['event_digest']==digest(e),'Conflicting budget request ID; inspect committed receipt')
+  return s
  if op=='rework'and e.get('request_id')in h.get('reworks',{}):
   require(h['reworks'][e['request_id']]['event_digest']==digest(e),'Conflicting rework request ID; inspect committed receipt')
   return s  # Readback only: never rewrite later state or repeat the transition.
+ diagnostic_invariants(s)
+ guarded=diagnostic_tasks(s)
+ if op in ('claim','release','reassign','handoff','review','accept','rework')and e.get('task')in guarded:raise Invalid('Diagnostic-only task remains blocked pending separately authorized future transition')
+ if op=='control_handoff_prepare':require(not guarded.intersection(e.get('tasks',[])),'Diagnostic owner/claims cannot transfer')
+ if op=='control_transfer':require(not guarded.intersection(h.get('handoffs',{}).get(e.get('handoff'),{}).get('tasks',[])),'Diagnostic owner/claims cannot transfer')
  if op in ('checkpoint_commit','checkpoint_restore'):
   import checkpoints
   return checkpoints.apply(s,e,state_root)
@@ -53,6 +139,7 @@ def apply(state,e,state_root=None):
  if op.startswith('control_'):
   import session_control
   s=session_control.apply(s,e)
+ elif op=='diagnostic_grant':diagnostic_grant(s,e,state_root)
  elif op=='register':
   m=e['member'];role=e['role'];require(m not in s['members'] and role in MODELS,'Duplicate member or unknown role')
   # Identity is a file-backed claim. Only adapter runtime receipt is observed transport data.
@@ -81,7 +168,7 @@ def apply(state,e,state_root=None):
   require(bool(e.get('reason')),'Leader migration reason required')
   require(not any(r['state']in ('active','uncertain')for r in h['runs'].values()),'Resolve active/uncertain runs before policy migration')
   contract=effective_contract();limits=contract['policy']['limits'];h['policy_hash']=digest(contract);h['revision']+=1
-  h['budget']=min(h['budget'],limits['project_token_budget']);h['concurrency']=limits['concurrency'];h['context_limit']=limits['context_estimate_limit'];h['review_limit']=limits['review_passes']
+  h['budget']=min(h['budget'],budget_ceiling(h,limits['project_token_budget']));h['concurrency']=limits['concurrency'];h['context_limit']=limits['context_estimate_limit'];h['review_limit']=limits['review_passes']
   for p in h['profiles'].values():p['model']=contract['policy']['roles'][p['role']]['model'];p.pop('ack',None)
   h['changes'].append({'revision':h['revision'],'policy_refresh':e['reason']})
   for r in h['runs'].values():
@@ -96,7 +183,12 @@ def apply(state,e,state_root=None):
   # last_revision tracks previous confirmed packet; changing it would change current packet hash.
  elif op=='begin':
   m=e['member'];t=s['tasks'][e['task']];p=h['profiles'][m]
-  require(t['owner']==m and t['state'] in ('assigned','running'),'Wrong task owner/state')
+  diagnostic=e.get('diagnostic_request_id');grant=h.get('diagnostics',{}).get(diagnostic)if diagnostic else None
+  if diagnostic:
+   require(grant is not None and grant['request']['task']==e['task']and grant['request']['member']==m and grant['state']=='granted','Exact unconsumed diagnostic grant required')
+   require(type(e['reserve'])is int and 0<e['reserve']<=grant['request']['max_reserve'],'Diagnostic reservation exceeds approved bound')
+  else:require(e['task']not in diagnostic_tasks(s),'Diagnostic-only task cannot begin normal work')
+  require(t['owner']==m and (t['state']=='ready_for_review'if diagnostic else t['state']in ('assigned','running')),'Wrong task owner/state')
   require(ledger.fresh(s['members'][m]['identity_claim']),'Stale identity claim')
   require(p['role'] not in ('leader','reviewer') and p['model'] is not None,'Requested role model unresolved or nonexecuting role')
   import session_control
@@ -112,7 +204,8 @@ def apply(state,e,state_root=None):
   reserve=e['reserve'];require(type(reserve)is int and reserve>0,'Positive integer reservation required')
   require(h['spent']+sum(r['reserve'] for r in active)+sum(r['packet_reserve']for r in packets)+reserve<=h['budget'],'Budget exhausted')
   h['runs'][e['run']]={'task':e['task'],'member':m,'model':p['model'],'revision':h['revision'],'epoch':p['epoch'],'state':'active','reserve':reserve,'stale':False,'phase':'reserved','observed':{},'packet':packet(s,m)}
-  t['state']='running'
+  if diagnostic:h['runs'][e['run']]['diagnostic_request_id']=diagnostic;grant['state']='active';grant['run']=e['run']
+  else:t['state']='running'
  elif op=='observe':
   r=h['runs'][e['run']];require(r['state']=='active','Run not active');r['observed'].update(e['receipt']);r['phase']=e['phase']
  elif op=='finish':
@@ -122,19 +215,48 @@ def apply(state,e,state_root=None):
    used=e.get('usage',0 if out=='not_executed' else r['reserve']);require(type(used)is int and used>=0,'Invalid usage')
    r['observed_usage']=e.get('usage');charged=0 if out=='not_executed'else max(r['reserve'],used)
    r['charged']=charged;r['measurement']='reported_provisional_reservation_retained' if 'usage'in e else ('none_started' if out=='not_executed' else 'reserved_missing_usage');h['spent']+=charged
-  p=h['profiles'][r['member']];p['last_revision']=r['revision'];p.pop('ack',None)
+  p=h['profiles'][r['member']];p['last_revision']=r['revision'];p.pop('ack',None);diagnostic_result(s,e['run'])
  elif op=='mark_uncertain':
   r=h['runs'][e['run']];require(r['state']=='active' and bool(e.get('evidence')),'Observed orphan evidence required')
-  r['state']='uncertain';r['evidence']=e['evidence'];h['profiles'][r['member']].pop('ack',None)
+  r['state']='uncertain';r['evidence']=e['evidence'];h['profiles'][r['member']].pop('ack',None);diagnostic_result(s,e['run'])
  elif op=='reconcile':
   r=h['runs'][e['run']];require(r['state']=='uncertain','Only uncertain outcome needs reconcile')
   require(e['outcome'] in ('not_executed','completed','failed') and bool(e['evidence']),'Observed terminal outcome required')
-  r['state']=e['outcome'];r['evidence']=e['evidence'];r['charged']=0 if r['state']=='not_executed' else r['reserve'];h['spent']+=r['charged']
+  r['state']=e['outcome'];r['evidence']=e['evidence'];r['charged']=0 if r['state']=='not_executed' else r['reserve'];h['spent']+=r['charged'];diagnostic_result(s,e['run'])
  elif op=='release':
   t=s['tasks'][e['task']]
   require(e.get('safe_boundary')is True,'Confirmed safe boundary required')
   require(not any(r['task']==e['task'] and r['state']in ('active','uncertain')for r in h['runs'].values()),'Run still unresolved')
   t['paths']=[];t['resources']=[]
+ elif op=='budget_change':
+  identifier=e.get('request_id');require(isinstance(identifier,str)and bool(identifier.strip())and len(identifier)<=128,'Stable budget request ID required')
+  require(state_root is not None and Path(e['project_root']).is_absolute()and Path(e['project_root']).resolve()==Path(state_root).resolve(),'Exact canonical project root required')
+  require(e.get('source_sha256')==digest(state),'Stale full-state canonical digest; inspect before retry')
+  require(e.get('project')==h['goal'],'Exact project goal required')
+  require(e.get('policy_hash')==h['policy_hash']==digest(effective_contract()),'Current exact policy contract required; migrate separately')
+  old=e.get('expected_budget');new=e.get('new_budget')
+  require(type(old)is int and type(new)is int and old==h['budget']and h['spent']<=old<new,'Exact current budget and additive integer increase required')
+  import checkpoints
+  checkpoints.quiescent(s)
+  if h.get('checkpoint'):checkpoints.active(s)
+  requester=e.get('requester');require(requester in s['members']and s['members'][requester]['role']=='leader','Registered leader must request budget change')
+  require(ledger.fresh(s['members'][requester]['identity_claim']),'Stale leader identity claim')
+  require(isinstance(e.get('reason'),str)and bool(e['reason'].strip()),'Explicit budget change reason required')
+  human=e['human_approval'];require(ledger.fresh(human),'Exact human approval bytes required')
+  human_data=Path(human['path']).read_bytes();require(hashlib.sha256(human_data).hexdigest()==human['sha256'],'Human approval changed during capture')
+  approval_proof=ledger.evidence(e['approvals']);approval_data=Path(e['approvals']).read_bytes();require(hashlib.sha256(approval_data).hexdigest()==approval_proof['sha256'],'Approval changed during capture')
+  approvals=json.loads(approval_data);proposal={k:v for k,v in e.items()if k!='approvals'};members=[]
+  for role in ('leader','reviewer'):
+   approval=approvals[role];member=approval['member'];require(member in s['members']and s['members'][member]['role']==role,'Budget approval role mismatch')
+   require(ledger.fresh(s['members'][member]['identity_claim']),'Stale budget approval identity')
+   require(approval.get('request_sha256')==digest(proposal)and all(approval.get(flag)is True for flag in ('approved','safe_boundary','all_current_obligations_retained','human_approval_verified')),'Exact budget request and safe boundary approval required')
+   members.append(member)
+  require(members[0]==requester and members[0]!=members[1]and s['members'][members[0]]['runtime_id_claim']!=s['members'][members[1]]['runtime_id_claim'],'Independent budget review required')
+  h['budget']=new;h['revision']+=1
+  for profile in h['profiles'].values():profile.pop('ack',None)
+  transition={'project':h['goal'],'project_root':str(Path(state_root).resolve()),'previous_budget':old,'budget':new,'spent':h['spent'],'revision':h['revision']}
+  h.setdefault('budget_changes',{})[identifier]={'event_digest':digest(e),'request':proposal,'approval_evidence':approval_proof,'approval_bytes_base64':base64.b64encode(approval_data).decode(),'human_approval':human,'human_approval_bytes_base64':base64.b64encode(human_data).decode(),'original_transition':transition,'authority_limit':'Recorded leader and reviewer attestations; hashes do not authenticate human identity'}
+  h['changes'].append({'revision':h['revision'],'budget_request':identifier,'old_budget':old,'new_budget':new,'reason':e['reason']})
  elif op=='rework':
   identifier=e.get('request_id');require(isinstance(identifier,str)and bool(identifier.strip())and len(identifier)<=128,'Stable rework request ID required')
   require(e.get('source_sha256')==digest(state),'Stale full-state canonical digest; inspect before retry')
@@ -179,6 +301,7 @@ def apply(state,e,state_root=None):
   require(all(ledger.fresh(a)for a in t['artifacts'])and ledger.fresh(t['reviews'][-1]['evidence']),'Stale evidence')
   t['state']='accepted'
  else:raise Invalid('Unknown harness operation')
+ diagnostic_invariants(s)
  s['history'].append({'at':ledger.now(),'event':e})
  return s
 
@@ -230,6 +353,8 @@ def main():
  if args.command=='init':initialize(args.state,args.goal,args.budget)
  elif args.command=='apply':
   event=json.loads(args.event.read_text());result=transaction(args.state,event)
+  if event['op']=='diagnostic_grant':print(json.dumps(diagnostic_receipt(result,event['request_id']),ensure_ascii=False,indent=2))
+  if event['op']=='budget_change':print(json.dumps(budget_change_receipt(result,event['request_id']),ensure_ascii=False,indent=2))
   if event['op']=='rework':print(json.dumps(rework_receipt(result,event['request_id']),ensure_ascii=False,indent=2))
  elif args.command=='checkpoint-prepare':
   import checkpoints
