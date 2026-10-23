@@ -154,4 +154,18 @@ class Checkpoints(unittest.TestCase):
   lineage=json.loads(second.read_text())['lineage'];approval=second.parent/lineage[-1]['approval_object'];approval.unlink()
   with self.assertRaises(h.Invalid):h.packet(new,'worker')
 
+ def test_target_drift_during_approval_capture_cannot_be_adopted(self):
+  import checkpoints as c
+  candidate=self.prepare();approval=self.approve(candidate);original_contract=h.effective_contract;original_approval=c.approval;before=self.path.read_bytes()
+  def approval_then_drift(*args):
+   result=original_approval(*args)
+   def drift():
+    contract=original_contract();contract['unexpected_runtime_change']=True;return contract
+   h.effective_contract=drift;return result
+  c.approval=approval_then_drift
+  try:
+   with self.assertRaises(h.Invalid):h.transaction(self.path,{'op':'checkpoint_commit','candidate':str(candidate),'approvals':str(approval),'policy_refresh':True,'reason':'migration'})
+  finally:c.approval=original_approval;h.effective_contract=original_contract
+  self.assertEqual(before,self.path.read_bytes())
+
 if __name__=='__main__':unittest.main()

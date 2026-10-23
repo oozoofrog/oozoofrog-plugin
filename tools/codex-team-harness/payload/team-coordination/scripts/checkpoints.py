@@ -136,12 +136,13 @@ def apply(state,e,state_root=None):
   quiescent(s)
   if current:active(s)
   require(digest(s)==p['source_sha256'],'Checkpoint full source state changed; prepare again')
-  require(p['target_policy_hash']==digest(h.effective_contract()),'Target contract changed after proposal; prepare and approve again')
+  contract=h.effective_contract();target_hash=digest(contract)
+  require(p['target_policy_hash']==target_hash,'Target contract changed after proposal; prepare and approve again')
   proof,approval_data=approval(s,p,e['approvals']);approval_relative='objects/'+sha(approval_data);immutable(safe(candidate.parent,approval_relative),approval_data);old_contract=a['policy_hash']
-  require(old_contract==digest(h.effective_contract())or e.get('policy_refresh')is True,'Explicit policy migration required')
+  require(old_contract==target_hash or e.get('policy_refresh')is True,'Explicit policy migration required')
   if e.get('policy_refresh'):
-   require(bool(e.get('reason')),'Policy migration reason required');contract=h.effective_contract();limits=contract['policy']['limits'];require(a['spent']<=a['budget']<=limits['project_token_budget'],'Preserve budget; resolve accounting before migration')
-   a.update(policy_hash=digest(contract),concurrency=min(a['concurrency'],limits['concurrency']),context_limit=min(a['context_limit'],limits['context_estimate_limit']),review_limit=min(a['review_limit'],limits['review_passes']))
+   require(bool(e.get('reason')),'Policy migration reason required');limits=contract['policy']['limits'];require(a['spent']<=a['budget']<=limits['project_token_budget'],'Preserve budget; resolve accounting before migration')
+   a.update(policy_hash=target_hash,concurrency=min(a['concurrency'],limits['concurrency']),context_limit=min(a['context_limit'],limits['context_estimate_limit']),review_limit=min(a['review_limit'],limits['review_passes']))
    for x in a['profiles'].values():x['model']=contract['policy']['roles'][x['role']]['model']
   a['checkpoint']={'id':p['id'],'directory':str(candidate.parent.resolve()),'proposal_sha256':digest(p),'approval':proof,'approval_object':{'relative':approval_relative,'sha256':sha(approval_data)},'source_policy_hash':old_contract}
  elif e['op']=='checkpoint_restore':
