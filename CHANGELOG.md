@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- MacPilot now keeps help, tool catalogs, MCP metadata, and connection diagnostics available when the current invocation cannot establish a WindowServer session. Desktop operations return a pre-dispatch session error; skipped permission probes remain unknown instead of appearing denied.
+
 ## Unreleased — team harness 0.2.0
 
 - Add explicit session model/effort inspection, pending next-turn configuration changes and later default-turn verification. Keep runtime identity unavailable when official telemetry does not expose it.

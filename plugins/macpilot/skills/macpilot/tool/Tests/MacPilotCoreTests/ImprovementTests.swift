@@ -2,6 +2,16 @@ import XCTest
 @testable import MacPilotCore
 
 final class ImprovementTests:XCTestCase {
+    @MainActor func testUnavailableDesktopSessionIsExpectedAndDoesNotQueueImprovement() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = try Store(root: root)
+        let identifier = await Improvements.capture(ToolFailure("gui_session_unavailable", "No current WindowServer session"),
+                                                   tool: "mac_activate", task: nil, store: store)
+        XCTAssertNil(identifier)
+        XCTAssertTrue(try store.names(prefix: "improvement-").isEmpty)
+    }
+
     @MainActor func testAutomaticFailureReportIsDurableDeduplicatedAndDoesNotCopyArguments() async throws {
         let root=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at:root,withIntermediateDirectories:false)
