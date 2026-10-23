@@ -1,6 +1,6 @@
 {
   "name": "team-coordination",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Coordinate an enabled leader-and-execution-team workflow with explicit roles, ownership, versioned context acknowledgements, evidence and recovery.",
   "author": {
     "name": "oozoofrog",
