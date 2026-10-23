@@ -1,6 +1,6 @@
 {
-  "version": "3.5.0",
-  "asset": "MacPilot-3.5.0-macos-universal.zip",
-  "mainSHA256": "1dca1bacb5b203700545d0817a75355d10cf8f8186efb6993554e1636ee7c40d",
-  "helperSHA256": "5450a506e3417890b95334833c11eea9963609b1ec49e4d2b5f8e04a4b2d3337"
+  "version": "3.5.1",
+  "asset": "MacPilot-3.5.1-macos-universal.zip",
+  "mainSHA256": "3823c5da0959ff740c7d2345b48f3dac304682980f9a9bc63f1bfde5152f0594",
+  "helperSHA256": "098ad138b734f7ae39c3b50b5f6f4943a3e5822937aa87774f9ab3a34bc915c0"
 }
