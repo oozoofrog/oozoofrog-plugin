@@ -2,7 +2,7 @@
 
 An opt-in coordination policy and read-only managed-run pilot for Codex. A leader assigns bounded work; execution owners hold canonical write claims; independent reviewers inspect current evidence. One project record stores decisions, instruction revisions, acknowledgements, runs and recovery state.
 
-Runtime `0.2.0` builds on the sanitized portable `0.1.1-public.1` derivative. It has a generic policy/guide and a plan-bound installer. Its bytes and hashes differ from the separately installed private package. It contains no machine-specific baselines, personal paths, project data, session logs or authentication. No prior repository history is imported.
+Runtime `0.3.0` builds on the sanitized portable `0.1.1-public.1` derivative. It has a generic policy/guide and a plan-bound installer. Its bytes and hashes differ from the separately installed private package. It contains no machine-specific baselines, personal paths, project data, session logs or authentication. No prior repository history is imported.
 
 ## Obtain and verify the migrated source
 
@@ -71,3 +71,5 @@ The managed adapter is read-only. Direct clients that bypass it receive advisory
 ## Session model control and requested handoff
 
 Use `python3 -I -S -B run.py session-control --help` and the [session-control procedure](payload/team-coordination/references/session-control.md) for exact live model/effort inspection, explicit pending changes and next-turn verification, or a user-requested unmanaged-to-managed handoff. New recipient creation, actual packet receipt, atomic ownership transfer, source dispatch disabling and committed-revision owner ACK are separate states. The native proxy requires an authorized supplied endpoint; current native-app availability is not inferred. Runtime/provider identity remains unverified, and outside clients are not intercepted. No global installation or existing project migration occurs automatically.
+
+For oversized packet recovery and portable checkpoint archives, see [checkpoint governance](payload/team-coordination/references/checkpoints.md). The archive is project-private and must not be committed to public source.

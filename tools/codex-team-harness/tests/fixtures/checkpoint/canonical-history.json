@@ -1,0 +1,823 @@
+{
+  "fixture": "synthetic-long-canonical-history",
+  "description": "A schema-independent history oracle. Its SHA-256 is computed over canonical JSON of source_state fields except sha256 itself. It is intentionally longer than the compact view and contains both mandatory carry-forward facts and details that may remain archived.",
+  "source_state": {
+    "revision": 73,
+    "sha256": "e60cd958fb57c103c649a02b02e9fd0b6821612620749d810ce5e10bde38bb8b",
+    "history": [
+      {
+        "id": "decision-scope-001",
+        "kind": "decision",
+        "status": "accepted",
+        "summary": "Use the deterministic parser for synthetic records.",
+        "rationale": "It keeps replay behavior stable across restarts.",
+        "evidence": [
+          {
+            "id": "ev-decision-001",
+            "sha256": "fixture:decision-001"
+          }
+        ],
+        "carry": "MUST_CARRY"
+      },
+      {
+        "id": "approval-proposal-001",
+        "kind": "approval",
+        "status": "approved",
+        "summary": "Owner approved checkpoint proposal cp-001.",
+        "rationale": "Proposal digest matched the exact source state.",
+        "evidence": [
+          {
+            "id": "ev-approval-001",
+            "sha256": "fixture:approval-001"
+          }
+        ],
+        "carry": "MUST_CARRY"
+      },
+      {
+        "id": "denial-publication-001",
+        "kind": "denial",
+        "status": "denied",
+        "summary": "Publication was denied pending an independent review.",
+        "rationale": "The evidence package was incomplete at that point.",
+        "evidence": [
+          {
+            "id": "ev-denial-001",
+            "sha256": "fixture:denial-001"
+          }
+        ],
+        "carry": "MUST_CARRY"
+      },
+      {
+        "id": "review-independent-001",
+        "kind": "review",
+        "status": "pass_with_open_blocker",
+        "summary": "Independent reviewer confirmed carry-forward coverage; one operation remains uncertain.",
+        "rationale": "The summary retains all decision and evidence links, but cannot resolve the pending operation.",
+        "evidence": [
+          {
+            "id": "ev-review-001",
+            "sha256": "fixture:review-001"
+          }
+        ],
+        "reviewer": "synthetic-reviewer-b",
+        "carry": "MUST_CARRY"
+      },
+      {
+        "id": "failure-attempt-001",
+        "kind": "failure",
+        "status": "failed",
+        "summary": "Attempt one stopped after a synthetic timeout.",
+        "rationale": "The result was not known at the stop boundary.",
+        "evidence": [
+          {
+            "id": "ev-failure-001",
+            "sha256": "fixture:failure-001"
+          }
+        ],
+        "carry": "MUST_CARRY"
+      },
+      {
+        "id": "recovery-attempt-001",
+        "kind": "recovery",
+        "status": "still_unknown",
+        "summary": "The first attempt has not yet been reconciled.",
+        "rationale": "A second attempt must not duplicate an operation that may have executed.",
+        "evidence": [
+          {
+            "id": "ev-recovery-001",
+            "sha256": "fixture:recovery-001"
+          }
+        ],
+        "carry": "MUST_CARRY"
+      },
+      {
+        "id": "failure-attempt-002",
+        "kind": "failure",
+        "status": "failed",
+        "summary": "A separate later attempt failed validation before execution.",
+        "rationale": "This is a distinct attempt and must not be merged with attempt one.",
+        "evidence": [
+          {
+            "id": "ev-failure-002",
+            "sha256": "fixture:failure-002"
+          }
+        ],
+        "carry": "MUST_CARRY"
+      },
+      {
+        "id": "constraint-approval-001",
+        "kind": "approval",
+        "status": "approved",
+        "summary": "Owner confirmed the read-only constraint.",
+        "rationale": "The task boundary excludes publication and destructive actions.",
+        "evidence": [
+          {
+            "id": "ev-constraint-001",
+            "sha256": "fixture:constraint-001"
+          }
+        ],
+        "carry": "MUST_CARRY"
+      },
+      {
+        "id": "change-001",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 001: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-001",
+            "sha256": "fixture:change-001"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-002",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 002: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-002",
+            "sha256": "fixture:change-002"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-003",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 003: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-003",
+            "sha256": "fixture:change-003"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-004",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 004: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-004",
+            "sha256": "fixture:change-004"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-005",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 005: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-005",
+            "sha256": "fixture:change-005"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-006",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 006: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-006",
+            "sha256": "fixture:change-006"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-007",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 007: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-007",
+            "sha256": "fixture:change-007"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-008",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 008: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-008",
+            "sha256": "fixture:change-008"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-009",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 009: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-009",
+            "sha256": "fixture:change-009"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-010",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 010: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-010",
+            "sha256": "fixture:change-010"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-011",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 011: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-011",
+            "sha256": "fixture:change-011"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-012",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 012: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-012",
+            "sha256": "fixture:change-012"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-013",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 013: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-013",
+            "sha256": "fixture:change-013"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-014",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 014: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-014",
+            "sha256": "fixture:change-014"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-015",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 015: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-015",
+            "sha256": "fixture:change-015"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-016",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 016: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-016",
+            "sha256": "fixture:change-016"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-017",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 017: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-017",
+            "sha256": "fixture:change-017"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-018",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 018: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-018",
+            "sha256": "fixture:change-018"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-019",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 019: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-019",
+            "sha256": "fixture:change-019"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-020",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 020: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-020",
+            "sha256": "fixture:change-020"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-021",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 021: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-021",
+            "sha256": "fixture:change-021"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-022",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 022: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-022",
+            "sha256": "fixture:change-022"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-023",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 023: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-023",
+            "sha256": "fixture:change-023"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-024",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 024: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-024",
+            "sha256": "fixture:change-024"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-025",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 025: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-025",
+            "sha256": "fixture:change-025"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-026",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 026: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-026",
+            "sha256": "fixture:change-026"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-027",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 027: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-027",
+            "sha256": "fixture:change-027"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-028",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 028: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-028",
+            "sha256": "fixture:change-028"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-029",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 029: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-029",
+            "sha256": "fixture:change-029"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-030",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 030: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-030",
+            "sha256": "fixture:change-030"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-031",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 031: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-031",
+            "sha256": "fixture:change-031"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-032",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 032: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-032",
+            "sha256": "fixture:change-032"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-033",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 033: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-033",
+            "sha256": "fixture:change-033"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-034",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 034: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-034",
+            "sha256": "fixture:change-034"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-035",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 035: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-035",
+            "sha256": "fixture:change-035"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-036",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 036: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-036",
+            "sha256": "fixture:change-036"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-037",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 037: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-037",
+            "sha256": "fixture:change-037"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-038",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 038: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-038",
+            "sha256": "fixture:change-038"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-039",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 039: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-039",
+            "sha256": "fixture:change-039"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-040",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 040: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-040",
+            "sha256": "fixture:change-040"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-041",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 041: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-041",
+            "sha256": "fixture:change-041"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-042",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 042: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-042",
+            "sha256": "fixture:change-042"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-043",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 043: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-043",
+            "sha256": "fixture:change-043"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-044",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 044: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-044",
+            "sha256": "fixture:change-044"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-045",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 045: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-045",
+            "sha256": "fixture:change-045"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-046",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 046: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-046",
+            "sha256": "fixture:change-046"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-047",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 047: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-047",
+            "sha256": "fixture:change-047"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-048",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 048: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-048",
+            "sha256": "fixture:change-048"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-049",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 049: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-049",
+            "sha256": "fixture:change-049"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      },
+      {
+        "id": "change-050",
+        "kind": "change",
+        "status": "recorded",
+        "summary": "Synthetic change batch 050: reviewed parser cases.",
+        "detail": "Synthetic detail only; no user or project data. Additional synthetic audit detail retained only in the archive; it demonstrates that checkpoint size reduction must not erase the original event, its ordered position, or its evidence reference.",
+        "evidence": [
+          {
+            "id": "ev-change-050",
+            "sha256": "fixture:change-050"
+          }
+        ],
+        "carry": "ARCHIVED_ORACLE"
+      }
+    ]
+  }
+}
