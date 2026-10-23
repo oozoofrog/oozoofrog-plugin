@@ -41,6 +41,9 @@ def ack_current(s,member):
 
 def apply(state,e,state_root=None):
  s=copy.deepcopy(state);h=s['harness'];op=e['op']
+ if op=='rework'and e.get('request_id')in h.get('reworks',{}):
+  require(h['reworks'][e['request_id']]['event_digest']==digest(e),'Conflicting rework request ID; inspect committed receipt')
+  return s  # Readback only: never rewrite later state or repeat the transition.
  if op in ('checkpoint_commit','checkpoint_restore'):
   import checkpoints
   return checkpoints.apply(s,e,state_root)
@@ -132,6 +135,27 @@ def apply(state,e,state_root=None):
   require(e.get('safe_boundary')is True,'Confirmed safe boundary required')
   require(not any(r['task']==e['task'] and r['state']in ('active','uncertain')for r in h['runs'].values()),'Run still unresolved')
   t['paths']=[];t['resources']=[]
+ elif op=='rework':
+  identifier=e.get('request_id');require(isinstance(identifier,str)and bool(identifier.strip())and len(identifier)<=128,'Stable rework request ID required')
+  require(e.get('source_sha256')==digest(state),'Stale full-state canonical digest; inspect before retry')
+  require(h['policy_hash']==digest(effective_contract()),'Explicit policy migration required before rework')
+  require(not any(r['state']in ('active','uncertain')for r in h['runs'].values()),'Drain all active/uncertain project runs before rework')
+  import session_control
+  require(not any(v.get('state')in session_control.UNRESOLVED+('configuration_pending_turn',)for v in h.get('controls',{}).values()),'Resolve pending/uncertain session controls before rework')
+  require(not any(v.get('state')not in ('resumed','blocked')for v in h.get('handoffs',{}).values()),'Resolve in-flight handoff before rework')
+  t=s['tasks'][e['task']];member=e['member'];require(t['owner']==member and t['state']=='ready_for_review','Rework requires same owner and ready_for_review task')
+  requester=e.get('requester');require(requester in s['members']and s['members'][requester]['role']=='leader','Registered leader must request rework')
+  require(ledger.fresh(s['members'][requester]['identity_claim']),'Stale leader identity claim')
+  require(isinstance(e.get('reason'),str)and bool(e['reason'].strip()),'Explicit scoped rework reason required')
+  proof=ledger.evidence(e['evidence']);require(ledger.fresh(proof),'Fresh leader decision evidence required')
+  reviews=t['reviews'];require(bool(reviews)and reviews[-1]['verdict']=='fail','Latest actual failed review required')
+  require(ledger.fresh(reviews[-1]['evidence']),'Failed review report changed or missing')
+  require(len(reviews)<h['review_limit'],'Review allowance exhausted; separate leader decision required')
+  failure=digest({'task':e['task'],'index':len(reviews)-1,'review':reviews[-1]})
+  require(not any(value['failed_review_digest']==failure for value in h.get('reworks',{}).values()),'Failed review already consumed by rework; fresh failed review required')
+  h['revision']+=1;t['state']='assigned';h['profiles'][member].pop('ack',None)
+  h.setdefault('reworks',{})[identifier]={'event_digest':digest(e),'source_sha256':e['source_sha256'],'failed_review_digest':failure,'decision_evidence':proof,'reason':e['reason'],'original_transition':{'task':e['task'],'owner':member,'state':'assigned','revision':h['revision']}}
+  h['changes'].append({'revision':h['revision'],'rework_request':identifier,'task':e['task'],'owner':member,'reason':e['reason'],'decision_evidence':proof})
  elif op=='reassign':
   t=s['tasks'][e['task']];require(not t['paths'] and not t['resources'],'Release ownership before reassignment')
   require(e['member']in s['members'] and s['members'][e['member']]['role']not in ('leader','reviewer'),'Execution owner required')
@@ -157,6 +181,11 @@ def apply(state,e,state_root=None):
  else:raise Invalid('Unknown harness operation')
  s['history'].append({'at':ledger.now(),'event':e})
  return s
+
+def rework_receipt(state,request_id):
+ require(request_id in state['harness'].get('reworks',{}),'Unknown rework request ID')
+ record=state['harness']['reworks'][request_id];task=state['tasks'][record['original_transition']['task']]
+ return {'request_id':request_id,'original_transition':record['original_transition'],'current_observation':{'state':task['state'],'owner':task['owner'],'revision':state['harness']['revision']},'scope':'Committed transition receipt, not a new transition or execution permission'}
 
 def check_model(model,catalog,receipt):
  require(any(m.get('model')==model for m in catalog),'Exact model absent from live catalog')
@@ -199,7 +228,9 @@ def main():
  q=sub.add_parser('packet');q.add_argument('--member',required=True);sub.add_parser('status')
  args=p.parse_args()
  if args.command=='init':initialize(args.state,args.goal,args.budget)
- elif args.command=='apply':transaction(args.state,json.loads(args.event.read_text()))
+ elif args.command=='apply':
+  event=json.loads(args.event.read_text());result=transaction(args.state,event)
+  if event['op']=='rework':print(json.dumps(rework_receipt(result,event['request_id']),ensure_ascii=False,indent=2))
  elif args.command=='checkpoint-prepare':
   import checkpoints
   print(json.dumps({'candidate':str(checkpoints.prepare(args.state,args.id,json.loads(args.view.read_text()),args.evidence))}))

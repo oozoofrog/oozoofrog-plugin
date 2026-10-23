@@ -75,3 +75,5 @@ Use `python3 -I -S -B run.py session-control --help` and the [session-control pr
 For oversized packet recovery and portable checkpoint archives, see [checkpoint governance](payload/team-coordination/references/checkpoints.md). The archive is project-private and must not be committed to public source.
 
 Astra leader/advisor requested defaults are model `gpt-6-astra`, reasoning `ultra` and service mode `fast`, separately. Read [profiles](payload/team-coordination/references/profiles.md) for catalogue translation, configuration limits and the independently reversible requested-default overlay. Existing active contracts are not automatically replaced.
+
+Patch0.3.1 adds [same-owner failed-review rework](payload/team-coordination/references/rework.md) without releasing claims or resetting reviews/accounting. No installed runtime or active project is automatically migrated.
