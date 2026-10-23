@@ -19,9 +19,11 @@ python3 scripts/release_plugin.py verify --plugin macpilot --version 3.5.0 --evi
 python3 scripts/release_plugin.py commit --plugin macpilot --version 3.5.0 --evidence macpilot/evidence/release-3.5.0
 ```
 
-`verify`는 인덱스의 정확한 Git tree를 임시 디렉터리에 펼쳐 배포·미러·릴리스 스크립트 검사를 실행한다. 작업 트리의 다른 변경은 커밋하지 않는다. 실제 실행 검사는 `source-manifest.json`의 선택 패키지 해시가 작업 트리와 인덱스에 모두 일치할 때 재사용한다. 기능 보고서의 모든 `checks[].status`는 `PASS`여야 한다. 런타임 보고서는 `status=passed`, 모든 `checks[].passed=true`여야 한다. 두 보고서의 실행 파일 SHA-256도 실제 패키징할 앱과 같아야 한다. 소스가 달라졌으면 실제 실행 검사를 다시 수행하고 새 보고서를 사용한다. 이 검사는 물리 기기나 임의 앱의 성공을 추가로 증명하지 않는다.
+`verify`는 인덱스의 정확한 Git tree를 임시 디렉터리에 펼쳐 배포·미러·릴리스 스크립트 검사를 실행한다. 작업 트리의 다른 변경은 커밋하지 않는다. 실제 실행 검사는 `source-manifest.json`의 선택 패키지 해시가 작업 트리와 인덱스에 모두 일치할 때 재사용한다. 기능 보고서는 `macpilot-capability-check/2`, `stage=all`, `suiteStatus=passed`, `completed=true`이며 본문/정리 오류가 없어야 한다. 검토한 `macpilot/scripts/capability_report.py`의 필수 45개 `(feature, id)`가 각각 한 번씩 있어야 하며 모든 `checks[].status`는 `PASS`여야 한다. 호출 프로세스의 실제 종료 코드 0도 별도로 확인한다. 중단된 실행의 통과 접두 항목이나 image 단계만의 보고서는 허용하지 않는다. 런타임 보고서는 `status=passed`, 모든 `checks[].passed=true`여야 한다. 두 보고서의 실행 파일 SHA-256도 실제 패키징할 앱과 같아야 한다. 소스가 달라졌으면 실제 실행 검사를 다시 수행하고 새 보고서를 사용한다. 이 검사는 물리 기기나 임의 앱의 성공을 추가로 증명하지 않는다.
 
 검증 후 인덱스가 바뀌면 `commit`은 중단한다. 검증 실패 후에는 이전 검증 결과로 커밋할 수 없다. `commit`은 로컬 커밋만 만든다. 커밋과 원격 게시를 분리한다. 공개 전 수정으로 다시 검증했다면 `commit --amend`로 같은 receipt의 미게시 HEAD만 갱신할 수 있다.
+
+기능 검사의 `timeout_is_not_success`는 200ms 기한과 200ms poll 간격으로 완전한 false 관측의 정상 타임아웃을 검사한다. AX 알림은 poll 간격 전에 깨울 수 있으며, 불완전한 관측이나 읽기 오류는 통과로 인정하지 않는다. 이 시나리오는 이전 실행의 `partial_coverage` 원인을 확정하거나 운영 기한을 늘리는 수정이 아니다.
 
 ## 패키징과 게시
 
@@ -30,7 +32,7 @@ python3 scripts/release_plugin.py package --plugin macpilot --version 3.5.0 --ev
 python3 scripts/release_plugin.py publish --plugin macpilot --version 3.5.0 --evidence macpilot/evidence/release-3.5.0 --notes /absolute/release-notes.md
 ```
 
-패키징은 검증한 커밋에서 Plugin 소스 tar.gz를 만든다. 실제 검사한 ad-hoc 서명 앱을 ZIP으로 묶고 `SHA256SUMS.txt`를 만든다. 앱은 notarization을 받지 않았다. Plugin은 스킬·소스·고정 runtime manifest를 포함한다. 첫 실행에서 Universal 배포 앱의 두 실행 파일 해시·버전·서명을 검사해 설치한다. Swift·Xcode가 없는 사용자도 일반 macOS 기능을 실행한다. 다운로드 실패 시 컴파일하지 않는다. 소스 빌드는 명시적 선택이다. 이 절차의 설치 단계도 같은 릴리스 앱을 배치한다. Simulator 기능만 선택한 Xcode·런타임을 요구한다.
+패키징은 검증한 커밋에서 Plugin 소스 tar.gz를 만든다. 실제 검사한 ad-hoc 서명 앱을 ZIP으로 묶고 `SHA256SUMS.txt`를 만든다. ZIP은 `ditto --norsrc`로 생성하여 AppleDouble sidecar를 포함하지 않습니다. 깨끗한 임시 경로에서 `ditto`와 `unzip`으로 각각 추출한 뒤 앱 서명과 실행 파일 해시를 확인합니다. 앱은 notarization을 받지 않았다. Plugin은 스킬·소스·고정 runtime manifest를 포함한다. 첫 실행에서 Universal 배포 앱의 두 실행 파일 해시·버전·서명을 검사해 설치한다. Swift·Xcode가 없는 사용자도 일반 macOS 기능을 실행한다. 다운로드 실패 시 컴파일하지 않는다. 소스 빌드는 명시적 선택이다. 이 절차의 설치 단계도 같은 릴리스 앱을 배치한다. Simulator 기능만 선택한 Xcode·런타임을 요구한다.
 
 게시는 검증한 `main` HEAD만 허용한다. 원격 주소와 fast-forward 조건을 검사하고 push 후 원격 commit을 재확인한다. `<plugin>-v<version>` annotated tag가 다른 커밋을 가리키면 중단한다. GitHub draft release에 파일을 올리고 실제로 다시 내려받은 바이트를 비교한 뒤 공개한다. 이미 공개된 release는 같은 파일인지 확인하며 덮어쓰지 않는다. 네트워크 실패 후에는 같은 근거 디렉터리와 단계를 다시 사용한다. 소스·커밋·파일이 달라졌으면 기록을 검토한 뒤 새 배포를 준비한다.
 

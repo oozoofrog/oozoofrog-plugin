@@ -6,7 +6,7 @@ JOURNAL='team-coordination-profile-defaults-install.json'
 PROFILE='team-coordination-desired-profiles.json'
 LEGACY='team-coordination-install.json'
 BEGIN='<!-- team-coordination:desired-profile:v1:begin -->'
-BLOCK=('\n'+BEGIN+'\nRequested defaults: leader/advisor model gpt-6-astra, reasoning ultra, service mode fast are separate fields. Read team-coordination-desired-profiles.json beside this global AGENTS.md under CODEX_HOME (normally ~/.codex), not in the project directory. Resolve fast through the current official model catalogue; never use ultrafast or assume a wire ID. Core remains gpt-6.1-sol; support remains gpt-6-luna. These instructions request future defaults, not verified session configuration. Existing project contracts require explicit safe owner adoption; do not restart completed work. Unsupported native service-tier controls remain unverified.\n<!-- team-coordination:desired-profile:v1:end -->\n').encode()
+BLOCK='\n<!-- team-coordination:desired-profile:v1:begin -->\nRequested defaults for every existing and future project: leader/design/advisor use gpt-6-astra with reasoning high; core/reviewer use gpt-6.1-sol with reasoning high; support uses gpt-6-luna with reasoning medium. Every role requests service mode Normal. Model, reasoning effort, and service mode are separate fields. Choose supported reasoning effort to fit task difficulty; do not automatically restore ultra or Fast defaults. Read team-coordination-desired-profiles.json beside this global AGENTS.md under CODEX_HOME (normally ~/.codex), not in the project directory. Normal is the human-requested mode; no native tier mapping or configured/runtime state is verified through the current app MCP. Only apply a wire value through a supported official control with observed mapping; never inject unsupported service-tier arguments. Existing project contracts require explicit safe owner adoption; do not restart completed work. These instructions request defaults and do not prove session configuration or runtime identity.\n<!-- team-coordination:desired-profile:v1:end -->\n'.encode()
 def raw(path):
  if path.is_symlink():raise OverlayError('symlink refused: '+path.name)
  if not path.exists():return None
@@ -39,10 +39,8 @@ def write(path,data):
   if os.path.exists(name):os.unlink(name)
 def validate(payload):
  if payload.get('requested_scope')!='all_existing_and_future_projects' or payload.get('schema')!=1 or payload.get('execution_authorized') is not False or payload.get('adoption')!='pending_explicit_owner_safe_boundary':raise OverlayError('requested-only profile required')
- for role in ('leader','advisor'):
-  if payload.get('roles',{}).get(role)!={'model':'gpt-6-astra','reasoning_effort':'ultra','service_tier':'fast'}:raise OverlayError('Astra fields must be separate and exact')
- for role,model in (('core','gpt-6.1-sol'),('support','gpt-6-luna')):
-  if payload.get('roles',{}).get(role,{}).get('model')!=model:raise OverlayError('core/support model changed')
+ expected={role:{'model':model,'reasoning_effort':effort,'service_tier':'normal'}for role,model,effort in [('leader','gpt-6-astra','high'),('advisor','gpt-6-astra','high'),('core','gpt-6.1-sol','high'),('reviewer','gpt-6.1-sol','high'),('support','gpt-6-luna','medium')]}
+ if payload.get('roles')!=expected:raise OverlayError('Normal defaults require exact separate model, reasoning and service fields for every role')
 def state(home):
  data=raw(home/JOURNAL)
  return validate_journal(json.loads(data)) if data else None

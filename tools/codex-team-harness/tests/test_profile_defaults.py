@@ -2,6 +2,7 @@ import sys,json,tempfile,unittest
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'payload/team-coordination/scripts'))
 CATALOG=[{'model':'gpt-6-astra','supportedReasoningEfforts':[{'reasoningEffort':'ultra'}],'serviceTiers':[{'id':'priority','name':'Fast','description':'catalogue declared'}]}]
+NORMAL=[{'model':'gpt-6-astra','supportedReasoningEfforts':[{'reasoningEffort':'high'}],'serviceTiers':[{'id':'catalogue-normal','name':'Normal','description':'synthetic explicit catalogue tier'}]}]
 class Profiles(unittest.TestCase):
  def test_profile_api_exists(self):self.assertTrue((ROOT/'payload/team-coordination/scripts/profile_defaults.py').exists(),'separate profile helper missing')
  def test_fast_label_resolves_only_catalogue_declared_wire(self):
@@ -15,8 +16,29 @@ class Profiles(unittest.TestCase):
  def test_policy_default_roles_are_distinct(self):
   import profile_defaults as p
   policy=json.loads((ROOT/'payload/team-coordination/policy.json').read_text())
-  for role in ['leader','advisor']:self.assertEqual({'model':'gpt-6-astra','reasoning_effort':'ultra','service_tier':'fast'},p.role_request(policy,role))
-  self.assertEqual('gpt-6.1-sol',p.role_request(policy,'core')['model']);self.assertEqual('gpt-6-luna',p.role_request(policy,'support')['model'])
+  for role in ['leader','advisor']:self.assertEqual({'model':'gpt-6-astra','reasoning_effort':'high','service_tier':'normal'},p.role_request(policy,role))
+  for role in ['core','reviewer']:self.assertEqual({'model':'gpt-6.1-sol','reasoning_effort':'high','service_tier':'normal'},p.role_request(policy,role))
+  self.assertEqual({'model':'gpt-6-luna','reasoning_effort':'medium','service_tier':'normal'},p.role_request(policy,'support'))
+ def test_normal_uses_only_explicit_current_catalogue_mapping(self):
+  import profile_defaults as p
+  params,resolved=p.start_parameters(NORMAL,{'model':'gpt-6-astra','reasoning_effort':'high','service_tier':'normal'})
+  self.assertEqual('catalogue-normal',params['serviceTier']);self.assertEqual('high',params['config']['model_reasoning_effort']);self.assertEqual('normal',resolved['requested_label']);self.assertEqual('Normal',resolved['catalog_label'])
+ def test_normal_never_infers_default_null_or_inherits_fast(self):
+  import profile_defaults as p
+  for options in (None,[],[{'id':'priority','name':'Fast'}],[{'id':'default','name':'Standard'}],[{'id':None,'name':'Normal'}],[{'id':'','name':'Normal'}],[{'id':'a','name':'Normal'},{'id':'b','name':'Normal'}]):
+   with self.subTest(options=options):
+    entry=dict(NORMAL[0],serviceTiers=options,defaultServiceTier=None,additionalSpeedTiers=['fast'])
+    with self.assertRaises(p.ProfileError):p.start_parameters([entry],{'model':'gpt-6-astra','reasoning_effort':'high','service_tier':'normal'})
+ def test_normal_missing_model_or_reasoning_support_refused(self):
+  import profile_defaults as p
+  for requested in ({'model':'other','reasoning_effort':'high','service_tier':'normal'},{'model':'gpt-6-astra','reasoning_effort':'ultra','service_tier':'normal'}):
+   with self.assertRaises(p.ProfileError):p.start_parameters(NORMAL,requested)
+ def test_normal_requires_exact_tier_model_effort_receipt(self):
+  import profile_defaults as p
+  resolution=p.resolve_service_tier(NORMAL,'gpt-6-astra','normal');receipt={'status':'observed','wire_service_tier':'catalogue-normal','model':'gpt-6-astra','reasoning_effort':'high'}
+  self.assertTrue(p.tier_matches(receipt,resolution,'gpt-6-astra','high'))
+  for field,value in [('wire_service_tier','priority'),('wire_service_tier',None),('model','gpt-6.1-sol'),('reasoning_effort','ultra'),('status','unavailable')]:
+   with self.subTest(field=field,value=value):self.assertFalse(p.tier_matches(dict(receipt,**{field:value}),resolution,'gpt-6-astra','high'))
  def test_configured_receipt_and_thread_read_missing_are_not_execution(self):
   import profile_defaults as p
   response={'model':'gpt-6-astra','reasoningEffort':'ultra','serviceTier':'priority','thread':{'id':'owned'}}

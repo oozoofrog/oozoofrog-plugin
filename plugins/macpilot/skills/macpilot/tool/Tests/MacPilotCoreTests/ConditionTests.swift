@@ -49,4 +49,163 @@ final class ConditionTests: XCTestCase {
         }
         XCTAssertNoThrow(try AXCondition(["predicate":"stable"]))
     }
+
+    @MainActor func withEngine(_ body: (Engine) async throws -> Void) async throws {
+        let parent = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: parent) }
+        try await body(Engine(store: Store(root: parent.appendingPathComponent("state"))))
+    }
+
+    @MainActor func testPartialReadCanRecoverToCompleteMatchingObservation() async throws {
+        try await withEngine { engine in
+            let condition = try AXCondition(["selector":["identifier":"field"], "predicate":"equals", "text":"done"])
+            let pid = ProcessInfo.processInfo.processIdentifier, identity = try XCTUnwrap(ProcessIdentity.startID(pid: pid))
+            var reads = 0
+            let result = try await Conditions.wait(condition, pid: pid, identity: identity, windowID: 1,
+                timeoutMs: 2000, pollMs: 1, engine: engine, observationProvider: { _ in
+                    reads += 1
+                    var value = self.observation([self.node(value: "done")])
+                    value.id = reads == 1 ? "partial-read" : "complete-read"
+                    if reads == 1 { value.coverage = "partial" }
+                    try engine.store.write(jsonData(value.object), to: engine.store.root.appendingPathComponent(value.id + ".json"))
+                    return value
+                })
+            XCTAssertEqual(result["matches"] as? Bool, true)
+            XCTAssertGreaterThanOrEqual(reads, 2)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: engine.store.root.appendingPathComponent("partial-read.json").path))
+            XCTAssertTrue(FileManager.default.fileExists(atPath: engine.store.root.appendingPathComponent("complete-read.json").path))
+        }
+    }
+
+    @MainActor func testUnresolvedPartialReadAtDeadlineRemainsUnknown() async throws {
+        for completeFirst in [false, true] {
+            try await withEngine { engine in
+                let condition = try AXCondition(["selector":["identifier":"field"], "predicate":"equals", "text":"done"])
+                let pid = ProcessInfo.processInfo.processIdentifier, identity = try XCTUnwrap(ProcessIdentity.startID(pid: pid))
+                var reads = 0
+                do {
+                    _ = try await Conditions.wait(condition, pid: pid, identity: identity, windowID: 1,
+                        timeoutMs: 200, pollMs: 1, engine: engine, observationProvider: { _ in
+                            reads += 1
+                            var value = self.observation([self.node(value: "waiting")])
+                            if !completeFirst || reads > 1 { value.coverage = "partial" }
+                            return value
+                        })
+                    XCTFail("An unresolved partial read must not become a negative predicate result")
+                } catch { XCTAssertEqual((error as? ToolFailure)?.code, "partial_coverage") }
+                XCTAssertGreaterThan(reads, completeFirst ? 2 : 1)
+            }
+        }
+    }
+
+    @MainActor func testCompleteFalseReadAfterPartialResolvesUncertaintyAtDeadline() async throws {
+        try await withEngine { engine in
+            let condition = try AXCondition(["selector":["identifier":"field"], "predicate":"equals", "text":"done"])
+            let pid = ProcessInfo.processInfo.processIdentifier, identity = try XCTUnwrap(ProcessIdentity.startID(pid: pid))
+            var reads = 0
+            let result = try await Conditions.wait(condition, pid: pid, identity: identity, windowID: 1,
+                timeoutMs: 200, pollMs: 1, engine: engine, observationProvider: { _ in
+                    reads += 1
+                    var value = self.observation([self.node(value: "waiting")])
+                    if reads == 1 { value.coverage = "partial" }
+                    return value
+                })
+            XCTAssertEqual(result["status"] as? String, "predicate_timeout")
+            XCTAssertEqual(result["matches"] as? Bool, false)
+        }
+    }
+
+    @MainActor func testTimeoutScenarioSeparatesOneIntervalFromBudgetLimitedTailRead() async throws {
+        for (poll, firstPartial) in [(100, false), (200, false), (200, true)] {
+            try await withEngine { engine in
+                let condition = try AXCondition(["selector":["identifier":"field"], "predicate":"exists"])
+                let pid = ProcessInfo.processInfo.processIdentifier, identity = try XCTUnwrap(ProcessIdentity.startID(pid: pid))
+                var budgets: [Int] = []
+                do {
+                    let result = try await Conditions.wait(condition, pid: pid, identity: identity, windowID: 1,
+                        timeoutMs: 200, pollMs: poll, engine: engine, observationProvider: { remaining in
+                            budgets.append(remaining)
+                            var value = self.observation([])
+                            // Model a collector that can finish the initial read but cannot
+                            // finish a later scan with less than 150ms left in the same deadline.
+                            if firstPartial || remaining < 150 { value.coverage = "partial"; value.diagnostics = ["node_or_time_budget"] }
+                            return value
+                        })
+                    XCTAssertEqual(poll, 200, "A final partial read must remain unknown")
+                    XCTAssertFalse(firstPartial)
+                    XCTAssertEqual(result["status"] as? String, "predicate_timeout")
+                    XCTAssertEqual(result["matches"] as? Bool, false)
+                    XCTAssertEqual((result["observation"] as? [String: Any])?["coverage"] as? String, "collected_window_tree")
+                } catch {
+                    XCTAssertTrue(poll == 100 || firstPartial)
+                    XCTAssertEqual((error as? ToolFailure)?.code, "partial_coverage")
+                    if !firstPartial { XCTAssertLessThan(try XCTUnwrap(budgets.last), 150) }
+                }
+                XCTAssertGreaterThanOrEqual(try XCTUnwrap(budgets.first), 150)
+            }
+        }
+        // The real observer may wake before pollMs; one interval does not guarantee
+        // a single read when notifications occur. Partial coverage still fails closed.
+    }
+
+    @MainActor func testToleratedGeometryFailureCannotClearPendingPartialRead() async throws {
+        try await withEngine { engine in
+            let condition = try AXCondition(["selector":["identifier":"field"], "predicate":"exists"])
+            let pid = ProcessInfo.processInfo.processIdentifier, identity = try XCTUnwrap(ProcessIdentity.startID(pid: pid))
+            var reads = 0
+            do {
+                _ = try await Conditions.wait(condition, pid: pid, identity: identity, windowID: 1,
+                    timeoutMs: 200, pollMs: 1, engine: engine, observationProvider: { _ in
+                        reads += 1
+                        if reads > 1 { throw ToolFailure("app_metadata_unavailable", "Synthetic transient read failure") }
+                        var value = self.observation([]); value.coverage = "partial"; return value
+                    })
+                XCTFail("A tolerated geometry error cannot clear an unresolved partial read")
+            } catch { XCTAssertEqual((error as? ToolFailure)?.code, "partial_coverage") }
+            XCTAssertGreaterThan(reads, 1)
+        }
+    }
+
+    @MainActor func testUnsafePredicateFailuresAreNotRetried() async throws {
+        var secure = node(); secure.secure = true
+        var identity = node(); identity.identityTruncated = true
+        var truncated = node(value: "done"); truncated.valueTruncated = true
+        let cases: [([Node], String)] = [([secure], "secure_node"), ([identity], "partial_identity"),
+                                        ([truncated], "oversized_ax_value"), ([node(), node("twin")], "ambiguous_target")]
+        for (nodes, code) in cases {
+            try await withEngine { engine in
+                let condition = try AXCondition(["selector":["identifier":"field"], "predicate":"equals", "text":"done"])
+                let pid = ProcessInfo.processInfo.processIdentifier, startID = try XCTUnwrap(ProcessIdentity.startID(pid: pid))
+                var reads = 0
+                do {
+                    _ = try await Conditions.wait(condition, pid: pid, identity: startID, windowID: 1,
+                        timeoutMs: 2000, pollMs: 1, engine: engine, observationProvider: { _ in reads += 1; return self.observation(nodes) })
+                    XCTFail("Unsafe predicate failure must remain an error")
+                } catch { XCTAssertEqual((error as? ToolFailure)?.code, code) }
+                XCTAssertEqual(reads, 1)
+            }
+        }
+    }
+
+    @MainActor func testPartialReadResetsStableFrameInterval() async throws {
+        try await withEngine { engine in
+            let condition = try AXCondition(["selector":["identifier":"field"], "predicate":"stable", "stableMs":100])
+            let pid = ProcessInfo.processInfo.processIdentifier, identity = try XCTUnwrap(ProcessIdentity.startID(pid: pid))
+            var reads = 0, recoveredAt: UInt64?
+            let result = try await Conditions.wait(condition, pid: pid, identity: identity, windowID: 1,
+                timeoutMs: 2000, pollMs: 1, engine: engine, observationProvider: { _ in
+                    reads += 1
+                    var value = self.observation([self.node()])
+                    if reads == 2 {
+                        try await Task.sleep(nanoseconds: 200_000_000)
+                        value.coverage = "partial"
+                    } else if reads == 3 { recoveredAt = DispatchTime.now().uptimeNanoseconds }
+                    return value
+                })
+            XCTAssertEqual(result["matches"] as? Bool, true)
+            let recovery = try XCTUnwrap(recoveredAt)
+            XCTAssertGreaterThanOrEqual(DispatchTime.now().uptimeNanoseconds - recovery, 100_000_000)
+        }
+    }
 }

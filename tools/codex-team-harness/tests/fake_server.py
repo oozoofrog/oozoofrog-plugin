@@ -6,9 +6,9 @@ for line in sys.stdin:
  with open(log,'a')as f:f.write(method+'\n')
  if 'id'not in o:continue
  result={}
- if method=='model/list':result={'data':[{'model':'gpt-6.1-sol','defaultReasoningEffort':'low','supportedReasoningEfforts':[{'reasoningEffort':'low'}]}],'nextCursor':None}
- if method=='thread/read':result={'thread':{'id':'synthetic-thread','model':'gpt-6.1-sol','reasoningEffort':'low','status':{'type':'idle'}}}
- if method=='thread/start':result={'model':'gpt-6-luna' if mode=='mismatch' else 'gpt-6.1-sol','thread':{'id':'synthetic-thread'}}
+ if method=='model/list':result={'data':[{'model':'gpt-6.1-sol','defaultReasoningEffort':'low','supportedReasoningEfforts':[{'reasoningEffort':'low'},{'reasoningEffort':'high'}],'serviceTiers':[{'id':'priority','name':'Fast'}]if mode=='normal-absent'else[{'id':'synthetic-normal','name':'Normal'}]}],'nextCursor':None}
+ if method=='thread/read':result={'thread':{'id':'synthetic-thread','model':'gpt-6.1-sol','reasoningEffort':'high','status':{'type':'idle'}}}
+ if method=='thread/start':result={'model':'gpt-6-luna' if mode=='mismatch' else 'gpt-6.1-sol','reasoningEffort':'high','serviceTier':'priority'if mode=='inherited-fast'else'synthetic-normal','thread':{'id':'synthetic-thread'}}
  if method=='turn/start':
   if mode=='disconnect':sys.exit(0)
   result={'turn':{'id':'synthetic-turn'}}
