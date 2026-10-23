@@ -178,7 +178,6 @@ private final class BoundedLineReader: @unchecked Sendable {
     }
 
     @MainActor static func main() async {
-        NSApplication.shared.setActivationPolicy(.prohibited)
         do {
             let args = Array(CommandLine.arguments.dropFirst())
             let command = args.first ?? "permission-setup-ui"
@@ -200,6 +199,8 @@ private final class BoundedLineReader: @unchecked Sendable {
                 return
             }
             if command == "permission-setup-ui" {
+                try DesktopSession.current().requireAvailable()
+                NSApplication.shared.setActivationPolicy(.prohibited)
                 guard args.count <= 3 else { throw ToolFailure("invalid_argument", "permission-setup-ui [KIND] [TARGET_BUNDLE_ID]") }
                 try PermissionSetup.run(kind: args.count >= 2 ? args[1] : "all", targetBundleID: args.count >= 3 ? args[2] : "com.apple.Safari")
                 return
@@ -233,14 +234,20 @@ private final class BoundedLineReader: @unchecked Sendable {
                 return
             }
             if command == "input-activity-host" {
+                try DesktopSession.current().requireAvailable()
+                NSApplication.shared.setActivationPolicy(.prohibited)
                 guard args.count == 2, args[1].hasPrefix("/") else { throw ToolFailure("invalid_argument", "input-activity-host needs an absolute state directory") }
                 try InputActivityHost.run(store: Store(root: URL(fileURLWithPath: args[1]))); return
             }
             if command == "overlay-host" {
+                try DesktopSession.current().requireAvailable()
+                NSApplication.shared.setActivationPolicy(.prohibited)
                 guard args.count==2,args[1].hasPrefix("/") else{throw ToolFailure("invalid_argument","overlay-host needs an absolute state directory")}
                 try DesktopOverlay.run(store:Store(root:URL(fileURLWithPath:args[1])));return
             }
             if command == "preview-host" {
+                try DesktopSession.current().requireAvailable()
+                NSApplication.shared.setActivationPolicy(.prohibited)
                 guard args.count == 4, args[1].hasPrefix("/"), UUID(uuidString:args[3]) != nil else {
                     throw ToolFailure("invalid_argument", "preview-host needs a state directory, observation UUID and command UUID")
                 }
@@ -249,6 +256,8 @@ private final class BoundedLineReader: @unchecked Sendable {
             let store = try Store(), engine = Engine(store: store, transport: command == "mcp" ? .mcpStdio : .cli)
             if command == "mcp" { await serve(engine); return }
             if command == "preview" {
+                try DesktopSession.current().requireAvailable()
+                NSApplication.shared.setActivationPolicy(.prohibited)
                 guard args.count == 2 else { throw ToolFailure("invalid_argument", "preview requires an observation UUID") }
                 try SnapshotPanel.run(store:store, id:args[1]); return
             }

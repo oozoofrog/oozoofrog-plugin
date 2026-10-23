@@ -11,6 +11,7 @@ xcrun swift test --package-path macpilot/tool
 MACPILOT_UNIVERSAL=1 macpilot/scripts/build.sh
 python3 macpilot/scripts/verify_mcp.py
 python3 macpilot/scripts/verify_connection.py --binary macpilot/bin/MacPilot.app/Contents/MacOS/macpilot
+python3 macpilot/scripts/verify_startup.py --binary macpilot/bin/MacPilot.app/Contents/MacOS/macpilot
 python3 macpilot/scripts/verify_browser_developer.py
 python3 macpilot/scripts/verify_features.py --stage all
 python3 macpilot/scripts/verify_runtime.py
@@ -122,3 +123,11 @@ Simulator 검증 계약의 불변식은 다음과 같다. 새 실행은 새 근�
 URL 전송 수락 뒤에는 scene의 실제 URL 수신 또는 해당 테스트 앱의 확인창이 나타날 때까지 읽기 관찰만 반복한다. 첫 캡처가 이전 화면이면 실패나 업무 완료로 판정하지 않고 제한 시간 안에서 다시 읽는다. URL 요청 자체는 재전송하지 않는다.
 
 전용 UIKit fixture에는 별도 화면 유지 assertion을 걸지 않는다. Home 검사는 복귀 후 앱 상태로 확인하고, Lock 검사는 UI·캡처 검사 뒤에 실행한다. Lock은 scene 변화 또는 실제 PNG의 명확한 어두워짐으로 확인하며 두 값을 따로 기록한다. Lock 이후 scene 활성만으로 화면이 깨어났다고 판정하지 않는다. OCR은 대소문자가 다른 앱 이름을 같은 문자열로 비교하지만, 앱 이름과 유일한 열기 버튼이 모두 현재 캡처에 있어야 입력한다. 검사 중 화면이 흐려지거나 확인창이 없으면 다른 버튼을 추측하지 않는다.
+
+## 실행 세션의 시작 회귀
+
+`verify_startup.py`는 호출자의 실제 실행 컨텍스트에서 help·도구 목록·MCP handshake와 ping·진단을 검사한다. 제한된 실행 환경과 승인된 GUI 실행 환경에서 각각 실행한다. `SessionGetInfo`의 그래픽 플래그만으로 AppKit 초기화를 허용하지 않는다. 현재 프로세스에서 `CGSessionCopyCurrentDictionary`도 확인해야 한다. 이 사전 검사는 TCC 승인이나 실제 GUI 동작 성공을 보장하지 않는다.
+
+WindowServer 세션을 확인할 수 없으면 `doctor`와 연결 상태는 `desktopSession.available=false`를 반환한다. 생략한 권한은 `null`, `permissionsStatus=not_probed`로 표시한다. 데스크톱 요청은 `gui_session_unavailable`로 중단한다. 이 상태를 사용자 권한 거부로 분류하거나 자동으로 권한을 요청하지 않는다. 실행 컨텍스트를 바꿀 때는 호스트의 승인 절차를 따른다. 도구가 자동으로 다른 세션이나 권한 경로로 전환하지 않는다.
+
+세션이 없는 실행에서는 진단·MCP 메타데이터·일부 컨트롤러 상태 조회만 허용한다. 현재 실행 엔진의 나머지 도구는 파일처럼 GUI를 직접 사용하지 않는 기능도 보수적으로 중단한다. `sessionDictionaryProbeStatus`는 실제 nil 응답과 사전 조건 때문에 생략한 조회를 구분한다. 예상된 세션 오류는 자동 개선 요청을 만들거나 전송하지 않는다.

@@ -102,6 +102,13 @@ import CryptoKit
                 leases.append(try baseStore.lease(".system-input.lock"))
             }
             try Task.checkCancellation()
+            let desktopSession = DesktopSession.current()
+            if tool == "mac_doctor", !desktopSession.available {
+                try Arguments(arguments).only([])
+                return Self.degradedDoctor(store: store, session: desktopSession)
+            }
+            try desktopSession.requireAvailable()
+            NSApplication.shared.setActivationPolicy(.prohibited)
             let foreground = NSWorkspace.shared.frontmostApplication?.processIdentifier
             do { trace = try await Tracing.begin(tool:tool,arguments:arguments,engine:self) }
             catch { tracePreparationError = (error as? ToolFailure)?.code ?? "trace_preparation_failed" }
@@ -151,6 +158,15 @@ import CryptoKit
                               outcome: failure?.outcome ?? Outcomes.failure(tool, arguments: arguments, beforeDispatch: !enteredDispatch))
         }
     }
+    private static func degradedDoctor(store: Store, session: DesktopSession) -> [String: Any] {
+        ["status": "ok", "version": MacPilotRuntime.version, "os": ProcessInfo.processInfo.operatingSystemVersionString,
+         "desktopSession": session.object, "permissions": DesktopSession.unknownPermissions, "permissionsStatus": "not_probed",
+         "stateDirectory": store.root.path, "secureEventInput": NSNull(), "systemCursor": NSNull(),
+         "foregroundPID": NSNull(), "displays": NSNull(),
+         "desktopProbesStatus": "not_probed", "networkRequired": false,
+         "verification": "Process diagnostics responded. Desktop probes were skipped because this invocation cannot establish its WindowServer session."]
+    }
+
     private func auditPID(_ arguments: [String: Any]) -> Int32? {
         if let number = arguments["pid"] as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID(), number.int64Value > 0,
            number.int64Value <= Int64(Int32.max) {
@@ -497,6 +513,7 @@ import CryptoKit
             var ids = [CGDirectDisplayID](repeating: 0, count: 32), count: UInt32 = 0
             CGGetActiveDisplayList(32, &ids, &count)
             return ["status":"ok", "version":MacPilotRuntime.version, "os":ProcessInfo.processInfo.operatingSystemVersionString,
+                    "desktopSession":DesktopSession.current().object, "permissionsStatus":"probed",
                     "permissions":["accessibility":AXIsProcessTrusted(), "screenCapture":CGPreflightScreenCaptureAccess(),
                         "postEvent":CGPreflightPostEventAccess(), "inputMonitoring":CGPreflightListenEventAccess()],
                     "secureEventInput":IsSecureEventInputEnabled(), "stateDirectory":store.root.path,
