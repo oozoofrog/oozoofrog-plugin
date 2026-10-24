@@ -1,10 +1,51 @@
 # Changelog
 
-## Unreleased — team harness 0.4.1
+## Team harness [0.5.5] - 2026-10-24
+
+- Publish the combined locally reviewed 0.5.0–0.5.5 changes after 0.4.1, with Korean installation/update/project-adoption guidance, a deterministic allowlisted source archive and commit-pinned CI. Preserve previous releases and separate requested model/Standard settings from unavailable provider execution identity.
+
+- Inventory contained descendant symlinks as exact literal metadata with mode and replacement identity; never follow links or expand claim roots or recipient permissions. Preserve strict canonical roots and reject lexical escapes, private trees and special devices.
+- Read regular files and recurse directories through no-follow descriptors with race checks. Share inventory between product and management baselines and add a pure all-claim compatibility preflight without state, lock or session writes.
+- Cover SwiftPM-style links, mixed twelve-claim management handoff, target/type/mode/replacement changes, dangling/chained/cyclic links, filesystem races and unsupported entries. Installation and project adoption remain separate owner operations.
+
+## Team harness [0.5.4] - Unpublished candidate
+
+- Retain the exact canonical management-directory ownership claim without granting it to recipient workspace writing. Inventory every administrative entry and preserve product baselines.
+- Validate complete canonical state/history and exact serialized bytes under the existing lock; commit the next consistency digest from the applied in-memory transaction, rejecting same-revision edits and mid-transaction state/product drift. This is not OS authentication.
+- Admit only new exact phase-validated source-observation and postcommit owner-ACK evidence files. Keep packet/baseline hashes immutable, retain FAIL/task states, and retire operational guarding only after resumed ownership and a valid current recipient context ACK.
+- Installation does not adopt existing projects. No new permissions, budgets, approval layers or administrative work cycles are introduced.
+
+## Team harness [0.5.3] - Unpublished candidate
+
+- Add explicit cross-tool source handoff with exact identity, supported-tool final evidence and actual owner stop attestation; unavailable source sessions never imply pause.
+- Preserve directory claims with content/type/mode/empty-directory baselines, retained failed reviews and owner-bound authority invalidation at atomic transfer.
+- Add optional exact workspace write roots with scoped cwd, temporary roots excluded, network disabled and normal approval review; verify official effective permission readback and repeat bounded policy per turn.
+- Retain known official creation IDs before post-create verification and allow explicit metadata-only reconciliation of that exact ID. Unknown creation and stale contracts block dispatch.
+- Existing installations and projects remain unchanged until separately reviewed adoption; no public release or automatic project migration.
+
+## Team harness [0.5.2] — Unpublished candidate
+
+- Add same-owner `claim_expand` for drained ready-for-review tasks, with exact canonical path union, parsed/raw CAS and idempotent receipts. Preserve failures, task obligations, diagnostic/checkpoint history and old authority records; clear current authority and ACKs before separately authorized correction. Same-task nested claims remain usable while different-task overlaps remain blocked.
+- Correct Normal/Standard resolution for priority-only or empty additional tiers. Each new owned idle Normal turn explicitly requests `serviceTierForTurn: "default"`, without changing persistent tier settings or falling back to Fast.
+- Select the versioned 0.163 client schema contract at official RPC factories; unknown/legacy transports or rejected fields stop without retry. Keep accepted requests, configured settings and provider execution separate, including repeated turns and configuration verification.
+- Retain concurrency occupancy after request acknowledgement, actual permission recovery, ownership and fresh review/ACK requirements. No global installation or existing project migration is performed.
+
+## Team harness [0.5.1] — Prepared locally, not publicly released
+
+- Add append-only permission recovery for closed, known-not-executed observations whose environment failed before collector initialization. Bind the unchanged method, exact original command/environment/input, current independent review and fresh ACK while preserving failures and scope.
+- Require normal command-specific native tool authorization; explicit denial, uncertain execution, stale evidence and duplicate successors remain blocked. Existing schema-2 projects require policy refresh only when the effective contract differs; global installation does not migrate them.
+
+## Team harness [0.5.0] — Reviewed locally, not released
+
+- Remove internal token budgets, reservations, synthetic charges, increase approvals and arbitrary packet/review-count stops. Preserve exact old state bytes privately through explicit CAS migration.
+- Clarify purpose, criteria, ownership, next action, observed failure and alternatives. Allow anchored, materially changed observations/corrections with actual scope and independent review, preserving prior failures and uncertain/access guards. Missing provider usage remains null; no billing or capacity bypass is claimed.
+- Prepare matching portable source, integrity manifest, Korean installation/update guidance and commit-pinned harness/distribution CI. Version 0.5.0 was not officially published; these changes are included in 0.5.5 after the 0.4.1 release. Installing guidance or runtime does not migrate existing project contracts.
+
+## Team harness [0.4.1] — 2026-10-23
 
 - Team harness 0.4.1 adds explicitly approved per-project budget administration and bounded same-task source diagnostics. Full-state CAS, copied approval evidence, fresh packet ACKs and one consumed diagnostic cycle preserve failures, claims, reviews and accounting.
 
-- Defaults now request Normal for every role, Astra/Sol high and Luna medium. Normal dispatch requires an explicit current catalogue mapping and refuses missing tiers or inherited Fast; explicit Fast remains opt-in. Requested defaults remain separate from native-session configuration and runtime identity.
+- Defaults request Normal for every role, Astra/Sol high and Luna medium. This version introduced a literal Normal catalogue gate; the incorrect requirement is corrected in 0.5.2 using the explicit per-turn Standard protocol sentinel. Explicit Fast remains opt-in. Requested defaults remain separate from native-session configuration and runtime identity.
 
 ## MacPilot [3.5.1] — 2026-10-23
 

@@ -10,8 +10,87 @@ def observed(model='gpt-6.1-sol',effort='low',status='idle'):
 CATALOG=[{'id':'picker-sol','model':'gpt-6.1-sol','supportedReasoningEfforts':[{'reasoningEffort':'low'}]}, {'id':'picker-astra','model':'gpt-6-astra','supportedReasoningEfforts':[{'reasoningEffort':'low'}]}]
 
 class Sessions(unittest.TestCase):
+ def standard_rpc(self,reject=False,contract=True):
+  import profile_defaults as profiles
+  class RPC:
+   calls=[];turn_count=0;tier_contract=profiles.CURRENT_TIER_CONTRACT if contract else None
+   def request(self,method,params,**kwargs):
+    self.calls.append((method,json.loads(json.dumps(params))))
+    if method=='model/list':return {'data':[dict(x,serviceTiers=[{'id':'priority','name':'Fast'}],defaultServiceTier='priority')for x in CATALOG],'nextCursor':None}
+    if method=='thread/read':return observed()
+    if method=='turn/start':
+     if reject:
+      from managed_run import RPCError
+      raise RPCError(method,{'code':-32602,'message':'Unsupported serviceTierForTurn'})
+     self.turn_count+=1;return {'turn':{'id':'turn-'+str(self.turn_count)}}
+    raise AssertionError('No tier observation mutation permitted: '+method)
+   def next(self,*args):return {'method':'turn/completed','params':{'threadId':'source','turn':{'id':'turn-'+str(self.turn_count),'status':'completed'}}}
+   def handle_request(self,event):pass
+  self.controller.rpc=RPC();return self.controller.rpc
+ def standard_owner(self):
+  import profile_defaults as profiles
+  state=self.controller.state();value=state['harness']['sessions']['source-owner'];value.update(managed=True);value['policy_expected'].update(reasoning_effort='low',service_tier='normal',tier_resolution=profiles.resolve_service_tier(CATALOG,'gpt-6.1-sol','normal'))
+  packet=h.packet(state,'source-owner');state=h.apply(state,{'op':'ack','member':'source-owner','revision':packet['revision'],'epoch':packet['epoch'],'digest':h.digest(packet)});h.save(self.path,state)
+ def test_normal_ordinary_turn_is_local_and_has_only_request_acknowledgement(self):
+  self.standard_owner();rpc=self.standard_rpc();self.controller.turn('source-owner','inspect',task='task')
+  params=next(p for method,p in rpc.calls if method=='turn/start')
+  self.assertEqual({'threadId':'source','input':[{'type':'text','text':'inspect','text_elements':[]}],'serviceTierForTurn':'default'},params)
+  state=self.controller.state();receipt=next(v for v in state['harness']['controls'].values()if v.get('accepted'))['accepted'];self.assertEqual('request_acknowledgement_only',receipt['scope']);self.assertEqual({'serviceTierForTurn':'default'},receipt['tier_parameters']);self.assertEqual('unavailable',state['harness']['sessions']['source-owner']['runtime_observed']['status']);self.assertNotIn('service_tier_observed',state['harness']['sessions']['source-owner'])
+ def test_normal_configuration_turn_does_not_change_persistent_tier_or_resume(self):
+  rpc=self.standard_rpc();self.controller.change('source-owner','normal','gpt-6.1-sol','low',service_tier='normal');self.controller.apply_change('source-owner','normal')
+  params=next(p for method,p in rpc.calls if method=='turn/start');self.assertEqual('default',params['serviceTierForTurn']);self.assertNotIn('serviceTier',params);self.assertEqual('low',params['effort']);self.assertNotIn('thread/resume',[m for m,p in rpc.calls]);self.assertEqual('configuration_pending_turn',self.controller.state()['harness']['controls']['normal']['state'])
+ def test_repeated_standard_turns_and_verification_never_infer_persistent_tier(self):
+  self.standard_owner();rpc=self.standard_rpc();self.controller.change('source-owner','normal','gpt-6.1-sol','low',service_tier='normal');self.controller.apply_change('source-owner','normal')
+  packet=h.packet(self.controller.state(),'source-owner');h.transaction(self.path,{'op':'ack','member':'source-owner','revision':packet['revision'],'epoch':packet['epoch'],'digest':h.digest(packet)})
+  first=self.controller.turn('source-owner','first',task='task');proof=self.controller.verify_after_turn('source-owner','normal',first['turn'])
+  self.assertEqual({'model_reasoning':'configured_observed','service_tier':'accepted_per_turn_only','persistent_service_tier':'unavailable','provider_execution':'unavailable'},proof['verification_scope'])
+  packet=h.packet(self.controller.state(),'source-owner');h.transaction(self.path,{'op':'ack','member':'source-owner','revision':packet['revision'],'epoch':packet['epoch'],'digest':h.digest(packet)})
+  self.controller.turn('source-owner','second',task='task')
+  turns=[p for method,p in rpc.calls if method=='turn/start'];self.assertEqual(3,len(turns));self.assertTrue(all(p.get('serviceTierForTurn')=='default'and 'serviceTier'not in p for p in turns));self.assertNotIn('thread/resume',[m for m,p in rpc.calls])
+ def test_model_effort_change_without_tier_preserves_requested_standard(self):
+  self.standard_owner();rpc=self.standard_rpc();self.controller.change('source-owner','effort-only','gpt-6.1-sol','low');self.controller.apply_change('source-owner','effort-only')
+  packet=h.packet(self.controller.state(),'source-owner');h.transaction(self.path,{'op':'ack','member':'source-owner','revision':packet['revision'],'epoch':packet['epoch'],'digest':h.digest(packet)})
+  self.controller.turn('source-owner','next',task='task')
+  turns=[p for method,p in rpc.calls if method=='turn/start'];self.assertEqual(2,len(turns));self.assertTrue(all(p.get('serviceTierForTurn')=='default'and 'serviceTier'not in p for p in turns))
+  self.assertEqual('normal',self.controller.state()['harness']['sessions']['source-owner']['policy_expected']['service_tier'])
+ def test_change_without_prior_tier_keeps_current_role_normal_default(self):
+  rpc=self.standard_rpc();self.controller.change('source-owner','default-role','gpt-6.1-sol','low');self.controller.apply_change('source-owner','default-role')
+  params=next(p for method,p in rpc.calls if method=='turn/start');self.assertEqual('default',params.get('serviceTierForTurn'));self.assertNotIn('serviceTier',params)
+ def test_fast_verification_retains_configured_evidence_scope(self):
+  rpc=self.standard_rpc();request=rpc.request
+  def resume(method,params,**kwargs):
+   if method=='thread/resume':return {'thread':{'id':'source'},'model':'gpt-6.1-sol','reasoningEffort':'low','serviceTier':'priority'}
+   return request(method,params,**kwargs)
+  rpc.request=resume;state=self.controller.state();state['harness']['controls']={'fast':{'member':'source-owner','state':'configuration_pending_turn','configuration_time_ns':0,'requested':{'model':'gpt-6.1-sol','reasoning_effort':'low','service_tier':'fast','tier_resolution':{'wire_id':'priority'}}},'later':{'member':'source-owner','state':'completed','turn':'later','intent_time_ns':1}};h.save(self.path,state)
+  proof=self.controller.verify_after_turn('source-owner','fast','later');self.assertEqual('configured_observed',proof['verification_scope']['service_tier']);self.assertEqual('configured_observed',proof['verification_scope']['persistent_service_tier']);self.assertEqual('unavailable',proof['verification_scope']['provider_execution'])
+ def test_normal_packet_turn_also_gets_local_default(self):
+  import profile_defaults as profiles
+  self.standard_owner();rpc=self.standard_rpc();state=self.controller.state();state['harness']['handoffs']['packet']={'state':'recipient_created','source':'source-owner','recipient':'source-owner'};h.save(self.path,state)
+  # Stop at the real request boundary: receipt failure cannot hide serialization.
+  rpc.next=lambda *args:(_ for _ in ()).throw(TimeoutError('synthetic after request'))
+  with self.assertRaises(TimeoutError):self.controller.turn('source-owner','packet',packet_handoff='packet')
+  params=next(p for method,p in rpc.calls if method=='turn/start');self.assertEqual('default',params['serviceTierForTurn']);self.assertNotIn('serviceTier',params)
+ def test_unknown_protocol_never_dispatches_or_claims_normal_unavailable(self):
+  import profile_defaults as profiles
+  self.standard_owner();rpc=self.standard_rpc(contract=False)
+  with self.assertRaisesRegex(profiles.ProfileError,'protocol contract'):self.controller.turn('source-owner','inspect',task='task')
+  self.assertNotIn('turn/start',[m for m,p in rpc.calls]);self.assertEqual({},self.controller.state()['harness'].get('controls',{}))
+ def test_rejected_turn_field_has_no_retry_or_tier_fallback(self):
+  from managed_run import RPCError
+  self.standard_owner();rpc=self.standard_rpc(reject=True)
+  with self.assertRaises(RPCError):self.controller.turn('source-owner','inspect',task='task')
+  turns=[p for method,p in rpc.calls if method=='turn/start'];self.assertEqual(1,len(turns));self.assertEqual('default',turns[0]['serviceTierForTurn']);self.assertNotIn('serviceTier',turns[0]);self.assertEqual('not_executed',next(iter(self.controller.state()['harness']['runs'].values()))['state'])
+ def test_accepted_receipt_turn_retains_cross_member_concurrency_slot(self):
+  state=self.controller.state();state['harness']['concurrency']=1
+  for event in [{'op':'register','member':'other','role':'core','identity':str(self.proof)},{'op':'assign','member':'other','task':'other-task','purpose':'inspect','context':'synthetic'}]:state=h.apply(state,event)
+  packet=h.packet(state,'other');state=h.apply(state,{'op':'ack','member':'other','revision':packet['revision'],'epoch':packet['epoch'],'digest':h.digest(packet)});h.save(self.path,state)
+  self.controller.bind('other','other-thread',owned=True)
+  self.controller.event('control_intent',member='source-owner',operation='receipt',state='request_pending',requested={'kind':'turn','receipt_only':True})
+  self.controller.event('control_result',operation='receipt',state='accepted_pending_observation',evidence={'accepted':{'turn':'still-running'}})
+  with self.assertRaises(h.Invalid):self.controller.event('control_intent',member='other',operation='second',state='request_pending',requested={'kind':'turn','receipt_only':True})
+  with self.assertRaises(h.Invalid):h.transaction(self.path,{'op':'begin','member':'other','task':'other-task','run':'second'})
  def setUp(self):
-  self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name);self.path=self.root/'state.json';self.proof=self.root/'proof';self.proof.write_text(json.dumps({'source':'source','controller':'fixture-controller','commands_drained':True,'execution_stopped':True}))
+  self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name).resolve();self.path=self.root/'state.json';self.proof=self.root/'proof';self.proof.write_text(json.dumps({'source':'source','controller':'fixture-controller','commands_drained':True,'execution_stopped':True}))
   s=h.initial('fixture')
   for event in [{'op':'register','member':'source-owner','role':'core','identity':str(self.proof)}, {'op':'assign','member':'source-owner','task':'task','purpose':'sample','context':'fixture','kind':'implementation'}, {'op':'claim','task':'task','paths':[str(self.root/'sample')]}]:s=h.apply(s,event)
   (self.root/'sample').write_text('uncommitted sample')
@@ -54,14 +133,16 @@ class Sessions(unittest.TestCase):
   self.assertEqual('queued',r['state'])
   with self.assertRaises(h.Invalid):self.controller.change('source-owner','change1','gpt-6.1-sol','low')
  def test_timeout_intent_retained_and_gate_blocks(self):
+  import profile_defaults as profiles
   class RPC:
+   tier_contract=profiles.CURRENT_TIER_CONTRACT
    def request(self,method,params):
     if method=='model/list':return {'data':CATALOG,'nextCursor':None}
     if method=='thread/read':return observed()
     raise TimeoutError('unknown')
   self.controller.rpc=RPC()
   self.controller.change('source-owner','change1','gpt-6.1-sol','low')
-  with self.assertRaises(TimeoutError):self.controller.apply_change('source-owner','change1',2048)
+  with self.assertRaises(TimeoutError):self.controller.apply_change('source-owner','change1')
   s=json.loads(self.path.read_text());self.assertEqual('outcome_unknown',s['harness']['controls']['change1']['state'])
   with self.assertRaises(h.Invalid):c.gate(s,'source-owner','implementation')
  def test_external_requires_owner_checkpoint(self):
@@ -145,7 +226,7 @@ class Sessions(unittest.TestCase):
      if method=='model/list':return {'data':[dict(CATALOG[0],serviceTiers=options)],'nextCursor':None}
      raise AssertionError('No turn may dispatch after catalogue change')
    self.controller.rpc=RPC()
-   with self.assertRaises((h.Invalid,profiles.ProfileError)):self.controller.apply_change('source-owner','tier',100)
+   with self.assertRaises((h.Invalid,profiles.ProfileError)):self.controller.apply_change('source-owner','tier')
  def test_native_tier_refresh_never_uses_standalone_fallback(self):
   state=self.controller.state();state['harness']['sessions']['source-owner']['identity']['owned']=False;h.save(self.path,state)
   with self.assertRaises(c.ControlError):self.controller.refresh_owned_configuration('source-owner')
@@ -157,7 +238,7 @@ class Sessions(unittest.TestCase):
    def request(self,*args,**kwargs):raise AssertionError('paused/disabled source must not call RPC')
   for execution in ('paused','disabled'):
    state=self.controller.state();state['harness']['sessions']['source-owner']['execution']=execution;state['harness']['controls']={'pending':{'member':'source-owner','state':'pending_turn_application','requested':{'model':'gpt-6.1-sol','reasoning_effort':'low'}}};h.save(self.path,state);self.controller.rpc=NoRPC()
-   with self.assertRaises(h.Invalid):self.controller.apply_change('source-owner','pending',100)
+   with self.assertRaises(h.Invalid):self.controller.apply_change('source-owner','pending')
    with self.assertRaises(h.Invalid):self.controller.change('source-owner','fresh','gpt-6.1-sol','low')
  def test_wrong_read_identity_refused(self):
   class RPC:
@@ -167,16 +248,11 @@ class Sessions(unittest.TestCase):
  def test_unknown_change_blocks_fresh_id(self):
   self.controller.event('control_intent',member='source-owner',operation='unknown',state='outcome_unknown',requested={})
   with self.assertRaises(h.Invalid):self.controller.event('control_intent',member='source-owner',operation='fresh-id',state='request_pending',requested={})
- def test_packet_inference_requires_budget(self):
-  self.prepare();s=self.controller.state();s['harness']['budget']=0;h.save(self.path,s)
-  with self.assertRaises(h.Invalid):self.controller.event('control_intent',member='source-owner',operation='packet',state='request_pending',requested={'packet_reserve':2048})
- def test_configuration_inference_rejects_zero_missing_negative_reserve(self):
-  class NoRPC:
-   def request(self,*args,**kwargs):raise AssertionError('invalid reservation must not call RPC')
-  self.controller.rpc=NoRPC()
-  for reserve in (0,None,-1,True):
-   with self.assertRaises(h.Invalid):self.controller.apply_change('source-owner','pending',reserve)
-   with self.assertRaises(h.Invalid):self.controller.event('control_intent',member='source-owner',operation='config',state='request_pending',requested={'application_for':'change','packet_reserve':reserve})
+ def test_receipt_admission_uses_scheduling_not_token_reservations(self):
+  self.controller.event('control_intent',member='source-owner',operation='packet',state='request_pending',requested={'kind':'turn','receipt_only':True})
+  self.assertEqual('request_pending',self.controller.state()['harness']['controls']['packet']['state'])
+ def test_retired_packet_reservation_cannot_reactivate_legacy_accounting(self):
+  with self.assertRaises(h.Invalid):self.controller.event('control_intent',member='source-owner',operation='config',state='request_pending',requested={'packet_reserve':1})
  def test_pretransfer_revision_change_keeps_source(self):
   self.recipient();h.transaction(self.path,{'op':'change','instruction':'new constraint'})
   with self.assertRaises(h.Invalid):self.controller.transfer('handoff1')

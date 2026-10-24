@@ -5,9 +5,9 @@ from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'payload/team-coordination/scripts'));import harness as h
 class Rework(unittest.TestCase):
  def setUp(self):
-  self.temp=tempfile.TemporaryDirectory();self.root=Path(self.temp.name).resolve();self.proof=self.root/'evidence';self.proof.write_text('Synthetic failed review and leader decision');self.path=self.root/'state.json';self.s=h.initial('same owner correction',100,1)
+  self.temp=tempfile.TemporaryDirectory();self.root=Path(self.temp.name).resolve();self.proof=self.root/'evidence';self.proof.write_text('Synthetic failed review and leader decision');self.path=self.root/'state.json';self.s=h.initial('same owner correction')
   for member,role in [('owner','core'),('reviewer','reviewer'),('leader','leader')]:self.ev('register',member=member,role=role,identity=str(self.proof))
-  self.ev('assign',member='owner',task='sample',purpose='correct within original scope',context='sentinel');self.ev('claim',task='sample',paths=[str(self.root/'sample.txt')]);self.ack();self.ev('begin',member='owner',task='sample',run='first',reserve=20);self.ev('finish',run='first',outcome='completed',evidence='actual synthetic completion',usage=5);self.ev('handoff',task='sample',artifacts=[str(self.proof)]);self.ev('review',task='sample',reviewer='reviewer',verdict='fail',evidence=str(self.proof));self.ev('handoff',task='sample',artifacts=[str(self.proof)]);self.ack()
+  self.ev('assign',member='owner',task='sample',purpose='correct within original scope',context='sentinel');self.ev('claim',task='sample',paths=[str(self.root/'sample.txt')]);self.ack();self.ev('begin',member='owner',task='sample',run='first');self.ev('finish',run='first',outcome='completed',evidence='actual synthetic completion',usage=5);self.ev('handoff',task='sample',artifacts=[str(self.proof)]);self.ev('review',task='sample',reviewer='reviewer',verdict='fail',evidence=str(self.proof));self.ev('handoff',task='sample',artifacts=[str(self.proof)]);self.ack()
  def tearDown(self):self.temp.cleanup()
  def ev(self,op,**values):self.s=h.apply(self.s,dict(op=op,**values));return self.s
  def ack(self):
@@ -20,17 +20,17 @@ class Rework(unittest.TestCase):
    raise
   return self.s
  def test_preserves_claims_reviews_runs_ledger_and_history_then_requires_fresh_ack(self):
-  before=copy.deepcopy(self.s);self.execute(self.request());expected=copy.deepcopy(before['tasks']['sample']);expected['state']='assigned';self.assertEqual(expected,self.s['tasks']['sample']);self.assertEqual(before['harness']['runs'],self.s['harness']['runs']);self.assertEqual(20,self.s['harness']['spent']);self.assertEqual(100,self.s['harness']['budget']);self.assertEqual(2,self.s['harness']['review_limit']);self.assertEqual(before['history'],self.s['history'][:-1]);self.assertEqual(1,len(self.s['tasks']['sample']['reviews']));self.assertNotIn('ack',self.s['harness']['profiles']['owner'])
-  with self.assertRaises(h.Invalid):self.ev('begin',member='owner',task='sample',run='second',reserve=20)
+  before=copy.deepcopy(self.s);self.execute(self.request());expected=copy.deepcopy(before['tasks']['sample']);expected['state']='assigned';self.assertEqual(expected,self.s['tasks']['sample']);self.assertEqual(before['harness']['runs'],self.s['harness']['runs']);self.assertEqual(before['history'],self.s['history'][:-1]);self.assertEqual(1,len(self.s['tasks']['sample']['reviews']));self.assertNotIn('ack',self.s['harness']['profiles']['owner'])
+  with self.assertRaises(h.Invalid):self.ev('begin',member='owner',task='sample',run='second')
   with self.assertRaises(h.Invalid):self.ev('review',task='sample',reviewer='reviewer',verdict='pass',evidence=str(self.proof))
   with self.assertRaises(h.Invalid):self.ev('accept',task='sample')
-  self.ack();self.ev('begin',member='owner',task='sample',run='second',reserve=20);self.assertEqual('active',self.s['harness']['runs']['second']['state'])
+  self.ack();self.ev('begin',member='owner',task='sample',run='second');self.assertEqual('active',self.s['harness']['runs']['second']['state'])
  def test_only_failed_ready_state_and_remaining_review_are_legal(self):
   original=copy.deepcopy(self.s)
   for state in ('assigned','running','reviewed','accepted'):
    self.s=copy.deepcopy(original);self.s['tasks']['sample']['state']=state
    with self.assertRaises(h.Invalid):self.ev(**self.request())
-  for reviews in ([],[dict(original['tasks']['sample']['reviews'][0],verdict='pass')],original['tasks']['sample']['reviews']*2):
+  for reviews in ([],[dict(original['tasks']['sample']['reviews'][0],verdict='pass')]):
    self.s=copy.deepcopy(original);self.s['tasks']['sample']['reviews']=reviews
    with self.assertRaises(h.Invalid):self.ev(**self.request())
  def test_wrong_owner_requester_stale_state_and_evidence_refused(self):
@@ -45,7 +45,7 @@ class Rework(unittest.TestCase):
   self.s['harness']['runs'].pop('elsewhere');self.s['harness']['controls']={'pending':{'state':'outcome_unknown'}}
   with self.assertRaises(h.Invalid):self.ev(**self.request())
  def test_duplicate_is_unchanged_readback_even_after_later_activity(self):
-  event=self.request();self.execute(event);self.ack();self.ev('begin',member='owner',task='sample',run='second',reserve=20);current=copy.deepcopy(self.s);self.assertEqual(current,h.apply(self.s,event));self.assertEqual(current,self.s)
+  event=self.request();self.execute(event);self.ack();self.ev('begin',member='owner',task='sample',run='second');current=copy.deepcopy(self.s);self.assertEqual(current,h.apply(self.s,event));self.assertEqual(current,self.s)
   with self.assertRaises(h.Invalid):h.apply(self.s,dict(event,reason='different payload'))
  def test_fresh_request_cannot_reuse_old_fail_and_duplicate_receipt_is_historical(self):
   event=self.request();self.execute(event);self.ev('handoff',task='sample',artifacts=[str(self.proof)])

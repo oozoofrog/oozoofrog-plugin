@@ -1,5 +1,9 @@
 # oozoofrog-plugin
 
+팀 하네스 `0.5.5`는 관리 디렉터리 인계 기준선에 심볼릭 링크를 따라가지 않는 메타데이터 기록과 전체 소유 경로의 읽기 전용 사전 점검을 추가합니다. 제품 파일 기준선과 새 세션의 제한된 쓰기 범위, Standard 명시 요청 수정은 유지합니다. 로컬에서 검토한 `0.5.0`~`0.5.4`의 변경을 `0.4.1` 다음 공개 릴리스에 함께 담았습니다. 설치와 프로젝트 계약 반영은 각각 진행해야 합니다.
+
+팀 하네스 [`0.5.5` 릴리스](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.5.5)는 환경 초기화 실패로 실행되지 않은 관찰에 [동일 명령의 권한 검토 제출](team-coordination/references/diagnostics.md)을 허용합니다. 기존 종료·실패 기록과 담당 범위를 유지하며, 일반 도구의 명령별 권한 검토와 최신 독립 검토·ACK가 필요합니다. 설치만으로 기존 프로젝트 계약을 갱신하지 않습니다.
+
 [English](README.md) | 한국어
 
 [한국어 제품 글쓰기](korean-product-writing/SKILL.md)는 사실·조건·요청한 구성요소를 보존하며 제품 문구를 다듬습니다. skills-only Plugin에는 런타임이나 hooks가 없습니다. 앞선 실패 뒤 같은 6개 입력의 회귀 검사를 통과했으며 [이력과 한계](drafts/korean-product-writing/tests/regression-v4/results.md)를 보존합니다. 설치와 자동 로딩은 시험하지 않았습니다.
@@ -18,9 +22,34 @@ Skills-only 패키지로 [한국어 여행 가이드북](korean-travel-guidebook
 
 [전체 후보 목록](docs/user-skill-inventory.md)은 현재 패키지·외부 의존성·미확인 소스를 구분합니다. [한국어 글쓰기의 과거 초안](drafts/korean-product-writing/STATUS.md)은 이전 실패 이력을 최신 원본과 구별해 보존합니다.
 
-## 팀 하네스 이전
+## 팀 하네스 0.5.5
 
-선택적으로 사용하는 [team-coordination 스킬](team-coordination/SKILL.md)과 skills-only Plugin은 공개 payload를 사용합니다. 설치·관리 실행·복구 도구와 검사는 [tools/codex-team-harness](tools/codex-team-harness/README.md)에 있습니다. 현재 소스 런타임 버전은 `0.4.0`이며, 기존 `0.1.1-public.1` 릴리스는 복구 참조로 보존합니다. Plugin 설치는 전역 지침이나 런타임을 설치하지 않습니다. 병합 전에는 검토한 PR commit을 고정해 [이전·검증 안내](docs/team-harness-migration.md)를 따릅니다. 목적지 main으로의 이전 완료는 병합 후에만 성립합니다. 기존 전용 저장소와 릴리스는 보존하며 새 릴리스를 만들지 않습니다.
+실제 담당자의 중지 ACK와 공식 앱 조회 근거가 있어야 교차 도구 인계를 준비할 수 있습니다. 대기 상태만으로 중지를 추정하지 않습니다. 디렉터리 소유권과 기존 실패·검토·채팅을 보존하며, 새 구현 세션은 승인된 경로와 일반 권한 심사 설정이 공식 응답에서 일치해야 합니다. 실제 패킷 수신·원자적 소유권 이전·이전 후 담당자 ACK·최신 문맥 ACK가 필요합니다. 설치만으로 기존 실제 프로젝트를 이전하지 않습니다. [인계 절차와 제한](team-coordination/references/session-control.md#cross-tool-source-and-bounded-writing)을 확인하세요.
+
+0.5.0~0.5.4는 개별 공개 릴리스로 게시하지 않았습니다. 해당 변경과 Standard 명시 요청 수정을 0.5.5에 포함했습니다. 이전 0.4.1 릴리스와 자산은 그대로 보존합니다.
+
+[team-coordination](team-coordination/SKILL.md)은 팀이 목적과 완료 조건을 공유하고, 담당자가 작업을 수행하며, 독립 검토자가 현재 결과와 근거를 확인하도록 돕는 선택형 하네스입니다. 리더는 다음 행동과 실패 원인·대안을 정리하고, 실행 담당자는 소유한 범위의 일을 완료까지 이어갑니다.
+
+[0.5.5 릴리스](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.5.5)는 내부 토큰 예산·예약·가상 차감·예산 증액 승인과 임의의 패킷 크기·검토 횟수 제한을 제거한 0.5.0 변경을 포함합니다. 과거에 계산한 한도를 소진했다는 이유만으로 의미 있는 작업을 중단하지 않습니다. 새로운 관찰이나 허용된 수정은 원인과 방법을 기록하고 이어갈 수 있습니다. 0.5.5에서는 수집기 초기화 전에 환경 문제로 실행되지 않았음이 확인된 명령만 같은 명령·환경·입력에 묶어 일반 도구의 권한 검토에 제출할 수 있습니다. 명시적 거부나 실행 여부가 불확실한 결과에는 이 절차를 적용하지 않습니다. 기존 실패 기록, 담당 범위, 최신 지침 확인, 실제 접근 권한과 독립 검토는 유지합니다. 통과하지 않은 결과를 통과로 바꾸지 않습니다.
+
+실제 제공자의 용량·계정 한도·오류와 사용자의 지시는 계속 적용됩니다. 사용량이 제공되지 않으면 미확인으로 남기며 비용을 추정하지 않습니다. 역할 기본값은 Normal, Astra/Sol은 high, Luna는 medium을 **요청**합니다. 현재 계정의 모델 사용 가능 여부, 실제 실행 모델·서비스 등급이나 모든 외부 클라이언트의 강제 준수는 보장하지 않습니다.
+
+설치·업데이트는 다음 순서로 진행합니다.
+
+1. 릴리스에서 `codex-team-harness-0.5.5.tar.gz`와 `.sha256` 파일을 함께 받아 SHA-256을 비교한 뒤 압축을 풉니다. 공식 소스를 신뢰할 수 있는 Python 3.9 이상으로 실행합니다. [소스 다운로드·검증 안내](tools/codex-team-harness/README.md#obtain-and-verify-the-source)를 참고하세요.
+2. 새 설치는 압축을 푼 디렉터리에서 아래 명령으로 변경 계획을 확인한 뒤 적용하고 검사합니다. 기존 지침과 원본 바이트는 로컬 저널에 보존합니다. 계획·저널·프로젝트 기록은 공개하지 않습니다.
+
+```sh
+python3 -I -S -B bootstrap.py --codex-home "$HOME/.codex" --save-plan plan.json dry-run
+python3 -I -S -B bootstrap.py --codex-home "$HOME/.codex" --plan plan.json apply
+python3 -I -S -B bootstrap.py --codex-home "$HOME/.codex" doctor
+```
+
+기존 설치의 업데이트는 덮어쓰기 방식으로 지원하지 않습니다. 이전 버전의 저널이나 관리 외 파일이 있으면 설치를 중단합니다. 기존 버전에 맞는 소스·저널로 [프로필 오버레이를 먼저 복원하고 런타임을 나중에 복원하는 순서](tools/codex-team-harness/payload/team-coordination/references/profiles.md)를 검토하거나, 원본 바이트와 사용자 지침을 보존하는 별도의 버전별 이전을 검토해야 합니다. 복원이 확인된 뒤 0.5.5에서 새 계획을 생성합니다. 저널이나 알 수 없는 파일을 지워 설치를 강행하지 마세요.
+
+Plugin만 설치하면 스킬 안내만 추가됩니다. 전역 지침·런타임 설치나 기존 프로젝트 이전은 자동으로 일어나지 않습니다. 0.5 이전 계약의 프로젝트는 담당자가 안전한 중단 지점에서 원본 상태 바이트를 비공개로 보존하고, 리더와 독립 검토자의 확인을 거쳐 [명시적 계약 이전(`contract_migrate`)](tools/codex-team-harness/payload/team-coordination/references/migration.md)을 실행해야 합니다. 이미 0.5 이상인 schema-2 프로젝트는 유효 계약 해시가 달라질 때만 안전한 중단 지점에서 `policy_refresh`를 수행하고, 현재 패킷을 실제로 읽은 참여자의 새 ACK를 받아야 합니다. 계약 해시가 이미 일치하면 반복 이전은 필요하지 않습니다. 0.5.5 런타임 변경은 유효 계약 해시를 바꿉니다. 설치 성공이나 합성 검사 ACK는 실제 프로젝트 이전·승인을 대신하지 않습니다.
+
+[실행·복구 도구](tools/codex-team-harness/README.md), [변경된 관찰·수정 절차](tools/codex-team-harness/payload/team-coordination/references/diagnostics.md), [소스 이전 이력](docs/team-harness-migration.md)을 함께 제공합니다. 이전 `0.4.1`과 `0.1.1-public.1` 릴리스는 복구 참조로 보존합니다.
 
 Swift 의미론 탐색용 `swift-intelligence`, 로컬 모델 설치·실행용 `local-ai-studio`, macOS·브라우저 제어와 화면·시스템 오디오 녹화용 `macpilot`를 제공합니다.
 

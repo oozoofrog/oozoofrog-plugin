@@ -1,5 +1,5 @@
 {
-  "version": "0.4.1",
+  "version": "0.5.5",
   "roles": {
     "leader": {
       "model": "gpt-6-astra",
@@ -33,10 +33,7 @@
     }
   },
   "limits": {
-    "concurrency": 1,
-    "project_token_budget": 100000,
-    "context_estimate_limit": 16000,
-    "review_passes": 2
+    "concurrency": 1
   },
   "runtime": "Defaults are explicit configuration examples. Verify each exact ID through official model/list and thread receipts; fail closed if unavailable.",
   "identity": "CLI registration is a recorded claim; adapter captures server observations.",
