@@ -94,11 +94,11 @@ def verify(directory,expected=None):
  except (OSError,ValueError,KeyError,TypeError)as e:raise h.Invalid('Checkpoint verification failed: '+str(e))from e
 
 def quiescent(s):
- a=s['harness'];require(type(a['spent'])is int and 0<=a['spent']<=a['budget'],'Unresolved budget accounting')
+ a=s['harness']
  claims=[]
- for task in s['tasks'].values():
+ for identifier,task in s['tasks'].items():
   for path in task['paths']:
-   require(not any(h.ledger.overlaps(path,other)for other in claims),'Conflicting canonical ownership');claims.append(path)
+   require(not any(identifier!=owner and h.ledger.overlaps(path,other)for owner,other in claims),'Conflicting canonical ownership');claims.append((identifier,path))
  require(not any(x['state']in ('active','uncertain')for x in a['runs'].values()),'Resolve active/uncertain runs first')
  require(not any(x.get('state')not in ('completed','rejected','failed','verified','configuration_verified_after_turn','not_executed')for x in a.get('controls',{}).values()),'Resolve pending control operations first')
  require(not any(x.get('state',x.get('phase'))!='resumed'for x in a.get('handoffs',{}).values()),'Resolve pending handoffs first')
@@ -117,7 +117,7 @@ def projection(s):
  item=active(s)
  if not item:return None
  p,source=item;v=p['working_view'];a=s['harness'];old=source['harness']
- return {'checkpoint':{'id':p['id'],'proposal_sha256':digest(p),'source_sha256':p['source_sha256'],'archive_relative':'checkpoints/'+p['id'],'history_count':len(source['history']),'semantic_approval':'recorded owner/reviewer attestations, not cryptographic identity'},'constraints':[old['constraints'][i]for i in v['constraint_indices']]+a['constraints'][len(old['constraints']):],'decisions':[old['decisions'][i]for i in v['decision_indices']]+a['decisions'][len(old['decisions']):],'historical_summary':v['historical_summary'],'remaining_work':v['remaining_work'],'changes':a['changes'][len(old['changes']):],'task_contexts':v['task_contexts']}
+ return {'checkpoint':{'id':p['id'],'proposal_sha256':digest(p),'source_sha256':p['source_sha256'],'archive_relative':'checkpoints/'+p['id'],'history_count':len(source['history']),'semantic_approval':'recorded owner/reviewer attestations, not cryptographic identity'},'constraints':[old['constraints'][i]for i in v['constraint_indices']]+a['constraints'][len(old['constraints']):],'decisions':[old['decisions'][i]for i in v['decision_indices']]+a['decisions'][len(old['decisions']):],'historical_summary':v['historical_summary'],'remaining_work':v['remaining_work'],'changes':h.active_changes(a['changes'][len(old['changes']):]),'task_contexts':v['task_contexts']}
 
 def approval(s,p,path):
  proof=h.ledger.evidence(path);data=Path(path).read_bytes();require(sha(data)==proof['sha256'],'Approval changed during capture');value=json.loads(data);members=[]
@@ -141,8 +141,8 @@ def apply(state,e,state_root=None):
   proof,approval_data=approval(s,p,e['approvals']);approval_relative='objects/'+sha(approval_data);immutable(safe(candidate.parent,approval_relative),approval_data);old_contract=a['policy_hash']
   require(old_contract==target_hash or e.get('policy_refresh')is True,'Explicit policy migration required')
   if e.get('policy_refresh'):
-   require(bool(e.get('reason')),'Policy migration reason required');limits=contract['policy']['limits'];require(a['spent']<=a['budget']<=h.budget_ceiling(a,limits['project_token_budget']),'Preserve budget; resolve accounting before migration')
-   a.update(policy_hash=target_hash,concurrency=min(a['concurrency'],limits['concurrency']),context_limit=min(a['context_limit'],limits['context_estimate_limit']),review_limit=min(a['review_limit'],limits['review_passes']))
+   require(bool(e.get('reason')),'Policy migration reason required');limits=contract['policy']['limits']
+   a.update(policy_hash=target_hash,concurrency=min(a['concurrency'],limits['concurrency']))
    for x in a['profiles'].values():x['model']=contract['policy']['roles'][x['role']]['model']
   a['checkpoint']={'id':p['id'],'directory':str(candidate.parent.resolve()),'proposal_sha256':digest(p),'approval':proof,'approval_object':{'relative':approval_relative,'sha256':sha(approval_data)},'source_policy_hash':old_contract}
  elif e['op']=='checkpoint_restore':

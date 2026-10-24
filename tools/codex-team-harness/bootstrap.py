@@ -2,7 +2,7 @@
 """Portable plan-bound installer. Standard library only; no network or privilege changes."""
 import argparse,base64,hashlib,json,os,sys,tempfile
 from pathlib import Path,PurePosixPath
-VERSION='0.4.1'
+VERSION='0.5.5'
 def check(value,message):
  if not value:raise ValueError(message)
 def sha(data):return hashlib.sha256(data).hexdigest()
@@ -88,7 +88,7 @@ def doctor(bundle,home):
  for relative,data in targets.items():
   path=safe(home,relative)
   if not path.is_file()or path.read_bytes()!=data:mismatches.append(relative)
- return {'integrity_ok':not mismatches,'mismatches':mismatches,'python':sys.version.split()[0],'manual_steps':['Install a trusted supported Python and official Codex CLI separately','Sign in through official Codex authentication; never copy credentials','Verify live exact model availability and selected-model receipts','Confirm fresh-session instruction exposure and real acknowledgements'],'scope':'Managed adapter is read-only; bypassing clients are advisory','clean_mac_verified':False}
+ return {'integrity_ok':not mismatches,'mismatches':mismatches,'python':sys.version.split()[0],'manual_steps':['Install a trusted supported Python and official Codex CLI separately','Sign in through official Codex authentication; never copy credentials','Verify live exact model availability and selected-model receipts','Confirm fresh-session instruction exposure and real acknowledgements'],'scope':'Read-only by default; explicit handoffs may configure bounded workspace writing; bypassing clients are advisory','clean_mac_verified':False}
 
 def main():
  parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--bundle',type=Path,default=Path(__file__).resolve().parent);parser.add_argument('--codex-home',type=Path,required=True);parser.add_argument('--plan',type=Path);parser.add_argument('--save-plan',type=Path);parser.add_argument('command',choices=['dry-run','apply','doctor','rollback']);args=parser.parse_args()

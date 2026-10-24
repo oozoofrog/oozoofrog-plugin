@@ -27,4 +27,9 @@ class Installer(unittest.TestCase):
   self.apply();p=self.home/'AGENTS.md';original=p.read_bytes();p.write_bytes(original+b'concurrent')
   with self.assertRaises(ValueError):b.rollback(self.home)
   p.write_bytes(original);b.rollback(self.home);self.assertFalse(p.exists())
+ def test_new_migration_and_observation_helpers_are_integrity_bound(self):
+  for helper in ('migration.py','observations.py'):
+   bundle=self.root/helper;shutil.copytree(ROOT,bundle,ignore=shutil.ignore_patterns('.git','dist','__pycache__'));p=bundle/'payload/team-coordination/scripts'/helper;p.write_text(p.read_text()+'\n# Synthetic tamper\n')
+   with self.assertRaises(ValueError):b.install(bundle,self.home)
+   self.assertFalse(self.home.exists())
 if __name__=='__main__':unittest.main()
