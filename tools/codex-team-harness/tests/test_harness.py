@@ -6,7 +6,7 @@ import harness as h
 
 class Gates(unittest.TestCase):
  def setUp(self):
-  self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name);self.s=h.initial('sample',100,1)
+  self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name);self.s=h.initial('sample')
   self.proof=self.root/'identity';self.proof.write_text('synthetic tool identity fixture')
   self.member='exec'
   self.ev('register',member=self.member,role='core',identity=str(self.proof))
@@ -17,7 +17,7 @@ class Gates(unittest.TestCase):
  def ack(self):
   p=h.packet(self.s,self.member);self.ev('ack',member=self.member,revision=p['revision'],epoch=p['epoch'],digest=h.digest(p))
  def begin(self,run='one',**kw):
-  return self.ev('begin',task='a',member=self.member,run=run,reserve=20,**kw)
+  return self.ev('begin',task='a',member=self.member,run=run,**kw)
  def test_stale_revision_and_ack(self):
   self.ack();self.ev('change',instruction='preserve sentinel',decisions=['do not overwrite'])
   with self.assertRaises(h.Invalid):self.begin()
@@ -39,27 +39,25 @@ class Gates(unittest.TestCase):
   with self.assertRaises(h.Invalid):self.begin('two')
   self.ev('reconcile',run='one',outcome='not_executed',evidence='server read observed no active turn')
   self.ack();self.begin('two')
- def test_budget_exhaustion_and_missing_usage(self):
-  self.ack();self.begin();self.ev('finish',run='one',outcome='completed',evidence='observed')
-  self.assertEqual(self.s['harness']['spent'],20)
-  with self.assertRaises(h.Invalid):self.ev('begin',task='a',member='exec',run='two',reserve=81)
+ def test_missing_usage_remains_unknown_and_does_not_limit_continuation(self):
+  self.ack();self.begin();self.ev('finish',run='one',outcome='completed',evidence='observed');self.assertIsNone(self.s['harness']['runs']['one']['reported_usage']);self.ack();self.begin('two')
  def test_support_explicit_corrected_model(self):
   self.ev('register',member='support',role='support',identity=str(self.proof))
   self.ev('assign',task='s',member='support',purpose='lookup',context='x')
   self.ev('claim',task='s',paths=[str(self.root/'else')])
   p=h.packet(self.s,'support');self.ev('ack',member='support',revision=p['revision'],epoch=p['epoch'],digest=h.digest(p))
-  self.ev('begin',task='s',member='support',run='s',reserve=1)
+  self.ev('begin',task='s',member='support',run='s')
   self.assertEqual(self.s['harness']['runs']['s']['model'],'gpt-6-luna')
  def test_context_overflow_not_truncated(self):
   self.ev('change',instruction='x'*70000,decisions=['critical rationale'])
-  with self.assertRaises(h.Invalid):h.packet(self.s,'exec')
+  self.assertEqual('x'*70000,h.packet(self.s,'exec')['constraints'][-1])
  def test_review_stop_and_independence(self):
   with self.assertRaises(h.Invalid):self.ev('review',task='a',reviewer='exec',verdict='pass',evidence='x')
   self.ev('register',member='reviewer',role='reviewer',identity=str(self.proof))
   for _ in range(2):
    self.ev('handoff',task='a',artifacts=[str(self.proof)]);self.ev('review',task='a',reviewer='reviewer',verdict='fail',evidence=str(self.proof))
   self.ev('handoff',task='a',artifacts=[str(self.proof)])
-  with self.assertRaises(h.Invalid):self.ev('review',task='a',reviewer='reviewer',verdict='pass',evidence='third')
+  self.ev('review',task='a',reviewer='reviewer',verdict='pass',evidence=str(self.proof));self.assertEqual(3,len(self.s['tasks']['a']['reviews']))
  def test_single_authority_legacy_and_project_preserved(self):
   sentinel=self.root/'sentinel';sentinel.write_bytes(b'original\x00bytes')
   self.assertIn('members',self.s);self.assertIn('tasks',self.s);self.assertNotIn('tasks',self.s['harness'])
@@ -75,7 +73,7 @@ class Gates(unittest.TestCase):
  def test_concurrency_and_release(self):
   self.ack();self.begin()
   self.ev('assign',task='b',member='exec',purpose='b',context='b');self.ev('claim',task='b',paths=[str(self.root/'other')]);self.ack()
-  with self.assertRaises(h.Invalid):self.ev('begin',task='b',member='exec',run='two',reserve=1)
+  with self.assertRaises(h.Invalid):self.ev('begin',task='b',member='exec',run='two')
   with self.assertRaises(h.Invalid):self.ev('release',task='a',safe_boundary=True)
   self.ev('finish',run='one',outcome='completed',evidence='observed');self.ev('release',task='a',safe_boundary=True)
   self.assertEqual(self.s['tasks']['a']['paths'],[])

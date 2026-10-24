@@ -1,25 +1,35 @@
-# Same-owner rework (0.3.1 patch source)
+# Same-owner evidence-based rework
 
-A task in `ready_for_review` retains its claimed paths, so neither `begin` (assigned/running only) nor `reassign` (released claims only) can safely reopen it. Use the additive `rework` event only to address the latest canonical failed review under the same owner and original scope. It is not reassignment, acceptance, a review-limit reset or an execution grant.
+Use `rework` to correct a genuinely failed deliverable without losing ownership, original artifacts, FAILs or history. Ordinary first rework requires exact full-state CAS, registered leader requester, original ready-for-review task/member, latest actual fresh FAIL, explicit reason and fresh decision evidence. All runs/controls/handoffs must be resolved. Its receipt is idempotent; new work requires an actual fresh packet ACK and current permissions.
 
-A registered leader with a fresh file-backed identity claim requests the transition. Provide a nonempty reason and fresh decision-evidence file. These are auditable claims, not native caller authentication. The task must be exactly `ready_for_review`, its latest actual stored review must be `fail` with an unchanged report, and a review allowance must remain. Each failed-review index/digest can authorize only one rework. All project runs must be terminal; pending/uncertain controls and in-flight handoffs block the revision change.
+An unchanged failure is not permission for meaningless repeated attempts. For materially changed further work, or correction following a diagnostic-only phase, use the cause/method/authority-bound rework form described in [diagnostics](diagnostics.md). There is no fixed review-count or total-attempt quota. Preserve every prior receipt and require genuine current-artifact independent review before acceptance. A previous PASS does not override a later FAIL or stale artifact.
 
-Save the following JSON event, substituting actual values:
+Source/skill installation, contract migration, native configuration and real work are separate. None is automatic and this workflow grants no new access.
+
+## Additional claims while awaiting review
+
+When a drained original task remains `ready_for_review` and needs additional integration files, use `claim_expand` before preparing separately authorized correction. The existing `claim` operation still accepts only assigned/running tasks. Expansion preserves the owner, state, purpose, context, kind, resources, artifacts, FAILs, diagnostic snapshots, retained authority records and all historical entries. It appends the sorted union of old and additional claims, advances the revision, removes the current task authority mapping and invalidates every packet ACK. Existing scope requirements remain intact.
+
+Supply an event with these fields:
 
 ```json
-{"op":"rework","request_id":"unique-correction-id","task":"task-id","member":"unchanged-owner","requester":"registered-leader","source_sha256":"FULL_STATE_CANONICAL_DIGEST","reason":"Address the failed finding within the approved scope","evidence":"ABSOLUTE_DECISION_EVIDENCE_FILE"}
+{
+  "op": "claim_expand",
+  "request_id": "stable-integration-claims-id",
+  "project": "exact current project goal",
+  "project_root": "/absolute/canonical/state-directory",
+  "task": "original-task-id",
+  "member": "current-execution-owner-id",
+  "source_sha256": "harness.digest(parsed current state)",
+  "source_raw_sha256": "sha256(exact current state file bytes)",
+  "policy_hash": "current effective contract digest",
+  "additional_paths": ["/absolute/canonical/additional-file"],
+  "reason": "Concrete reason the original task needs these claims"
+}
 ```
 
-`source_sha256` is `harness.digest(parsed_state)`: SHA-256 over Python `json.dumps(state, sort_keys=True, ensure_ascii=False).encode()` with default separators. It is not the raw JSON-file SHA. Capture the complete current state, including history and nonrevision mutations. Submit through `run.py harness --state STATE apply --event EVENT` or installed `harness.transaction`; do not edit state JSON manually.
+Use `run.py harness --state state.json apply --event event.json`. The state directory and every path must already be canonical; aliases, relative paths, duplicates, stale owner identity, stale contracts/CAS and other-task overlaps are refused. Existing claims cannot have changed through symlinks. Same-task parent/child claims remain explicit and usable; different tasks conflict even when their owner is the same. Shared resources are preserved and must not conflict. Drain all project runs, uncertain outcomes, unresolved controls and in-flight handoffs first. Pending diagnostic grants for this task must be legitimately resolved before expansion; this operation cannot cancel them or rewrite their immutable snapshots. A current checkpoint must still verify.
 
-The locked transaction preserves every task field except state (`assigned`), existing claims/resources, all artifacts/reviews/failure counts, runs, reservations/accounting and full prior history. It adds a request receipt, auditable history/change and revision boundary, and removes the owner's old ACK. Read the fresh packet and record an actual revision/epoch/digest receipt before any new `begin`; never generate another participant's ACK. A new completion still needs handoff and independent review. Remaining review allowance is unchanged.
+Keep the request ID and exact event after uncertain output. Identical committed-ID readback is read-only even after later state changes, and returns the historical transition plus current observation. A conflicting event with the same ID is refused. An uncommitted stale-CAS event must be rebuilt from a fresh read, without silently broadening its paths.
 
-Exact duplicate request ID and payload return the current state without saving, appending history or charging again—even after later activity. CLI output distinguishes the original committed transition from current observed owner/state/revision; it never reports a later task as newly assigned. A conflicting payload or a fresh request with stale full-state digest is refused. A fresh ID cannot reuse the consumed old failed review.
-
-Before atomic file replacement, storage failure leaves original state bytes intact. Failure after replacement (such as directory fsync failure) can mean a full transition committed with durability uncertain. Read the authoritative state and request receipt before retrying. The same exact request permits idempotent readback; never guess a new ID or reset accounting. Fault-injection tests do not prove real power-cut durability.
-
-## Adoption and current installed overlay
-
-This is source0.3.1, separate from staged0.4 Astra/Fast work. It is not installed automatically. Active project contracts must remain unchanged until actual owner safe holds and a reviewed preserving installer are ready. The public generic installer is not a private-overlay migration recipe.
-
-An installed requested-default Astra overlay changes global AGENTS outside the managed block and has its own journal. A future preserving runtime migration must first back up and remove that overlay using its reviewed helper; preserve exact private guidance and old journals; apply/doctor the reviewed runtime patch; then recreate the overlay against the new baseline and verify both doctors/ordered rollback. Do not rewrite historical journals. That complete private migration is not proven by this patch and must be separately staged/tested before installation. Project policy migration/checkpoint and real fresh member ACKs follow installation; no project operation or resumption is automatic.
+Expansion records ownership only. It grants no native permission, correction, execution, or acceptance authority and requires no new human approval for this administrative step. After expansion, use the existing applicable correction authorization and evidence workflow, obtain a fresh packet ACK, and begin separately. Existing failed-review and artifact freshness checks still apply to correction/review; expansion preserves their original truth without inventing a new FAIL or PASS.

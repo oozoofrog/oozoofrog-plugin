@@ -6,7 +6,8 @@ import harness as h
 class RPCError(h.Invalid):
  def __init__(self,method,error):self.code=error.get('code');self.error=error;super().__init__('Server rejected '+method+': '+json.dumps(error))
 class RPC:
- def __init__(self,command):
+ def __init__(self,command,tier_contract=None):
+  self.tier_contract=tier_contract # Selected client schema contract, not server attestation.
   self.p=subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,bufsize=0)
   self.selector=selectors.DefaultSelector();self.selector.register(self.p.stdout,selectors.EVENT_READ);self.buffer=b'';self.seq=0
  def send(self,item):
@@ -48,17 +49,22 @@ def dispatch(rpc,path,run,thread_id,prompt,model):
   h.require(r['state']=='active' and not r['stale'] and r['revision']==s['harness']['revision'] and r['epoch']==p['epoch'],'Instruction/epoch changed before dispatch')
   h.require(r['model']==model and s['tasks'][r['task']]['owner']==r['member'],'Owner/model changed')
   import session_control as control
+  import profile_defaults as profiles
   control.gate(s,r['member'],s['tasks'][r['task']].get('kind','implementation'))
+  expected=s['harness']['sessions'][r['member']]['policy_expected'];params={'threadId':thread_id,'model':model,'input':[{'type':'text','text':prompt,'text_elements':[]}]}
+  if expected.get('service_tier')=='normal':
+   profiles.require_tier_contract(rpc,expected['tier_resolution']);params.update(profiles.tier_parameters(expected['tier_resolution'],'turn/start'))
   # Persist before sending: a crash here is uncertain, never an automatic retry.
   s=h.apply(s,{'op':'observe','run':run,'phase':'dispatch_uncertain','receipt':{'thread_id':thread_id,'model':model}});h.save(path,s)
-  rpc.seq+=1;i=rpc.seq;rpc.send({'id':i,'method':'turn/start','params':{'threadId':thread_id,'model':model,'input':[{'type':'text','text':prompt,'text_elements':[]}]}})
+  rpc.seq+=1;i=rpc.seq;rpc.send({'id':i,'method':'turn/start','params':params})
   return i
 
-def run(path,member,task,run_id,reserve,command,cwd,timeout=120):
- h.transaction(path,{'op':'begin','member':member,'task':task,'run':run_id,'reserve':reserve})
+def run(path,member,task,run_id,command,cwd,timeout=120):
+ h.transaction(path,{'op':'begin','member':member,'task':task,'run':run_id})
  rpc=None;dispatched=False;usage=None;thread_id=None;turn_id=None;terminal=False
  try:
-  rpc=RPC(command);rpc.request('initialize',{'clientInfo':{'name':'team-coordination-harness','version':'0.1.0'}});rpc.send({'method':'initialized'})
+  import profile_defaults as profiles
+  rpc=RPC(command,tier_contract=profiles.CURRENT_TIER_CONTRACT);rpc.request('initialize',{'clientInfo':{'name':'team-coordination-harness','version':'0.1.0'}});rpc.send({'method':'initialized'})
   catalog=[];cursor=None
   while True:
    response=rpc.request('model/list',{'limit':100,'includeHidden':True,'cursor':cursor});catalog+=response['data'];cursor=response.get('nextCursor')
@@ -68,11 +74,14 @@ def run(path,member,task,run_id,reserve,command,cwd,timeout=120):
   import session_control as control
   import profile_defaults as profiles
   role=s['harness']['profiles'][member]['role'];requested=profiles.role_request(h.effective_contract()['policy'],role);entry=next(m for m in catalog if m.get('model')==model);effort=requested.get('reasoning_effort',entry.get('defaultReasoningEffort'));requested.update(model=model,reasoning_effort=effort);params,resolution=profiles.start_parameters(catalog,requested)
+  profiles.require_tier_contract(rpc,resolution)
   response=rpc.request('thread/start',dict(params,cwd=str(Path(cwd).resolve()),sandbox='read-only',approvalPolicy='never'))
   thread_id=response['thread']['id'];h.check_model(model,catalog,response)
   ctl=control.Controller(path,rpc,'managed-run:'+run_id,'local','official-owned-stdio');ctl.bind(member,thread_id,owned=True,effort=effort,managed=True,replacement_run=run_id,service_tier=requested.get('service_tier'),tier_resolution=resolution);ctl.inspect(member)
   if requested.get('service_tier')is not None:
-   tier=profiles.configured(response,'thread/start');h.require(profiles.tier_matches(tier,resolution),'Configured service tier unavailable/substituted');ctl.event('control_tier_observe',member=member,observation=tier,generation=ctl.state()['harness']['sessions'][member]['configuration_generation'],response_bound=True)
+   tier=profiles.configured(response,'thread/start')
+   if requested['service_tier']!='normal':h.require(profiles.tier_matches(tier,resolution),'Configured service tier unavailable/substituted')
+   ctl.event('control_tier_observe',member=member,observation=tier,generation=ctl.state()['harness']['sessions'][member]['configuration_generation'],response_bound=True)
   h.transaction(path,{'op':'observe','run':run_id,'phase':'thread_verified','receipt':{'thread_id':thread_id,'model':response['model'],'catalog_models':[m.get('model') for m in catalog]}})
   s=read(path);prompt=json.dumps(s['harness']['runs'][run_id]['packet'],ensure_ascii=False)+'\nPerform only the assigned task within read-only capability; return evidence and limits.'
   # Set uncertain before invocation, because send may succeed then throw.
@@ -87,13 +96,12 @@ def run(path,member,task,run_id,reserve,command,cwd,timeout=120):
    rpc.handle_request(o)
    if o.get('id')==request_id:
     h.require('error'not in o,'turn/start rejected; inspect server state before retry');turn_id=o['result']['turn']['id']
-    h.transaction(path,{'op':'observe','run':run_id,'phase':'turn_observed','receipt':{'turn_id':turn_id}})
+    h.transaction(path,{'op':'observe','run':run_id,'phase':'turn_observed','receipt':{'turn_id':turn_id,'tier_request_accepted':profiles.tier_parameters(resolution,'turn/start')if requested.get('service_tier')=='normal'else {},'selected_client_contract':rpc.tier_contract,'scope':'request_acknowledgement_only'}})
    method=o.get('method');params=o.get('params',{})
    if method=='model/rerouted':raise h.Invalid('Server model reroute; continuation blocked')
    if method=='thread/tokenUsage/updated' and params.get('threadId')==thread_id:
     value=control.turn_usage(params)
     if type(value)is int:usage=value
-    if usage is not None and usage>=reserve:raise h.Invalid('Reported usage reached reservation; interrupt required')
    if method in ('thread/compacted','item/completed') and (method=='thread/compacted' or params.get('item',{}).get('type')=='contextCompaction'):
     h.transaction(path,{'op':'boundary','member':member,'reason':'compaction'});raise h.Invalid('Compaction requires fresh context acknowledgement')
    if method=='turn/completed' and params.get('threadId')==thread_id:
@@ -115,8 +123,8 @@ def run(path,member,task,run_id,reserve,command,cwd,timeout=120):
   if rpc:rpc.close()
 
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('--state',type=Path,required=True);p.add_argument('--member',required=True);p.add_argument('--task',required=True);p.add_argument('--run',required=True);p.add_argument('--reserve',type=int,required=True);p.add_argument('--cwd',type=Path,required=True);a=p.parse_args()
- print(json.dumps(run(a.state,a.member,a.task,a.run,a.reserve,['codex','app-server','--stdio'],a.cwd)))
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('--state',type=Path,required=True);p.add_argument('--member',required=True);p.add_argument('--task',required=True);p.add_argument('--run',required=True);p.add_argument('--cwd',type=Path,required=True);a=p.parse_args()
+ print(json.dumps(run(a.state,a.member,a.task,a.run,['codex','app-server','--stdio'],a.cwd)))
 if __name__=='__main__':
  try:main()
  except Exception as e:print(json.dumps({'error':str(e),'inspect_state_before_retry':True}));sys.exit(2)

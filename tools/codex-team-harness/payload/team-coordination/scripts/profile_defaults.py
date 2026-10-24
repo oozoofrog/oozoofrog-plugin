@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Separate requested role defaults, catalogue tier translation and configured evidence."""
 import datetime,hashlib,json
+CURRENT_TIER_CONTRACT='codex-app-server-0.163.0-alpha.11.2'
 class ProfileError(ValueError):pass
 def now():return datetime.datetime.now(datetime.timezone.utc).isoformat()
 def digest(value):return hashlib.sha256(json.dumps(value,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
@@ -11,16 +12,27 @@ def resolve_service_tier(catalog,model,label):
  if label not in ('normal','fast'):raise ProfileError('Unsupported requested tier label; never conflate reasoning/tier or infer aliases')
  entry=next((m for m in catalog if m.get('model')==model),None)
  if entry is None:raise ProfileError('Exact model absent from catalogue')
+ if label=='normal':return {'requested_label':label,'wire_id':'default','catalog_entry_sha256':digest(entry),'source':'official Codex app-server explicit Standard sentinel','status':'resolved_from_protocol','at':now()}
  tiers=entry.get('serviceTiers')
  if not isinstance(tiers,list):raise ProfileError('Explicit current serviceTiers required; null/default/deprecated labels do not establish a tier')
  options=[x for x in tiers if isinstance(x,dict)and isinstance(x.get('name'),str)and x['name'].casefold()==label]
  if len(options)!=1 or not isinstance(options[0].get('id'),str)or not options[0]['id']:raise ProfileError(label+' tier absent/ambiguous in current serviceTiers; no fallback or inherited tier')
  return {'requested_label':label,'wire_id':options[0]['id'],'catalog_label':options[0]['name'],'catalog_entry_sha256':digest(entry),'source':'official model/list.serviceTiers','status':'resolved_from_catalogue','at':now()}
+def tier_parameters(resolution,method):
+ value=resolution['wire_id']
+ if value is None:return {}
+ if method=='turn/start':return {'serviceTierForTurn':value}if resolution['requested_label']=='normal'else {'serviceTier':value}
+ if method in ('thread/start','thread/resume'):return {}if resolution['requested_label']=='normal'else {'serviceTier':value}
+ if method=='thread/settings/update':return {'serviceTier':None if resolution['requested_label']=='normal'else value}
+ raise ProfileError('Unsupported tier request method')
+def require_tier_contract(rpc,resolution):
+ if resolution.get('requested_label')=='normal'and getattr(rpc,'tier_contract',None)!=CURRENT_TIER_CONTRACT:raise ProfileError('Unsupported/unknown client protocol contract for explicit Standard; no inherited or Fast fallback')
+ if resolution.get('requested_label')=='normal'and resolution.get('wire_id')!='default':raise ProfileError('Stale/nonstandard Normal resolution; explicit default required')
 def start_parameters(catalog,requested):
  model=requested['model'];effort=requested['reasoning_effort'];entry=next((x for x in catalog if x.get('model')==model),None)
  if entry is None or effort not in [x.get('reasoningEffort')for x in entry.get('supportedReasoningEfforts',[])]:raise ProfileError('Exact model/reasoning effort unavailable; no fallback')
  resolution=resolve_service_tier(catalog,model,requested.get('service_tier'));params={'model':model,'config':{'model_reasoning_effort':effort}}
- if resolution['wire_id']is not None:params['serviceTier']=resolution['wire_id']
+ params.update(tier_parameters(resolution,'thread/start'))
  return params,resolution
 def configured(response,source):
  allowed=source in ('thread/start','thread/resume','thread/settings/updated');available=allowed and 'serviceTier'in response and response['serviceTier']is not None

@@ -33,13 +33,11 @@
         "changes",
         "profiles",
         "runs",
-        "budget",
-        "spent",
         "policy_hash"
       ],
       "properties": {
         "schema": {
-          "const": 1
+          "const": 2
         },
         "revision": {
           "type": "integer",
@@ -68,14 +66,6 @@
         },
         "runs": {
           "type": "object"
-        },
-        "budget": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "spent": {
-          "type": "integer",
-          "minimum": 0
         },
         "policy_hash": {
           "type": "string"
@@ -120,13 +110,17 @@
           "type": "object",
           "description": "Optional immutable request-ID/event-digest receipts for same-owner rework. Original transition is distinct from current task state."
         },
-        "budget_changes": {
-          "type": "object",
-          "description": "Append-only exact per-project budget approval, copied evidence, and idempotent request receipts; no global default increase."
-        },
         "diagnostics": {
           "type": "object",
-          "description": "One same-task diagnostic cycle with copied approvals, original failure/task snapshot and separately retained diagnostic result. No correction or acceptance authority."
+          "description": "Append-only method-bound observations and exact-command permission-recovery submission records preserving failures and scope; native tool authorization remains required."
+        },
+        "legacy_archives": {
+          "type": "object",
+          "description": "Exact original-state bytes and hashes; historical only, never active limits."
+        },
+        "diagnostic_method_seeds": {
+          "type": "object",
+          "description": "Reviewed actual-run-bound legacy method provenance."
         }
       }
     }
