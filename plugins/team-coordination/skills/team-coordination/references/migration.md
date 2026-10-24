@@ -1,0 +1,9 @@
+# Budget-free contract migration
+
+Version 0.5.0 removes internal token allowances, reservations, synthetic charges and increase approvals. Historical accounting is evidence only, never a provider balance, billing measurement or active constraint. Actual provider errors, user instructions, permissions, ownership and uncertainty remain authoritative.
+
+`contract_migrate` needs stable `request_id`, exact `project` and canonical `project_root` (state-file parent), `source_sha256` (`harness.digest` of parsed state), `source_raw_sha256` of exact saved bytes, target `policy_hash`, registered leader `requester`, reason and an `approvals` JSON path. Leader/reviewer records bind the entire request excluding only `approvals`, with `approved`, `safe_boundary` and `all_current_obligations_retained` true and distinct claimed identities. These attest existing authority and preservation; no new human budget approval is requested. They are not authenticated native identity.
+
+All runs must be terminal and controls/handoffs resolved. The atomic transaction retains the original bytes, hashes and review evidence in `legacy_archives`, removes obsolete live accounting/count-limit fields, preserves business tasks/FAILs/claims/artifacts/history, increments revision and invalidates ACKs. Read the current packet and obtain actual participant ACKs before any separately authorized work. Exact duplicate ID/payload is historical readback; conflict, stale raw/parsed CAS or changed evidence fails. After an uncertain write, read back the original ID rather than manufacture another attempt.
+
+`migration.project(raw_bytes)` is a pure uncommitted preview, with no authorization, ACK or execution effect. Keep real snapshots/archives private. A source installation, preview or fixture ACK never constitutes real project adoption or native permission.

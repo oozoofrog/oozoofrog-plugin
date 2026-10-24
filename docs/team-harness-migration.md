@@ -1,6 +1,6 @@
 # Team harness migration
 
-Canonical destination: `oozoofrog/oozoofrog-plugin`, `tools/codex-team-harness/`. This change is reviewed on a branch; main becomes the installation source only after merge. Before merge, use the exact reviewed commit archive and enter that subtree. The installer and runner resolve their manifest/payload relative to their own directory, so extraction under a larger repository does not change target resolution.
+Canonical destination: `oozoofrog/oozoofrog-plugin`, `tools/codex-team-harness/`. This document records the original source relocation and subsequent changes. Release 0.5.5 includes the locally reviewed 0.5.0–0.5.4 preparations after public 0.4.1; previous releases remain preserved. For installation, updates and explicit project-contract adoption, use [the 0.5.5 source guide](../tools/codex-team-harness/README.md) and [Korean explanation](../README.ko.md#팀-하네스-055). The installer and runner resolve their manifest/payload relative to their own directory, so extraction under a larger repository does not change target resolution.
 
 ## Source provenance and license boundary
 
@@ -12,7 +12,7 @@ Legacy release (retained, not overwritten): https://github.com/oozoofrog/codex-t
 
 This is the user-authorized relocation of the accepted public handoff; it supplies no new rights warranty. No new license grant is invented: neither the accepted upstream payload nor destination root selected an open-source license. Python runtime code uses the standard library; no vendored third-party code/dependency was found in this payload. Python and Codex are installed separately from their official distributors. This does not redistribute authentication, runtime binaries, personal policy variants or project state.
 
-Migration changes are source-routing documentation, matching public skill instructions, distribution metadata/mirrors and refreshed integrity manifest. State-machine, managed-run and installer behavior are unchanged. Extra standalone/Plugin UI metadata is distribution-only; the installer retains its verified public payload. No new release is created, and the old accepted archive checksum must not be reused for the relocated source.
+The original relocation changed source-routing documentation, matching public skill instructions, distribution metadata/mirrors and the integrity manifest, without changing state-machine, managed-run or installer behavior. Extra standalone/Plugin UI metadata is distribution-only. That relocation created no new release; later versioned releases have their own reviewed source and checksums. The old accepted archive checksum must not be reused for relocated or updated source.
 
 ## Installation and recovery
 

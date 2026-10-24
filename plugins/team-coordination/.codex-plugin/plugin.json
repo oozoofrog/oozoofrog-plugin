@@ -1,6 +1,6 @@
 {
   "name": "team-coordination",
-  "version": "0.4.1",
+  "version": "0.5.5",
   "description": "Coordinate an enabled leader-and-execution-team workflow with explicit roles, ownership, versioned context acknowledgements, evidence and recovery.",
   "author": {
     "name": "oozoofrog",
@@ -11,7 +11,7 @@
   "interface": {
     "displayName": "Team Coordination",
     "shortDescription": "Opt-in roles, ownership, evidence and recovery",
-    "longDescription": "Opt-in team guidance and managed read-only pilot. Runtime source is provided separately in tools/codex-team-harness. Plugin installation does not modify global guidance, runtime, hooks, models or authentication.",
+    "longDescription": "Opt-in team guidance and managed pilot, read-only by default with explicitly bounded handoff writing. Runtime source is provided separately in tools/codex-team-harness. Plugin installation does not modify global guidance, runtime, hooks, models or authentication.",
     "developerName": "oozoofrog",
     "category": "Productivity",
     "capabilities": [
