@@ -1,0 +1,4 @@
+interface:
+  display_name: "Interface First Design"
+  short_description: "Design product UI with visible actions and states"
+  default_prompt: "Use $interface-first-design to design or review this product UI with visible actions, clear states, and preserved meaning."

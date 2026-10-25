@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -36,7 +38,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ["swift-intelligence", "local-ai-studio", "macpilot", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing", "c4fy"],
+            ["swift-intelligence", "local-ai-studio", "macpilot", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing", "interface-first-design", "winpilot", "c4fy"],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -76,6 +78,38 @@ class PluginDistributionTests(unittest.TestCase):
             self.assertTrue((mirror / name).is_file(), name)
         self.assertTrue((mirror / "bin/c4fy.mjs").stat().st_mode & 0o111)
         self.assertNotIn("dependencies", json.loads((source / "package.json").read_text()))
+    def test_winpilot_distribution(self) -> None:
+        from test_sync_skill_mirrors import load_module
+        from test_document_links import local_targets
+        source = REPO_ROOT / "winpilot"
+        plugin = REPO_ROOT / "plugins/winpilot"
+        mirror = plugin / "skills/winpilot"
+        module = load_module()
+        self.assertEqual(module.package_files(source), module.package_files(mirror))
+        manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
+        runtime = json.loads((source / "runtime/distribution.json").read_text())
+        self.assertEqual(manifest["version"].split("+")[0], runtime["version"])
+        self.assertIn("windows-pilot.exe", runtime["files"])
+        self.assertRegex(runtime["sha256"], r"^[a-f0-9]{64}$")
+        self.assertIn("<Version>" + runtime["version"] + "</Version>", (source / "tool/WindowsPilot.csproj").read_text())
+        config = json.loads((plugin / ".mcp.json").read_text())["mcpServers"]["winpilot"]
+        self.assertTrue((plugin / config["args"][2]).is_file())
+        self.assertEqual("-Stdio", config["args"][3])
+        metadata = dict(line.strip().split(": ", 1) for line in (source / "agents/openai.yaml").read_text(encoding="utf-8").splitlines() if line.startswith("  "))
+        self.assertEqual(json.loads(metadata["display_name"]), manifest["interface"]["displayName"])
+        self.assertEqual(json.loads(metadata["short_description"]), manifest["interface"]["shortDescription"])
+        self.assertIn(json.loads(metadata["default_prompt"]), manifest["interface"]["defaultPrompt"])
+        self.assertIn("WinPilot", (REPO_ROOT / "README.md").read_text(encoding="utf-8"))
+        self.assertIn("WinPilot", (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8"))
+        for root in (source, mirror):
+            for document in root.rglob("*.md"):
+                if any(part in {"evidence", "bin", "obj", "artifacts"} for part in document.relative_to(root).parts):
+                    continue
+                for target in local_targets(document.read_text(encoding="utf-8")):
+                    self.assertTrue((document.parent / target).exists(), (document, target))
+        files = module.package_files(source)
+        self.assertFalse(any(part in {"bin", "obj", "artifacts", "evidence"} for name in files for part in Path(name).parts))
+        self.assertNotIn("game-start-reference.png", runtime["files"])
 
     def test_macpilot_distribution(self) -> None:
         source = REPO_ROOT / "macpilot"
@@ -125,7 +159,11 @@ class PluginDistributionTests(unittest.TestCase):
                          "tool/Sources/MacPilotCore/Workflows.swift"):
             self.assertTrue((mirror / relative).is_file(), relative)
         for relative in ("scripts/macpilot", "scripts/build.sh", "scripts/install-runtime.sh", "scripts/verify_simulator.py"):
-            self.assertTrue((mirror / relative).stat().st_mode & 0o111, relative)
+            if os.name == "nt":
+                mode = subprocess.check_output(["git", "ls-files", "--stage", "--", (mirror / relative).relative_to(REPO_ROOT).as_posix()], cwd=REPO_ROOT, text=True).split()[0]
+                self.assertEqual("100755", mode, relative)
+            else:
+                self.assertTrue((mirror / relative).stat().st_mode & 0o111, relative)
         for relative in module.GENERATED_PATHS[source.name]:
             self.assertFalse((mirror / relative).exists(), relative)
         manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text())
