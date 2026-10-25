@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## C4fy 0.1.0 — 2026-10-25
+
 - C4fy: support project-defined roleLabel and validated generic icon identifiers on cards and SVG exports, retaining C4 kind in details and backward-compatible defaults.
 
 - C4fy: retain full C4 diagrams and morph navigation with viewport-fit layout and paginated bottom details.
