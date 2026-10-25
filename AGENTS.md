@@ -20,3 +20,5 @@
 - For file-delivery validation, distinguish actual attachment from path/text delivery; correlate the final assistant turn and compare original/retrieved files when a supported read provides them.
 - Keep live UI evidence, server-internal model claims, installed/enabled state, and fresh-session skill exposure separate. Do not claim the removed runtime's scan, approval, signed-stream, or receipt guarantees.
 - Retired consultation packages and login profiles are user data. Do not migrate, resend, or delete them when renaming or removing a skill.
+- On Windows, run Python validation with `-X utf8`; verify Unix executable bits through the Git index because Windows filesystem modes do not retain them.
+- Run foreground desktop tests serially on an unlocked interactive desktop. Preserve external-input and protected-desktop failures as environmental evidence; do not weaken input guards to make a test pass.

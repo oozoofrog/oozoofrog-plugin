@@ -1,5 +1,7 @@
 # oozoofrog-plugin
 
+[WinPilot](winpilot/SKILL.md) 0.5.0 migrates the existing Windows Pilot controller into this repository. Use `$winpilot` (formerly `windows-pilot`) to observe Windows apps and games with WGC/UIA and perform foreground input with a visible stop control. The Windows x64 Plugin includes MCP configuration and installs a hash-pinned self-contained runtime on first connection. Existing executable and tool names remain compatible. See [installation](docs/plugin-installation.md#winpilot) and [validation](docs/validation/winpilot.md).
+
 [Team harness `0.5.6`](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.5.6) fixes recipient creation config merging and adds explicit same-ID paused-recipient settings repair plus versioned stale-packet refresh. Exact identity, permission, owner-evidence and canonical-byte checks remain required. Installation and project adoption are separate; no automatic load, recovery or model turn is added. See the [Korean explanation and update procedure](README.ko.md#팀-하네스-056).
 
 Team harness `0.5.5` adds no-follow symlink inventory to the management-aware handoff baseline while retaining cross-tool handoff, strict product baselines and bounded recipient writing. It includes the locally reviewed `0.5.0`–`0.5.4` changes in one public release after `0.4.1`. Installation and project adoption remain separate operations.
