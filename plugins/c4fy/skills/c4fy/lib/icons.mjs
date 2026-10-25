@@ -1,5 +1,6 @@
 export const iconPaths={person:'<circle cx="12" cy="7" r="3.5"/><path d="M5 21v-3a7 7 0 0 1 14 0v3"/>',system:'<rect x="3" y="4" width="18" height="14" rx="4"/><path d="M8 22h8M12 18v4M7 9h3m4 0h3"/>',container:'<rect x="3" y="3" width="18" height="18" rx="5"/><path d="M3 9h18M8 6h.01m4 0h.01M8 14h8m-8 3h5"/>',component:'<rect x="5" y="5" width="14" height="14" rx="4"/><path d="M9 1v4m6-4v4M9 19v4m6-4v4M1 9h4m-4 6h4m14-6h4m-4 6h4"/>'};
 Object.assign(iconPaths,{
+ validation:'<path d="M12 2l8 4v6c0 5-8 10-8 10S4 17 4 12V6zM8 12l3 3 5-6"/>',
  code:'<path d="M8 5L2 12l6 7M16 5l6 7-6 7M14 3l-4 18"/>',
  app:'<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M7 6.5h.01M10 6.5h.01"/>',
  server:'<rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6.5h.01M7 17.5h.01M11 6.5h6M11 17.5h6"/>',

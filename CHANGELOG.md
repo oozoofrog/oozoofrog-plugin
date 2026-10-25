@@ -2,11 +2,15 @@
 
 ## Unreleased
 
-- C4fy: add an eight-choice theme preview picker with remembered selection, independent light/dark appearance, and theme-aware SVG export. Use Functionalism and Minimalism as style names.
-- C4fy: apply seven theme circuit effects and preview-matched connector styles, including sparks, multi-wave wind and droplets; preserve route endpoints, keyboard behavior and reduced-motion emphasis.
-
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
+
+## C4fy 0.3.0 — 2026-10-26
+
+- Infer project domains, types and roles with explicit overrides and visible provenance; apply stable domain colors, type shapes and role icons, and preserve assignments in JSON.
+- Add eight theme choices and seven circuit effects. Cyberpunk uses dark-only near-black cards, neon borders and enlarged, more frequent sparks; leaving the theme restores the appearance preference.
+- Preserve readable text and connectors, selected outlines, type decorations outside text, Nouveau corners and Liquid gradients. Export theme fonts, borders, gradients, shadows and scope styling to SVG.
+- Add semantic classification, theme appearance, narrow-screen, selection and export regression checks.
 
 ## C4fy 0.2.0 — 2026-10-25
 

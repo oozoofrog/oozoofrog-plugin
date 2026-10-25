@@ -29,13 +29,13 @@ function deliver(output,html,receipt){
  rmSync(temp,{recursive:true,force:true});
 }
 try{
- const args=process.argv.slice(2);if(!args.length||args[0]==='--help'){console.log('C4fy 0.2.0\nnode bin/c4fy.mjs validate model.json [--repo-root PATH]\nnode bin/c4fy.mjs render model.json output.html [--repo-root PATH]\nIndependent C1/C2/C3/C4 renderer. No Archify installation required.');process.exit(0);}
+ const args=process.argv.slice(2);if(!args.length||args[0]==='--help'){console.log('C4fy 0.3.0\nnode bin/c4fy.mjs validate model.json [--repo-root PATH]\nnode bin/c4fy.mjs render model.json output.html [--repo-root PATH]\nIndependent C1/C2/C3/C4 renderer. No Archify installation required.');process.exit(0);}
  const command=args.shift();if(!['validate','render'].includes(command))throw new Error(`Unknown command: ${command}`);
  let repoRoot;const positional=[];for(let i=0;i<args.length;i++){if(args[i]==='--repo-root'){if(repoRoot||!args[i+1]||args[i+1].startsWith('--'))throw new Error('Expected one --repo-root PATH');repoRoot=args[++i];}else if(args[i].startsWith('--'))throw new Error(`Unknown flag: ${args[i]}`);else positional.push(args[i]);}
  if(positional.length!==(command==='render'?2:1))throw new Error('Expected model.json and, for render, output.html');
  const input=resolve(positional[0]),inputBytes=readFileSync(input);if(inputBytes.length>4*1024*1024)throw new Error('Model exceeds 4 MiB');
  const model=assertModel(JSON.parse(inputBytes.toString('utf8'))),layouts=model.views.map(v=>layoutView(model,v)),sourceEvidence=evidence(model,repoRoot);
- const receipt={schemaVersion:1,tool:'c4fy',version:'0.2.0',status:'pass',command,specification:{path:input,sha256:digest(inputBytes),bytes:inputBytes.length},validation:{model:'pass',layout:'pass',views:layouts.map(l=>({id:l.id,...l.diagnostics}))},sourceEvidence,browserEvidence:'not-run',visualReview:'not-run'};
+ const receipt={schemaVersion:1,tool:'c4fy',version:'0.3.0',status:'pass',command,specification:{path:input,sha256:digest(inputBytes),bytes:inputBytes.length},validation:{model:'pass',layout:'pass',views:layouts.map(l=>({id:l.id,...l.diagnostics}))},sourceEvidence,browserEvidence:'not-run',visualReview:'not-run'};
  if(command==='render'){const output=resolve(positional[1]);if(!output.endsWith('.html'))throw new Error('Output must be a separate .html file');const inputIdentity=realpathSync(input);for(const target of [output,output+'.receipt.json']){const identity=existsSync(target)?realpathSync(target):target;if(identity===inputIdentity)throw new Error('Output or receipt would replace the input specification');}const html=renderHTML(model);receipt.artifact={path:output,sha256:digest(html),bytes:Buffer.byteLength(html)};deliver(output,html,receipt);}
  console.log(JSON.stringify(receipt,null,2));
 }catch(error){console.error(JSON.stringify({status:'fail',error:error.message},null,2));process.exitCode=1;}

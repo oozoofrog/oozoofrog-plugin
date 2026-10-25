@@ -9,7 +9,7 @@ function start(){stop();const design=root.dataset.design||'default';if(design===
  layer=make('g',{class:'theme-circuit','data-effect':design,'aria-hidden':'true'});svg.append(layer);
  for(const [index,path]of paths.entries()){
   const group=make('g',{'data-relation':path.dataset.id}),trail=make('polyline',{points:path.getAttribute('points'),class:'circuit-trail'}),particle=make('g',{class:'circuit-particle'}),halo=make('circle',{class:'circuit-halo',r:0,opacity:0});group.append(trail,particle,halo);layer.append(group);
-  if(design==='cyber'){for(let j=0;j<15;j++)particle.append(make('line',{'data-spark':j,'stroke-width':j%3===0?1.3:.9,'stroke-linecap':'round',opacity:0}));}
+  if(design==='cyber'){for(let j=0;j<30;j++)particle.append(make('line',{'data-spark':j,'stroke-width':j%3===0?2.2:1.5,'stroke-linecap':'round',opacity:0}));}
   else if(design==='nouveau'){for(let j=0;j<5;j++)particle.append(make('path',{'data-wave':j,fill:'none','stroke-width':j===2?1.2:.7,opacity:j===2?.7:.32}));}
   else if(design==='bauhaus')particle.append(index%2?make('path',{d:'M-6 -6L7 0L-6 6Z'}):make('rect',{x:-5,y:-5,width:10,height:10}));
   else if(design==='rams')particle.append(make('rect',{x:-3,y:-2,width:6,height:4}));
@@ -26,9 +26,9 @@ function start(){stop();const design=root.dataset.design||'default';if(design===
    const distance=p*r.length,pos=r.path.getPointAtLength(distance),a=r.path.getPointAtLength(Math.max(0,distance-1)),b=r.path.getPointAtLength(Math.min(r.length,distance+1)),angle=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;
    r.particle.setAttribute('opacity',visible?'1':'0');r.particle.setAttribute('transform',`translate(${pos.x} ${pos.y}) rotate(${angle})`);
    if(design==='cyber'){
-    r.particle.setAttribute('transform','translate(0 0)');for(const [j,spark]of [...r.particle.children].entries()){const birth=.15+Math.floor(j/3)*.37,age=cycle-delay-birth,life=.16+(j%3)*.035;if(age<0||age>life){spark.setAttribute('opacity','0');continue;}
-     const anchor=r.path.getPointAtLength(birth/2.016*r.length),theta=j*2.399+r.index*.8,speed=30+(j%4)*11.25,vx=Math.cos(theta)*speed,vy=Math.sin(theta)*speed-12,k=4.5,g=100;
-     const at=t=>{const d=(1-Math.exp(-k*t))/k;return {x:anchor.x+vx*d,y:anchor.y+(vy-g/k)*d+g*t/k};};const head=at(age),tail=at(Math.max(0,age-.032));for(const [key,value]of Object.entries({x1:tail.x,y1:tail.y,x2:head.x,y2:head.y,opacity:.8*Math.pow(1-age/life,1.3)}))spark.setAttribute(key,value);
+    r.particle.setAttribute('transform','translate(0 0)');for(const [j,spark]of [...r.particle.children].entries()){const birth=.1+Math.floor(j/3)*.185,age=cycle-delay-birth,life=.2+(j%3)*.035;if(age<0||age>life){spark.setAttribute('opacity','0');continue;}
+     const anchor=r.path.getPointAtLength(birth/2.016*r.length),theta=j*2.399+r.index*.8,speed=54+(j%4)*20.25,vx=Math.cos(theta)*speed,vy=Math.sin(theta)*speed-12,k=4.5,g=100;
+     const at=t=>{const d=(1-Math.exp(-k*t))/k;return {x:anchor.x+vx*d,y:anchor.y+(vy-g/k)*d+g*t/k};};const head=at(age),tail=at(Math.max(0,age-.05));for(const [key,value]of Object.entries({x1:tail.x,y1:tail.y,x2:head.x,y2:head.y,opacity:.8*Math.pow(1-age/life,1.3)}))spark.setAttribute(key,value);
     }
    }
    if(design==='nouveau'){
