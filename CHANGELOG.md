@@ -5,6 +5,10 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## Team harness [0.5.6] - 2026-10-25
+
+- Preserve profile reasoning and unrelated config keys when bounded recipient sandbox configuration is added. Creation policy replaces conflicting sandbox values as a whole; model/reasoning substitutions fail before creation. Add explicit raw-byte/revision-CAS paused-recipient settings reconciliation and versioned predelivery packet refresh, preserving original identity, failures, ownership, content and permission baselines. Cold loading requires separately authorized empty-queue/inactive-goal preflight and the original backend namespace; no automatic load or model turn is added.
+
 ## Team harness [0.5.5] - 2026-10-24
 
 - Publish the combined locally reviewed 0.5.0–0.5.5 changes after 0.4.1, with Korean installation/update/project-adoption guidance, a deterministic allowlisted source archive and commit-pinned CI. Preserve previous releases and separate requested model/Standard settings from unavailable provider execution identity.
