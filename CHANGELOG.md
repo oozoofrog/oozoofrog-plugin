@@ -5,6 +5,13 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## WinPilot [0.5.0] - 2026-10-25
+
+- Migrate the operational Windows Pilot 0.4.0 C# controller and fixture tests into `winpilot/`, with a matching Plugin, discovery metadata and MCP configuration. Preserve WGC/UIA, foreground consent, stop controls, external-input cancellation and request replay protection.
+- Replace the build's private full-screen game capture dependency with the required 28×28 icon sample. Keep historical captures, experimental hooking code and original local data outside distribution.
+- Add a self-contained Windows x64 runtime ZIP, pinned archive/file SHA-256 verification, staged installation, and portable helper executable selection. Dispose parsed MCP JSON documents promptly.
+- Recheck cursor arrival and window ownership before title-bar activation clicks, and report activation diagnostics. Verify 43 self-tests, 15 MCP fixture checks, four foreground-input checks, two automatic verification checks, and runtime installation integrity on Windows.
+
 ## Interface First Design [0.1.0] - 2026-10-25
 
 - Add `interface-first-design` 0.1.0 as a standalone skill and skills-only Plugin for product UI design, implementation and review. Its positive workflow preserves known meaning and essential text, exposes actions and state, and distinguishes observed UI checks from proposed verification. Include synthetic examples, discovery metadata, marketplace registration, installation guidance and structural distribution checks.

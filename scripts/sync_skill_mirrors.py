@@ -13,10 +13,10 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-PACKAGES = ("local-ai-studio", "macpilot", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing", "interface-first-design")
+PACKAGES = ("local-ai-studio", "macpilot", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing", "interface-first-design", "winpilot")
 IGNORED_NAMES = {".DS_Store", "__pycache__"}
 IGNORED_SUFFIXES = {".pyc", ".pyo"}
-GENERATED_PATHS = {"macpilot": ("bin", "evidence", "tool/.build", "tool/.swiftpm")}
+GENERATED_PATHS = {"macpilot": ("bin", "evidence", "tool/.build", "tool/.swiftpm"), "winpilot": ("evidence", "tool/bin", "tool/obj", "tool/artifacts")}
 
 
 class SyncError(Exception):

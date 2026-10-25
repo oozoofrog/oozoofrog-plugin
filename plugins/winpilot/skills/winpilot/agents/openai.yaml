@@ -1,0 +1,4 @@
+interface:
+  display_name: "WinPilot"
+  short_description: "Windows 앱·게임 관찰과 화면 안내·중지 기능이 있는 입력 제어"
+  default_prompt: "$winpilot로 Windows 앱·게임을 관찰하고 요청한 조작과 실제 결과를 검증하세요."
