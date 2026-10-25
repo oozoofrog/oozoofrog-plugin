@@ -1,3 +1,4 @@
+import {iconPaths} from './icons.mjs';
 // C4fy model validation. Original implementation; no renderer dependency.
 const ID = /^[a-z][a-z0-9_-]{0,63}$/;
 const kinds = new Set(['person', 'system', 'container', 'component']);
@@ -21,7 +22,7 @@ export function validateModel(m) {
   if(!m.elements.length||!m.views.length)fail('model','At least one element and view required');
   const es=new Map(),rs=new Map(),vs=new Set();
   const add=(o,map,p)=>{if(typeof o.id!=='string'||!ID.test(o.id))fail(p+'.id','Use a lowercase stable ID');if(map.has(o.id))fail(p+'.id','Duplicate ID');map.set(o.id,o);};
-  m.elements.forEach((e,i)=>{const p=`elements[${i}]`;if(!keys(e,['id','kind','name','description','parent','technology','external','sources'],p))return;add(e,es,p);if(!kinds.has(e.kind))fail(p+'.kind','Invalid C4 kind');str(e.name,p+'.name',80);str(e.description,p+'.description',500);if(e.technology!==undefined)str(e.technology,p+'.technology',100);if(['container','component'].includes(e.kind)&&!e.technology)fail(p+'.technology','Container/component requires technology');if(e.external!==undefined&&typeof e.external!=='boolean')fail(p+'.external','Expected boolean');sources(e.sources,p+'.sources');});
+  m.elements.forEach((e,i)=>{const p=`elements[${i}]`;if(!keys(e,['id','kind','name','description','parent','technology','external','sources','roleLabel','icon'],p))return;add(e,es,p);if(!kinds.has(e.kind))fail(p+'.kind','Invalid C4 kind');str(e.name,p+'.name',80);if(e.roleLabel!==undefined)str(e.roleLabel,p+'.roleLabel',48);if(e.icon!==undefined&&(typeof e.icon!=='string'||!Object.hasOwn(iconPaths,e.icon)))fail(p+'.icon','Unknown icon identifier');str(e.description,p+'.description',500);if(e.technology!==undefined)str(e.technology,p+'.technology',100);if(['container','component'].includes(e.kind)&&!e.technology)fail(p+'.technology','Container/component requires technology');if(e.external!==undefined&&typeof e.external!=='boolean')fail(p+'.external','Expected boolean');sources(e.sources,p+'.sources');});
   for(const e of es.values()){
     const wanted={container:'system',component:'container'}[e.kind];
     if(wanted&&es.get(e.parent)?.kind!==wanted)fail(`elements.${e.id}.parent`,`${e.kind} must belong to ${wanted}`);

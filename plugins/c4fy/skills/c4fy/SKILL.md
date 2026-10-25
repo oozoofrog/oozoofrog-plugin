@@ -14,6 +14,7 @@ Read [model contract](references/model.md) and the matching parts of [the MacPil
 - C1: people and systems around one internal system.
 - C2: applications/process roles and data stores inside one system. A container is not necessarily Docker. Do not promote a source file or module to an independently executing container.
 - C3: components within one selected container; supporting people, systems and sibling containers can remain visible.
+- Set optional `roleLabel` from the project’s actual responsibilities and choose a generic `icon` from the model contract. Do not hardcode project-specific role vocabularies into the renderer. Omitted fields retain C4 labels/icons; `kind` is unchanged and remains visible in details.
 - Keep stable entity IDs across views. A system/container should lead to a view whose `scope` is that entity. The viewer morphs the selected card bounds into the child scope boundary through a clipped transition layer. Child cards translate at constant text scale, the title moves to the boundary heading, and connection endpoints follow the actual moving card ports on every animation frame, including links to external cards. Relationship labels move with the routes. Return reverses the same keyframes over 520ms. Shared external cards move independently. Reduced-motion users receive immediate transitions.
 - Put meaningful actions/protocols and optional conditions on relationships. Keep unresolved boundaries explicit in descriptions. Do not invent a runtime, database, provider or metric from a name alone.
 
