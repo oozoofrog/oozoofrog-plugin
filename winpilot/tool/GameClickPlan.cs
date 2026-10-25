@@ -1,24 +1,38 @@
 using System.Drawing;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace WindowsPilot;
 
 // 에이전트가 실제 화면에서 확인한 단일 버튼만 전달한다. 실행 명령이나 임의 키는 받지 않는다.
 internal sealed record GameClickPlan(WindowInfo Window, DateTimeOffset ObservedAt, int X, int Y, string PngBase64, string Purpose)
 {
-    public static GameClickPlan Read(string path)
+    public static (GameClickPlan Plan, string Hash) Load(string path)
     {
         if (new FileInfo(path).Length > 12_000_000) throw new PilotException("invalid_plan", "관찰 파일이 너무 커요");
-        return Json.Read<GameClickPlan>(File.ReadAllText(path));
+        var bytes = File.ReadAllBytes(path);
+        if (bytes.Length > 12_000_000) throw new PilotException("invalid_plan", "관찰 파일이 너무 커요");
+        GameClickPlan plan;
+        try { plan = Json.Read<GameClickPlan>(Encoding.UTF8.GetString(bytes).TrimStart('\uFEFF')); }
+        catch (System.Text.Json.JsonException) { throw new PilotException("invalid_plan", "클릭 계획 JSON을 읽지 못했습니다."); }
+        if (plan.Window == null || string.IsNullOrWhiteSpace(plan.Purpose) || plan.Purpose.Length > 60 || string.IsNullOrEmpty(plan.PngBase64))
+            throw new PilotException("invalid_plan", "클릭 계획의 필수 값이 없습니다.");
+        return (plan, Convert.ToHexString(SHA256.HashData(bytes)));
     }
 
-    public Point Validate(WindowInfo current, CaptureInfo capture)
+    internal void ValidateTarget(WindowInfo current)
     {
         var age = DateTimeOffset.UtcNow - ObservedAt;
         if (age < TimeSpan.Zero || age > TimeSpan.FromMinutes(2)) throw new PilotException("stale_observation", "화면을 다시 확인해야 해요");
         if (current.Pid != Window.Pid || current.Started != Window.Started || current.Hwnd != Window.Hwnd || current.Bounds != Window.Bounds)
             throw new PilotException("target_changed", "관찰 이후 대상 창이 바뀌었어요");
         if (Purpose.Length is < 1 or > 60) throw new PilotException("invalid_plan", "작업 설명이 올바르지 않아요");
+    }
+
+    public Point Validate(WindowInfo current, CaptureInfo capture)
+    {
+        ValidateTarget(current);
         using var oldStream = new MemoryStream(Convert.FromBase64String(PngBase64));
         using var newStream = new MemoryStream(Convert.FromBase64String(capture.PngBase64));
         using var before = new Bitmap(oldStream); using var now = new Bitmap(newStream);

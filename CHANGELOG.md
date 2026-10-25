@@ -5,6 +5,12 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## WinPilot [0.5.1] - 2026-10-25
+
+- Request game elevation directly through native `ShellExecuteExW(runas)` with STA COM initialization, explicit working directory, process-handle cleanup and Win32 error reporting. PowerShell remains only an optional compatibility wrapper.
+- Parse Korean click plans as UTF-8 in the executable, reject malformed plans without printing screenshots, and pin the plan SHA-256 across the elevation boundary. Retain target identity, expiry and pixel checks after elevation.
+- Verify real Mabinogi Mobile gold-detail opening with a High-integrity helper after confirming ordinary input is rejected with `elevation_required`. Preserve raw dispatched-unverified records separately from visual confirmation.
+
 ## WinPilot [0.5.0] - 2026-10-25
 
 - Plugin build `0.5.0+codex.20261025.1` suppresses slow Windows PowerShell download progress, bounds download time to 120 seconds, and allows 180 seconds for first MCP startup. The verified 0.5.0 runtime archive remains unchanged.

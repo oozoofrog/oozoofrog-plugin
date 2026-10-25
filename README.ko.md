@@ -1,6 +1,6 @@
 # oozoofrog-plugin
 
-[WinPilot](winpilot/SKILL.md) 0.5.0은 기존 Windows Pilot 제어기를 이 저장소로 이관합니다. `$winpilot` 또는 `windows-pilot` 요청으로 Windows 앱·게임을 WGC·UIA로 관찰하고 화면 안내·중지 기능이 있는 전경 입력을 수행합니다. Windows x64 Plugin은 MCP 설정을 포함하고 첫 연결에서 해시를 검증한 독립 실행형 런타임을 설치합니다. 기존 실행 파일명과 도구명은 유지합니다. [설치](docs/plugin-installation.md#winpilot)와 [검증 범위](docs/validation/winpilot.md)를 확인하세요.
+[WinPilot](winpilot/SKILL.md) 0.5.1은 기존 Windows Pilot 제어기를 이 저장소로 이관합니다. `$winpilot` 또는 `windows-pilot` 요청으로 Windows 앱·게임을 WGC·UIA로 관찰하고 화면 안내·중지 기능이 있는 전경 입력을 수행합니다. Windows x64 Plugin은 MCP 설정을 포함하고 첫 연결에서 해시를 검증한 독립 실행형 런타임을 설치합니다. 기존 실행 파일명과 도구명은 유지합니다. [설치](docs/plugin-installation.md#winpilot)와 [검증 범위](docs/validation/winpilot.md)를 확인하세요.
 
 팀 하네스 [`0.5.6`](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.5.6)은 수신 세션을 만들 때 추론·샌드박스 설정을 함께 보존합니다. 같은 수신자의 일시 중지 상태 복구와 오래된 인계 패킷 갱신을 명시적으로 수행할 수 있습니다. 세션 식별자·권한·담당자 근거·원본 상태 바이트를 검증해야 하며, 설치만으로 복구나 프로젝트 계약 반영이 실행되지는 않습니다.
 

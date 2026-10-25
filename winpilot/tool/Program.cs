@@ -29,9 +29,21 @@ internal static class Program
                 Console.WriteLine(Json.Write(new { status, bitmap.Width, bitmap.Height, point, native_input_sent = false }));
                 return 0;
             }
-            if (args is ["--verify-game-click", var planPath])
+            if (args is ["--elevate-game-click", var elevationPlan])
             {
-                var plan = GameClickPlan.Read(planPath);
+                Console.WriteLine(Json.Write(Elevation.RequestGameClick(elevationPlan)));
+                return 0;
+            }
+            if (args is ["--elevate-game"])
+            {
+                Console.WriteLine(Json.Write(Elevation.RequestGameSettings()));
+                return 0;
+            }
+            if (args.Length is 2 or 3 && args[0] == "--verify-game-click")
+            {
+                var (plan, hash) = GameClickPlan.Load(args[1]);
+                if (args.Length == 3 && !string.Equals(args[2], hash, StringComparison.OrdinalIgnoreCase))
+                    throw new PilotException("plan_changed", "UAC 요청 이후 클릭 계획이 변경됐습니다. 입력하지 않았습니다.");
                 ApplicationConfiguration.Initialize();
                 System.Windows.Forms.Application.Run(new VerificationForm(plan.Window.Pid, plan.Window.Started, false, plan));
                 return 0;
@@ -69,10 +81,10 @@ internal static class Program
                 Console.CancelKeyPress += (_, e) => { e.Cancel = true; broker.Cancel(null); };
                 return new Mcp(broker).Run().GetAwaiter().GetResult();
             }
-            Console.WriteLine("WinPilot 0.5.0 (화면 안내와 사용자 입력 자동 중지)\n--stdio       MCP 서버\n--self-test   입력 없는 검사\n--fixture A   테스트 전용 창");
+            Console.WriteLine("WinPilot 0.5.1 (화면 안내와 사용자 입력 자동 중지)\n--stdio       MCP 서버\n--elevate-game-click PLAN  네이티브 UAC 단일 클릭\n--self-test   입력 없는 검사\n--fixture A   테스트 전용 창");
             return 0;
         }
-        catch (Exception e) { Console.Error.WriteLine(e.Message); return 1; }
+        catch (Exception e) { Console.Error.WriteLine(Json.Write(new { status = e is PilotException p ? p.Code : "operation_failed", message = e.Message })); return 1; }
     }
     private static WorkerResult Observe(WorkerRequest request)
     {
