@@ -2,11 +2,13 @@
 
 게임 미실행 여부는 실제 프로세스와 창으로 판단한다. 마비노기 모바일은 설치된 넥슨플러그의 로그인된 게임 카드를 먼저 확인하고 관찰한 게임시작 버튼을 사용한다. 실행 인수·인증 토큰을 추측하지 않는다. 트레이 앱은 호출 후 창 표시를 기다린다. 웹 경로는 로컬 런처를 확인한 뒤 필요할 때 사용한다.
 
-게임 검증 helper는 [verify-current-game-elevated.ps1](../tool/scripts/verify-current-game-elevated.ps1)이다. `WINDOWS_PILOT_EXE`에 설치된 실행 파일을 지정한다. 실제 PID·시작 시각을 고정하고 필요한 UAC 승인 이후 자동 진행한다. UAC를 우회하거나 수동 시작 버튼을 추가하지 않는다.
+권한 상승은 `windows-pilot.exe --elevate-game` 또는 `windows-pilot.exe --elevate-game-click 계획.json`으로 요청한다. 0.5.1부터 실행 파일이 `ShellExecuteExW(runas)`를 직접 호출하므로 PowerShell은 필요하지 않다. 실제 PID·시작 시각을 고정하고 필요한 Windows UAC 승인 이후 자동 진행한다. `elevated_process_started`는 관리자 프로세스 생성이며 클릭 성공이 아니다. 사용자 취소는 `uac_cancelled`, 다른 실패는 Win32 오류 번호를 반환한다. UAC를 우회하거나 수동 시작 버튼을 추가하지 않는다.
+
+기존 [PowerShell helper](../tool/scripts/verify-current-game-elevated.ps1)는 위 명령을 부르는 호환 wrapper다. JSON 파싱이나 권한 상승을 직접 수행하지 않는다. wrapper를 사용할 때만 `WINDOWS_PILOT_EXE`로 실행 파일을 지정한다.
 
 기본 게임 검사는 현재 캡처에서 같은 밝은 톱니 아이콘을 0.6~3배 크기로 찾는다. 후보가 없거나 여러 개면 중단하며 이미 설정 제목이 보이면 클릭하지 않는다. 입력 후 설정 제목으로 확인한다. 다른 스킨·숨겨진 메뉴를 자동으로 이해하는 기능은 아니다.
 
-다른 화면은 최신 WGC 이미지에서 버튼을 실제로 확인한 뒤 [prepare-game-click.py](../tool/scripts/prepare-game-click.py)에 `X Y 설명 --output 계획.json`을 전달한다. 출력 PNG를 확인하고 helper에 `-Plan 계획.json`을 준다. helper는 PID·시작 시각·HWND·창 경계·2분 수명·버튼 주변 픽셀을 다시 확인한다. 단일 클릭만 지원한다. 창 이동·크기 변경에는 새 관찰이 필요하다. 계획 생성 자체는 버튼 의미 검증이 아니다.
+다른 화면은 최신 WGC 이미지에서 버튼을 실제로 확인한 뒤 [prepare-game-click.py](../tool/scripts/prepare-game-click.py)에 `X Y 설명 --output 계획.json`을 전달한다. 출력 PNG를 확인하고 `windows-pilot.exe --elevate-game-click 계획.json`을 실행한다. 요청 시 계획 SHA-256을 고정하며 관리자 프로세스는 파일 해시·PID·시작 시각·HWND·창 경계·2분 수명·버튼 주변 픽셀을 다시 확인한다. 단일 클릭만 지원한다. 창 이동·크기 변경에는 새 관찰이 필요하다. 계획 생성 자체는 버튼 의미 검증이 아니다.
 
 전후 캡처·상세 결과는 실행 파일 상위 폴더의 `verification/`에 저장한다. 사용자의 화면을 포함하므로 배포에 넣지 않는다. UAC 승인·입력 전달·기록 생성만으로 게임 효과 성공을 보고하지 않는다. 중단된 클릭은 자동 재시도하지 않는다.
 

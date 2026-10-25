@@ -1,7 +1,7 @@
 {
-  "version": "0.5.0",
+  "version": "0.5.1",
   "platform": "win-x64",
-  "sha256": "b6151e1047f395e49fa2e833a16b6fe2d5bab891f29d6e73b658556d00378a2d",
+  "sha256": "9d73408694c88fc84a5b8572c2fcfe73f0258dbcca56966c9b5f1471bbfc1ac5",
   "files": {
     "Accessibility.dll": "7ce3bd7a5d0ec61be7d5d139e51831c4a20ae32cb7635baac739846fd0fc07b4",
     "clretwrc.dll": "e9f9ccaa20a91570e6e505fd85197b86e8e6582b67864a8630c1a82afb9866a7",
@@ -437,9 +437,9 @@
     "UIAutomationProvider.dll": "4c7676ed72bdcb17714ad11ee838d416fcbbdac4101ec1af9248cca91e9470b0",
     "UIAutomationTypes.dll": "903fe486e2a90299568fc90e61fc735a2b6826de967bccb7e16ae77f1b5ca92f",
     "vcruntime140_cor3.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
-    "windows-pilot.deps.json": "34a0da789cd7bff19a67764d5067068d1359e5e435dc98c36b5c34707e76ea56",
-    "windows-pilot.dll": "a2f4788da847f75b38f373e2774e927d92057eb9916e2fc838c948d5448edb0f",
-    "windows-pilot.exe": "8a6c9b0c2557cffb78f5d62c9f41acffcf1a56f1199e76b47cbbe9da3314d7f4",
+    "windows-pilot.deps.json": "7e760c06dcbeaa96e6e78d71de27f486f7f1c19f9c9007e9cc2cbd88de37dd97",
+    "windows-pilot.dll": "771646c58ad02733220012c56c154a93aa5d2aaa13c19bb3273e0d06b7ce9855",
+    "windows-pilot.exe": "79cc74291cb84a60358e65265909387f6d598f9b75318cbab9c7d942504dc035",
     "windows-pilot.runtimeconfig.json": "b8e11d3bb7959b149bcdd07d2e12279489658a582225540cef5806534b11046a",
     "WindowsBase.dll": "42e05225d944bde54e4f2cbe0142105fce822c574267b6f8e305ee8c45c664e8",
     "WindowsFormsIntegration.dll": "994cb84f5f46df57be5ea9ed3de1c6b703212b9985a28440806fc131c7d0119f",
