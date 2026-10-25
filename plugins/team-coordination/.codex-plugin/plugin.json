@@ -1,7 +1,7 @@
 {
   "name": "team-coordination",
-  "version": "0.5.6",
-  "description": "Coordinate an enabled leader-and-execution-team workflow with explicit roles, ownership, versioned context acknowledgements, evidence and recovery.",
+  "version": "0.5.7",
+  "description": "Start or reuse an Astra project-analysis chat that forms tailored leader and teammate chats in the Codex sidebar; coordinate roles, ownership, evidence and recovery.",
   "author": {
     "name": "oozoofrog",
     "url": "https://github.com/oozoofrog"
@@ -10,8 +10,8 @@
   "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
   "interface": {
     "displayName": "Team Coordination",
-    "shortDescription": "Opt-in roles, ownership, evidence and recovery",
-    "longDescription": "Opt-in team guidance and managed pilot, read-only by default with explicitly bounded handoff writing. Runtime source is provided separately in tools/codex-team-harness. Plugin installation does not modify global guidance, runtime, hooks, models or authentication.",
+    "shortDescription": "Astra project analysis and tailored sidebar teams",
+    "longDescription": "Start or reuse a user-requested Astra project-analysis chat that forms a tailored separate leader and distinctive professional teammate chats through official Codex app tools. Managed adapter operations are separate; runtime source is in tools/codex-team-harness. Installation creates no chats and does not modify global guidance, runtime, hooks, models or authentication.",
     "developerName": "oozoofrog",
     "category": "Productivity",
     "capabilities": [
@@ -19,7 +19,7 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Use $team-coordination for the enabled team workflow and verify current context and ownership."
+      "Use $team-coordination to start an Astra project-analysis chat that creates separate leader and tailored teammate chats in the Codex sidebar, or reuse this task's existing team."
     ]
   }
 }
