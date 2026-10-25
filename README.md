@@ -24,7 +24,7 @@ After installation, invoke explicitly: `Use $korean-product-writing to edit this
 
 [C4fy](c4fy/SKILL.md) creates source-backed C4 context, container, and component diagrams as standalone HTML with a soft rounded UI, animated C1/C2/C3 drill-down, source details, and SVG/JSON export. Use it for C4 architecture maps and hierarchical system explanations, not generic flowcharts, sequence diagrams, or C4 code-level diagrams. It is an original implementation; Archify is conceptual inspiration, not copied code or a runtime dependency.
 
-Use `$c4fy` to explain a repository through C1/C2/C3 with source evidence. Node.js 18+ generates an offline HTML viewer; reduced-motion preferences disable transitions. The [model contract](c4fy/references/model.md) describes scope rules, evidence and export limits. Source and [Plugin mirror](plugins/c4fy/skills/c4fy/SKILL.md) are included; the new local marketplace entry has not been remotely published. Installation and fresh-session discovery require separate checks.
+Use `$c4fy` to explain a repository through C1/C2/C3 with source evidence. Node.js 18+ generates an offline HTML viewer; reduced-motion preferences disable transitions. The [model contract](c4fy/references/model.md) describes scope rules, evidence and export limits. Source and [Plugin mirror](plugins/c4fy/skills/c4fy/SKILL.md) are included; install with `codex plugin add c4fy@oozoofrog-plugin` after registering this marketplace. Installation and fresh-session discovery require separate checks.
 
 ## JEV Native stable source
 
