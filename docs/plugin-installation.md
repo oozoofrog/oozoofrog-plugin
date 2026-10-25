@@ -52,3 +52,18 @@ Plugin 설치 자체는 LocalAIHub나 모델을 설치하지 않습니다. 스�
 Qwen Image 2.1 설치 플래그는 사용자의 명시적 라이선스 동의 후에만 사용합니다. 24 GB Mac에서는 다른 app/UI 작업도 포함해 대형 생성 모델을 직렬로 실행합니다. TTS 출력 디렉터리·전사 stem·그 외 파일 경로의 차이와 `music --prompt`/bare `music`의 동작을 [명령 참고](../local-ai-studio/references/cli-workflows.md)에 정리했습니다.
 
 Plugin 설치 성공, 새 세션에서 읽은 스킬 경로, 모델 readiness, 실제 추론 완료, 결과의 파일·형식·품질 확인은 별도 단계입니다. 배포 검사만으로 실제 생성·재생 품질이나 설치 후 노출을 주장하지 않습니다.
+
+## Interface First Design
+
+`interface-first-design` 0.1.0은 제품 화면·상호작용을 설계·구현·검토하는 skills-only Plugin입니다. 설명문 대신 구조·보이는 조작·상태 피드백으로 사용 흐름을 드러내며, 기능 이름·실제 데이터·사용자 콘텐츠·오류·동의 안내를 보존합니다. 에이전트 답변이나 기술 문서에는 적용하지 않습니다. 별도 런타임·MCP·hooks·인증 정보를 포함하지 않습니다.
+
+원격에 반영된 뒤 다음 명령으로 설치합니다. 기존 marketplace가 있으면 먼저 `codex plugin marketplace upgrade oozoofrog-plugin`로 snapshot을 갱신하세요.
+
+```sh
+codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
+codex plugin add interface-first-design@oozoofrog-plugin
+```
+
+게시 전 checkout 검증에는 저장소 루트에서 `codex plugin marketplace add "$PWD"`를 사용하고 source가 그 checkout인지 확인합니다. Standalone 설치는 `interface-first-design/`을 skill-installer로 설치하며 기존 설치본을 임의로 덮어쓰거나 Plugin과 중복 설치하지 않습니다.
+
+새 작업에서 `$interface-first-design` 또는 `$interface-first-design:interface-first-design`으로 호출합니다. [스킬](../interface-first-design/SKILL.md)과 [가상 예시](../interface-first-design/references/examples.md)를 참고하세요. 패키지 검사 통과, 원격 카탈로그 반영, 설치 성공, 새 세션 노출, 실제 제품 UI 동작 검증은 각각 확인해야 합니다.
