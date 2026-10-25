@@ -4,7 +4,7 @@
 Configuration receipts are not provider/model execution attestation. Native
 callers need an owner checkpoint; this wrapper cannot lock another dispatcher.
 """
-import argparse,copy,fcntl,hashlib,json,secrets,sys,time
+import argparse,copy,datetime,fcntl,hashlib,json,secrets,sys,time
 from pathlib import Path
 import harness as h
 import profile_defaults as profiles
@@ -23,6 +23,33 @@ def validate_choice(catalog,model,effort):
  entry=next((m for m in catalog if m.get('model')==model),None)
  if entry is None:raise ControlError('unsupported_model','Exact requestable model absent from complete catalog')
  if effort not in [e.get('reasoningEffort')for e in entry.get('supportedReasoningEfforts',[])]:raise ControlError('unsupported_effort','Effort absent from model catalog; no default inferred')
+def creation_parameters(params,creation):
+ """Keep profile config and replace each creation policy as a whole value."""
+ profile_config=params.get('config',{});creation_config=creation.get('config',{})
+ h.require(isinstance(profile_config,dict)and isinstance(creation_config,dict),'Creation config must be an object')
+ h.require('model'not in creation or creation['model']==params['model'],'Creation cannot substitute the selected model')
+ h.require('model_reasoning_effort'not in creation_config or creation_config['model_reasoning_effort']==profile_config.get('model_reasoning_effort'),'Creation cannot substitute the selected reasoning effort')
+ merged=dict(params,**creation)
+ if 'config'in params or 'config'in creation:merged['config']=dict(profile_config,**creation_config)
+ return merged
+def state_cas(s,e,raw):
+ h.require(raw is not None and hashlib.sha256(raw).hexdigest()==e.get('expected_state_sha256')and s['harness']['revision']==e.get('expected_revision'),'Stale canonical bytes or project revision; inspect committed receipt')
+def predelivery(s,x):
+ a=s['harness'];src=session(s,x['source']);dest=session(s,x['recipient']);identity=x.get('creation_receipt',{}).get('identity')
+ h.require(identity and identity.get('owned')is True and dest['identity']==identity,'Exact previously registered creation identity required')
+ h.require(src['identity']==x['packet']['source_identity']and src['execution']=='paused'and dest['execution']=='paused'and dest['managed']is False,'Original source and unmanaged recipient must remain paused')
+ h.require(dest.get('permission_ceiling')==x['packet']['permission_ceiling'],'Original permission ceiling changed')
+ h.require(not any(key in x for key in ('receipt','transfer_revision','owner_ack'))and not a['profiles'][x['recipient']].get('ack'),'Only undelivered recipient without ownership/context ACK may recover')
+ h.require(not any(r['state']in ('active','uncertain')for r in a['runs'].values())and not any(v['state']in UNRESOLVED for v in a.get('controls',{}).values()),'Active or uncertain operation blocks recovery')
+ h.require(not any(v['state']in ('granted','active','uncertain')and v['request']['task']in x['tasks']for v in a.get('diagnostics',{}).values()),'Active diagnostic owner blocks recovery')
+ for task in x['tasks']:h.require(s['tasks'][task]['owner']==x['source']and s['tasks'][task]==x['packet']['canonical_context']['tasks'][task],'Canonical owner or original task obligations/claims changed')
+ if not x.get('management'):h.require(baseline(x['packet']['baseline'])==x['packet']['baseline'],'Original product baseline changed before recovery transition')
+def recovery_settings(x,notification,model,effort):
+ h.require(notification.get('threadId')==x['creation_receipt']['identity']['thread'],'Settings notification exact identity mismatch')
+ value=notification.get('threadSettings',{});h.require(value.get('model')==model and value.get('effort')==effort,'Exact configured model and reasoning required')
+ original=x['creation_receipt']['configured'];observed={key:value.get('sandboxPolicy'if key=='sandbox'else key)for key in ('cwd','sandbox','approvalPolicy','approvalsReviewer')}
+ h.require(all(original.get(key)is not None and observed[key]==original[key]for key in observed),'Full original cwd/sandbox/network/tmp/approval settings must remain exact')
+ return observed
 def typed_task(role,kind):
  h.require(kind in KINDS,'Explicit supported task kind required')
  h.require(not(role=='advisor'and kind=='implementation'),'Advisor independent implementation is forbidden')
@@ -47,7 +74,7 @@ def gate(s,member,kind,observation=None):
  h.require(o.get('status')=='idle','Idle snapshot required; it is not an external lock')
  h.require(time.time()-x.get('observed_monotonic_wall',0)<=30,'Configuration observation expired')
 
-def apply(s,e,state_root=None,state_path=None):
+def apply(s,e,state_root=None,state_path=None,source_bytes=None):
  """Called by harness.apply under its single project-record transaction lock."""
  a=s['harness'];sessions=a.setdefault('sessions',{});controls=a.setdefault('controls',{});handoffs=a.setdefault('handoffs',{});op=e['op']
  if op=='control_bind':
@@ -127,6 +154,49 @@ def apply(s,e,state_root=None,state_path=None):
  elif op=='control_creation_receipt':
   x=handoffs[e['handoff']];h.require(x['state']=='creation_pending'and 'creation_receipt'not in x,'Creation receipt already recorded or not pending')
   x['creation_receipt']={'identity':e['identity'],'configured':e['configured'],'at':now(),'scope':'Official returned identity/settings only; no recipient authority'}
+ elif op=='control_paused_recovery_intent':
+  state_cas(s,e,source_bytes);x=handoffs[e['handoff']];predelivery(s,x)
+  h.require(x['state']=='outcome_unknown'and x.get('failure',{}).get('phase')=='recipient_created','Only retained recipient_created uncertainty may use paused recovery')
+  h.require(e['identity']==x['creation_receipt']['identity']and e['model']==x['selected_model'],'Recovery identity/model substitution refused')
+  h.require(not any(v['state']in ('request_pending','outcome_unknown')for v in x.get('recipient_recoveries',{}).values()),'Prior recovery unresolved; never resend or use a new operation ID')
+  x.setdefault('recipient_recoveries',{})[e['request_id']]={'state':'request_pending','request_event':copy.deepcopy(e),'event_digest':h.digest(e),'at':now()}
+ elif op=='control_paused_recovery_result':
+  state_cas(s,e,source_bytes);x=handoffs[e['handoff']];predelivery(s,x);record=x['recipient_recoveries'][e['request_id']];request=record['request_event']
+  h.require(record['state']=='request_pending','Recovery result already resolved')
+  h.require(e['status']in ('verified','outcome_unknown','rejected'),'Unsupported recovery outcome')
+  if e['status']=='verified':
+   recovery_settings(x,e['notification'],request['model'],request['effort']);o=e['observation'];h.require(o.get('thread')==request['identity']['thread']and matches(o,request['model'],request['effort'])and o.get('status')=='idle','Fresh matching same-ID live idle metadata required')
+   dest=session(s,x['recipient']);dest['policy_expected'].update(model=request['model'],reasoning_effort=request['effort']);dest['configuration_generation']=e['request_id'];dest['configured_observed']=o;dest['observed_monotonic_wall']=time.time();dest.pop('service_tier_observed',None);dest.pop('tier_observed_wall',None);dest['runtime_observed']=runtime_unknown();x['state']='recipient_created'
+  record.update(state=e['status'],result=copy.deepcopy(e),result_event_digest=h.digest(e),completed_at=now())
+ elif op=='control_packet_refresh':
+  state_cas(s,e,source_bytes);x=handoffs[e['handoff']];predelivery(s,x)
+  h.require(x['state']=='recipient_created'and e['identity']==x['creation_receipt']['identity'],'Exact paused predelivery recipient required')
+  h.require(not any(v['state']in ('request_pending','outcome_unknown')for v in x.get('recipient_recoveries',{}).values()),'Resolve recipient settings uncertainty before packet refresh')
+  h.require(x['packet_hash']==e['expected_packet_hash']and x['packet']['project_revision']!=a['revision'],'Exact stale packet CAS required')
+  h.require(a['policy_hash']==h.digest(h.effective_contract()),'Adopt the current contract before packet refresh')
+  original=x['packet']['canonical_context'];h.require(all(a[key]==original[key]for key in ('goal','decisions','constraints')),'Packet refresh is limited to unchanged task context under contract adoption')
+  # Fresh evidence stays outside inventoried claims; no management-tree reseeding.
+  for raw in (e['checkpoint'],e['external_observation']):
+   p=external.canonical(raw,allow_evidence=True);h.require(not any(p==Path(root)or Path(root)in p.parents for root in x['packet']['baseline']),'Capture refresh evidence outside retained claim baselines')
+  floor=x.get('prepared_time_ns',0)
+  for item in s['history']:
+   if item['event']['op']in ('policy_refresh','contract_migrate','change','claim_expand'):floor=max(floor,int(datetime.datetime.fromisoformat(item['at']).timestamp()*1e9))
+  external.proof(e['checkpoint'],after_ns=floor);external.external_observation(e['external_observation'],session(s,x['source'])['identity'],after_ns=floor)
+  source_identity=session(s,x['source'])['identity']
+  if x.get('source_provenance'):provenance=external.external_source({'identity':source_identity,'observation':e['external_observation']},e['checkpoint'],a['revision'],x['packet']['permission_ceiling'])
+  else:
+   proof,stop=external.proof(e['checkpoint'],after_ns=floor);observation_proof,source_observation=external.external_observation(e['external_observation'],source_identity,after_ns=floor)
+   h.require(source_identity.get('owned')is True and stop.get('source')==source_identity['thread']and stop.get('controller')==source_identity['controller']and stop.get('commands_drained')is True and stop.get('execution_stopped')is True,'Actual owned-source stopped/drained identity required')
+   h.require(stop.get('project_revision')==a['revision']and stop.get('permission_ceiling')==x['packet']['permission_ceiling']and stop.get('observation_sha256')==observation_proof['sha256']and stop.get('actual_stop_turn')==source_observation['turn'],'Fresh owned-source stop must bind current revision, ceiling and supported stopped turn')
+   quote=stop.get('actual_owner_text');h.require(isinstance(quote,str)and bool(quote.strip())and quote in source_observation.get('final_text',''),'Actual source-owner stop text from supported observation required')
+   provenance={'scope':'operator_attestation_with_supported_tool_evidence_owned_source','identity':source_identity,'observation':observation_proof,'stopped_turn':source_observation['turn'],'owner_ack_quote':quote,'checkpoint':proof}
+  observed=e['observation'];expected=session(s,x['recipient'])['policy_expected'];h.require(observed.get('thread')==e['identity']['thread']and matches(observed,expected['model'],expected['reasoning_effort'])and observed['status']=='idle','Fresh matching recipient metadata required')
+  version=x.get('packet_version',1);archive={key:copy.deepcopy(x[key])for key in ('packet','packet_hash','nonce','checkpoint','source_provenance','packet_refresh_source','failure')if key in x};archive['packet_version']=version;x.setdefault('packet_versions',[]).append(archive)
+  packet=copy.deepcopy(x['packet']);packet.update(project_revision=a['revision'],source_checkpoint=provenance['checkpoint'],packet_version=version+1,prior_packet_hash=x['packet_hash'],policy_hash=a['policy_hash']);packet['canonical_context'].update(history_sha256=h.digest(s['history']))
+  x.update(packet=packet,packet_hash=h.digest(packet),nonce=e['nonce'],checkpoint=provenance['checkpoint'],packet_version=version+1,prepared_time_ns=time.time_ns())
+  x['source_provenance'if x.get('source_provenance')else 'packet_refresh_source']=provenance
+  transition={'packet_version':version+1,'packet_hash':x['packet_hash'],'nonce':x['nonce'],'project_revision':a['revision'],'source_owner':x['source'],'recipient_identity':e['identity']}
+  x.setdefault('packet_refreshes',{})[e['request_id']]={'event_digest':h.digest(e),'request_event':copy.deepcopy(e),'transition':transition,'at':now()}
  elif op=='control_recipient':
   x=handoffs[e['handoff']];h.require(x['state']=='creation_pending','Recipient creation not pending');m=x['recipient'];h.require(e['model']==x['selected_model'],'Recipient model substitution')
   s['members'][m]={'role':x['role'],'identity_claim':x['checkpoint'],'runtime_id_claim':e['identity']['thread']}
@@ -146,9 +216,10 @@ def apply(s,e,state_root=None,state_path=None):
   x=handoffs[e['handoff']];h.require(x['state']=='packet_received','Recipient packet receipt required')
   h.require(a['revision']==x['packet']['project_revision'],'Project changed before transfer; keep both paused')
   h.require(external.fresh(x['checkpoint']),'Stale source stop ACK')
-  if x.get('source_provenance'):
-   proof,value=external.external_observation(e.get('external_observation')or '',x['source_provenance']['identity'],x['source_provenance']['stopped_turn'],x['prepared_time_ns'])
-   h.require(external.fresh(x['source_provenance']['observation']),'Original supported source evidence changed');h.require(x['source_provenance']['owner_ack_quote']in value.get('final_text',''),'Source owner stop ACK no longer observed');x['transfer_source_observation']=proof
+  provenance=x.get('source_provenance')or x.get('packet_refresh_source')
+  if provenance:
+   proof,value=external.external_observation(e.get('external_observation')or '',provenance['identity'],provenance['stopped_turn'],x['prepared_time_ns'])
+   h.require(external.fresh(provenance['observation']),'Original supported source evidence changed');h.require(provenance['owner_ack_quote']in value.get('final_text',''),'Source owner stop ACK no longer observed');x['transfer_source_observation']=proof
   h.require(e['source_status']=='idle'and e['recipient_status']=='idle','Both sides must be quiescent')
   if not x.get('management'):h.require(baseline(x['packet']['baseline'])==x['packet']['baseline'],'Uncommitted baseline changed')
   for task in x['tasks']:
@@ -202,10 +273,10 @@ class Controller:
   o=configuration(self.rpc.request('thread/read',{'threadId':identity['thread'],'includeTurns':False}));h.require(o['thread']==identity['thread'],'Server returned different thread identity');
   if record:self.event('control_observe',member=member,observation=o)
   return o
- def catalog(self):
+ def catalog(self,on_event=None):
   models=[];cursor=None;seen=set()
   while True:
-   page=self.rpc.request('model/list',{'limit':100,'includeHidden':True,'cursor':cursor});models.extend(page['data']);cursor=page.get('nextCursor')
+   params={'limit':100,'includeHidden':True,'cursor':cursor};page=self.rpc.request('model/list',params,**({'on_event':on_event}if on_event is not None else {}));models.extend(page['data']);cursor=page.get('nextCursor')
    if not cursor:return models
    h.require(cursor not in seen,'Catalog pagination cycle');seen.add(cursor)
  def change(self,member,operation,model,effort,checkpoint=None,service_tier=None):
@@ -246,10 +317,10 @@ class Controller:
  def create_recipient(self,hid,effort,cwd):
   x=self.state()['harness']['handoffs'][hid];model=x['selected_model'];catalog=self.catalog();requested=profiles.role_request(h.effective_contract()['policy'],x['role']);entry=next((m for m in catalog if m.get('model')==model),{});effort=effort or requested.get('reasoning_effort',entry.get('defaultReasoningEffort'));requested.update(model=model,reasoning_effort=effort);params,resolution=profiles.start_parameters(catalog,requested)
   profiles.require_tier_contract(self.rpc,resolution)
-  permission=x['packet']['permission_ceiling'];creation=external.creation(permission,str(cwd))
+  permission=x['packet']['permission_ceiling'];creation=external.creation(permission,str(cwd));params=creation_parameters(params,creation)
   self.event('control_handoff_intent',handoff=hid,phase='creation_pending')
   try:
-   r=self.rpc.request('thread/start',dict(params,**creation))
+   r=self.rpc.request('thread/start',params)
    tid=r['thread']['id']
    self.event('control_creation_receipt',handoff=hid,identity=dict(self.identity,thread=tid,owned=True),configured={k:r.get(k)for k in ('model','reasoningEffort','sandbox','cwd','approvalPolicy','approvalsReviewer')})
    external.verify_creation(r,permission,creation['cwd'])
@@ -271,6 +342,68 @@ class Controller:
    o=self.inspect(x['recipient']);h.require(matches(o,model,effort)and o['status']=='idle','Reconciled recipient must be live and idle');return identity['thread']
   except Exception as exc:
    self.event('control_handoff_failure',handoff=hid,reason=str(exc),unknown=True);raise
+ def recovery_snapshot(self,hid,expected_revision,expected_state_sha256):
+  raw=self.path.read_bytes();state=json.loads(raw);state_cas(state,{'expected_revision':expected_revision,'expected_state_sha256':expected_state_sha256},raw)
+  import management_handoff as management
+  management.before(state,[],self.path,raw);x=state['harness']['handoffs'][hid];predelivery(state,x)
+  h.require(all(x['creation_receipt']['identity'].get(k)==v for k,v in self.identity.items()),'Recovery host/transport/controller mismatch')
+  if x.get('management'):management.products(x)
+  else:h.require(baseline(x['packet']['baseline'])==x['packet']['baseline'],'Original claim baseline changed')
+  return state,x
+ def recover_paused_recipient(self,hid,request_id,effort,cwd,expected_revision,expected_state_sha256,timeout=20):
+  signature={'handoff':hid,'request_id':request_id,'effort':effort,'cwd':str(cwd),'expected_revision':expected_revision,'expected_state_sha256':expected_state_sha256}
+  prior=self.state()['harness']['handoffs'][hid].get('recipient_recoveries',{}).get(request_id)
+  if prior:
+   h.require(all(prior['request_event'].get(k)==v for k,v in signature.items()),'Conflicting recovery operation ID; inspect committed receipt');return copy.deepcopy(prior)
+  state,x=self.recovery_snapshot(hid,expected_revision,expected_state_sha256);h.require(x['state']=='outcome_unknown'and x.get('failure',{}).get('phase')=='recipient_created','Only same paused recipient_created failure is recoverable')
+  h.require(not any(v['state']in ('request_pending','outcome_unknown')for v in x.get('recipient_recoveries',{}).values()),'Prior recovery unresolved; do not resend')
+  notifications=[]
+  def observe(event):
+   method=event.get('method');p=event.get('params',{})
+   if method in ('turn/started','turn/completed','item/started','item/completed','model/rerouted'):raise ControlError('unexpected_activity','Unexpected backend execution during settings recovery')
+   if method=='thread/settings/updated'and p.get('threadId')==x['creation_receipt']['identity']['thread']:notifications.append(p)
+  model=x['selected_model'];catalog=self.catalog(on_event=observe);validate_choice(catalog,model,effort);external.verify_creation(x['creation_receipt']['configured'],x['packet']['permission_ceiling'],str(cwd))
+  before=configuration(self.rpc.request('thread/read',{'threadId':x['creation_receipt']['identity']['thread'],'includeTurns':False},on_event=observe));h.require(before['thread']==x['creation_receipt']['identity']['thread']and before['scope']=='live'and before['status']=='idle','Same recipient must already be loaded and idle; no automatic resume or new creation')
+  # Drain already buffered notifications before the new request. This does not
+  # authorize another producer; the original owner still holds the idle boundary.
+  while True:
+   event=self.rpc.next(0)
+   if event is None:break
+   self.rpc.handle_request(event)
+   observe(event)
+  committed=self.event('control_paused_recovery_intent',**signature,identity=x['creation_receipt']['identity'],model=model)
+  import management_handoff as management
+  pending_hash=hashlib.sha256(management.encoded(committed)).hexdigest();notifications=[]
+  try:
+   h.require(not self.path.is_symlink()and not Path(str(self.path)+'.lock').is_symlink(),'State/lock symlink refused')
+   with open(str(self.path)+'.lock','a')as lock:
+    fcntl.flock(lock,fcntl.LOCK_EX);raw=self.path.read_bytes();current=json.loads(raw);state_cas(current,{'expected_revision':expected_revision,'expected_state_sha256':pending_hash},raw);predelivery(current,current['harness']['handoffs'][hid]);management.before(current,[],self.path,raw)
+    self.rpc.request('thread/settings/update',{'threadId':x['creation_receipt']['identity']['thread'],'model':model,'effort':effort},on_event=observe,timeout=timeout)
+   end=time.monotonic()+timeout
+   while not notifications and time.monotonic()<end:
+    event=self.rpc.next(.5)
+    if event is not None:self.rpc.handle_request(event);observe(event)
+   h.require(bool(notifications),'Queued settings response is not applied verification; same-ID notification required')
+   recovery_settings(x,notifications[-1],model,effort)
+   response=self.rpc.request('thread/read',{'threadId':x['creation_receipt']['identity']['thread'],'includeTurns':False},on_event=observe);after=configuration(response);h.require(after['thread']==x['creation_receipt']['identity']['thread']and matches(after,model,effort)and after['status']=='idle','Same-ID configured model/effort must be live and idle')
+   while True:
+    event=self.rpc.next(0)
+    if event is None:break
+    self.rpc.handle_request(event);observe(event)
+   notification=notifications[-1];recovery_settings(x,notification,model,effort)
+   committed=self.event('control_paused_recovery_result',handoff=hid,request_id=request_id,expected_revision=expected_revision,expected_state_sha256=pending_hash,status='verified',notification=notification,observation=after,verification_scope='Configured settings only; no execution, binding, ownership or ACK authority')
+  except Exception as error:
+   if hashlib.sha256(self.path.read_bytes()).hexdigest()==pending_hash:self.event('control_paused_recovery_result',handoff=hid,request_id=request_id,expected_revision=expected_revision,expected_state_sha256=pending_hash,status='rejected'if hasattr(error,'code')else 'outcome_unknown',error=str(error),automatic_retry=False)
+   raise
+  return copy.deepcopy(committed['harness']['handoffs'][hid]['recipient_recoveries'][request_id])
+ def refresh_packet(self,hid,request_id,expected_packet_hash,checkpoint,external_observation,expected_revision,expected_state_sha256):
+  signature={'handoff':hid,'request_id':request_id,'expected_packet_hash':expected_packet_hash,'checkpoint':str(checkpoint),'external_observation':str(external_observation),'expected_revision':expected_revision,'expected_state_sha256':expected_state_sha256}
+  prior=self.state()['harness']['handoffs'][hid].get('packet_refreshes',{}).get(request_id)
+  if prior:
+   h.require(all(prior['request_event'].get(k)==v for k,v in signature.items()),'Conflicting packet refresh operation ID');return copy.deepcopy(prior['transition'])
+  state,x=self.recovery_snapshot(hid,expected_revision,expected_state_sha256);observation=self.inspect(x['recipient'],record=False)
+  committed=self.event('control_packet_refresh',**signature,identity=x['creation_receipt']['identity'],observation=observation,nonce=secrets.token_hex(16))
+  return copy.deepcopy(committed['harness']['handoffs'][hid]['packet_refreshes'][request_id]['transition'])
  def turn(self,member,prompt,timeout=120,packet_handoff=None,task=None,configuration_operation=None,checkpoint=None):
   identity=self.require_control(member,checkpoint);before=self.inspect(member);receipt_only=bool(packet_handoff or configuration_operation)
   if packet_handoff:
@@ -384,6 +517,8 @@ def main():
  q=sub.add_parser('prepare');q.add_argument('--handoff',required=True);q.add_argument('--source',required=True);q.add_argument('--recipient',required=True);q.add_argument('--role',choices=tuple(h.MODELS),required=True);q.add_argument('--model',help='Required explicit choice for null-model leader; never inferred');q.add_argument('--tasks',nargs='+',required=True);q.add_argument('--packet',type=Path,required=True);q.add_argument('--owner-stop-ack',required=True);q.add_argument('--explicit-user-request',action='store_true');q.add_argument('--external-source',type=Path,help='Exact external identity and supported observation JSON; explicit opt-in');q.add_argument('--expected-revision',type=int)
  for name in ('create','reconcile-create'):
   q=sub.add_parser(name);q.add_argument('--handoff',required=True);q.add_argument('--effort',required=name=='reconcile-create');q.add_argument('--cwd',type=Path,required=True)
+ q=sub.add_parser('recover-paused');q.add_argument('--handoff',required=True);q.add_argument('--request-id',required=True);q.add_argument('--effort',required=True);q.add_argument('--cwd',type=Path,required=True);q.add_argument('--expected-revision',type=int,required=True);q.add_argument('--expected-state-sha256',required=True)
+ q=sub.add_parser('refresh-packet');q.add_argument('--handoff',required=True);q.add_argument('--request-id',required=True);q.add_argument('--expected-packet-hash',required=True);q.add_argument('--owner-stop-ack',required=True);q.add_argument('--external-observation',required=True);q.add_argument('--expected-revision',type=int,required=True);q.add_argument('--expected-state-sha256',required=True)
  for name in ('deliver','transfer','resume'):
   q=sub.add_parser(name);q.add_argument('--handoff',required=True)
   if name=='transfer':q.add_argument('--external-observation',type=Path)
@@ -401,6 +536,8 @@ def main():
   elif a.operation=='bind':result=ctl.bind(a.member,a.thread)
   elif a.operation=='prepare':result=ctl.prepare_handoff(a.handoff,a.source,a.recipient,a.role,a.tasks,json.loads(a.packet.read_text()),a.owner_stop_ack,a.explicit_user_request,a.model,external_source=json.loads(a.external_source.read_text())if a.external_source else None,expected_revision=a.expected_revision)
   elif a.operation=='create':result=ctl.create_recipient(a.handoff,a.effort,a.cwd)
+  elif a.operation=='recover-paused':result=ctl.recover_paused_recipient(a.handoff,a.request_id,a.effort,a.cwd,a.expected_revision,a.expected_state_sha256)
+  elif a.operation=='refresh-packet':result=ctl.refresh_packet(a.handoff,a.request_id,a.expected_packet_hash,a.owner_stop_ack,a.external_observation,a.expected_revision,a.expected_state_sha256)
   elif a.operation=='reconcile-create':result=ctl.reconcile_recipient(a.handoff,a.effort,a.cwd)
   elif a.operation=='deliver':result=ctl.deliver_packet(a.handoff)
   elif a.operation=='transfer':result={'transfer_revision':ctl.transfer(a.handoff,external_observation=str(a.external_observation)if a.external_observation else None)}

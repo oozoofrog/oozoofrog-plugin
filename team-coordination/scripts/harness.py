@@ -175,6 +175,9 @@ def apply(state,e,state_root=None,source_bytes=None,state_path=None):
  import migration
  migration.verify(state)
  s=copy.deepcopy(state);h=s['harness'];op=e['op']
+ if op in ('control_paused_recovery_intent','control_paused_recovery_result','control_packet_refresh'):
+  x=h.get('handoffs',{}).get(e.get('handoff'),{});rows=x.get('packet_refreshes'if op=='control_packet_refresh'else 'recipient_recoveries',{});record=rows.get(e.get('request_id'));field='result_event_digest'if op=='control_paused_recovery_result'else 'event_digest'
+  if record and field in record:require(record[field]==digest(e),'Conflicting recovery operation ID; inspect committed receipt');return s
  if op=='claim_expand'and e.get('request_id')in h.get('claim_expansions',{}):
   require(h['claim_expansions'][e['request_id']]['event_digest']==digest(e),'Conflicting claim expansion request ID; inspect committed receipt');return s
  if op in ('diagnostic_grant','diagnostic_followup','diagnostic_permission_recovery')and e.get('request_id')in h.get('diagnostics',{}):
@@ -203,7 +206,7 @@ def apply(state,e,state_root=None,source_bytes=None,state_path=None):
   checkpoints.active(s)
  if op.startswith('control_'):
   import session_control
-  s=session_control.apply(s,e,state_root,state_path)
+  s=session_control.apply(s,e,state_root,state_path,source_bytes)
  elif op=='diagnostic_permission_recovery':
   import observations
   observations.permission_recovery(s,e,state_root,source_bytes)
@@ -241,6 +244,7 @@ def apply(state,e,state_root=None,source_bytes=None,state_path=None):
  elif op=='policy_refresh':
   require(bool(e.get('reason')),'Leader migration reason required')
   require(not any(r['state']in ('active','uncertain')for r in h['runs'].values()),'Resolve active/uncertain runs before policy migration')
+  require(not any(r['state']in ('request_pending','outcome_unknown')for x in h.get('handoffs',{}).values()for r in x.get('recipient_recoveries',{}).values()),'Resolve uncertain recipient settings before policy migration')
   contract=effective_contract();limits=contract['policy']['limits'];h['policy_hash']=digest(contract);h['revision']+=1
   h['concurrency']=limits['concurrency']
   for p in h['profiles'].values():p['model']=contract['policy']['roles'][p['role']]['model'];p.pop('ack',None)
