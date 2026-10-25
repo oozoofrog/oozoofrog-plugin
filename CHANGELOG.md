@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
+- Remove the unused team profile `desired_overlay` helper from all distribution copies.
+
 ## C4fy 0.1.0 — 2026-10-25
 
 - C4fy: support project-defined roleLabel and validated generic icon identifiers on cards and SVG exports, retaining C4 kind in details and backward-compatible defaults.
@@ -21,8 +24,6 @@
 - C4fy: single-click focuses connected flows; double-click expands the selected C4 scope. Escape or canvas background clears flow focus.
 - Add C4fy 0.1.0: an original offline C1/C2/C3 renderer and Skill/Plugin with semantic zoom transitions, reduced-motion support, source evidence, SVG/JSON export, deterministic model/layout validation and atomic delivery receipts. Archify is conceptual inspiration only; local catalog preparation is not remote publication.
 
-- Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
-- Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
 ## WinPilot [0.5.1] - 2026-10-25
 
