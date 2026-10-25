@@ -352,6 +352,86 @@
       "technology": "simctl · AX · HID subprocess",
       "roleLabel": "Simulator 제어",
       "icon": "device"
+    },
+    {
+      "id": "bridge-type",
+      "kind": "code",
+      "codeType": "enum",
+      "parent": "browser",
+      "name": "BrowserBridge",
+      "description": "@MainActor 정적 메서드로 브라우저 요청을 연결합니다.",
+      "technology": "Swift",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/BrowserBridge.swift",
+          "line": 14,
+          "endLine": 29
+        }
+      ]
+    },
+    {
+      "id": "bridge-call",
+      "kind": "code",
+      "codeType": "method",
+      "parent": "browser",
+      "name": "BrowserBridge.call",
+      "description": "요청을 분기하고 검증한 payload를 command에 전달합니다. Safari와 설치·영수증 경로는 별도 분기입니다.",
+      "technology": "Swift",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/BrowserBridge.swift",
+          "line": 80,
+          "endLine": 100
+        }
+      ]
+    },
+    {
+      "id": "bridge-validate",
+      "kind": "code",
+      "codeType": "method",
+      "parent": "browser",
+      "name": "validatedPayload",
+      "description": "operation별 허용 필드와 값 범위를 검사하고 전경 보존 조건을 적용합니다.",
+      "technology": "Swift",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/BrowserBridge.swift",
+          "line": 42,
+          "endLine": 78
+        }
+      ]
+    },
+    {
+      "id": "bridge-command",
+      "kind": "code",
+      "codeType": "method",
+      "parent": "browser",
+      "name": "command",
+      "description": "요청 JSON을 기록하고 응답을 기다립니다. 취소·실패 시 요청 상태를 갱신합니다.",
+      "technology": "Swift",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/BrowserBridge.swift",
+          "line": 148,
+          "endLine": 177
+        }
+      ]
+    },
+    {
+      "id": "bridge-connection",
+      "kind": "code",
+      "codeType": "struct",
+      "parent": "browser",
+      "name": "BrowserConnection",
+      "description": "브라우저 연결 식별자와 프로세스·연결 상태를 보관합니다. live는 최근 응답 시각과 프로세스 시작 식별자를 검사합니다.",
+      "technology": "Swift",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/BrowserBridge.swift",
+          "line": 5,
+          "endLine": 12
+        }
+      ]
     }
   ],
   "relationships": [
@@ -618,6 +698,58 @@
         }
       ],
       "technology": "JSON 파일"
+    },
+    {
+      "id": "bridge-declares",
+      "source": "bridge-type",
+      "target": "bridge-call",
+      "description": "call 메서드 선언",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/BrowserBridge.swift",
+          "line": 80,
+          "endLine": 80
+        }
+      ]
+    },
+    {
+      "id": "bridge-validates",
+      "source": "bridge-call",
+      "target": "bridge-validate",
+      "description": "payload 검증",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/BrowserBridge.swift",
+          "line": 96,
+          "endLine": 96
+        }
+      ]
+    },
+    {
+      "id": "bridge-dispatches",
+      "source": "bridge-call",
+      "target": "bridge-command",
+      "description": "검증한 요청 전달",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/BrowserBridge.swift",
+          "line": 136,
+          "endLine": 136
+        }
+      ]
+    },
+    {
+      "id": "bridge-accepts",
+      "source": "bridge-command",
+      "target": "bridge-connection",
+      "description": "연결 값을 매개변수로 사용",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/BrowserBridge.swift",
+          "line": 148,
+          "endLine": 150
+        }
+      ]
     }
   ],
   "views": [
@@ -764,6 +896,48 @@
         "simulator": [
           2,
           2
+        ]
+      }
+    },
+    {
+      "id": "browser-code",
+      "level": 4,
+      "scope": "browser",
+      "title": "브라우저 브리지의 코드 구조",
+      "description": "BrowserBridge의 주요 메서드와 연결 타입을 표시합니다. SafariBridge·설치·업로드·Store 내부 구현은 생략했습니다. 연결은 호출·선언·타입 사용 관계이며 전체 실행 순서가 아닙니다.",
+      "nodes": [
+        "bridge-type",
+        "bridge-call",
+        "bridge-validate",
+        "bridge-command",
+        "bridge-connection"
+      ],
+      "relationships": [
+        "bridge-declares",
+        "bridge-validates",
+        "bridge-dispatches",
+        "bridge-accepts"
+      ],
+      "positions": {
+        "bridge-type": [
+          0,
+          0
+        ],
+        "bridge-call": [
+          1,
+          0
+        ],
+        "bridge-validate": [
+          2,
+          0
+        ],
+        "bridge-command": [
+          1,
+          1
+        ],
+        "bridge-connection": [
+          2,
+          1
         ]
       }
     }

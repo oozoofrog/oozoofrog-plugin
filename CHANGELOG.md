@@ -5,6 +5,10 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## C4fy 0.2.0 — 2026-10-25
+
+- Add optional component-scoped C4 code diagrams with typed, source-backed code nodes and relationships; extend animated drill/return, localized details, role labels/icons, SVG/JSON exports and backward-compatible validation. Add the pinned MacPilot BrowserBridge code example and desktop/narrow-screen browser checks.
+
 ## C4fy 0.1.0 — 2026-10-25
 
 - C4fy: support project-defined roleLabel and validated generic icon identifiers on cards and SVG exports, retaining C4 kind in details and backward-compatible defaults.

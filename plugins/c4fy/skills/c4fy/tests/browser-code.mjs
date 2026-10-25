@@ -1,0 +1,34 @@
+// Development probe for the bundled, source-pinned MacPilot C1–C4 example.
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import {resolve,join} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {createHash} from 'node:crypto';
+import assert from 'node:assert/strict';
+import {renderHTML} from '../lib/render.mjs';
+const input=resolve(process.argv[2]),out=resolve(process.argv[3]);mkdirSync(out,{recursive:true});
+const bytes=readFileSync(input),data=JSON.parse(bytes.toString().match(/<script id="c4fy-data" type="application\/json">([^]*?)<\/script>/)[1]);
+const {chromium}=await import(process.env.C4FY_PLAYWRIGHT_PATH?pathToFileURL(process.env.C4FY_PLAYWRIGHT_PATH).href:'playwright');
+const browser=await chromium.launch({headless:true,...(process.env.C4FY_CHROME?{executablePath:process.env.C4FY_CHROME}:{channel:'chrome'})});
+const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'no-preference',acceptDownloads:true}),errors=[],requests=[];
+page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/^https?:/.test(r.url()))requests.push(r.url());});
+const receipt={status:'running',artifact:{path:input,sha256:createHash('sha256').update(bytes).digest('hex')},checks:[],visualReview:'pending'};
+const check=name=>receipt.checks.push({name,status:'pass'}),url=pathToFileURL(input).href;
+try{
+ await page.goto(url+'#components');await page.locator('.node[data-id="browser"]').waitFor();
+ await page.locator('.node[data-id="engine"]').click();assert.equal(await page.locator('#details [data-view]').count(),0);check('no-invented-drill-for-component-without-code');
+ await page.locator('.node[data-id="browser"]').dblclick();await page.waitForSelector('.scope-morph[data-transition="unfold"]');
+ assert.equal(await page.locator('.scope-morph .node[data-kind="code"]').count(),5);await page.screenshot({path:join(out,'c3-c4-unfold.png')});await page.waitForTimeout(650);
+ assert.equal(await page.locator('.scene').count(),1);assert.ok(page.url().endsWith('#browser-code'));check('C3-to-C4-shared-card-boundary-morph');
+ await page.locator('.node[data-id="bridge-call"]').click();assert.match(await page.locator('#details').textContent(),/코드 요소 \/ 메서드/);
+ await page.locator('[data-section="sources"]').click();const source=await page.locator('.detail-content a').getAttribute('href');assert.ok(source.includes('/blob/'+data.model.repository.revision+'/'));assert.ok(source.endsWith('#L80-L100'));check('code-type-and-immutable-source-details');
+ await page.locator('[data-section="relationships"]').click();assert.match(await page.locator('.detail-pages').textContent(),/1 \/ 3/);await page.locator('[data-page="1"]').click();assert.match(await page.locator('.detail-pages').textContent(),/2 \/ 3/);check('code-relationships-paginate-in-bottom-panel');
+ for(const [selector,file] of [['#svg-export','code.svg'],['#json-export','model.json']]){const wait=page.waitForEvent('download');await page.locator(selector).click();await (await wait).saveAs(join(out,file));const content=readFileSync(join(out,file),'utf8');if(file.endsWith('.json'))assert.deepEqual(JSON.parse(content),data.model);else{assert.equal(await page.evaluate(s=>new DOMParser().parseFromString(s,'image/svg+xml').querySelector('parsererror')?.textContent||'',content),'');assert.ok(content.includes('BrowserBridge.call'));assert.ok(content.includes('메서드'));assert.ok(content.includes('#f9e5d9'));assert.ok(!content.includes('undefined'));}}check('C4-SVG-and-full-model-JSON-export');
+ await page.locator('.parent-card').click();await page.waitForSelector('.scope-morph[data-transition="fold"]');await page.screenshot({path:join(out,'c4-c3-fold.png')});await page.waitForTimeout(650);assert.ok(page.url().endsWith('#components'));check('C4-to-C3-reversed-morph');
+ await page.locator('.node[data-id="browser"]').focus();await page.keyboard.press('Alt+ArrowDown');await page.waitForTimeout(650);assert.ok(page.url().endsWith('#browser-code'));check('keyboard-component-code-drill');
+ await page.emulateMedia({reducedMotion:'reduce'});
+ for(const width of [1440,390,320]){const height=width===1440?900:width===390?844:568;await page.setViewportSize({width,height});for(const v of data.model.views){await page.goto(url+'#'+v.id);await page.reload();await page.locator('.scene .node').first().waitFor();await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));const metrics=await page.evaluate(()=>{const stage=document.querySelector('#stage').getBoundingClientRect(),detail=document.querySelector('#details').getBoundingClientRect();return {width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight,below:detail.top>=stage.bottom,fits:[...document.querySelectorAll('.scene .node')].every(n=>{const r=n.getBoundingClientRect();return r.left>=stage.left&&r.right<=stage.right+1&&r.top>=stage.top&&r.bottom<=stage.bottom+1;})};});assert.ok(metrics.width<=width&&metrics.height<=height&&metrics.below&&metrics.fits,JSON.stringify({width,view:v.id,metrics}));assert.equal(await page.locator('.scope-morph').count(),0);if(v.level===4){await page.screenshot({path:join(out,`code-${width}-light.png`)});await page.locator('#theme').click();await page.screenshot({path:join(out,`code-${width}-dark.png`)});await page.locator('#theme').click();}}}check('all-four-levels-fit-1440-390-320-with-bottom-details-and-reduced-motion');
+ await page.setViewportSize({width:1440,height:900});await page.goto(url+'#browser-code');await page.reload();await page.locator('.parent-card').click();assert.ok(page.url().endsWith('#components'));assert.equal(await page.evaluate(()=>document.getAnimations().filter(a=>a.playState==='running').length),0);check('C4-reduced-motion-return');
+ const legacy=structuredClone(data.model);legacy.elements=legacy.elements.filter(e=>e.kind!=='code');legacy.relationships=legacy.relationships.filter(r=>!data.model.elements.some(e=>e.kind==='code'&&(e.id===r.source||e.id===r.target)));legacy.views=legacy.views.filter(v=>v.level<4);const old=join(out,'legacy.html');writeFileSync(old,renderHTML(legacy));await page.goto(pathToFileURL(old).href+'#components');assert.equal(await page.locator('[data-level="4"]').count(),0);await page.locator('.node[data-id="browser"]').click();assert.equal(await page.locator('#details [data-view]').count(),0);check('legacy-C1-C2-C3-viewer-has-no-C4-tab-or-code-drill');
+ assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);check('no-page-errors-or-network');receipt.status='pass';
+}catch(error){receipt.status='fail';receipt.error=error.stack;process.exitCode=1;await page.screenshot({path:join(out,'failure.png')}).catch(()=>{});}
+finally{await browser.close();writeFileSync(join(out,'browser-code-receipt.json'),JSON.stringify(receipt,null,2)+'\n');console.log(JSON.stringify(receipt,null,2));}

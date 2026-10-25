@@ -1,7 +1,7 @@
 {
   "name": "c4fy",
-  "version": "0.1.0",
-  "description": "Create source-backed C4 context, container, and component diagrams as standalone HTML with a soft rounded UI, animated C1/C2/C3 drill-down, source details, and SVG/JSON export. Use for C4 architecture maps and hierarchical system explanations; not for generic flowcharts, sequence diagrams, or C4 code-level diagrams.",
+  "version": "0.2.0",
+  "description": "Create source-backed C4 context, container, component, and code diagrams as standalone HTML with a soft rounded UI, animated C1/C2/C3/C4 drill-down, source details, and SVG/JSON export. Use for C4 architecture maps and hierarchical system explanations, including optional component-level code structure; not for generic flowcharts or sequence diagrams.",
   "author": {
     "name": "oozoofrog",
     "url": "https://github.com/oozoofrog"
@@ -10,8 +10,8 @@
   "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
   "interface": {
     "displayName": "C4fy",
-    "shortDescription": "C4 diagrams with soft cards and animated C1/C2/C3 navigation",
-    "longDescription": "Create source-backed C4 context, container, and component diagrams as standalone HTML with a soft rounded UI, animated C1/C2/C3 drill-down, source details, and SVG/JSON export. Use for C4 architecture maps and hierarchical system explanations; not for generic flowcharts, sequence diagrams, or C4 code-level diagrams.",
+    "shortDescription": "C4 diagrams with soft cards and animated C1/C2/C3/C4 navigation",
+    "longDescription": "Create source-backed C4 context, container, component, and code diagrams as standalone HTML with a soft rounded UI, animated C1/C2/C3/C4 drill-down, source details, and SVG/JSON export. Use for C4 architecture maps and hierarchical system explanations, including optional component-level code structure; not for generic flowcharts or sequence diagrams.",
     "developerName": "oozoofrog",
     "category": "Productivity",
     "capabilities": [
@@ -19,7 +19,7 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Use $c4fy to create source-backed C4 context, container and component diagrams with smooth animated transitions."
+      "Use $c4fy to create source-backed C4 context, container, component and optional code diagrams with smooth animated transitions."
     ]
   }
 }

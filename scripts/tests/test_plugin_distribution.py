@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import unittest
 from pathlib import Path
@@ -72,12 +73,29 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertIn("description: " + manifest["description"], (source / "SKILL.md").read_text())
         self.assertEqual(manifest["description"], manifest["interface"]["longDescription"])
         self.assertIn("$c4fy", (source / "agents/openai.yaml").read_text())
-        self.assertIn("C1/C2/C3", (REPO_ROOT / "README.md").read_text())
+        self.assertIn("C1/C2/C3/C4", (REPO_ROOT / "README.md").read_text())
+        self.assertIn("C1·C2·C3·C4", (source / "agents/openai.yaml").read_text())
+        self.assertIn("code", (source / "references/model.md").read_text())
         for name in ("bin/c4fy.mjs", "lib/model.mjs", "lib/layout.mjs", "lib/render.mjs",
                      "assets/viewer.js", "assets/viewer.css", "references/model.md", "LICENSE"):
             self.assertTrue((mirror / name).is_file(), name)
         self.assertTrue((mirror / "bin/c4fy.mjs").stat().st_mode & 0o111)
         self.assertNotIn("dependencies", json.loads((source / "package.json").read_text()))
+
+    def test_c4fy_documented_scope_matches_ui_levels(self) -> None:
+        metadata = (REPO_ROOT / "c4fy/agents/openai.yaml").read_text(encoding="utf-8")
+        short = next(line.split(": ", 1)[1] for line in metadata.splitlines()
+                     if line.strip().startswith("short_description:"))
+        levels = re.findall(r"\bC[1-4]\b", json.loads(short))
+        self.assertEqual(["C1", "C2", "C3", "C4"], levels)
+        for name, code_scope in (("README.md", "optional component-level code structure"),
+                                 ("README.ko.md", "컴포넌트 내부의 코드")):
+            with self.subTest(document=name):
+                section = (REPO_ROOT / name).read_text(encoding="utf-8").split("## C4fy\n", 1)[1].split("\n## ", 1)[0]
+                self.assertIn("/".join(levels), section)
+                self.assertIn(code_scope, section)
+                self.assertNotRegex(section, r"C4 코드[^.\n]*(?:대상이 아닙니다|제외)")
+
     def test_winpilot_distribution(self) -> None:
         from test_sync_skill_mirrors import load_module
         from test_document_links import local_targets
