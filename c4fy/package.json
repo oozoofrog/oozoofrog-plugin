@@ -1,6 +1,6 @@
 {
   "name": "c4fy",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Independent C4 context, container, component and code renderer with animated semantic navigation.",

@@ -1,0 +1,19 @@
+:root{--domain-s:40%;--domain-l:93%;--domain-stroke-l:56%}
+:root[data-theme=dark]{--domain-s:22%;--domain-l:23%;--domain-stroke-l:59%}
+:root[data-design=cyber]{--domain-s:85%;--domain-l:9%;--domain-stroke-l:65%}
+:root[data-design=bauhaus]{--domain-s:65%}
+:root[data-design=rams],:root[data-design=ive]{--domain-s:20%}
+:root .node[data-domain]{background-color:var(--semantic-fill);background-image:none;border-color:var(--semantic-stroke);border-radius:var(--semantic-radius);--muted:color-mix(in srgb,var(--ink) 80%,var(--semantic-fill))}
+:root[data-design=nouveau] .node[data-domain]:is([data-semantic-type=service],[data-semantic-type=unknown],[data-semantic-type=external]){border-radius:var(--semantic-radius) 8px var(--semantic-radius) 8px}
+:root[data-design=material] .node[data-domain]{border-color:transparent}
+:root[data-design=liquid] .node[data-domain]{background-image:linear-gradient(145deg,var(--semantic-fill),color-mix(in srgb,var(--semantic-fill) 86%,var(--surface)))}
+:root .node[data-domain][aria-pressed=true]{outline:3px solid var(--accent);outline-offset:3px;border-color:var(--accent)}
+:root .node[data-semantic-type=external],:root .node[data-semantic-type=contract]{border-style:dashed}
+.semantic-marks{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;color:var(--semantic-stroke)}
+.node .domain-tag{position:absolute;right:13px;bottom:7px;max-width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;line-height:12px;color:var(--ink)}
+.node .node-tech{max-width:52%}
+.semantic-reason{display:block;font-size:11px;color:var(--muted);margin-top:4px;overflow-wrap:anywhere}
+
+:root[data-design=cyber] .node[data-domain]{border-radius:min(6px,var(--semantic-radius));box-shadow:0 0 10px color-mix(in srgb,var(--semantic-stroke) 24%,transparent),4px 4px 0 #03050a}
+:root[data-design=cyber] .node[data-domain][aria-pressed=true]{box-shadow:0 0 18px color-mix(in srgb,var(--accent) 45%,transparent),4px 4px 0 #03050a}
+:root[data-design=cyber] #theme:disabled{opacity:.65;cursor:default}
