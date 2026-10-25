@@ -4,7 +4,7 @@ from pathlib import Path,PurePosixPath
 import hashlib,json,runpy,sys
 root=Path(__file__).resolve().parent
 manifest=json.loads((root/'manifest.json').read_text())
-if manifest.get('version')!='0.5.5':raise SystemExit('Wrong release version')
+if manifest.get('version')!='0.5.6':raise SystemExit('Wrong release version')
 for relative,expected in manifest['files'].items():
  name=PurePosixPath(relative)
  if name.is_absolute()or '..'in name.parts or not name.parts or '\\'in relative:raise SystemExit('Unsafe manifest path')
