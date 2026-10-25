@@ -5,6 +5,10 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## Interface First Design [0.1.0] - 2026-10-25
+
+- Add `interface-first-design` 0.1.0 as a standalone skill and skills-only Plugin for product UI design, implementation and review. Its positive workflow preserves known meaning and essential text, exposes actions and state, and distinguishes observed UI checks from proposed verification. Include synthetic examples, discovery metadata, marketplace registration, installation guidance and structural distribution checks.
+
 ## Team harness [0.5.6] - 2026-10-25
 
 - Preserve profile reasoning and unrelated config keys when bounded recipient sandbox configuration is added. Creation policy replaces conflicting sandbox values as a whole; model/reasoning substitutions fail before creation. Add explicit raw-byte/revision-CAS paused-recipient settings reconciliation and versioned predelivery packet refresh, preserving original identity, failures, ownership, content and permission baselines. Cold loading requires separately authorized empty-queue/inactive-goal preflight and the original backend namespace; no automatic load or model turn is added.
