@@ -8,6 +8,14 @@ WinPilot 0.5.1은 [스킬](../winpilot/SKILL.md)과 MCP 설정을 함께 제공�
 
 기존 `windows-pilot` 실행 파일명과 7개 MCP 도구명은 유지합니다. 기존 standalone 스킬·MCP 설정·개인 캡처·원본 폴더는 자동 삭제하지 않습니다. 동일 서버를 Plugin MCP와 수동 MCP 양쪽에 등록하지 마세요. 설치 상태와 현재 대화의 도구 노출은 별도로 확인하며 새 대화에서 `$winpilot`을 호출할 수 있습니다. [검증 범위](validation/winpilot.md)를 참고하세요.
 
+## Team Coordination
+
+`codex plugin marketplace upgrade oozoofrog-plugin` 후 `codex plugin add team-coordination@oozoofrog-plugin`으로 `0.5.7` Plugin을 설치하거나 갱신합니다. 설치 후 버전·활성화 상태·실제 캐시 경로를 확인합니다.
+
+`$team-coordination:team-coordination`으로 별도 사이드바 팀 시작을 요청하면 Astra가 프로젝트를 분석한 뒤 리더와 전문 팀원을 구성합니다. 설명 질문이나 설치만으로 채팅을 만들지 않습니다. [시작 절차](../team-coordination/references/sidebar-startup.md)를 참고하세요.
+
+Plugin 설치는 기존 `~/.codex/skills/team-coordination` standalone 런타임·설치 저널·프로필 오버레이와 활성 프로젝트 계약을 이전하지 않습니다. 기존 저널을 삭제하거나 설치 경로를 직접 덮어쓰지 않습니다. 새 채팅의 스킬 노출과 실제 실행 모델·등급은 설치 파일 검사와 구분합니다.
+
 ## 기존 Plugin
 
 Repository marketplace에는 `swift-intelligence`, `local-ai-studio`, `macpilot`가 있습니다. 필요한 Plugin만 선택합니다. 아래 명령은 해당 변경이 원격에 반영된 뒤 사용합니다.
