@@ -2,7 +2,7 @@
 
 WinPilot 0.5.0은 Windows 11 x64용이다. 독립 실행형 ZIP에 .NET 10 Desktop Runtime을 포함한다. 실행에는 SDK·Python·관리자 권한이 필수가 아니다. 대상 앱의 권한은 별도 제약이다. Windows 10은 이번 배포에서 검증하지 않았다.
 
-Plugin은 `winpilot@oozoofrog-plugin`이며 MCP 서버를 함께 등록한다. 첫 연결에서 [설치 스크립트](../scripts/install-runtime.ps1)가 GitHub `winpilot-v0.5.0`의 ZIP SHA-256과 모든 파일 해시를 [manifest](../runtime/distribution.json)와 대조하고 `%LOCALAPPDATA%/WinPilot/0.5.0/`에 설치한다. 기존 설치의 해시가 다르면 덮어쓰지 않고 중단한다. 인증서 서명·SmartScreen 평판은 제공하지 않는다. 처음 설치할 때 네트워크가 필요하다.
+Plugin은 `winpilot@oozoofrog-plugin`이며 MCP 서버를 함께 등록한다. Plugin build `0.5.0+codex.20261025.1`은 같은 0.5.0 runtime을 사용하면서 다운로드 진행률 표시의 지연을 제거한다. 첫 연결에서 [설치 스크립트](../scripts/install-runtime.ps1)가 GitHub `winpilot-v0.5.0`의 ZIP SHA-256과 모든 파일 해시를 [manifest](../runtime/distribution.json)와 대조하고 `%LOCALAPPDATA%/WinPilot/0.5.0/`에 설치한다. 다운로드 제한은 120초, MCP 시작 제한은 180초다. 기존 설치의 해시가 다르면 덮어쓰지 않고 중단한다. 인증서 서명·SmartScreen 평판은 제공하지 않는다. 처음 설치할 때 네트워크가 필요하다.
 
 Standalone은 스킬 루트에서 `powershell -NoProfile -File scripts/install-runtime.ps1`로 설치한다. 출력된 절대 실행 파일 경로를 `codex mcp add winpilot -- 실행파일 --stdio`에 지정한다. Plugin MCP와 중복 등록하지 않는다. 현재 대화가 이미 시작됐다면 새 대화에서 도구 노출을 확인한다.
 

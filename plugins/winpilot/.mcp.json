@@ -4,7 +4,7 @@
       "command": "powershell.exe",
       "args": ["-NoProfile", "-File", "./skills/winpilot/scripts/install-runtime.ps1", "-Stdio"],
       "cwd": ".",
-      "startup_timeout_sec": 120,
+      "startup_timeout_sec": 180,
       "enabled": true
     }
   }

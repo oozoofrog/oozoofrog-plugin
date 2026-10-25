@@ -70,7 +70,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual(module.package_files(source), module.package_files(mirror))
         manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
         runtime = json.loads((source / "runtime/distribution.json").read_text())
-        self.assertEqual(manifest["version"], runtime["version"])
+        self.assertEqual(manifest["version"].split("+")[0], runtime["version"])
         self.assertIn("windows-pilot.exe", runtime["files"])
         self.assertRegex(runtime["sha256"], r"^[a-f0-9]{64}$")
         self.assertIn("<Version>" + runtime["version"] + "</Version>", (source / "tool/WindowsPilot.csproj").read_text())
