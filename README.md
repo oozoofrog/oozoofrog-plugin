@@ -8,6 +8,10 @@ The [team-harness `0.5.5` release](https://github.com/oozoofrog/oozoofrog-plugin
 
 English | [한국어](README.ko.md)
 
+[Interface First Design](interface-first-design/SKILL.md) (`interface-first-design` 0.1.0) is a skills-only Plugin. Use when designing, implementing, or reviewing product UI, especially when explanatory prose substitutes for clear structure, visible controls, or state feedback. Applies to product screens and interactions, not agent communication or technical documentation. It preserves essential text and data while making actions and recovery visible. Distribution checks cover packaging; behavioral evaluation and live UI verification are separate. See [installation](docs/plugin-installation.md#interface-first-design). [Validation method, results and limits](docs/validation/interface-first-design.md).
+
+Invocation: `Use $interface-first-design to design or review this product UI with visible actions, clear states, and preserved meaning.`
+
 [Korean Product Writing](korean-product-writing/SKILL.md) edits Korean product copy while preserving facts, conditions and requested components. Its skills-only Plugin is opt-in guidance without runtime/hooks. One reused six-case regression passed after earlier failures; [validation history and limits](drafts/korean-product-writing/tests/regression-v4/results.md) remain public. Installation and automatic loading were not tested.
 
 After installation, invoke explicitly: `Use $korean-product-writing to edit this screen’s title, description and button while preserving facts and conditions.` This is an invocation example, not a completed installation or automatic-loading test.
