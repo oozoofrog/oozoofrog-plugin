@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- C4fy: remove duplicate transition titles, reverse the easing curve on collapse, and synchronize child/edge visibility after continuous light/dark browser review.
+- C4fy: preserve opening card content through the initial expansion and overlap its linear fade with the moving title and child reveal.
+- C4fy: crossfade actual card title, icon and description into the closing scope before the transition ends.
+- C4fy: match morph endpoints to computed card backgrounds, borders, shadows and scaled corner radii in both navigation directions.
+- C4fy: update transition wire endpoints from moving card geometry each frame; move relationship labels and delay child visibility to avoid stacked-card flashes.
+- C4fy: replace whole-scene scaling with a clipped card-to-boundary morph, constant-scale child cards, moving scope title and reversed return keyframes.
+- C4fy: unfold child structures from the selected card with timing symmetric to parent folding.
+- C4fy: animate parent navigation by folding the outgoing structure into its parent-view card.
+- C4fy: replace the top back button with a faded parent-scope card inside the diagram.
+- C4fy: selected connections show moving direction markers from source to target, with static emphasis under reduced motion.
+- C4fy: single-click focuses connected flows; double-click expands the selected C4 scope. Escape or canvas background clears flow focus.
+- Add C4fy 0.1.0: an original offline C1/C2/C3 renderer and Skill/Plugin with semantic zoom transitions, reduced-motion support, source evidence, SVG/JSON export, deterministic model/layout validation and atomic delivery receipts. Archify is conceptual inspiration only; local catalog preparation is not remote publication.
+
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 

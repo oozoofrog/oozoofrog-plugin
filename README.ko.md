@@ -132,3 +132,9 @@ git diff --check
 ```
 
 Plugin manifest와 marketplace는 저장소 배포 검사로 확인합니다. 실제 원격 등록·설치는 별도 `CODEX_HOME`에서 CLI로 검증하며 기존 설치·인증을 변경하지 않습니다. Swift Intelligence를 수정할 때는 해당 Plugin의 검증 지침을 별도로 따릅니다. 변경 기록은 [CHANGELOG.md](CHANGELOG.md)에 있습니다.
+
+## C4fy
+
+[C4fy](c4fy/SKILL.md)는 소스 근거를 갖춘 C4 시스템 맥락·컨테이너·컴포넌트 구조도를 독립 HTML로 만듭니다. 둥근 카드와 부드러운 색상을 사용하며 C1/C2/C3를 확대 전환합니다. 노드·소스 상세, SVG·JSON 저장을 지원합니다. 일반 흐름도·시퀀스·C4 코드 수준 구조도는 대상이 아닙니다.
+
+`$c4fy`로 프로젝트의 C1·C2·C3 구조를 요청할 수 있습니다. Archify의 제작·검증 흐름만 참고한 독립 구현이며 Archify 설치나 코드에 의존하지 않습니다. 생성에는 Node.js 18 이상이 필요하고 결과 HTML은 오프라인에서 작동합니다. ‘동작 줄이기’를 켜면 즉시 전환합니다. [모델 계약](c4fy/references/model.md)에 계층·근거·출력 범위를 정리했습니다. 로컬 소스와 Plugin 미러·카탈로그 항목을 추가했으며 원격 마켓플레이스에는 아직 게시하지 않았습니다.

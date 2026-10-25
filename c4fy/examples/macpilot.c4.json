@@ -1,0 +1,745 @@
+{
+  "version": 1,
+  "title": "MacPilot",
+  "description": "C1 → C2 → C3",
+  "locale": "ko",
+  "repository": {
+    "url": "https://github.com/oozoofrog/oozoofrog-plugin",
+    "revision": "f49a4113fd948e6d0d18a675427cabe388ac2139"
+  },
+  "elements": [
+    {
+      "id": "operator",
+      "kind": "person",
+      "name": "사용자",
+      "description": "자동화 목표를 요청하고 실제 업무 결과를 확인합니다.",
+      "sources": [
+        {
+          "path": "macpilot/SKILL.md",
+          "line": 26,
+          "endLine": 31
+        }
+      ]
+    },
+    {
+      "id": "codex",
+      "kind": "system",
+      "name": "Codex · CLI 호스트",
+      "description": "사용자 요청을 도구 호출로 바꾸고 결과를 해석합니다.",
+      "sources": [
+        {
+          "path": "macpilot/SKILL.md",
+          "line": 8,
+          "endLine": 10
+        },
+        {
+          "path": "macpilot/tool/Sources/MacPilot/Main.swift",
+          "line": 159,
+          "endLine": 173
+        }
+      ],
+      "external": true
+    },
+    {
+      "id": "macpilot",
+      "kind": "system",
+      "name": "MacPilot",
+      "description": "로컬 macOS 앱·브라우저·Simulator를 관찰하고 제어합니다.",
+      "sources": [
+        {
+          "path": "macpilot/SKILL.md",
+          "line": 8,
+          "endLine": 22
+        },
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Engine.swift",
+          "line": 80,
+          "endLine": 140
+        }
+      ]
+    },
+    {
+      "id": "desktop",
+      "kind": "system",
+      "name": "macOS 앱 환경",
+      "description": "앱·브라우저·Simulator의 UI와 시스템 API를 제공합니다. 접근에는 각 기능의 권한과 실행 조건이 적용됩니다.",
+      "sources": [
+        {
+          "path": "macpilot/SKILL.md",
+          "line": 28,
+          "endLine": 38
+        }
+      ],
+      "external": true
+    },
+    {
+      "id": "controller",
+      "kind": "container",
+      "name": "MacPilot 컨트롤러",
+      "description": "같은 실행 파일이 MCP 서버 또는 CLI로 실행됩니다. 요청을 검증하고 도구별 기능으로 분기합니다.",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilot/Main.swift",
+          "line": 256,
+          "endLine": 281
+        },
+        {
+          "path": "macpilot/tool/Sources/MacPilot/Main.swift",
+          "line": 159,
+          "endLine": 173
+        },
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Engine.swift",
+          "line": 80,
+          "endLine": 140
+        }
+      ],
+      "parent": "macpilot",
+      "technology": "Swift · MCP stdio / CLI JSON"
+    },
+    {
+      "id": "state",
+      "kind": "container",
+      "name": "로컬 상태 디렉터리",
+      "description": "작업·관찰·감사 기록과 브라우저 요청·응답을 저장합니다. 기본 경로는 ~/Library/Application Support/MacPilot입니다.",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Model.swift",
+          "line": 359,
+          "endLine": 375
+        },
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Model.swift",
+          "line": 750,
+          "endLine": 764
+        },
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/BrowserBridge.swift",
+          "line": 148,
+          "endLine": 171
+        }
+      ],
+      "parent": "macpilot",
+      "technology": "파일 시스템 · JSON / JSONL / 미디어"
+    },
+    {
+      "id": "native-host",
+      "kind": "container",
+      "name": "브라우저 Native Host",
+      "description": "별도 프로세스가 큐 파일을 읽고 Chromium 확장과 요청·응답을 교환합니다.",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/BrowserBridge.swift",
+          "line": 236,
+          "endLine": 278
+        },
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/BrowserBridge.swift",
+          "line": 188,
+          "endLine": 210
+        }
+      ],
+      "parent": "macpilot",
+      "technology": "Swift · native-host 프로세스"
+    },
+    {
+      "id": "extension",
+      "kind": "container",
+      "name": "Chromium 확장",
+      "description": "탭과 DOM을 관찰·조작하고 Native Host로 응답합니다. 확장과 사이트 접근 권한이 필요합니다.",
+      "sources": [
+        {
+          "path": "macpilot/browser/extension/background.js",
+          "line": 40,
+          "endLine": 53
+        },
+        {
+          "path": "macpilot/browser/extension/background.js",
+          "line": 5,
+          "endLine": 24
+        }
+      ],
+      "parent": "macpilot",
+      "technology": "JavaScript · Chrome Extension APIs"
+    },
+    {
+      "id": "hid",
+      "kind": "container",
+      "name": "Simulator HID 드라이버",
+      "description": "선택한 Simulator에 입력을 전달하는 별도 실행 파일입니다. 호출마다 privateAPI=true가 필요합니다.",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Simulator.swift",
+          "line": 182,
+          "endLine": 196
+        },
+        {
+          "path": "macpilot/tool/Package.swift",
+          "line": 7,
+          "endLine": 16
+        }
+      ],
+      "parent": "macpilot",
+      "technology": "Objective-C · IndigoHID"
+    },
+    {
+      "id": "preview",
+      "kind": "container",
+      "name": "프리뷰 호스트",
+      "description": "별도 프로세스가 선택한 관찰의 프리뷰 패널을 표시합니다.",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/PreviewActions.swift",
+          "line": 17,
+          "endLine": 55
+        },
+        {
+          "path": "macpilot/tool/Sources/MacPilot/Main.swift",
+          "line": 248,
+          "endLine": 254
+        }
+      ],
+      "parent": "macpilot",
+      "technology": "Swift · AppKit · preview-host"
+    },
+    {
+      "id": "entry",
+      "kind": "component",
+      "name": "MCP · CLI 진입점",
+      "description": "입력을 읽고 Engine.call을 호출합니다. MCP 응답에는 구조화 결과와 조건부 PNG가 포함됩니다.",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilot/Main.swift",
+          "line": 159,
+          "endLine": 173
+        },
+        {
+          "path": "macpilot/tool/Sources/MacPilot/Main.swift",
+          "line": 256,
+          "endLine": 281
+        }
+      ],
+      "parent": "controller",
+      "technology": "Main.swift · JSON-RPC / JSON"
+    },
+    {
+      "id": "engine",
+      "kind": "component",
+      "name": "Engine · 실행 조정",
+      "description": "taskID·대상·취소·잠금·전경 보존을 검사합니다. 도구 실행 후 결과와 추적·감사 기록을 남깁니다.",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Engine.swift",
+          "line": 19,
+          "endLine": 79
+        },
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Engine.swift",
+          "line": 80,
+          "endLine": 140
+        }
+      ],
+      "parent": "controller",
+      "technology": "Swift @MainActor · Tasks / Outcomes"
+    },
+    {
+      "id": "native",
+      "kind": "component",
+      "name": "네이티브 앱·시스템",
+      "description": "AX 관찰, 앱·창·메뉴·입력과 파일·시스템 동작을 수행합니다. TCC와 앱별 지원 범위가 적용됩니다.",
+      "sources": [
+        {
+          "path": "macpilot/SKILL.md",
+          "line": 28,
+          "endLine": 38
+        },
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Engine.swift",
+          "line": 620,
+          "endLine": 650
+        }
+      ],
+      "parent": "controller",
+      "technology": "Accessibility · AppKit · CoreGraphics"
+    },
+    {
+      "id": "browser",
+      "kind": "component",
+      "name": "브라우저 브리지",
+      "description": "Chromium은 파일 큐와 Native Host를 사용합니다. Safari는 별도의 Apple Events 경로로 분기합니다.",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/BrowserBridge.swift",
+          "line": 148,
+          "endLine": 171
+        },
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/BrowserBridge.swift",
+          "line": 80,
+          "endLine": 100
+        }
+      ],
+      "parent": "controller",
+      "technology": "BrowserBridge · SafariBridge"
+    },
+    {
+      "id": "capture",
+      "kind": "component",
+      "name": "캡처·녹화·프리뷰",
+      "description": "화면·시스템 오디오를 캡처하고 녹화·프리뷰 기능을 제공합니다. 도구별 조건을 적용합니다.",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Engine.swift",
+          "line": 500,
+          "endLine": 503
+        },
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Engine.swift",
+          "line": 575,
+          "endLine": 579
+        },
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/PreviewActions.swift",
+          "line": 17,
+          "endLine": 55
+        }
+      ],
+      "parent": "controller",
+      "technology": "Capture · Recording · PreviewActions"
+    },
+    {
+      "id": "simulator",
+      "kind": "component",
+      "name": "Simulator 어댑터",
+      "description": "UDID와 부팅 식별자를 확인합니다. simctl과 선택적 HID 보조 실행 파일을 사용합니다.",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Simulator.swift",
+          "line": 182,
+          "endLine": 196
+        },
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Simulator.swift",
+          "line": 196,
+          "endLine": 202
+        }
+      ],
+      "parent": "controller",
+      "technology": "simctl · AX · HID subprocess"
+    }
+  ],
+  "relationships": [
+    {
+      "id": "request",
+      "source": "operator",
+      "target": "codex",
+      "description": "작업 요청",
+      "sources": [
+        {
+          "path": "macpilot/SKILL.md",
+          "line": 26,
+          "endLine": 31
+        }
+      ]
+    },
+    {
+      "id": "tool-call",
+      "source": "codex",
+      "target": "macpilot",
+      "description": "도구 호출",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilot/Main.swift",
+          "line": 159,
+          "endLine": 173
+        }
+      ],
+      "technology": "MCP stdio / CLI JSON"
+    },
+    {
+      "id": "operate",
+      "source": "macpilot",
+      "target": "desktop",
+      "description": "권한 내 관찰·제어",
+      "sources": [
+        {
+          "path": "macpilot/SKILL.md",
+          "line": 28,
+          "endLine": 38
+        }
+      ],
+      "technology": "AX / 앱 API / 입력"
+    },
+    {
+      "id": "invoke",
+      "source": "codex",
+      "target": "controller",
+      "description": "도구 요청",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilot/Main.swift",
+          "line": 159,
+          "endLine": 173
+        }
+      ],
+      "technology": "MCP stdio / CLI JSON"
+    },
+    {
+      "id": "persist",
+      "source": "controller",
+      "target": "state",
+      "description": "상태·IPC 읽기/쓰기",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Engine.swift",
+          "line": 80,
+          "endLine": 140
+        },
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/BrowserBridge.swift",
+          "line": 148,
+          "endLine": 171
+        },
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Model.swift",
+          "line": 750,
+          "endLine": 764
+        }
+      ],
+      "technology": "로컬 파일"
+    },
+    {
+      "id": "poll",
+      "source": "native-host",
+      "target": "state",
+      "description": "큐 조회·응답 저장",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/BrowserBridge.swift",
+          "line": 236,
+          "endLine": 278
+        }
+      ],
+      "technology": "JSON 파일 · 폴링"
+    },
+    {
+      "id": "native-message",
+      "source": "native-host",
+      "target": "extension",
+      "description": "명령·응답 교환",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/BrowserBridge.swift",
+          "line": 236,
+          "endLine": 278
+        },
+        {
+          "path": "macpilot/browser/extension/background.js",
+          "line": 40,
+          "endLine": 53
+        }
+      ],
+      "technology": "Native Messaging stdio"
+    },
+    {
+      "id": "hid-call",
+      "source": "controller",
+      "target": "hid",
+      "description": "선택적 입력",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Simulator.swift",
+          "line": 182,
+          "endLine": 196
+        }
+      ],
+      "technology": "privateAPI=true · subprocess JSON",
+      "optional": true
+    },
+    {
+      "id": "preview-call",
+      "source": "controller",
+      "target": "preview",
+      "description": "프리뷰 실행",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/PreviewActions.swift",
+          "line": 17,
+          "endLine": 55
+        }
+      ],
+      "technology": "preview-host",
+      "optional": true
+    },
+    {
+      "id": "preview-state",
+      "source": "preview",
+      "target": "state",
+      "description": "상태 조회",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilot/Preview.swift",
+          "line": 158,
+          "endLine": 165
+        },
+        {
+          "path": "macpilot/tool/Sources/MacPilot/Preview.swift",
+          "line": 248,
+          "endLine": 253
+        }
+      ],
+      "technology": "Store"
+    },
+    {
+      "id": "entry-engine",
+      "source": "entry",
+      "target": "engine",
+      "description": "call",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilot/Main.swift",
+          "line": 159,
+          "endLine": 173
+        }
+      ],
+      "technology": "Swift async"
+    },
+    {
+      "id": "engine-native",
+      "source": "engine",
+      "target": "native",
+      "description": "네이티브 동작",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Engine.swift",
+          "line": 620,
+          "endLine": 650
+        }
+      ],
+      "technology": "도구 분기"
+    },
+    {
+      "id": "engine-browser",
+      "source": "engine",
+      "target": "browser",
+      "description": "브라우저 동작",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Engine.swift",
+          "line": 496,
+          "endLine": 497
+        }
+      ],
+      "technology": "BrowserBridge.call"
+    },
+    {
+      "id": "engine-capture",
+      "source": "engine",
+      "target": "capture",
+      "description": "화면·오디오",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Engine.swift",
+          "line": 575,
+          "endLine": 579
+        },
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Engine.swift",
+          "line": 500,
+          "endLine": 503
+        }
+      ],
+      "technology": "도구 분기"
+    },
+    {
+      "id": "engine-simulator",
+      "source": "engine",
+      "target": "simulator",
+      "description": "Simulator 동작",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Engine.swift",
+          "line": 626,
+          "endLine": 630
+        }
+      ],
+      "technology": "simulator(arguments)"
+    },
+    {
+      "id": "engine-state",
+      "source": "engine",
+      "target": "state",
+      "description": "작업·감사·추적",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/Engine.swift",
+          "line": 80,
+          "endLine": 140
+        }
+      ],
+      "technology": "Store / Tasks / Tracing"
+    },
+    {
+      "id": "browser-state",
+      "source": "browser",
+      "target": "state",
+      "description": "요청·응답 큐",
+      "sources": [
+        {
+          "path": "macpilot/tool/Sources/MacPilotCore/BrowserBridge.swift",
+          "line": 148,
+          "endLine": 171
+        }
+      ],
+      "technology": "JSON 파일"
+    }
+  ],
+  "views": [
+    {
+      "id": "context",
+      "level": 1,
+      "scope": "macpilot",
+      "title": "MacPilot이 만나는 시스템",
+      "description": "사용자 요청이 로컬 도구 호출로 이어집니다. 대상 앱과 OS는 MacPilot 바깥에 있습니다.",
+      "nodes": [
+        "operator",
+        "codex",
+        "macpilot",
+        "desktop"
+      ],
+      "relationships": [
+        "request",
+        "tool-call",
+        "operate"
+      ],
+      "positions": {
+        "operator": [
+          0,
+          0
+        ],
+        "codex": [
+          1,
+          0
+        ],
+        "macpilot": [
+          1,
+          1
+        ],
+        "desktop": [
+          2,
+          1
+        ]
+      }
+    },
+    {
+      "id": "containers",
+      "level": 2,
+      "scope": "macpilot",
+      "title": "프로세스와 저장소로 나누기",
+      "description": "MCP와 CLI는 같은 컨트롤러를 사용합니다. 주요 실행·IPC 경로를 표시하며, 오버레이·선택적 이미지 검색·개선 요청 전송은 생략했습니다.",
+      "nodes": [
+        "codex",
+        "controller",
+        "state",
+        "native-host",
+        "hid",
+        "preview",
+        "extension"
+      ],
+      "relationships": [
+        "invoke",
+        "persist",
+        "poll",
+        "native-message",
+        "hid-call",
+        "preview-call",
+        "preview-state"
+      ],
+      "positions": {
+        "codex": [
+          0,
+          0
+        ],
+        "controller": [
+          0,
+          1
+        ],
+        "state": [
+          1,
+          1
+        ],
+        "native-host": [
+          2,
+          1
+        ],
+        "hid": [
+          0,
+          2
+        ],
+        "preview": [
+          1,
+          2
+        ],
+        "extension": [
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "id": "components",
+      "level": 3,
+      "scope": "controller",
+      "title": "컨트롤러 안의 실행 경로",
+      "description": "Engine이 실행 조건을 확인하고 기능별 코드로 분기합니다. 기본 경로는 로컬 Apple API를 사용하며 모델 호출을 요구하지 않습니다.",
+      "nodes": [
+        "state",
+        "entry",
+        "engine",
+        "native",
+        "browser",
+        "capture",
+        "simulator"
+      ],
+      "relationships": [
+        "entry-engine",
+        "engine-native",
+        "engine-browser",
+        "engine-capture",
+        "engine-simulator",
+        "engine-state",
+        "browser-state"
+      ],
+      "positions": {
+        "state": [
+          1,
+          0
+        ],
+        "entry": [
+          0,
+          1
+        ],
+        "engine": [
+          1,
+          1
+        ],
+        "native": [
+          2,
+          1
+        ],
+        "browser": [
+          0,
+          2
+        ],
+        "capture": [
+          1,
+          2
+        ],
+        "simulator": [
+          2,
+          2
+        ]
+      }
+    }
+  ]
+}

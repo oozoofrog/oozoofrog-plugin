@@ -1,0 +1,4 @@
+interface:
+  display_name: "C4fy"
+  short_description: "C1·C2·C3 구조와 소스 근거를 부드러운 확대 전환으로 탐색"
+  default_prompt: "$c4fy를 사용해 이 프로젝트의 C4 구조를 소스 근거와 함께 만들고, C1·C2·C3를 자연스럽게 확대 전환하는 HTML로 보여주세요."
