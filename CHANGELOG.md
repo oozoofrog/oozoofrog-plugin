@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- C4fy: retain full C4 diagrams and morph navigation with viewport-fit layout and paginated bottom details.
+
 - C4fy: remove duplicate transition titles, reverse the easing curve on collapse, and synchronize child/edge visibility after continuous light/dark browser review.
 - C4fy: preserve opening card content through the initial expansion and overlap its linear fade with the moving title and child reveal.
 - C4fy: crossfade actual card title, icon and description into the closing scope before the transition ends.
