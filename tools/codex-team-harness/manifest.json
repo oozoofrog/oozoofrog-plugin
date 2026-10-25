@@ -17,7 +17,7 @@
     "payload/team-coordination/scripts/external_handoff.py": "7a57a087000e4676706ac0b4cc294da0bbfe05f537436a55026611f65e6805cf",
     "payload/team-coordination/scripts/management_handoff.py": "a6a681b65b642832f8f4c776e9dc83795f5a9691273b8e3d5dd1edb233d6ddca",
     "payload/team-coordination/scripts/checkpoints.py": "654ccafd40861e802e8983bda2d27fef044e2308e95978a9985582b8673e5615",
-    "payload/team-coordination/scripts/profile_defaults.py": "4bee7191fd20b9d1182924b98f834150e524822b3b8a2c37f8df7c4bcc2c1c3b",
+    "payload/team-coordination/scripts/profile_defaults.py": "22b5ff0ff45c7b83b6c0267c981897a88437b3af9dc57577d50426d97cdc09f1",
     "payload/team-coordination/scripts/profile_overlay.py": "6ceec875515af24a6216fd3ed297a451643ed6b1c29058d12cc59ee4cd3f6ef8",
     "payload/team-coordination/scripts/migration.py": "f2379dd4d259f637c377b533bbb00b6829e7e0be691e711db2c21ae5153d6cf1",
     "payload/team-coordination/scripts/observations.py": "d5819eef7077309db943324f3ee6ef463902d81ef37d33f1dfbc91240aaea771",
