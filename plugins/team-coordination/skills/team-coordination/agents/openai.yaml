@@ -1,4 +1,4 @@
 interface:
   display_name: "Team Coordination"
-  short_description: "Opt-in roles, ownership, evidence and recovery"
-  default_prompt: "Use $team-coordination for the enabled team workflow and verify current context and ownership."
+  short_description: "Astra project analysis and tailored sidebar teams"
+  default_prompt: "Use $team-coordination to start an Astra project-analysis chat that creates separate leader and tailored teammate chats in the Codex sidebar, or reuse this task's existing team."

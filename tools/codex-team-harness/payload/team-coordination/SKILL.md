@@ -1,11 +1,13 @@
 ---
 name: team-coordination
-description: Coordinate an enabled leader-and-execution-team workflow with explicit roles, ownership, versioned context acknowledgements, evidence and recovery.
+description: Start or reuse an Astra project-analysis chat that forms tailored leader and teammate chats in the Codex sidebar; coordinate roles, ownership, evidence and recovery.
 ---
 
 The leader owns scope, decisions and acceptance. Execution owners investigate and implement. An independent reviewer checks current artifacts; do not approve your own runtime. Reuse a small team and bounded advisor help. This workflow grants no new permissions.
 
-For managed projects, use one `.codex-team/state.json` through `scripts/harness.py`; legacy ledger CLI refuses managed state. Preserve critical decisions and rationale in role packets. Register real supported IDs with honest provenance, claim canonical write paths, and require current revision/epoch/digest ACKs. Identity registration remains a claim, not OS authentication.
+On an actionable user request to start or continue a sidebar team, first read [sidebar startup](references/sidebar-startup.md). Start or reuse a separate Astra bootstrap chat: it inspects the project, designs an appropriate team with distinct professional collaboration styles, then creates the separate leader and teammate chats through official app tools. Resolve same-task existing chats before creation. Only the bootstrap owner forms the team; delegated leader/specialist chats never bootstrap another team. Native collaboration subagents and app-server threads do not satisfy a sidebar-chat request. Informational questions and installation do not create chats.
+
+For managed projects, use one `.codex-team/state.json` through `scripts/harness.py`; legacy ledger CLI refuses managed state. Sidebar startup does not create, adopt or migrate that managed record. Preserve critical decisions and rationale in role packets. Register real supported IDs with honest provenance, claim canonical write paths, and require current revision/epoch/digest ACKs. Identity registration remains a claim, not OS authentication.
 
 Read the relevant file in `roles/` and `policy.json`. Exact model availability is client/account dependent. The managed adapter initializes, queries model/list, verifies thread model, then rechecks current instructions before dispatch. It defaults to a read-only pilot; explicit handoffs may use the bounded writing scope in session control; direct clients that bypass it retain advisory guidance.
 
