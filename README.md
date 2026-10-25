@@ -12,6 +12,12 @@ After installation, invoke explicitly: `Use $korean-product-writing to edit this
 
 [Audit](audit/SKILL.md) reviews skill, repository and task instructions within the requested scope. [Choice Interview](choice-interview/SKILL.md) conducts adaptive interviews with single, multiple and text responses; its mixed-form template is included. Both are available as matching skills-only Plugins, without hooks or runtime installation.
 
+## C4fy
+
+[C4fy](c4fy/SKILL.md) creates source-backed C4 context, container, and component diagrams as standalone HTML with a soft rounded UI, animated C1/C2/C3 drill-down, source details, and SVG/JSON export. Use it for C4 architecture maps and hierarchical system explanations, not generic flowcharts, sequence diagrams, or C4 code-level diagrams. It is an original implementation; Archify is conceptual inspiration, not copied code or a runtime dependency.
+
+Use `$c4fy` to explain a repository through C1/C2/C3 with source evidence. Node.js 18+ generates an offline HTML viewer; reduced-motion preferences disable transitions. The [model contract](c4fy/references/model.md) describes scope rules, evidence and export limits. Source and [Plugin mirror](plugins/c4fy/skills/c4fy/SKILL.md) are included; the new local marketplace entry has not been remotely published. Installation and fresh-session discovery require separate checks.
+
 ## JEV Native stable source
 
 The [stable native controller source](tools/jev-native/README.md) and [companion skill](jev-native/SKILL.md) are included from a pinned public commit. No binary or installed runtime is replaced. [Provenance and deferred newer revisions](docs/jev-native-source.md) distinguish source/unit verification from live desktop behavior.

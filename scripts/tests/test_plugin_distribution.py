@@ -36,7 +36,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ["swift-intelligence", "local-ai-studio", "macpilot", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing"],
+            ["swift-intelligence", "local-ai-studio", "macpilot", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing", "c4fy"],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -57,6 +57,25 @@ class PluginDistributionTests(unittest.TestCase):
                     self.assertEqual("https://github.com/oozoofrog/oozoofrog-plugin", manifest["repository"])
                 skill_root = plugin_root / manifest["skills"] / entry["name"]
                 self.assertTrue((skill_root / "SKILL.md").is_file())
+
+    def test_c4fy_distribution(self) -> None:
+        source = REPO_ROOT / "c4fy"
+        mirror = REPO_ROOT / "plugins/c4fy/skills/c4fy"
+        from test_sync_skill_mirrors import load_module
+        module = load_module()
+        self.assertIn("c4fy", module.PACKAGES)
+        self.assertEqual(module.package_files(source), module.package_files(mirror))
+        manifest = json.loads((REPO_ROOT / "plugins/c4fy/.codex-plugin/plugin.json").read_text())
+        self.assertEqual(manifest["version"], json.loads((source / "package.json").read_text())["version"])
+        self.assertIn("description: " + manifest["description"], (source / "SKILL.md").read_text())
+        self.assertEqual(manifest["description"], manifest["interface"]["longDescription"])
+        self.assertIn("$c4fy", (source / "agents/openai.yaml").read_text())
+        self.assertIn("C1/C2/C3", (REPO_ROOT / "README.md").read_text())
+        for name in ("bin/c4fy.mjs", "lib/model.mjs", "lib/layout.mjs", "lib/render.mjs",
+                     "assets/viewer.js", "assets/viewer.css", "references/model.md", "LICENSE"):
+            self.assertTrue((mirror / name).is_file(), name)
+        self.assertTrue((mirror / "bin/c4fy.mjs").stat().st_mode & 0o111)
+        self.assertNotIn("dependencies", json.loads((source / "package.json").read_text()))
 
     def test_macpilot_distribution(self) -> None:
         source = REPO_ROOT / "macpilot"
