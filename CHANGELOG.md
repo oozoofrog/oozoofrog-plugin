@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- C4fy: add an eight-choice theme preview picker with remembered selection, independent light/dark appearance, and theme-aware SVG export. Use Functionalism and Minimalism as style names.
+- C4fy: apply seven theme circuit effects and preview-matched connector styles, including sparks, multi-wave wind and droplets; preserve route endpoints, keyboard behavior and reduced-motion emphasis.
+
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
