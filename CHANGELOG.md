@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- C4fy: support project-defined roleLabel and validated generic icon identifiers on cards and SVG exports, retaining C4 kind in details and backward-compatible defaults.
+
 - C4fy: retain full C4 diagrams and morph navigation with viewport-fit layout and paginated bottom details.
 
 - C4fy: remove duplicate transition titles, reverse the easing curve on collapse, and synchronize child/edge visibility after continuous light/dark browser review.

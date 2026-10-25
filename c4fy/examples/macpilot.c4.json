@@ -56,7 +56,9 @@
           "line": 80,
           "endLine": 140
         }
-      ]
+      ],
+      "roleLabel": "자동화 시스템",
+      "icon": "system"
     },
     {
       "id": "desktop",
@@ -95,7 +97,9 @@
         }
       ],
       "parent": "macpilot",
-      "technology": "Swift · MCP stdio / CLI JSON"
+      "technology": "Swift · MCP stdio / CLI JSON",
+      "roleLabel": "MCP 서버 · CLI",
+      "icon": "server"
     },
     {
       "id": "state",
@@ -120,7 +124,9 @@
         }
       ],
       "parent": "macpilot",
-      "technology": "파일 시스템 · JSON / JSONL / 미디어"
+      "technology": "파일 시스템 · JSON / JSONL / 미디어",
+      "roleLabel": "파일 저장소",
+      "icon": "storage"
     },
     {
       "id": "native-host",
@@ -140,7 +146,9 @@
         }
       ],
       "parent": "macpilot",
-      "technology": "Swift · native-host 프로세스"
+      "technology": "Swift · native-host 프로세스",
+      "roleLabel": "네이티브 메시징 호스트",
+      "icon": "bridge"
     },
     {
       "id": "extension",
@@ -160,7 +168,9 @@
         }
       ],
       "parent": "macpilot",
-      "technology": "JavaScript · Chrome Extension APIs"
+      "technology": "JavaScript · Chrome Extension APIs",
+      "roleLabel": "브라우저 확장",
+      "icon": "extension"
     },
     {
       "id": "hid",
@@ -180,7 +190,9 @@
         }
       ],
       "parent": "macpilot",
-      "technology": "Objective-C · IndigoHID"
+      "technology": "Objective-C · IndigoHID",
+      "roleLabel": "Simulator 입력 드라이버",
+      "icon": "keyboard"
     },
     {
       "id": "preview",
@@ -200,7 +212,9 @@
         }
       ],
       "parent": "macpilot",
-      "technology": "Swift · AppKit · preview-host"
+      "technology": "Swift · AppKit · preview-host",
+      "roleLabel": "화면 표시 앱",
+      "icon": "app"
     },
     {
       "id": "entry",
@@ -220,7 +234,9 @@
         }
       ],
       "parent": "controller",
-      "technology": "Main.swift · JSON-RPC / JSON"
+      "technology": "Main.swift · JSON-RPC / JSON",
+      "roleLabel": "요청 진입점",
+      "icon": "component"
     },
     {
       "id": "engine",
@@ -240,7 +256,9 @@
         }
       ],
       "parent": "controller",
-      "technology": "Swift @MainActor · Tasks / Outcomes"
+      "technology": "Swift @MainActor · Tasks / Outcomes",
+      "roleLabel": "실행 조정",
+      "icon": "component"
     },
     {
       "id": "native",
@@ -260,7 +278,9 @@
         }
       ],
       "parent": "controller",
-      "technology": "Accessibility · AppKit · CoreGraphics"
+      "technology": "Accessibility · AppKit · CoreGraphics",
+      "roleLabel": "네이티브 앱 제어",
+      "icon": "app"
     },
     {
       "id": "browser",
@@ -280,7 +300,9 @@
         }
       ],
       "parent": "controller",
-      "technology": "BrowserBridge · SafariBridge"
+      "technology": "BrowserBridge · SafariBridge",
+      "roleLabel": "브라우저 연결",
+      "icon": "bridge"
     },
     {
       "id": "capture",
@@ -305,7 +327,9 @@
         }
       ],
       "parent": "controller",
-      "technology": "Capture · Recording · PreviewActions"
+      "technology": "Capture · Recording · PreviewActions",
+      "roleLabel": "화면·오디오 캡처",
+      "icon": "component"
     },
     {
       "id": "simulator",
@@ -325,7 +349,9 @@
         }
       ],
       "parent": "controller",
-      "technology": "simctl · AX · HID subprocess"
+      "technology": "simctl · AX · HID subprocess",
+      "roleLabel": "Simulator 제어",
+      "icon": "device"
     }
   ],
   "relationships": [

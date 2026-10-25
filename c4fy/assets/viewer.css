@@ -23,3 +23,5 @@
 @media print{.parent-card{display:none}}
 
 .scope-morph{position:absolute;overflow:clip;pointer-events:none;z-index:4;background:var(--surface);border:1.5px solid var(--accent);box-sizing:border-box}.morph-title{position:absolute;top:0;left:0;font-size:12px;font-weight:700;z-index:2;white-space:nowrap;color:var(--ink)}
+
+.node-type{min-width:0;max-width:90%}.role-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
