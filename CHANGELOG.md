@@ -5,6 +5,12 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## Team harness [0.5.7] - 2026-10-25
+
+- Start user-requested sidebar teams with a separate Astra project-analysis and formation chat, followed by a tailored coordination-only leader and professionally distinctive teammates. Reuse task-known chats and prevent delegated-role recursive formation.
+- Preserve official app messaging authorization, pending/ready creation receipts, exact requested role models/efforts and the boundary between sidebar guidance and managed adapter enforcement. Plugin installation creates no chats and does not migrate active project contracts.
+- Validate the source-directed live flow through actual Astra formation, role packet acknowledgements, independent scoped review and scoped acceptance. No product writes, recursive teams or cross-chat messages occurred. Installed fresh-chat discovery and provider execution model/tier remain unverified by that trial.
+
 ## C4fy 0.2.0 — 2026-10-25
 
 - Add optional component-scoped C4 code diagrams with typed, source-backed code nodes and relationships; extend animated drill/return, localized details, role labels/icons, SVG/JSON exports and backward-compatible validation. Add the pinned MacPilot BrowserBridge code example and desktop/narrow-screen browser checks.
