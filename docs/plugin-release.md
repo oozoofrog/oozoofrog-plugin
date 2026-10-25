@@ -2,6 +2,8 @@
 
 `python3 scripts/release_plugin.py`는 버전 변경, 검증, 커밋, 패키징, GitHub 게시, Codex 설치를 각각 실행한다. 현재 버전 어댑터와 배포 프로필은 MacPilot을 지원한다. 프로필은 `scripts/releases/macpilot.json`이다. 다른 Plugin을 지원하려면 해당 버전 어댑터와 검증 계약을 추가한다.
 
+WinPilot 0.5.0은 이 MacPilot 전용 스크립트를 사용하지 않는다. [WinPilot 개발 절차](../winpilot/references/development.md)의 Windows 빌드·자체 시험·`package-runtime.py`·미러 검사를 수행한 뒤 소스를 커밋·푸시한다. 검증한 커밋에 `winpilot-v0.5.0` annotated tag를 붙이고 runtime ZIP과 SHA256SUMS.txt를 draft release에 업로드한다. 다시 내려받은 두 파일을 원본과 대조한 뒤 공개하고 대상 marketplace만 갱신하여 설치한다. 설치본 파일을 공개 커밋과 대조하고 설치본 `.mcp.json`으로 stdio 연결을 확인한다. [0.5.0 실행 결과와 제약](validation/winpilot.md)을 참고한다.
+
 각 단계는 명시적으로 실행한다. `prepare` 외에는 버전을 자동 증가시키지 않는다. 같은 버전으로 `prepare`를 다시 실행해도 앱 build 번호는 증가하지 않는다. 이전 버전으로 내리는 요청과 버전 항목의 누락·중복은 쓰기 전에 거부한다. 변경 설명과 CHANGELOG는 작성자가 갱신한다.
 
 ## 준비와 검증

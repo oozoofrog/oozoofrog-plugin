@@ -1,10 +1,18 @@
 # oozoofrog-plugin
 
+[WinPilot](winpilot/SKILL.md) 0.5.1 migrates the existing Windows Pilot controller into this repository. Use `$winpilot` (formerly `windows-pilot`) to observe Windows apps and games with WGC/UIA and perform foreground input with a visible stop control. The Windows x64 Plugin includes MCP configuration and installs a hash-pinned self-contained runtime on first connection. Existing executable and tool names remain compatible. See [installation](docs/plugin-installation.md#winpilot) and [validation](docs/validation/winpilot.md).
+
+[Team harness `0.5.6`](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.5.6) fixes recipient creation config merging and adds explicit same-ID paused-recipient settings repair plus versioned stale-packet refresh. Exact identity, permission, owner-evidence and canonical-byte checks remain required. Installation and project adoption are separate; no automatic load, recovery or model turn is added. See the [Korean explanation and update procedure](README.ko.md#팀-하네스-056).
+
 Team harness `0.5.5` adds no-follow symlink inventory to the management-aware handoff baseline while retaining cross-tool handoff, strict product baselines and bounded recipient writing. It includes the locally reviewed `0.5.0`–`0.5.4` changes in one public release after `0.4.1`. Installation and project adoption remain separate operations.
 
 The [team-harness `0.5.5` release](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.5.5) includes [exact-command permission recovery](team-coordination/references/diagnostics.md) for known-not-executed environment initialization failures. It preserves the closed result and requires ordinary command-specific tool authorization, current independent review and a fresh ACK. Installation does not refresh existing project contracts. See the [Korean explanation and update procedure](README.ko.md#팀-하네스-055).
 
 English | [한국어](README.ko.md)
+
+[Interface First Design](interface-first-design/SKILL.md) (`interface-first-design` 0.1.0) is a skills-only Plugin. Use when designing, implementing, or reviewing product UI, especially when explanatory prose substitutes for clear structure, visible controls, or state feedback. Applies to product screens and interactions, not agent communication or technical documentation. It preserves essential text and data while making actions and recovery visible. Distribution checks cover packaging; behavioral evaluation and live UI verification are separate. See [installation](docs/plugin-installation.md#interface-first-design). [Validation method, results and limits](docs/validation/interface-first-design.md).
+
+Invocation: `Use $interface-first-design to design or review this product UI with visible actions, clear states, and preserved meaning.`
 
 [Korean Product Writing](korean-product-writing/SKILL.md) edits Korean product copy while preserving facts, conditions and requested components. Its skills-only Plugin is opt-in guidance without runtime/hooks. One reused six-case regression passed after earlier failures; [validation history and limits](drafts/korean-product-writing/tests/regression-v4/results.md) remain public. Installation and automatic loading were not tested.
 

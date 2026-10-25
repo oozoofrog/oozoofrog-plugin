@@ -1,10 +1,18 @@
 # oozoofrog-plugin
 
+[WinPilot](winpilot/SKILL.md) 0.5.1은 기존 Windows Pilot 제어기를 이 저장소로 이관합니다. `$winpilot` 또는 `windows-pilot` 요청으로 Windows 앱·게임을 WGC·UIA로 관찰하고 화면 안내·중지 기능이 있는 전경 입력을 수행합니다. Windows x64 Plugin은 MCP 설정을 포함하고 첫 연결에서 해시를 검증한 독립 실행형 런타임을 설치합니다. 기존 실행 파일명과 도구명은 유지합니다. [설치](docs/plugin-installation.md#winpilot)와 [검증 범위](docs/validation/winpilot.md)를 확인하세요.
+
+팀 하네스 [`0.5.6`](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.5.6)은 수신 세션을 만들 때 추론·샌드박스 설정을 함께 보존합니다. 같은 수신자의 일시 중지 상태 복구와 오래된 인계 패킷 갱신을 명시적으로 수행할 수 있습니다. 세션 식별자·권한·담당자 근거·원본 상태 바이트를 검증해야 하며, 설치만으로 복구나 프로젝트 계약 반영이 실행되지는 않습니다.
+
 팀 하네스 `0.5.5`는 관리 디렉터리 인계 기준선에 심볼릭 링크를 따라가지 않는 메타데이터 기록과 전체 소유 경로의 읽기 전용 사전 점검을 추가합니다. 제품 파일 기준선과 새 세션의 제한된 쓰기 범위, Standard 명시 요청 수정은 유지합니다. 로컬에서 검토한 `0.5.0`~`0.5.4`의 변경을 `0.4.1` 다음 공개 릴리스에 함께 담았습니다. 설치와 프로젝트 계약 반영은 각각 진행해야 합니다.
 
 팀 하네스 [`0.5.5` 릴리스](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.5.5)는 환경 초기화 실패로 실행되지 않은 관찰에 [동일 명령의 권한 검토 제출](team-coordination/references/diagnostics.md)을 허용합니다. 기존 종료·실패 기록과 담당 범위를 유지하며, 일반 도구의 명령별 권한 검토와 최신 독립 검토·ACK가 필요합니다. 설치만으로 기존 프로젝트 계약을 갱신하지 않습니다.
 
 [English](README.md) | 한국어
+
+[Interface First Design](interface-first-design/SKILL.md) (`interface-first-design` 0.1.0)은 제품 UI를 설계·구현·검토할 때 사용합니다. 설명문이 화면 구조·보이는 조작·상태 피드백을 대신하는 경우에 특히 유용합니다. 기능 이름·사용자 콘텐츠·실제 데이터·오류·동의 안내는 보존합니다. 에이전트의 답변이나 기술 문서에는 적용하지 않습니다. 런타임이나 hooks가 없는 skills-only Plugin이며, 배포 검사와 행동 평가·실제 UI 검증은 구분합니다. [설치 안내](docs/plugin-installation.md#interface-first-design)를 참고하세요. [검증 결과와 한계](docs/validation/interface-first-design.md).
+
+호출 예: `$interface-first-design으로 이 제품 UI의 구조·조작·상태를 설계하거나 검토해 주세요. 필요한 문구와 데이터의 의미는 유지해 주세요.`
 
 [한국어 제품 글쓰기](korean-product-writing/SKILL.md)는 사실·조건·요청한 구성요소를 보존하며 제품 문구를 다듬습니다. skills-only Plugin에는 런타임이나 hooks가 없습니다. 앞선 실패 뒤 같은 6개 입력의 회귀 검사를 통과했으며 [이력과 한계](drafts/korean-product-writing/tests/regression-v4/results.md)를 보존합니다. 설치와 자동 로딩은 시험하지 않았습니다.
 
@@ -22,6 +30,16 @@ Skills-only 패키지로 [한국어 여행 가이드북](korean-travel-guidebook
 
 [전체 후보 목록](docs/user-skill-inventory.md)은 현재 패키지·외부 의존성·미확인 소스를 구분합니다. [한국어 글쓰기의 과거 초안](drafts/korean-product-writing/STATUS.md)은 이전 실패 이력을 최신 원본과 구별해 보존합니다.
 
+## 팀 하네스 0.5.6
+
+수신 세션을 만들 때 지정한 모델·추론 수준과 승인된 샌드박스 설정을 함께 보존합니다. 충돌하는 모델이나 추론 설정은 생성 전에 거부합니다. 권한·네트워크·승인 범위를 넓히지 않습니다.
+
+`recover-paused`는 패킷을 전달하기 전에 실패한 수신자의 설정을 같은 세션 ID에서 확인하고 복구합니다. 원래 생성 기록·실패·담당자·권한과 일시 중지 상태를 보존합니다. 이미 로드되어 있고 작업이 진행되지 않는 세션만 다룹니다. 별도의 세션을 만들거나 자동으로 로드하거나 모델 작업을 시작하지 않습니다. 세션을 다시 로드하려면 같은 공식 백엔드에서 대기 입력과 활성 목표가 없음을 확인하고, 새 입력을 보내는 주체가 중지된 상태를 유지해야 합니다. 조회를 지원하지 않거나 결과가 불명확하면 중단합니다.
+
+`refresh-packet`은 계약을 명시적으로 반영한 뒤 아직 전달하지 않은 오래된 패킷을 갱신합니다. 이전 패킷·해시·실패와 작업 내용·담당 범위를 보존하고 최신 실제 담당자의 중지 근거를 요구합니다. 새 패킷의 실제 수신과 새 ACK가 있어야 인계를 이어갈 수 있습니다. 설치 성공이나 합성 검사 결과로 실제 인계가 완료되었다고 판단하지 않습니다. [세부 조건과 명령](team-coordination/references/session-control.md)을 확인하세요.
+
+[0.5.6 릴리스](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.5.6)에서 소스와 체크섬을 받으세요. 아래 설치 절차의 파일명·새 설치 계획에는 `0.5.6`을 사용합니다. 기존 설치는 해당 버전의 소스·저널과 사용자 지침을 보존한 채 오버레이를 먼저 복원하고 런타임을 나중에 복원하는 순서를 검토해야 합니다. 0.5.6의 유효 계약 해시도 바뀌므로 기존 프로젝트 반영은 안전한 중단 지점에서 별도로 진행합니다. Normal/default와 역할별 추론 수준은 요청값이며 실제 제공자의 실행 모델·등급을 증명하지 않습니다. 이전 0.5.5와 이전 릴리스는 복구용으로 남습니다.
+
 ## 팀 하네스 0.5.5
 
 실제 담당자의 중지 ACK와 공식 앱 조회 근거가 있어야 교차 도구 인계를 준비할 수 있습니다. 대기 상태만으로 중지를 추정하지 않습니다. 디렉터리 소유권과 기존 실패·검토·채팅을 보존하며, 새 구현 세션은 승인된 경로와 일반 권한 심사 설정이 공식 응답에서 일치해야 합니다. 실제 패킷 수신·원자적 소유권 이전·이전 후 담당자 ACK·최신 문맥 ACK가 필요합니다. 설치만으로 기존 실제 프로젝트를 이전하지 않습니다. [인계 절차와 제한](team-coordination/references/session-control.md#cross-tool-source-and-bounded-writing)을 확인하세요.
@@ -36,7 +54,7 @@ Skills-only 패키지로 [한국어 여행 가이드북](korean-travel-guidebook
 
 설치·업데이트는 다음 순서로 진행합니다.
 
-1. 릴리스에서 `codex-team-harness-0.5.5.tar.gz`와 `.sha256` 파일을 함께 받아 SHA-256을 비교한 뒤 압축을 풉니다. 공식 소스를 신뢰할 수 있는 Python 3.9 이상으로 실행합니다. [소스 다운로드·검증 안내](tools/codex-team-harness/README.md#obtain-and-verify-the-source)를 참고하세요.
+1. 릴리스에서 `codex-team-harness-0.5.6.tar.gz`와 `.sha256` 파일을 함께 받아 SHA-256을 비교한 뒤 압축을 풉니다. 공식 소스를 신뢰할 수 있는 Python 3.9 이상으로 실행합니다. [소스 다운로드·검증 안내](tools/codex-team-harness/README.md#obtain-and-verify-the-source)를 참고하세요.
 2. 새 설치는 압축을 푼 디렉터리에서 아래 명령으로 변경 계획을 확인한 뒤 적용하고 검사합니다. 기존 지침과 원본 바이트는 로컬 저널에 보존합니다. 계획·저널·프로젝트 기록은 공개하지 않습니다.
 
 ```sh
@@ -45,7 +63,7 @@ python3 -I -S -B bootstrap.py --codex-home "$HOME/.codex" --plan plan.json apply
 python3 -I -S -B bootstrap.py --codex-home "$HOME/.codex" doctor
 ```
 
-기존 설치의 업데이트는 덮어쓰기 방식으로 지원하지 않습니다. 이전 버전의 저널이나 관리 외 파일이 있으면 설치를 중단합니다. 기존 버전에 맞는 소스·저널로 [프로필 오버레이를 먼저 복원하고 런타임을 나중에 복원하는 순서](tools/codex-team-harness/payload/team-coordination/references/profiles.md)를 검토하거나, 원본 바이트와 사용자 지침을 보존하는 별도의 버전별 이전을 검토해야 합니다. 복원이 확인된 뒤 0.5.5에서 새 계획을 생성합니다. 저널이나 알 수 없는 파일을 지워 설치를 강행하지 마세요.
+기존 설치의 업데이트는 덮어쓰기 방식으로 지원하지 않습니다. 이전 버전의 저널이나 관리 외 파일이 있으면 설치를 중단합니다. 기존 버전에 맞는 소스·저널로 [프로필 오버레이를 먼저 복원하고 런타임을 나중에 복원하는 순서](tools/codex-team-harness/payload/team-coordination/references/profiles.md)를 검토하거나, 원본 바이트와 사용자 지침을 보존하는 별도의 버전별 이전을 검토해야 합니다. 복원이 확인된 뒤 0.5.6에서 새 계획을 생성합니다. 저널이나 알 수 없는 파일을 지워 설치를 강행하지 마세요.
 
 Plugin만 설치하면 스킬 안내만 추가됩니다. 전역 지침·런타임 설치나 기존 프로젝트 이전은 자동으로 일어나지 않습니다. 0.5 이전 계약의 프로젝트는 담당자가 안전한 중단 지점에서 원본 상태 바이트를 비공개로 보존하고, 리더와 독립 검토자의 확인을 거쳐 [명시적 계약 이전(`contract_migrate`)](tools/codex-team-harness/payload/team-coordination/references/migration.md)을 실행해야 합니다. 이미 0.5 이상인 schema-2 프로젝트는 유효 계약 해시가 달라질 때만 안전한 중단 지점에서 `policy_refresh`를 수행하고, 현재 패킷을 실제로 읽은 참여자의 새 ACK를 받아야 합니다. 계약 해시가 이미 일치하면 반복 이전은 필요하지 않습니다. 0.5.5 런타임 변경은 유효 계약 해시를 바꿉니다. 설치 성공이나 합성 검사 ACK는 실제 프로젝트 이전·승인을 대신하지 않습니다.
 

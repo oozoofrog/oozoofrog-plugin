@@ -22,6 +22,29 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## WinPilot [0.5.1] - 2026-10-25
+
+- Request game elevation directly through native `ShellExecuteExW(runas)` with STA COM initialization, explicit working directory, process-handle cleanup and Win32 error reporting. PowerShell remains only an optional compatibility wrapper.
+- Parse Korean click plans as UTF-8 in the executable, reject malformed plans without printing screenshots, and pin the plan SHA-256 across the elevation boundary. Retain target identity, expiry and pixel checks after elevation.
+- Verify real Mabinogi Mobile gold-detail opening with a High-integrity helper after confirming ordinary input is rejected with `elevation_required`. Preserve raw dispatched-unverified records separately from visual confirmation.
+
+## WinPilot [0.5.0] - 2026-10-25
+
+- Plugin build `0.5.0+codex.20261025.1` suppresses slow Windows PowerShell download progress, bounds download time to 120 seconds, and allows 180 seconds for first MCP startup. The verified 0.5.0 runtime archive remains unchanged.
+
+- Migrate the operational Windows Pilot 0.4.0 C# controller and fixture tests into `winpilot/`, with a matching Plugin, discovery metadata and MCP configuration. Preserve WGC/UIA, foreground consent, stop controls, external-input cancellation and request replay protection.
+- Replace the build's private full-screen game capture dependency with the required 28×28 icon sample. Keep historical captures, experimental hooking code and original local data outside distribution.
+- Add a self-contained Windows x64 runtime ZIP, pinned archive/file SHA-256 verification, staged installation, and portable helper executable selection. Dispose parsed MCP JSON documents promptly.
+- Recheck cursor arrival and window ownership before title-bar activation clicks, and report activation diagnostics. Verify 43 self-tests, 15 MCP fixture checks, four foreground-input checks, two automatic verification checks, and runtime installation integrity on Windows.
+
+## Interface First Design [0.1.0] - 2026-10-25
+
+- Add `interface-first-design` 0.1.0 as a standalone skill and skills-only Plugin for product UI design, implementation and review. Its positive workflow preserves known meaning and essential text, exposes actions and state, and distinguishes observed UI checks from proposed verification. Include synthetic examples, discovery metadata, marketplace registration, installation guidance and structural distribution checks.
+
+## Team harness [0.5.6] - 2026-10-25
+
+- Preserve profile reasoning and unrelated config keys when bounded recipient sandbox configuration is added. Creation policy replaces conflicting sandbox values as a whole; model/reasoning substitutions fail before creation. Add explicit raw-byte/revision-CAS paused-recipient settings reconciliation and versioned predelivery packet refresh, preserving original identity, failures, ownership, content and permission baselines. Cold loading requires separately authorized empty-queue/inactive-goal preflight and the original backend namespace; no automatic load or model turn is added.
+
 ## Team harness [0.5.5] - 2026-10-24
 
 - Publish the combined locally reviewed 0.5.0–0.5.5 changes after 0.4.1, with Korean installation/update/project-adoption guidance, a deterministic allowlisted source archive and commit-pinned CI. Preserve previous releases and separate requested model/Standard settings from unavailable provider execution identity.

@@ -149,6 +149,30 @@
       "category": "Productivity"
     },
     {
+      "name": "interface-first-design",
+      "source": {
+        "source": "local",
+        "path": "./plugins/interface-first-design"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "winpilot",
+      "source": {
+        "source": "local",
+        "path": "./plugins/winpilot"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
       "name": "c4fy",
       "source": {
         "source": "local",

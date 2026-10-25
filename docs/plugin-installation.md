@@ -1,5 +1,15 @@
 # Plugin installation
 
+## WinPilot
+
+Windows x64에서 `codex plugin marketplace upgrade oozoofrog-plugin` 후 `codex plugin add winpilot@oozoofrog-plugin`을 실행합니다. marketplace가 없으면 `codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main`으로 먼저 등록합니다.
+
+WinPilot 0.5.1은 [스킬](../winpilot/SKILL.md)과 MCP 설정을 함께 제공합니다. 첫 서버 연결에서 GitHub Release의 독립 실행형 ZIP을 내려받아 SHA-256을 검증하고 `%LOCALAPPDATA%/WinPilot/0.5.1/`에 설치합니다. 별도 .NET 설치·Python·SDK는 실행에 필요하지 않습니다. 빌드·시험·오프라인 설치는 [개발 안내](../winpilot/references/development.md)를 따릅니다. unsigned 배포이며 Windows SmartScreen 승인이 필요할 수 있습니다.
+
+기존 `windows-pilot` 실행 파일명과 7개 MCP 도구명은 유지합니다. 기존 standalone 스킬·MCP 설정·개인 캡처·원본 폴더는 자동 삭제하지 않습니다. 동일 서버를 Plugin MCP와 수동 MCP 양쪽에 등록하지 마세요. 설치 상태와 현재 대화의 도구 노출은 별도로 확인하며 새 대화에서 `$winpilot`을 호출할 수 있습니다. [검증 범위](validation/winpilot.md)를 참고하세요.
+
+## 기존 Plugin
+
 Repository marketplace에는 `swift-intelligence`, `local-ai-studio`, `macpilot`가 있습니다. 필요한 Plugin만 선택합니다. 아래 명령은 해당 변경이 원격에 반영된 뒤 사용합니다.
 
 ```bash
@@ -52,3 +62,18 @@ Plugin 설치 자체는 LocalAIHub나 모델을 설치하지 않습니다. 스�
 Qwen Image 2.1 설치 플래그는 사용자의 명시적 라이선스 동의 후에만 사용합니다. 24 GB Mac에서는 다른 app/UI 작업도 포함해 대형 생성 모델을 직렬로 실행합니다. TTS 출력 디렉터리·전사 stem·그 외 파일 경로의 차이와 `music --prompt`/bare `music`의 동작을 [명령 참고](../local-ai-studio/references/cli-workflows.md)에 정리했습니다.
 
 Plugin 설치 성공, 새 세션에서 읽은 스킬 경로, 모델 readiness, 실제 추론 완료, 결과의 파일·형식·품질 확인은 별도 단계입니다. 배포 검사만으로 실제 생성·재생 품질이나 설치 후 노출을 주장하지 않습니다.
+
+## Interface First Design
+
+`interface-first-design` 0.1.0은 제품 화면·상호작용을 설계·구현·검토하는 skills-only Plugin입니다. 설명문 대신 구조·보이는 조작·상태 피드백으로 사용 흐름을 드러내며, 기능 이름·실제 데이터·사용자 콘텐츠·오류·동의 안내를 보존합니다. 에이전트 답변이나 기술 문서에는 적용하지 않습니다. 별도 런타임·MCP·hooks·인증 정보를 포함하지 않습니다.
+
+원격에 반영된 뒤 다음 명령으로 설치합니다. 기존 marketplace가 있으면 먼저 `codex plugin marketplace upgrade oozoofrog-plugin`로 snapshot을 갱신하세요.
+
+```sh
+codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
+codex plugin add interface-first-design@oozoofrog-plugin
+```
+
+게시 전 checkout 검증에는 저장소 루트에서 `codex plugin marketplace add "$PWD"`를 사용하고 source가 그 checkout인지 확인합니다. Standalone 설치는 `interface-first-design/`을 skill-installer로 설치하며 기존 설치본을 임의로 덮어쓰거나 Plugin과 중복 설치하지 않습니다.
+
+새 작업에서 `$interface-first-design` 또는 `$interface-first-design:interface-first-design`으로 호출합니다. [스킬](../interface-first-design/SKILL.md)과 [가상 예시](../interface-first-design/references/examples.md)를 참고하세요. 패키지 검사 통과, 원격 카탈로그 반영, 설치 성공, 새 세션 노출, 실제 제품 UI 동작 검증은 각각 확인해야 합니다.
