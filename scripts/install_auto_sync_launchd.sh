@@ -72,50 +72,27 @@ STDERR_LOG="${LOG_DIR}/${LABEL}.err.log"
 
 mkdir -p "${PLIST_DIR}" "${LOG_DIR}"
 
-cat > "${PLIST_PATH}" <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key>
-  <string>${LABEL}</string>
+"${PYTHON_BIN}" - "${PLIST_PATH}" "${LABEL}" "${PYTHON_BIN}" "${REPO_ROOT}" \
+  "${INTERVAL}" "${DEBOUNCE}" "${RETRY_COOLDOWN}" "${STDOUT_LOG}" "${STDERR_LOG}" <<'PYTHON'
+import plistlib
+import sys
 
-  <key>ProgramArguments</key>
-  <array>
-    <string>${PYTHON_BIN}</string>
-    <string>${REPO_ROOT}/scripts/auto_sync_daemon.py</string>
-    <string>--repo-root</string>
-    <string>${REPO_ROOT}</string>
-    <string>--sync-script</string>
-    <string>${REPO_ROOT}/scripts/sync_repo.sh</string>
-    <string>--interval</string>
-    <string>${INTERVAL}</string>
-    <string>--debounce</string>
-    <string>${DEBOUNCE}</string>
-    <string>--retry-cooldown</string>
-    <string>${RETRY_COOLDOWN}</string>
-  </array>
-
-  <key>RunAtLoad</key>
-  <true/>
-
-  <key>KeepAlive</key>
-  <true/>
-
-  <key>WorkingDirectory</key>
-  <string>${REPO_ROOT}</string>
-
-  <key>ProcessType</key>
-  <string>Background</string>
-
-  <key>StandardOutPath</key>
-  <string>${STDOUT_LOG}</string>
-
-  <key>StandardErrorPath</key>
-  <string>${STDERR_LOG}</string>
-</dict>
-</plist>
-EOF
+path, label, python, root, interval, debounce, cooldown, stdout, stderr = sys.argv[1:]
+config = {
+    "Label": label,
+    "ProgramArguments": [python, root + "/scripts/auto_sync_daemon.py",
+                         "--repo-root", root, "--sync-script", root + "/scripts/sync_repo.sh",
+                         "--interval", interval, "--debounce", debounce, "--retry-cooldown", cooldown],
+    "RunAtLoad": True,
+    "KeepAlive": True,
+    "WorkingDirectory": root,
+    "ProcessType": "Background",
+    "StandardOutPath": stdout,
+    "StandardErrorPath": stderr,
+}
+with open(path, "wb") as output:
+    plistlib.dump(config, output)
+PYTHON
 
 plutil -lint "${PLIST_PATH}" >/dev/null
 
