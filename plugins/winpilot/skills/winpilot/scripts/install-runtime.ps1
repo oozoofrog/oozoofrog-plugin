@@ -4,6 +4,7 @@
     [switch]$Stdio
 )
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
 $manifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot '../runtime/distribution.json') -Raw | ConvertFrom-Json
 if ($manifest.version -notmatch '^\d+\.\d+\.\d+$' -or $manifest.sha256 -notmatch '^[a-f0-9]{64}$') { throw '잘못된 배포 manifest입니다.' }
 $root = [IO.Path]::GetFullPath($InstallRoot)
@@ -41,7 +42,7 @@ if (Test-Path -LiteralPath $destination) {
         if ($Archive) { Copy-Item -LiteralPath $Archive -Destination $zip }
         else {
             $url = "https://github.com/oozoofrog/oozoofrog-plugin/releases/download/winpilot-v$($manifest.version)/winpilot-$($manifest.version)-win-x64.zip"
-            Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $zip
+            Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $zip -TimeoutSec 120
         }
         if ((Get-Sha256 $zip) -ne $manifest.sha256) { throw '배포 ZIP 해시가 일치하지 않습니다.' }
         Add-Type -AssemblyName System.IO.Compression.FileSystem

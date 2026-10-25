@@ -24,6 +24,18 @@
 
 최종 runtime ZIP SHA-256: `b6151e1047f395e49fa2e833a16b6fe2d5bab891f29d6e73b658556d00378a2d`. ZIP 476개 파일을 해시 manifest와 대조했다. 로컬 상세 기록은 `winpilot/tool/artifacts/`에 보존하며 개인 화면이 포함될 수 있어 게시하지 않는다.
 
+## 공개·설치 확인
+
+소스 커밋 `51d522f57a90c9287703fd5d385e769309df43b1`을 원격 main에 반영하고 annotated tag `winpilot-v0.5.0`을 게시했다. [GitHub Release](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/winpilot-v0.5.0)의 ZIP과 SHA256SUMS.txt를 다시 내려받아 업로드 전 원본과 바이트 단위로 비교한 뒤 공개했다.
+
+`codex plugin marketplace upgrade oozoofrog-plugin --json`과 `codex plugin add winpilot@oozoofrog-plugin --json`으로 원격 배포본을 설치했다. 설치 경로는 `%USERPROFILE%/.codex/plugins/cache/oozoofrog-plugin/winpilot/0.5.0`이다. 설치 파일 36개의 Git blob을 위 커밋과 대조했다. `codex plugin list --marketplace oozoofrog-plugin --json`에서 설치·활성화를 확인했고 기존 Plugin의 버전·활성화 상태를 전후 비교했다.
+
+실제 설치된 `.mcp.json`의 PowerShell 진입점을 실행해 버전 0.5.0, 도구 7개, 창 목록 조회를 확인했다. runtime은 `%LOCALAPPDATA%/WinPilot/0.5.0`에 설치했다. 기존 standalone 스킬은 중복 선택을 피하도록 `%USERPROFILE%/.codex/skills-archive/windows-pilot-0.4.0-before-winpilot-0.5.0`으로 옮기고 두 파일의 해시를 확인했다. 기존 개발 프로젝트와 개인 기록은 변경하지 않았다.
+
+현재 대화의 재연결과 새 대화에서의 자동 스킬 선택은 검증하지 않았다. 위 검사는 설치된 서버의 별도 stdio 연결 검사다.
+
+공개 URL에서 비어 있는 경로로 설치하는 최초 검사는 약 2분 걸렸다. Windows PowerShell의 진행률 표시를 끈 Plugin build `0.5.0+codex.20261025.1`은 같은 공개 ZIP의 새 경로 다운로드·전체 파일 검증·설치를 7.05초에 완료했다. 다운로드는 120초로 제한하고 MCP 시작 제한은 180초로 설정했다. 바이너리·ZIP·runtime manifest 해시는 변경하지 않았다.
+
 ## 범위와 제한
 
 자체 시험 창의 결과는 실제 게임 검증을 대신하지 않는다. 2026-10-18의 게임 실행·설정 화면 기록은 이전 버전의 이력이다. 이번 버전에서 실제 게임, UAC, 물리 장치로 발생시킨 중단, 독점 전체 화면, 모든 DPI 조합과 강제 worker 종료 후 입력 해제를 검증하지 않았다. 배포 실행 파일은 인증서 서명되지 않았다.

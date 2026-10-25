@@ -7,6 +7,8 @@
 
 ## WinPilot [0.5.0] - 2026-10-25
 
+- Plugin build `0.5.0+codex.20261025.1` suppresses slow Windows PowerShell download progress, bounds download time to 120 seconds, and allows 180 seconds for first MCP startup. The verified 0.5.0 runtime archive remains unchanged.
+
 - Migrate the operational Windows Pilot 0.4.0 C# controller and fixture tests into `winpilot/`, with a matching Plugin, discovery metadata and MCP configuration. Preserve WGC/UIA, foreground consent, stop controls, external-input cancellation and request replay protection.
 - Replace the build's private full-screen game capture dependency with the required 28×28 icon sample. Keep historical captures, experimental hooking code and original local data outside distribution.
 - Add a self-contained Windows x64 runtime ZIP, pinned archive/file SHA-256 verification, staged installation, and portable helper executable selection. Dispose parsed MCP JSON documents promptly.
