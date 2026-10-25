@@ -1,5 +1,7 @@
 # oozoofrog-plugin
 
+[Team harness `0.5.6`](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.5.6) fixes recipient creation config merging and adds explicit same-ID paused-recipient settings repair plus versioned stale-packet refresh. Exact identity, permission, owner-evidence and canonical-byte checks remain required. Installation and project adoption are separate; no automatic load, recovery or model turn is added. See the [Korean explanation and update procedure](README.ko.md#팀-하네스-056).
+
 Team harness `0.5.5` adds no-follow symlink inventory to the management-aware handoff baseline while retaining cross-tool handoff, strict product baselines and bounded recipient writing. It includes the locally reviewed `0.5.0`–`0.5.4` changes in one public release after `0.4.1`. Installation and project adoption remain separate operations.
 
 The [team-harness `0.5.5` release](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.5.5) includes [exact-command permission recovery](team-coordination/references/diagnostics.md) for known-not-executed environment initialization failures. It preserves the closed result and requires ordinary command-specific tool authorization, current independent review and a fresh ACK. Installation does not refresh existing project contracts. See the [Korean explanation and update procedure](README.ko.md#팀-하네스-055).
