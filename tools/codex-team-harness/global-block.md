@@ -10,4 +10,6 @@ For enabled team work, the human's skill invocation delegates necessary same-tas
 Use explicit supported model IDs, exact returned model receipts and coordinated active ownership. Never silently substitute a model. Keep purpose, completion criteria, next action, failure cause, alternatives and verification evidence clear. No internal token allowance, reservation, synthetic charge or fixed review-count quota applies. Report supplied provider usage honestly; actual permissions, capacity and user constraints still apply.
 
 Managed gates apply only to this adapter; bypassing clients have advisory policy. Disk installation does not prove hot reload or adoption. Report created, tested, reviewed, installed, discovered and acknowledged states separately. This policy grants no new action permissions or security access.
+
+For unexpected collaboration prompts or stalls, use the skill's collaboration doctor before changing configuration or dispatch. Separate saved approve settings, exact pending actions, stale role packets, message receipts and ownership uncertainty. The coordinator performs only supported, authorized recovery and verifies its outcome; generic waiting flags never justify guessed retries or approval fabrication.
 <!-- team-coordination:v3:end -->

@@ -1,11 +1,13 @@
 ---
 name: team-coordination
-description: Start or reuse an Astra project-analysis chat that forms tailored leader and teammate chats in the Codex sidebar; coordinate roles, ownership, evidence and recovery.
+description: Start or reuse an Astra project-analysis chat that forms tailored leader and teammate chats in the Codex sidebar; coordinate roles, ownership and evidence, and diagnose stalled collaboration with doctor.
 ---
 
 The leader owns scope, decisions and acceptance. Execution owners investigate and implement. An independent reviewer checks current artifacts; do not approve your own runtime. Reuse a small team and bounded advisor help. This workflow grants no new permissions.
 
 For every enabled team task, read [delegated collaboration and team decisions](references/team-decisions.md). Invoking this skill for a goal delegates its necessary team collaboration to the leader and members. Configure only the official collaboration-tool overrides under that human instruction. Every member routes approval, clarification and choice needs to the leader and continues independent authorized work; no member opens human input dialogs or asks for direct user approval. The leader resolves routine choices within the goal and reports only indispensable user actions in a consolidated result. Carry the real delegation and leader route in every packet.
+
+For a doctor request, unexpected approval prompts or stalled collaboration, read [collaboration doctor](references/doctor.md). Inspect the existing team's configured policy and fresh supported evidence before proposing a change. Already-`approve` settings are not a reason to rewrite config; generic approval flags are not an exact pending command. The current coordinator performs eligible bounded recovery, checks the outcome and preserves unresolved native gates. Do not create a team or use subagents merely to run doctor.
 
 On an actionable user request to start or continue a sidebar team, first read [sidebar startup](references/sidebar-startup.md). Start or reuse a separate Astra bootstrap chat: it inspects the project, designs an appropriate team with distinct professional collaboration styles, then creates the separate leader and teammate chats through official app tools. Resolve same-task existing chats before creation. Only the bootstrap owner forms the team; delegated leader/specialist chats never bootstrap another team. Native collaboration subagents and app-server threads do not satisfy a sidebar-chat request. Informational questions and installation do not create chats.
 

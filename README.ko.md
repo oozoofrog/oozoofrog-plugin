@@ -2,7 +2,7 @@
 
 [WinPilot](winpilot/SKILL.md) 0.5.1은 기존 Windows Pilot 제어기를 이 저장소로 이관합니다. `$winpilot` 또는 `windows-pilot` 요청으로 Windows 앱·게임을 WGC·UIA로 관찰하고 화면 안내·중지 기능이 있는 전경 입력을 수행합니다. Windows x64 Plugin은 MCP 설정을 포함하고 첫 연결에서 해시를 검증한 독립 실행형 런타임을 설치합니다. 기존 실행 파일명과 도구명은 유지합니다. [설치](docs/plugin-installation.md#winpilot)와 [검증 범위](docs/validation/winpilot.md)를 확인하세요.
 
-Team Coordination [`0.5.9`](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.5.9)은 스킬로 목표를 맡기는 행위를 해당 작업의 팀 협업 권한 위임으로 적용합니다. 팀원은 승인·확인·선택이 필요한 사항을 사용자에게 직접 묻지 않고 리더에게 전달합니다. 리더는 기존 목표와 권한 안에서 판단하고 작업을 이어갑니다. 최초 조정 담당자는 공식 협업 도구 6개의 사용자 전체 승인 설정만 확인·적용합니다. [팀 판단과 도구 설정](team-coordination/references/team-decisions.md), [Plugin 설치 안내](docs/plugin-installation.md#team-coordination)를 참고하세요.
+Team Coordination [`0.6.0`](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.6.0)은 예상하지 않은 승인 요청과 협업 정체를 확인하는 [Doctor](team-coordination/references/doctor.md)를 추가합니다. 저장된 설정과 실제 대기 명령, 이전 역할 패킷, 메시지 전달 상태, 담당자 충돌을 구분하고 기존 위임 안에서 복구를 이어갑니다. 이미 `approve`인 설정을 반복해서 쓰거나 불확실한 명령을 재전송하지 않습니다. 팀원의 판단 요청은 계속 리더에게 모읍니다. [Plugin 설치 안내](docs/plugin-installation.md#team-coordination)를 참고하세요.
 
 팀 하네스 [`0.5.6`](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.5.6)은 수신 세션을 만들 때 추론·샌드박스 설정을 함께 보존합니다. 같은 수신자의 일시 중지 상태 복구와 오래된 인계 패킷 갱신을 명시적으로 수행할 수 있습니다. 세션 식별자·권한·담당자 근거·원본 상태 바이트를 검증해야 하며, 설치만으로 복구나 프로젝트 계약 반영이 실행되지는 않습니다.
 
@@ -31,6 +31,12 @@ Team Coordination [`0.5.9`](https://github.com/oozoofrog/oozoofrog-plugin/releas
 Skills-only 패키지로 [한국어 여행 가이드북](korean-travel-guidebook/SKILL.md), [Obsidian 프로젝트 기록](obsidian-projects/SKILL.md), [Outcome Brief](outcome-brief/SKILL.md), [Verify Work](verify-work/SKILL.md)를 제공합니다. 사용자가 선택한 범위와 프로젝트 검증을 유지합니다. 여행 패키지의 예시는 가상이며 수정하지 않은 나눔고딕과 OFL 원문을 보존합니다. 기기별 합의·개인 프로젝트 상태는 공개본에서 제외했습니다.
 
 [전체 후보 목록](docs/user-skill-inventory.md)은 현재 패키지·외부 의존성·미확인 소스를 구분합니다. [한국어 글쓰기의 과거 초안](drafts/korean-product-writing/STATUS.md)은 이전 실패 이력을 최신 원본과 구별해 보존합니다.
+
+## 팀 하네스 0.6.0
+
+스킬에 `doctor`를 요청하면 기존 팀의 협업 상태를 진단하고 가능한 복구를 이어갑니다. 진단만을 위해 새 팀이나 세션을 만들지 않습니다. 읽기 전용 명령은 도구별 설정과 공식 조회 근거, 선택한 기존 원장을 분석합니다. 설정 저장·현재 세션 반영·실제 팝업 관찰을 구분합니다. 구체적인 명령이 드러나지 않은 `waitingOnApproval` 표시만으로 승인 실패나 재시도 대상을 추정하지 않습니다.
+
+진단 뒤에는 현재 조정 담당자가 실제 사용자 위임과 담당 범위를 확인해 지원되는 도구로 복구하고 결과를 다시 확인합니다. 명시적 거부·접근 제한·실행 여부가 불확실한 작업은 우회하지 않습니다. `run.py collaboration-doctor` 또는 스킬의 `scripts/collaboration_doctor.py`를 사용하며, 이 선택 명령은 Python 3.11 이상이 필요합니다. [입력 형식·진단 코드·복구 절차](team-coordination/references/doctor.md)를 참고하세요.
 
 ## 팀 하네스 0.5.9
 
@@ -76,7 +82,7 @@ Skills-only 패키지로 [한국어 여행 가이드북](korean-travel-guidebook
 
 설치·업데이트는 다음 순서로 진행합니다.
 
-1. 릴리스에서 `codex-team-harness-0.5.9.tar.gz`와 `.sha256` 파일을 함께 받아 SHA-256을 비교한 뒤 압축을 풉니다. 공식 소스를 신뢰할 수 있는 Python 3.9 이상으로 실행합니다. [소스 다운로드·검증 안내](tools/codex-team-harness/README.md#obtain-and-verify-the-source)를 참고하세요.
+1. 릴리스에서 `codex-team-harness-0.6.0.tar.gz`와 `.sha256` 파일을 함께 받아 SHA-256을 비교한 뒤 압축을 풉니다. 기본 런타임은 Python 3.9 이상, 선택 명령인 협업 Doctor는 Python 3.11 이상이 필요합니다. [소스 다운로드·검증 안내](tools/codex-team-harness/README.md#obtain-and-verify-the-source)를 참고하세요.
 2. 새 설치는 압축을 푼 디렉터리에서 아래 명령으로 변경 계획을 확인한 뒤 적용하고 검사합니다. 기존 지침과 원본 바이트는 로컬 저널에 보존합니다. 계획·저널·프로젝트 기록은 공개하지 않습니다.
 
 ```sh
@@ -85,7 +91,7 @@ python3 -I -S -B bootstrap.py --codex-home "$HOME/.codex" --plan plan.json apply
 python3 -I -S -B bootstrap.py --codex-home "$HOME/.codex" doctor
 ```
 
-기존 설치의 업데이트는 덮어쓰기 방식으로 지원하지 않습니다. 이전 버전의 저널이나 관리 외 파일이 있으면 설치를 중단합니다. 기존 버전에 맞는 소스·저널로 [프로필 오버레이를 먼저 복원하고 런타임을 나중에 복원하는 순서](tools/codex-team-harness/payload/team-coordination/references/profiles.md)를 검토하거나, 원본 바이트와 사용자 지침을 보존하는 별도의 버전별 이전을 검토해야 합니다. 복원이 확인된 뒤 0.5.9에서 새 계획을 생성합니다. 저널이나 알 수 없는 파일을 지워 설치를 강행하지 마세요.
+기존 설치의 업데이트는 덮어쓰기 방식으로 지원하지 않습니다. 이전 버전의 저널이나 관리 외 파일이 있으면 설치를 중단합니다. 기존 버전에 맞는 소스·저널로 [프로필 오버레이를 먼저 복원하고 런타임을 나중에 복원하는 순서](tools/codex-team-harness/payload/team-coordination/references/profiles.md)를 검토하거나, 원본 바이트와 사용자 지침을 보존하는 별도의 버전별 이전을 검토해야 합니다. 복원이 확인된 뒤 0.6.0에서 새 계획을 생성합니다. 저널이나 알 수 없는 파일을 지워 설치를 강행하지 마세요.
 
 Plugin만 설치하면 스킬 안내만 추가됩니다. 전역 지침·런타임 설치나 기존 프로젝트 이전은 자동으로 일어나지 않습니다. 0.5 이전 계약의 프로젝트는 담당자가 안전한 중단 지점에서 원본 상태 바이트를 비공개로 보존하고, 리더와 독립 검토자의 확인을 거쳐 [명시적 계약 이전(`contract_migrate`)](tools/codex-team-harness/payload/team-coordination/references/migration.md)을 실행해야 합니다. 이미 0.5 이상인 schema-2 프로젝트는 유효 계약 해시가 달라질 때만 안전한 중단 지점에서 `policy_refresh`를 수행하고, 현재 패킷을 실제로 읽은 참여자의 새 ACK를 받아야 합니다. 계약 해시가 이미 일치하면 반복 이전은 필요하지 않습니다. 0.5.5 런타임 변경은 유효 계약 해시를 바꿉니다. 설치 성공이나 합성 검사 ACK는 실제 프로젝트 이전·승인을 대신하지 않습니다.
 

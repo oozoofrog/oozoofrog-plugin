@@ -30,6 +30,8 @@ approval_mode = "approve"
 
 Apply the same supported table form to the other five names. Inspect existing entries before adding a table; do not create duplicate TOML keys. Preserve unrelated settings, comments, file permissions and explicit restrictions. Validate TOML and the exact intended semantic change. If another configuration writer or a conflicting restriction is observed, reconcile it through the coordinator before writing; do not replace the whole config, silently clear a restriction or claim an atomic guarantee from a normal file edit. Record only the changed policy keys and verification, never credentials. See [official plugin MCP configuration](https://learn.chatgpt.com/docs/extend/mcp#plugin-provided-mcp-servers). Saved configuration, active-session adoption and observed absence of popups are separate evidence. A pending native approval request is not resolved by fabricating a human response or repeatedly resubmitting it.
 
+If these settings already exist or collaboration still asks for approval, run [collaboration doctor](doctor.md) before making another change. Diagnose the actual pending action, current packet and message/owner state; do not repeat the same config edit or dispatch as a guessed fix.
+
 ## Every role packet carries the route
 
 Include these details in each creation, continuation and handoff packet:

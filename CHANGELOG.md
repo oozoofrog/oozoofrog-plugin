@@ -5,6 +5,12 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## Team harness [0.6.0] - 2026-10-27
+
+- Add a read-only collaboration doctor and a coordinator-led recovery workflow. Inspect configured tool policies and public-tool evidence for exact pending requests, stale packets, direct member questions, identity/decision-route errors, message outcomes, model capacity and declared owner conflicts.
+- Keep already-approved settings unchanged; do not infer a blocked command from generic `waitingOnApproval`, treat send submission as acknowledgement, retry an uncertain producer or work around an observed denial. Recovery plans require current delegation and supported client controls.
+- Expose `run.py collaboration-doctor` and the standalone script, with Python 3.11+ for this optional command. The existing installer doctor remains separate. Add direct regression coverage and preserve the distinction between configuration, observation, native popup behavior and product acceptance.
+
 ## Team harness [0.5.9] - 2026-10-27
 
 - Treat an actionable skill invocation as delegation for necessary same-task collaboration to its leader and members. Carry the original human source, team IDs and decision route in every role packet; no separate per-destination or per-message approval is needed within that delegation.

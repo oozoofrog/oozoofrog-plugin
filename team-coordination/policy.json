@@ -1,5 +1,5 @@
 {
-  "version": "0.5.9",
+  "version": "0.6.0",
   "roles": {
     "leader": {
       "model": "gpt-6-astra",
