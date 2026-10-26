@@ -2,7 +2,7 @@
 """Build only the public allowlist; deterministic archive, no local history/state."""
 from pathlib import Path
 import gzip,hashlib,io,json,re,tarfile
-VERSION='0.5.7'
+VERSION='0.5.8'
 ROOT=Path(__file__).resolve().parent
 FILES=['.gitignore','README.md','bootstrap.py','run.py','make_release.py','global-block.md','payload/team-coordination/SKILL.md','payload/team-coordination/policy.json','payload/team-coordination/schema/project-state.schema.json']
 FILES += ['payload/team-coordination/scripts/'+name for name in ['harness.py','managed_run.py','team_ledger.py','session_control.py','external_handoff.py','management_handoff.py','checkpoints.py','profile_defaults.py','profile_overlay.py','migration.py','observations.py']]
