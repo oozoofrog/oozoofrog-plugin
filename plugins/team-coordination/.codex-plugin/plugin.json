@@ -1,6 +1,6 @@
 {
   "name": "team-coordination",
-  "version": "0.5.7",
+  "version": "0.5.8",
   "description": "Start or reuse an Astra project-analysis chat that forms tailored leader and teammate chats in the Codex sidebar; coordinate roles, ownership, evidence and recovery.",
   "author": {
     "name": "oozoofrog",
@@ -19,7 +19,7 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Use $team-coordination to start an Astra project-analysis chat that creates separate leader and tailored teammate chats in the Codex sidebar, or reuse this task's existing team."
+      "Use $team-coordination to start an Astra project-analysis chat that creates separate leader and tailored teammate chats in the Codex sidebar, or reuse this task's existing team. Coordinate these chats to complete my stated goal, including task instructions, questions, review requests and result reporting between team chats, without initial or repeated messaging-approval questions."
     ]
   }
 }

@@ -5,6 +5,12 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## Team harness [0.5.8] - 2026-10-26
+
+- Carry the human's goal-scoped team coordination instruction and trusted source through role packets. Routine team instructions, questions, review requests and result reporting continue without initial or repeated messaging-approval prompts, including while the user is away.
+- Preserve the original human instruction, exact task/team membership and changes or revocation across formation, resume and handoff. Keep entrypoint guidance, leader instructions and Plugin prompts consistent with the same scope.
+- This release changes coordination guidance. It does not implement pending-prompt detection or automatic approval of native tool permission requests. Plugin installation and active-project contract adoption remain separate.
+
 ## C4fy 0.3.0 — 2026-10-26
 
 - Infer project domains, types and roles with explicit overrides and visible provenance; apply stable domain colors, type shapes and role icons, and preserve assignments in JSON.
