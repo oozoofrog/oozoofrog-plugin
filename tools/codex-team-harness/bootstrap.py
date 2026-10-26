@@ -2,7 +2,7 @@
 """Portable plan-bound installer. Standard library only; no network or privilege changes."""
 import argparse,base64,hashlib,json,os,sys,tempfile
 from pathlib import Path,PurePosixPath
-VERSION='0.5.8'
+VERSION='0.5.9'
 def check(value,message):
  if not value:raise ValueError(message)
 def sha(data):return hashlib.sha256(data).hexdigest()

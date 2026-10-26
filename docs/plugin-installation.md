@@ -10,9 +10,9 @@ WinPilot 0.5.1은 [스킬](../winpilot/SKILL.md)과 MCP 설정을 함께 제공�
 
 ## Team Coordination
 
-`codex plugin marketplace upgrade oozoofrog-plugin` 후 `codex plugin add team-coordination@oozoofrog-plugin`으로 `0.5.8` Plugin을 설치하거나 갱신합니다. 설치 후 버전·활성화 상태·실제 캐시 경로를 확인합니다.
+`codex plugin marketplace upgrade oozoofrog-plugin` 후 `codex plugin add team-coordination@oozoofrog-plugin`으로 `0.5.9` Plugin을 설치하거나 갱신합니다. 설치 후 버전·활성화 상태·실제 캐시 경로를 확인합니다.
 
-`$team-coordination:team-coordination`으로 별도 사이드바 팀 시작을 요청하면 Astra가 프로젝트를 분석한 뒤 리더와 전문 팀원을 구성합니다. 목표를 맡긴 사용자 지시와 출처를 전달해 작업 범위의 팀 소통을 최초·반복 승인 질문 없이 이어갑니다. 설명 질문이나 설치만으로 채팅을 만들지 않습니다. [시작 절차](../team-coordination/references/sidebar-startup.md)를 참고하세요.
+`$team-coordination:team-coordination`으로 별도 사이드바 팀 시작을 요청하면 Astra가 프로젝트를 분석한 뒤 리더와 전문 팀원을 구성합니다. 스킬 호출을 해당 작업의 협업 위임으로 전달하고, 팀원의 승인·확인·선택 요청은 리더에게 모읍니다. 협업 도구의 `prompt` 정책은 별도이므로 조정 담당자가 [공식 도구별 설정](../team-coordination/references/team-decisions.md#official-tool-policy)을 확인·적용합니다. 사용자 전체에 적용되는 6개 도구만 변경하며 실제 작업 권한은 넓히지 않습니다. 설명 질문이나 설치만으로 채팅을 만들지 않습니다. [시작 절차](../team-coordination/references/sidebar-startup.md)를 참고하세요.
 
 Plugin 설치는 기존 `~/.codex/skills/team-coordination` standalone 런타임·설치 저널·프로필 오버레이와 활성 프로젝트 계약을 이전하지 않습니다. 기존 저널을 삭제하거나 설치 경로를 직접 덮어쓰지 않습니다. 새 채팅의 스킬 노출과 실제 실행 모델·등급은 설치 파일 검사와 구분합니다.
 
