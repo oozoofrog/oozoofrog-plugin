@@ -1,6 +1,6 @@
 {
   "name": "team-coordination",
-  "version": "0.5.8",
+  "version": "0.5.9",
   "description": "Start or reuse an Astra project-analysis chat that forms tailored leader and teammate chats in the Codex sidebar; coordinate roles, ownership, evidence and recovery.",
   "author": {
     "name": "oozoofrog",
@@ -10,8 +10,8 @@
   "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
   "interface": {
     "displayName": "Team Coordination",
-    "shortDescription": "Astra project analysis and tailored sidebar teams",
-    "longDescription": "Start or reuse a user-requested Astra project-analysis chat that forms a tailored separate leader and distinctive professional teammate chats through official Codex app tools. Managed adapter operations are separate; runtime source is in tools/codex-team-harness. Installation creates no chats and does not modify global guidance, runtime, hooks, models or authentication.",
+    "shortDescription": "Astra sidebar teams with internal decision routing",
+    "longDescription": "Start or reuse a user-requested Astra project-analysis chat that forms a separate leader and professional teammates. The human task invocation delegates same-task collaboration; members route approval and clarification needs to the leader without direct human prompts. Under that instruction, configure only the documented user-wide collaboration-tool approval overrides. Managed adapter operations remain separate; installation alone creates no chats or active-project adoption.",
     "developerName": "oozoofrog",
     "category": "Productivity",
     "capabilities": [
@@ -19,7 +19,7 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Use $team-coordination to start an Astra project-analysis chat that creates separate leader and tailored teammate chats in the Codex sidebar, or reuse this task's existing team. Coordinate these chats to complete my stated goal, including task instructions, questions, review requests and result reporting between team chats, without initial or repeated messaging-approval questions."
+      "Use $team-coordination to form or reuse the Astra-led sidebar team and complete my goal; I delegate necessary team creation, messages, reviews and same-task coordination to the leader and members, with approval and clarification needs resolved within the team instead of prompting me from teammate chats."
     ]
   }
 }

@@ -13,7 +13,7 @@ BUNDLE = ROOT / 'tools/codex-team-harness'
 class TeamHarnessDistributionTests(unittest.TestCase):
     def test_public_payload_manifest_and_complete_skill_copies(self):
         manifest = json.loads((BUNDLE / 'manifest.json').read_text())
-        self.assertEqual('0.5.8', manifest['version'])
+        self.assertEqual('0.5.9', manifest['version'])
         payload = BUNDLE / 'payload/team-coordination'
         for relative, expected in manifest['files'].items():
             path = BUNDLE / relative

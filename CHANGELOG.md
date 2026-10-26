@@ -5,6 +5,12 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## Team harness [0.5.9] - 2026-10-27
+
+- Treat an actionable skill invocation as delegation for necessary same-task collaboration to its leader and members. Carry the original human source, team IDs and decision route in every role packet; no separate per-destination or per-message approval is needed within that delegation.
+- Route every member's approval, clarification and choice needs to the leader. Keep ordinary decisions inside the team, continue independent authorized work and consolidate indispensable user actions in the leader's report. Preserve actual permission gates, ownership and independent review.
+- Document official user-wide `approve` overrides for six collaboration/continuation tools, distinct from conversational task authority. One coordinator applies and validates the narrow configuration change; preserve unrelated settings and restrictions. Saving settings does not attest active-session adoption or absence of native popups.
+
 ## Team harness [0.5.8] - 2026-10-26
 
 - Carry the human's goal-scoped team coordination instruction and trusted source through role packets. Routine team instructions, questions, review requests and result reporting continue without initial or repeated messaging-approval prompts, including while the user is away.
