@@ -29,6 +29,7 @@ DIAGNOSTICS_TIMEOUT_SECONDS = 20
 # comma-separated list; the index settings of every scheme are merged.
 SCHEME_ENV = "SWIFT_INTELLIGENCE_XCODE_SCHEME"
 CONFIGURATION_ENV = "SWIFT_INTELLIGENCE_XCODE_CONFIGURATION"
+REFRESH_INDEX_SETTINGS_ENV = "SWIFT_INTELLIGENCE_REFRESH_INDEX_SETTINGS"
 # Opt-in: restrict the index to units of the loaded targets' own files. Removes stale
 # results left by other configurations' units, but also drops references living in
 # modules that are not part of the selected schemes.
@@ -603,19 +604,24 @@ class XcodeProject:
 
     def _index_settings(self, scheme):
         # -showBuildSettingsForIndex takes ~1 min per scheme on large workspaces, so the
-        # raw result is cached on disk, keyed by the content hash of every project.pbxproj
-        # under the workspace (a Tuist regeneration with identical output keeps the cache).
-        key = hashlib.sha1(f"{self.container}\0{scheme}\0v2".encode()).hexdigest()
+        # Include build configuration, scheme and workspace inputs, not just the project.
+        # Paths delimit the hash so additions, removals and renames invalidate it too.
+        key = hashlib.sha1(f"{self.container}\0{scheme}\0v3".encode()).hexdigest()
         cache = INDEX_SETTINGS_CACHE / f"{key}.json.gz"
         stamp = hashlib.sha1()
-        for path in sorted(self.workspace.rglob("project.pbxproj")):
-            stamp.update(path.read_bytes())
+        dependencies = {".pbxproj", ".xcconfig", ".xcscheme", ".xcworkspacedata", ".xcsettings"}
+        for path in sorted(self.workspace.rglob("*")):
+            if path.is_file() and path.suffix in dependencies:
+                stamp.update(str(path.relative_to(self.workspace)).encode())
+                stamp.update(b"\0")
+                stamp.update(hashlib.sha256(path.read_bytes()).digest())
         stamp = stamp.hexdigest()
         cached = None
-        if cache.is_file():
+        refresh = os.environ.get(REFRESH_INDEX_SETTINGS_ENV, "").lower() in {"1", "true", "yes"}
+        if not refresh and cache.is_file():
             with gzip.open(cache, "rt", encoding="utf-8") as handle:
                 cached = json.load(handle)
-        if isinstance(cached, dict) and cached.get("stamp") == stamp:
+        if not refresh and isinstance(cached, dict) and cached.get("stamp") == stamp:
             settings = cached["settings"]
         else:
             arguments = ["-scheme", scheme, "-configuration", "Debug"]
@@ -648,19 +654,60 @@ class XcodeProject:
         wanted = os.environ.get(CONFIGURATION_ENV) or self._scheme_configuration(scheme)
         if not wanted:
             return settings
-        # "<config>-<sdk>" segments only; "Objects-normal" and friends must stay untouched.
+        # macOS products have no SDK suffix; only replace the configuration segment.
         pattern = re.compile(
-            r"(/(?:Build/Products|\w+\.build)/)([^/]+?)(-(?:[a-z]+os|[a-z]+simulator|macosx))(?=/|$)"
+            r"(/(?:Build/Products|[^/]+\.build)/)([^/]+?)(-(?:[a-z]+os|[a-z]+simulator|macosx))?(?=/|$)"
         )
-        sdk = self._built_sdk_suffix(settings, pattern, wanted)
-
         def retarget(text):
-            return pattern.sub(lambda m: m.group(1) + wanted + (sdk or m.group(3)), text)
+            # Only the outer build directory owns the configuration. Nested target
+            # .build directories contain Objects-normal/DerivedSources, not configs.
+            return pattern.sub(lambda m: m.group(1) + wanted + (sdk or m.group(3) or ""), text, count=1)
 
+        simulator_sdk = None
         for documents in settings.values():
             for values in documents.values():
+                sdk = self._built_sdk_suffix({"target": {"source": values}}, pattern, wanted)
                 arguments = values.get("swiftASTCommandArguments")
                 if arguments:
+                    arguments = list(arguments)
+                    if sdk == "-iphonesimulator":
+                        for flag in ("-target", "-sdk"):
+                            if (flag not in arguments or arguments.index(flag) + 1 >= len(arguments)
+                                    or arguments[arguments.index(flag) + 1].startswith("-")):
+                                raise SourceKitError(f"Simulator index arguments need a value for {flag}; rebuild the scheme.")
+                        index = arguments.index("-target") + 1
+                        target = arguments[index]
+                        if not re.fullmatch(r"(?:arm64|x86_64)-apple-ios[0-9.]+(?:-simulator)?", target):
+                            raise SourceKitError(
+                                f"Cannot safely retarget {target!r} to iOS Simulator. "
+                                "Rebuild the scheme for the desired simulator destination."
+                            )
+                        if simulator_sdk is None:
+                            try:
+                                result = subprocess.run(
+                                    ["/usr/bin/xcrun", "--sdk", "iphonesimulator", "--show-sdk-path"],
+                                    text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                )
+                            except OSError as error:
+                                raise SourceKitError("Cannot resolve the iOS Simulator SDK; xcrun is unavailable.") from error
+                            simulator_sdk = result.stdout.strip()
+                            if result.returncode or not Path(simulator_sdk).is_absolute():
+                                raise SourceKitError("Cannot resolve the iOS Simulator SDK; select a valid Xcode installation.")
+                        if not target.endswith("-simulator"):
+                            arguments[index] = target + "-simulator"
+                        sdk_index = arguments.index("-sdk") + 1
+                        old_sdk = arguments[sdk_index]
+                        arguments = [arg.replace(old_sdk + "/", simulator_sdk + "/")
+                                     if old_sdk else arg for arg in arguments]
+                        # XCTest and other platform frameworks live outside the SDK.
+                        marker = "/Developer/SDKs/"
+                        if marker in old_sdk and marker in simulator_sdk:
+                            old_platform = old_sdk.split(marker, 1)[0] + "/"
+                            simulator_platform = simulator_sdk.split(marker, 1)[0] + "/"
+                            arguments = [arg.replace(old_platform, simulator_platform) for arg in arguments]
+                        arguments = [re.sub(r"(/usr/lib/swift/)iphoneos(?=/|$)",
+                                            r"\1iphonesimulator", arg) for arg in arguments]
+                        arguments[sdk_index] = simulator_sdk
                     values["swiftASTCommandArguments"] = [retarget(arg) for arg in arguments]
                 if values.get("outputFilePath"):
                     values["outputFilePath"] = retarget(values["outputFilePath"])
@@ -673,10 +720,15 @@ class XcodeProject:
         for documents in settings.values():
             for values in documents.values():
                 for argument in values.get("swiftASTCommandArguments") or []:
+                    if argument.startswith(("-I/", "-F/", "-L/")):
+                        argument = argument[2:]
                     match = pattern.search(argument)
-                    if match and match.group(1) == "/Build/Products/":
+                    if match and match.group(1) == "/Build/Products/" and match.group(3):
                         products = Path(argument[: match.start()]) / "Build" / "Products"
-                        for suffix in ("-iphonesimulator", match.group(3)):
+                        suffixes = [match.group(3)]
+                        if match.group(3) in {"-iphoneos", "-iphonesimulator"}:
+                            suffixes.insert(0, "-iphonesimulator")
+                        for suffix in suffixes:
                             if (products / f"{configuration}{suffix}").is_dir():
                                 return suffix
                         return None

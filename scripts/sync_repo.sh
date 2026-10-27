@@ -133,12 +133,20 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   exit 1
 fi
 
-if [[ -z "${SYNC_BRANCH}" ]]; then
-  SYNC_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+CURRENT_BRANCH="$(git symbolic-ref --quiet --short HEAD || true)"
+if [[ -z "${CURRENT_BRANCH}" ]]; then
+  echo "Detached HEAD is not supported for sync_repo.sh." >&2
+  exit 1
 fi
 
-if [[ "${SYNC_BRANCH}" == "HEAD" ]]; then
-  echo "Detached HEAD is not supported for sync_repo.sh." >&2
+if [[ -z "${SYNC_BRANCH}" ]]; then
+  SYNC_BRANCH="${CURRENT_BRANCH}"
+fi
+
+# Validate before fetch, rebase, staging, or committing. --branch does not
+# switch worktrees: committing one branch and pushing another loses the sync.
+if [[ "${SYNC_BRANCH}" != "${CURRENT_BRANCH}" ]]; then
+  echo "Requested branch '${SYNC_BRANCH}' does not match current branch '${CURRENT_BRANCH}'. Switch branches explicitly before syncing." >&2
   exit 1
 fi
 

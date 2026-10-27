@@ -50,8 +50,8 @@ internal static class PhysicalInput
                         if (Native.SendMessageValue(hwnd, 0x84, 0, coordinate, 3, 200, out var hit) == 0 || hit != 2) continue;
                         Native.Send(Native.MouseMove(px, py));
                         if (cancellation.WaitOne(30)) throw new PilotException("interrupted", "제목 표시줄 활성화 전에 중지됐습니다.");
-                        Native.GetCursorPos(out var positioned);
-                        if (positioned.X != px || positioned.Y != py) { activationDetail = "제목 표시줄로 커서를 이동하지 못했습니다."; continue; }
+                        bool cursorKnown = Native.GetCursorPos(out var positioned);
+                        if (!cursorKnown || positioned.X != px || positioned.Y != py) { activationDetail = "제목 표시줄로 커서를 이동하지 못했습니다."; continue; }
                         Native.Validate(request.Window);
                         if (Native.GetAncestor(Native.WindowFromPoint(positioned), 2) != hwnd) { activationDetail = "제목 표시줄이 다른 창에 가려졌습니다."; continue; }
                         mouseDown = true;
@@ -85,6 +85,14 @@ internal static class PhysicalInput
             {
                 int x = checked(request.Window.Bounds.X + a.X!.Value), y = checked(request.Window.Bounds.Y + a.Y!.Value);
                 int endX = checked(request.Window.Bounds.X + (a.ToX ?? a.X).Value), endY = checked(request.Window.Bounds.Y + (a.ToY ?? a.Y).Value);
+                void VerifyPosition(int px, int py)
+                {
+                    Check(request, cancellation, !activateByClick);
+                    if (!Native.GetCursorPos(out var actual) || actual.X != px || actual.Y != py)
+                        throw new PilotException("cursor_position_unverified", $"요청 지점 ({px},{py})으로 커서를 이동하지 못했습니다. 버튼 입력을 중단했습니다.");
+                    if (Native.GetAncestor(Native.WindowFromPoint(actual), 2) != (nint)request.Window.Hwnd)
+                        throw new PilotException("target_obscured", "실제 커서 위치가 대상 창에 속하지 않아 입력을 중단했습니다.");
+                }
                 void Move(int px, int py)
                 {
                     Check(request, cancellation, !activateByClick);
@@ -92,6 +100,8 @@ internal static class PhysicalInput
                     if (Native.GetAncestor(hit, 2) != (nint)request.Window.Hwnd)
                         throw new PilotException("target_obscured", $"입력 지점 ({px},{py})이 가려졌습니다. hit={hit}, root={Native.GetAncestor(hit, 2)}, foreground={Native.GetForegroundWindow()}, target={request.Window.Hwnd}");
                     Native.Send(Native.MouseMove(px, py));
+                    if (cancellation.WaitOne(10)) throw new PilotException("interrupted", "커서 이동 중 중지됐습니다.");
+                    VerifyPosition(px, py);
                 }
                 Move(x, y);
                 if (activateByClick)
@@ -101,6 +111,8 @@ internal static class PhysicalInput
                     Move(x, y);
                 }
                 else Wait(request, cancellation, 30);
+                // Recheck after the settling wait, immediately before button-down.
+                VerifyPosition(x, y);
                 mouseDown = true;
                 Native.Send(Native.MouseButton(false));
                 if (activateByClick)

@@ -196,6 +196,24 @@ class CollaborationDoctorTests(unittest.TestCase):
         self.assertIn('TOOL_PERMISSION_DENIED',self.codes(result))
         self.assertFalse(any(a['kind']=='configure_tool_policy' and a.get('tool')=='send_message_to_thread' for a in result['recovery_plan']))
 
+    def test_coordinator_only_denial_is_preserved_without_policy_override(self):
+        evidence=snapshot()
+        evidence['reads'][0]['response']['turns'][0]['items'].append({
+            'type':'mcpToolCall','id':'denied','tool':'send_message_to_thread',
+            'status':'failed','error':{'message':'Permission denied by user'}})
+        result=doctor.diagnose(config('prompt'),snapshot=evidence)
+        self.assertIn('TOOL_PERMISSION_DENIED',self.codes(result))
+        self.assertFalse(any(a['kind']=='configure_tool_policy' and a.get('tool')=='send_message_to_thread' for a in result['recovery_plan']))
+        self.assertTrue(any(a['kind']=='honor_observed_denial' and a['thread_id']=='origin' for a in result['recovery_plan']))
+
+    def test_coordinator_capacity_is_diagnosed_without_member_routing(self):
+        evidence=snapshot()
+        evidence['reads'][0]['response']['turns'][0]['error']={'message':'Model is at capacity'}
+        evidence['reads'][0]['response']['turns'][0]['items'].append({'type':'mcpToolCall','tool':'request_user_input'})
+        result=doctor.diagnose(config(),snapshot=evidence)
+        self.assertIn('MODEL_CAPACITY_UNAVAILABLE',self.codes(result))
+        self.assertNotIn('MEMBER_DIRECT_USER_PROMPT',self.codes(result))
+
     def test_pending_request_outside_recorded_team_does_not_receive_repair_action(self):
         evidence=snapshot();evidence['pending_requests']=[{'source':'codex_app.read_thread',
             'thread_id':'unrelated','tool':'send_message_to_thread','request_id':'other-request','state':'pending'}]
