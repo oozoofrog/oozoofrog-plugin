@@ -22,3 +22,5 @@
 초기 검증 실행기는 로그 형식 가정 때문에 두 번 멈췄다. 첫 번째는 SwiftBuild 로그가 원시 실행 인수 대신 `Running SwiftLint`를 표시했기 때문이다. 두 번째는 성공한 prebuild warning이 빌드 로그에 표시되지 않았기 때문이다. 실제 종료 상태와 직접 진단을 함께 검사하도록 수정했으며 원래 로그도 보존했다. 최종 실행 후 독립 리뷰에서 발견한 예제 내부 output 경로의 재귀 복사 가능성을 차단했다. 그 경로 검사를 별도로 실행했고, 강화한 도구 실패 메시지 단언은 보존한 실제 빌드 로그로 확인했다. 이후 전체 Swift 빌드를 반복하지 않았다.
 
 재현 명령은 `python3 examples/swiftlint-build/verify.py --output /tmp/new-swiftlint-proof`다. 전체 로그와 `results.json`은 지정한 로컬 출력 경로에 보존한다. SwiftPM 실행 target의 이 도구 체인에서 확인한 결과이며, 독립 `.xcodeproj`의 Run Script·GUI 빌드, 다른 도구 체인·플랫폼·CI·실제 기기는 검증하지 않았다. 이 검증은 기존 Refactor 0.2.0 지침을 적용한 예제이며 Plugin payload 변경은 없다.
+
+후속 요청에서는 [독립 Xcode Run Script 검증](refactor-xcode-swiftlint-build.md)을 별도로 완료했다. 위 미검증 기록은 이 SwiftPM 시험의 범위를 나타낸다.
