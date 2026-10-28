@@ -1,8 +1,10 @@
 # Codex team harness
 
+Version `0.6.1` defaults to direct work and existing-owner reuse, makes separate Astra analysis optional, and requires explicit creation authority plus a concrete benefit for new chats. It includes evidence-based adaptive collaboration guidance. Runtime APIs are unchanged; active project contracts are not automatically migrated.
+
 An opt-in coordination policy and managed-run pilot for Codex, read-only by default with explicitly bounded handoff writing. A leader assigns bounded work; execution owners hold canonical write claims; independent reviewers inspect current evidence. One project record stores decisions, instruction revisions, acknowledgements, runs and recovery state.
 
-Version `0.6.0` adds a read-only [collaboration doctor](payload/team-coordination/references/doctor.md) and a coordinator-led recovery workflow. It distinguishes saved policy, exact pending actions, stale role packets, message submission, model capacity and declared ownership uncertainty. The optional `run.py collaboration-doctor` command needs Python 3.11+; other runtime commands retain Python 3.9+. Installation integrity remains the separate `bootstrap.py doctor` check.
+Version `0.6.0` added a read-only [collaboration doctor](payload/team-coordination/references/doctor.md) and a coordinator-led recovery workflow. It distinguishes saved policy, exact pending actions, stale role packets, message submission, model capacity and declared ownership uncertainty. The optional `run.py collaboration-doctor` command needs Python 3.11+; other runtime commands retain Python 3.9+. Installation integrity remains the separate `bootstrap.py doctor` check.
 
 Version `0.5.9` delegates same-task collaboration from the human invocation to the leader and members. Members route approval, clarification and choice needs to the leader without direct human prompts. The originating coordinator applies only six official user-wide collaboration-tool approval overrides under that delegation, preserving unrelated settings and explicit restrictions. See [team decisions and tool policy](payload/team-coordination/references/team-decisions.md). Saving settings does not prove active-session adoption or native popup absence.
 
@@ -18,16 +20,16 @@ Versions `0.5.0`–`0.5.4` were reviewed locally without individual public relea
 
 Canonical source: https://github.com/oozoofrog/oozoofrog-plugin, under `tools/codex-team-harness/`.
 
-Use the reviewed commit referenced by the [0.6.0 release](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.6.0); do not substitute an unreviewed branch head. The portable release is a source archive, with no bundled model runtime or credentials.
+Use the reviewed commit referenced by the [0.6.1 release](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.6.1); do not substitute an unreviewed branch head. The portable release is a source archive, with no bundled model runtime or credentials.
 
-The release assets are `codex-team-harness-0.6.0.tar.gz` and its `.sha256` file. Download both without signing in, compare the checksum before extraction, and retain the trusted release commit and digest. A checksum authenticates bytes only when obtained through a trusted release record. Existing versioned assets must not be overwritten. Read the [Korean explanation and update procedure](https://github.com/oozoofrog/oozoofrog-plugin/blob/team-harness-v0.6.0/README.ko.md#팀-하네스-060).
+The release assets are `codex-team-harness-0.6.1.tar.gz` and its `.sha256` file. Download both without signing in, compare the checksum before extraction, and retain the trusted release commit and digest. A checksum authenticates bytes only when obtained through a trusted release record. Existing versioned assets must not be overwritten. Read the [Korean explanation and update procedure](https://github.com/oozoofrog/oozoofrog-plugin/blob/team-harness-v0.6.1/README.ko.md#팀-하네스-060).
 
 ```sh
-/usr/bin/curl -fLO https://github.com/oozoofrog/oozoofrog-plugin/releases/download/team-harness-v0.6.0/codex-team-harness-0.6.0.tar.gz
-/usr/bin/curl -fLO https://github.com/oozoofrog/oozoofrog-plugin/releases/download/team-harness-v0.6.0/codex-team-harness-0.6.0.tar.gz.sha256
-shasum -a 256 -c codex-team-harness-0.6.0.tar.gz.sha256
-tar -xzf codex-team-harness-0.6.0.tar.gz
-cd codex-team-harness-0.6.0
+/usr/bin/curl -fLO https://github.com/oozoofrog/oozoofrog-plugin/releases/download/team-harness-v0.6.1/codex-team-harness-0.6.1.tar.gz
+/usr/bin/curl -fLO https://github.com/oozoofrog/oozoofrog-plugin/releases/download/team-harness-v0.6.1/codex-team-harness-0.6.1.tar.gz.sha256
+shasum -a 256 -c codex-team-harness-0.6.1.tar.gz.sha256
+tar -xzf codex-team-harness-0.6.1.tar.gz
+cd codex-team-harness-0.6.1
 ```
 
 Anonymous source download needs no GitHub account. Replace the placeholder with the trusted reviewed commit:
@@ -67,7 +69,7 @@ Rollback compares all affected current bytes before restoring originals; unexpec
 
 ## Managed sample
 
-For user-requested separate sidebar chats, follow [Astra analysis and team formation](payload/team-coordination/references/sidebar-startup.md) through official app tools. Astra inspects the project before choosing and creating an appropriate separate leader and distinctive professional teammates. This skill startup path is separate from the managed-run pilot and explicit handoff lifecycle below. Installing the bundle starts no chats or project migration.
+For explicitly requested new sidebar chats, follow [minimal sidebar collaboration](payload/team-coordination/references/sidebar-startup.md) through official app tools. Prefer direct work and existing-owner reuse; create only useful missing assignments. A separate Astra analysis chat is optional, while explicit human role/model choices and required independent review remain binding. This 0.6.1 guidance is separate from the managed-run pilot and explicit handoff lifecycle below. Installing the bundle starts no chats or project migration.
 
 From this verified `tools/codex-team-harness/` source directory:
 
@@ -104,4 +106,4 @@ Patch0.3.1 adds [same-owner failed-review rework](payload/team-coordination/refe
 
 The harness clarifies the goal, completion criteria, owner, next action, failure cause, alternatives and verification evidence. It no longer allocates tokens or stops meaningful work because a synthetic budget, packet estimate, review count or single diagnostic cycle was exhausted.
 
-Projects with pre-0.5 contracts need an explicit [contract migration (`contract_migrate`)](payload/team-coordination/references/migration.md), retaining exact original state bytes privately while retiring old live limits. For schema-2 projects already on 0.5 or later, use quiescent `policy_refresh` and fresh packets with real participant ACKs only when the effective contract hash differs. A project whose contract already matches needs no repeat migration. The 0.5.5 runtime change alters the effective contract; adoption remains a separate quiescent owner operation. Changed observations and properly authorized corrections use [method-bound continuation](payload/team-coordination/references/diagnostics.md), preserving every actual failure and requiring genuine current independent review before product acceptance. Fresh installation follows the plan/apply/doctor procedure above. Existing installations require a separately reviewed versioned migration or guarded rollback using the matching prior release; [roll back any profile overlay before its runtime](payload/team-coordination/references/profiles.md). Preserve user guidance, journals and unknown files; do not delete them to force installation. Generate a fresh 0.6.0 plan only after reconciliation. Installation does not migrate a project or create actual participant ACKs. Previous releases remain available for recovery.
+Projects with pre-0.5 contracts need an explicit [contract migration (`contract_migrate`)](payload/team-coordination/references/migration.md), retaining exact original state bytes privately while retiring old live limits. For schema-2 projects already on 0.5 or later, use quiescent `policy_refresh` and fresh packets with real participant ACKs only when the effective contract hash differs. A project whose contract already matches needs no repeat migration. The 0.5.5 runtime change alters the effective contract; adoption remains a separate quiescent owner operation. Changed observations and properly authorized corrections use [method-bound continuation](payload/team-coordination/references/diagnostics.md), preserving every actual failure and requiring genuine current independent review before product acceptance. Fresh installation follows the plan/apply/doctor procedure above. Existing installations require a separately reviewed versioned migration or guarded rollback using the matching prior release; [roll back any profile overlay before its runtime](payload/team-coordination/references/profiles.md). Preserve user guidance, journals and unknown files; do not delete them to force installation. Generate a fresh 0.6.1 plan only after reconciliation. Installation does not migrate a project or create actual participant ACKs. Previous releases remain available for recovery.

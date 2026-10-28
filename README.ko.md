@@ -1,5 +1,7 @@
 # oozoofrog-plugin
 
+Team Coordination 0.6.1에서 [작업 근거에 따른 협업 조정](team-coordination/references/adaptive-collaboration.md)을 추가했습니다. 초기 배분의 불확실성을 기록하고, 리더가 세션의 실제 결과에 따라 조정하며, 독립 리뷰어가 중요한 배분 판단을 검토합니다. 현재 작업의 조정·프로젝트 규칙·공통 스킬 변경을 구분합니다. 사용자가 지정한 모델과 완료 조건을 보존하며, 자동 모델 라우팅이나 기존 팀의 적용 완료를 뜻하지 않습니다.
+
 [WinPilot](winpilot/SKILL.md) 0.5.1은 기존 Windows Pilot 제어기를 이 저장소로 이관합니다. `$winpilot` 또는 `windows-pilot` 요청으로 Windows 앱·게임을 WGC·UIA로 관찰하고 화면 안내·중지 기능이 있는 전경 입력을 수행합니다. Windows x64 Plugin은 MCP 설정을 포함하고 첫 연결에서 해시를 검증한 독립 실행형 런타임을 설치합니다. 기존 실행 파일명과 도구명은 유지합니다. [설치](docs/plugin-installation.md#winpilot)와 [검증 범위](docs/validation/winpilot.md)를 확인하세요.
 
 Team Coordination [`0.6.0`](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.6.0)은 예상하지 않은 승인 요청과 협업 정체를 확인하는 [Doctor](team-coordination/references/doctor.md)를 추가합니다. 저장된 설정과 실제 대기 명령, 이전 역할 패킷, 메시지 전달 상태, 담당자 충돌을 구분하고 기존 위임 안에서 복구를 이어갑니다. 이미 `approve`인 설정을 반복해서 쓰거나 불확실한 명령을 재전송하지 않습니다. 팀원의 판단 요청은 계속 리더에게 모읍니다. [Plugin 설치 안내](docs/plugin-installation.md#team-coordination)를 참고하세요.
@@ -54,7 +56,7 @@ Skills-only 패키지로 [한국어 여행 가이드북](korean-travel-guidebook
 
 ## 팀 하네스 0.5.7
 
-별도 사이드바 팀을 시작하도록 요청하면 [team-coordination](team-coordination/SKILL.md)은 먼저 Astra 채팅을 만들거나 기존 채팅을 재사용합니다. Astra가 프로젝트를 분석한 뒤 적절한 리더와 팀원 채팅을 구성합니다. 각 팀원에는 업무에 맞는 판단 관점과 협업 성격을 지정합니다. [시작 절차](team-coordination/references/sidebar-startup.md)는 공식 앱 도구를 사용하며, 기존 팀 재사용과 하위 역할의 팀 중복 생성 방지를 명시합니다. 사이드바 채팅 생성과 관리 어댑터 등록은 별개입니다. 설명 질문이나 설치만으로 채팅을 만들지 않습니다. 0.5.7의 소스 지정 실제 시험에서는 제품 파일 변경·팀 중복 생성·채팅 간 메시지 없이 구성과 수신 확인을 완료했습니다. 이 결과는 설치 후 자동 발견이나 실제 실행 모델·등급을 증명하지 않습니다.
+[team-coordination](team-coordination/SKILL.md)은 현재 채팅에서 직접 수행하고 기존 담당자를 재사용하는 것을 기본으로 합니다. 새 사이드바 채팅은 사용자의 명시적 생성 요청이 있고 조정 비용보다 이점이 분명할 때만 만듭니다. 별도 Astra 분석 채팅은 선택 사항입니다. 역할 목록을 모두 채우지 않으며, 필수 독립 검토와 단일 작성자 규칙은 유지합니다. [시작 지침](team-coordination/references/sidebar-startup.md)은 중복 팀 생성·변화 없는 상태 전달·완료 작업 재개도 제한합니다. 0.6.1에 포함된 지침이며 진행 중인 팀에는 별도로 적용해야 합니다.
 
 [0.5.7 릴리스](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.5.7)는 스킬·Plugin과 별도 휴대용 하네스 소스를 제공합니다. 아래의 일반 설치 절차에서 새 파일명과 설치 계획에는 `0.5.7`을 사용합니다. Plugin 업데이트는 기존 standalone 런타임·프로필 저널이나 활성 프로젝트 계약을 변경하지 않습니다. 기존 standalone 설치의 이전은 원본 보존과 별도 검토가 필요한 작업입니다.
 

@@ -2,8 +2,15 @@
 
 ## Unreleased
 
+
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
+
+## Team harness [0.6.1] - 2026-10-29
+
+- Add evidence-based adaptive collaboration guidance to Team Coordination: provisional initial allocation, session-level observations, cause-aware leader adjustments and independent review of consequential allocation claims.
+- Separate delivery acceptance from reusable learning, preserve human model choices and original checks, and distinguish task adjustments, project rules and authorized shared-skill maintenance. This adds no automatic router, state schema, permanent audit role or active-team adoption.
+- Team Coordination now defaults to direct work and existing-owner reuse. New chats need explicit creation authority and a concrete benefit; Astra bootstrap is optional. Preserve required independent review and safe ownership while reducing redundant roles, handoffs and status-only wakeups.
 
 ## Team harness [0.6.0] - 2026-10-27
 
@@ -220,6 +227,7 @@
 - MacPilot `3.2.0`에 macOS 시스템 설정 옆에 붙는 88×88pt 아이콘 전용 권한 안내 패널을 추가했습니다. 설정 창 이동 추적, 다른 앱 전환 시 숨김, 패널 아이콘의 실제 앱 파일 드래그, 우클릭 메뉴의 선택적 자동 추가·권한 전환·요청·재검사를 지원합니다. Finder와 큰 별도 설정 창은 열지 않습니다. Automation은 대상 앱별 macOS 동의를 사용합니다. 일반 제어에 불필요한 입력 모니터링·전체 디스크 접근은 선택 항목으로 남깁니다. 인증·재실행·최종 승인은 사용자가 진행합니다.
 
 ## [Unreleased]
+
 
 - MacPilot에 `permission-setup`과 `mac_permission operation=setup`을 추가했습니다. 실행한 앱 번들을 시스템 설정에 드래그하는 네이티브 창, 설정 바로 열기, Finder 표시와 창 프로세스 기준 권한 상태를 제공합니다. 기본 권한 요청은 유지하며 드롭 수락과 실제 사용자 승인·현재 MCP 권한을 구분합니다. 백그라운드 유지 작업과 다른 작업의 시스템 입력 잠금에서는 권한 요청·설정 실행을 사전에 차단합니다.
 

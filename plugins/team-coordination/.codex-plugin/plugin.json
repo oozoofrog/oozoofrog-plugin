@@ -1,7 +1,7 @@
 {
   "name": "team-coordination",
-  "version": "0.6.0",
-  "description": "Start or reuse an Astra project-analysis chat that forms tailored leader and teammate chats in the Codex sidebar; coordinate roles, ownership and evidence, and diagnose stalled collaboration with doctor.",
+  "version": "0.6.1",
+  "description": "Coordinate an existing team or a user-requested new team with minimal overhead; prefer direct work and reuse, preserve ownership and independent review, and diagnose collaboration stalls with doctor.",
   "author": {
     "name": "oozoofrog",
     "url": "https://github.com/oozoofrog"
@@ -10,8 +10,8 @@
   "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
   "interface": {
     "displayName": "Team Coordination",
-    "shortDescription": "Astra teams, internal decisions and collaboration doctor",
-    "longDescription": "Start or reuse a user-requested Astra sidebar team with internal decision routing. Collaboration doctor separates configured tool policy, exact pending actions, stale packets, message receipts and owner uncertainty, then guides bounded supported recovery. Its diagnostic command is read-only and does not fabricate approvals or attest native popup suppression. Installation alone creates no chats or active-project adoption.",
+    "shortDescription": "Direct work, team reuse and collaboration doctor",
+    "longDescription": "Prefer direct work and existing-team reuse. New sidebar chats require explicit human creation authority and a concrete benefit over their coordination cost. A separate Astra bootstrap is optional. Preserve single-writer ownership, required independent review and internal decision routing. Doctor diagnoses and guides bounded recovery of existing collaboration without creating diagnostic teams. Evidence-led adaptation remains task-scoped; installation does not prove active-team adoption.",
     "developerName": "oozoofrog",
     "category": "Productivity",
     "capabilities": [
@@ -19,7 +19,7 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Use $team-coordination to form or reuse the Astra-led sidebar team and complete my goal; I delegate necessary collaboration to the leader and members, with decisions handled inside the team and doctor used to diagnose and recover unexpected approvals or stalls within the existing task."
+      "Use $team-coordination to complete my goal with minimal coordination overhead: work directly when sufficient, reuse existing owners and required review, and create chats only when I explicitly request them and their benefit is clear."
     ]
   }
 }
