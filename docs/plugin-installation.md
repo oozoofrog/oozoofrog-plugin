@@ -90,7 +90,7 @@ codex plugin add interface-first-design@oozoofrog-plugin
 
 ## Refactor
 
-`refactor` 0.1.0은 동작 보존 리팩토링을 위한 skills-only Plugin입니다. 별도 런타임·MCP·hooks를 설치하지 않습니다. SwiftLint는 요청 권한과 저장소 설정에 따라 별도로 사용합니다.
+`refactor` 0.1.1은 동작 보존 리팩토링을 위한 skills-only Plugin입니다. 별도 런타임·MCP·hooks를 설치하지 않습니다. Swift 작업은 분석 전용 요청에서도 SwiftLint 진단을 반드시 사용합니다. 도구가 없으면 요청 권한과 저장소·환경 제약에 따라 설치합니다. 진단을 확보하지 못하면 원인과 필요한 조치를 보고하고 작업을 미완료로 남깁니다.
 
 ```sh
 # marketplace가 없는 경우 먼저 등록합니다.

@@ -26,7 +26,7 @@ After installation, invoke explicitly: `Use $korean-product-writing to edit this
 
 ## Refactor
 
-[Refactor](refactor/SKILL.md) 0.1.0 is a skills-only Plugin. Use when a user requests behavior-preserving code refactoring, SRP cleanup, clearer responsibilities or dependencies, or reducing code smells under repository lint rules. Not for adding features, fixing behavior, or formatting alone. It preserves existing user edits and repository checks, asks for scope only when needed, and reports lint, test, build and runtime evidence separately. Swift guidance covers the repository’s SwiftLint version and configuration; invoking the skill does not grant tool-installation permission.
+[Refactor](refactor/SKILL.md) 0.1.1 is a skills-only Plugin. Use when a user requests behavior-preserving code refactoring, SRP cleanup, clearer responsibilities or dependencies, or reducing code smells under repository lint rules. Not for adding features, fixing behavior, or formatting alone. It preserves existing user edits and repository checks, asks for scope only when needed, and reports lint, test, build and runtime evidence separately. Swift work, including analysis-only requests, requires SwiftLint diagnostics under the repository’s version and configuration. Reuse valid diagnostics for unchanged inputs; if diagnostics are unavailable, report the blocker and keep the Swift work incomplete. Installation follows the current request and environment permissions.
 
 Install with `codex plugin add refactor@oozoofrog-plugin` after refreshing this marketplace. Invoke `$refactor` or `$refactor:refactor` in a new chat. See [installation](docs/plugin-installation.md#refactor) and [review and validation](docs/validation/refactor.md).
 

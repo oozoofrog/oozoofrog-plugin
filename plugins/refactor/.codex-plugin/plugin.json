@@ -1,6 +1,6 @@
 {
   "name": "refactor",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Use when a user requests behavior-preserving code refactoring, SRP cleanup, clearer responsibilities or dependencies, or reducing code smells under repository lint rules. Not for adding features, fixing behavior, or formatting alone.",
   "author": {
     "name": "oozoofrog",
@@ -19,7 +19,7 @@
       "Write"
     ],
     "defaultPrompt": [
-      "$refactor 요청 범위에서 기존 동작을 보존하며 책임과 의존 관계를 정리하고 검증하세요. 범위가 불명확하면 조사 후 후보를 제시해 질문하세요."
+      "$refactor 요청 범위에서 동작을 보존하며 책임과 의존 관계를 정리하고 검증하세요. Swift에는 SwiftLint 진단을 반드시 사용하세요. 범위가 불명확하면 조사 후 질문하세요."
     ]
   }
 }
