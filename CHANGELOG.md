@@ -6,6 +6,11 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## Refactor 0.1.1 — 2026-10-29
+
+- Require SwiftLint diagnostics for Swift work, including analysis-only requests. Reuse valid diagnostics only for matching inputs, configuration and tool version. Missing diagnostics block completion; source analysis is not a substitute.
+- Keep installation permissions separate from the mandatory diagnostic requirement and align entrypoint, Swift guidance, invocation prompts and documentation.
+
 ## Refactor 0.1.0 — 2026-10-29
 
 - Migrate the reviewed personal Refactor skill into standalone source and a matching skills-only Plugin, with marketplace registration and distribution checks.

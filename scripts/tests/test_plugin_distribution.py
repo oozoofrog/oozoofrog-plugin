@@ -74,7 +74,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertIn("refactor", load_module().PACKAGES)
         refactor_manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text())
         self.assertEqual("refactor", refactor_manifest["name"])
-        self.assertEqual("0.1.0", refactor_manifest["version"])
+        self.assertEqual("0.1.1", refactor_manifest["version"])
         self.assertEqual("./skills/", refactor_manifest["skills"])
         for key in ("mcpServers", "apps", "hooks"):
             self.assertNotIn(key, refactor_manifest)
