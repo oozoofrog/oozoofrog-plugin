@@ -24,6 +24,12 @@ After installation, invoke explicitly: `Use $korean-product-writing to edit this
 
 [Audit](audit/SKILL.md) reviews skill, repository and task instructions within the requested scope. [Choice Interview](choice-interview/SKILL.md) conducts adaptive interviews with single, multiple and text responses; its mixed-form template is included. Both are available as matching skills-only Plugins, without hooks or runtime installation.
 
+## Refactor
+
+[Refactor](refactor/SKILL.md) 0.1.0 is a skills-only Plugin. Use when a user requests behavior-preserving code refactoring, SRP cleanup, clearer responsibilities or dependencies, or reducing code smells under repository lint rules. Not for adding features, fixing behavior, or formatting alone. It preserves existing user edits and repository checks, asks for scope only when needed, and reports lint, test, build and runtime evidence separately. Swift guidance covers the repository’s SwiftLint version and configuration; invoking the skill does not grant tool-installation permission.
+
+Install with `codex plugin add refactor@oozoofrog-plugin` after refreshing this marketplace. Invoke `$refactor` or `$refactor:refactor` in a new chat. See [installation](docs/plugin-installation.md#refactor) and [review and validation](docs/validation/refactor.md).
+
 ## C4fy
 
 [C4fy](c4fy/SKILL.md) creates source-backed C4 context, container, component, and code diagrams as standalone HTML with a soft rounded UI, animated C1/C2/C3/C4 drill-down, source details, automatic domain/type/role classification, and SVG/JSON export. Use it for C4 architecture maps and hierarchical system explanations, including optional component-level code structure, not generic flowcharts or sequence diagrams. It is an original implementation; Archify is conceptual inspiration, not copied code or a runtime dependency.

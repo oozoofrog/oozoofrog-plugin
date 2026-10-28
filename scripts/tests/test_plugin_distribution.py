@@ -39,7 +39,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ["swift-intelligence", "local-ai-studio", "macpilot", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing", "interface-first-design", "winpilot", "c4fy"],
+            ["swift-intelligence", "local-ai-studio", "macpilot", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing", "interface-first-design", "winpilot", "c4fy", "refactor"],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -60,6 +60,44 @@ class PluginDistributionTests(unittest.TestCase):
                     self.assertEqual("https://github.com/oozoofrog/oozoofrog-plugin", manifest["repository"])
                 skill_root = plugin_root / manifest["skills"] / entry["name"]
                 self.assertTrue((skill_root / "SKILL.md").is_file())
+
+    def test_refactor_distribution(self) -> None:
+        from test_sync_skill_mirrors import load_module
+        from test_document_links import local_targets
+        source = REPO_ROOT / "refactor"
+        plugin = REPO_ROOT / "plugins/refactor"
+        mirror = plugin / "skills/refactor"
+        expected = {"SKILL.md", "agents/openai.yaml", "references/swift.md"}
+        self.assertEqual(expected, set(tree_files(source)))
+        self.assertEqual(tree_files(source), tree_files(mirror))
+        self.assertEqual({".codex-plugin/plugin.json"} | {f"skills/refactor/{p}" for p in expected}, set(tree_files(plugin)))
+        self.assertIn("refactor", load_module().PACKAGES)
+        refactor_manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text())
+        self.assertEqual("refactor", refactor_manifest["name"])
+        self.assertEqual("0.1.0", refactor_manifest["version"])
+        self.assertEqual("./skills/", refactor_manifest["skills"])
+        for key in ("mcpServers", "apps", "hooks"):
+            self.assertNotIn(key, refactor_manifest)
+        description = (source / "SKILL.md").read_text().split("description: ", 1)[1].splitlines()[0]
+        self.assertEqual(description, refactor_manifest["description"])
+        self.assertEqual(description, refactor_manifest["interface"]["longDescription"])
+        self.assertIn(description, (REPO_ROOT / "README.md").read_text())
+        metadata = {}
+        for line in (source / "agents/openai.yaml").read_text().splitlines():
+            if line.startswith("  ") and ": " in line:
+                key, value = line.strip().split(": ", 1)
+                metadata[key] = json.loads(value)
+        for yaml_key, json_key in (("display_name", "displayName"), ("short_description", "shortDescription")):
+            self.assertEqual(metadata[yaml_key], refactor_manifest["interface"][json_key])
+        self.assertEqual([metadata["default_prompt"]], refactor_manifest["interface"]["defaultPrompt"])
+        self.assertIn("$refactor", metadata["default_prompt"])
+        self.assertLessEqual(len(metadata["default_prompt"]), 128)
+        for root in (source, plugin):
+            for path in root.rglob("*"):
+                self.assertFalse(path.is_symlink(), path)
+            for document in root.rglob("*.md"):
+                for target in local_targets(document.read_text()):
+                    self.assertTrue((document.parent / target).is_file(), (document, target))
 
     def test_c4fy_distribution(self) -> None:
         source = REPO_ROOT / "c4fy"

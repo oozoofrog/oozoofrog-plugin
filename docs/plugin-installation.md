@@ -87,3 +87,18 @@ codex plugin add interface-first-design@oozoofrog-plugin
 게시 전 checkout 검증에는 저장소 루트에서 `codex plugin marketplace add "$PWD"`를 사용하고 source가 그 checkout인지 확인합니다. Standalone 설치는 `interface-first-design/`을 skill-installer로 설치하며 기존 설치본을 임의로 덮어쓰거나 Plugin과 중복 설치하지 않습니다.
 
 새 작업에서 `$interface-first-design` 또는 `$interface-first-design:interface-first-design`으로 호출합니다. [스킬](../interface-first-design/SKILL.md)과 [가상 예시](../interface-first-design/references/examples.md)를 참고하세요. 패키지 검사 통과, 원격 카탈로그 반영, 설치 성공, 새 세션 노출, 실제 제품 UI 동작 검증은 각각 확인해야 합니다.
+
+## Refactor
+
+`refactor` 0.1.0은 동작 보존 리팩토링을 위한 skills-only Plugin입니다. 별도 런타임·MCP·hooks를 설치하지 않습니다. SwiftLint는 요청 권한과 저장소 설정에 따라 별도로 사용합니다.
+
+```sh
+# marketplace가 없는 경우 먼저 등록합니다.
+codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
+# 기존 marketplace는 snapshot을 갱신합니다.
+codex plugin marketplace upgrade oozoofrog-plugin
+codex plugin add refactor@oozoofrog-plugin
+codex plugin list --marketplace oozoofrog-plugin --json
+```
+
+새 대화에서 `$refactor` 또는 `$refactor:refactor`로 호출합니다. 기존 개인 `refactor` 스킬이 있다면 원본을 스킬 검색 경로 밖에 백업하고, Plugin 설치 경로와 내용 일치를 확인한 뒤 개인 사본을 제거합니다. 설치·활성화와 새 대화의 스킬 노출은 별도로 확인합니다. [리뷰와 검증 범위](validation/refactor.md)를 참고하세요.

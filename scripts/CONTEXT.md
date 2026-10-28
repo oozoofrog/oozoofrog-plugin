@@ -20,3 +20,5 @@
 ## Verification Notes
 - `sync_repo.sh`를 수정하면 `--dry-run` 시나리오를 먼저 확인하기.
 - daemon이나 launchd 스크립트를 수정하면 경로, 기본값, 로그 경로를 함께 점검하기.
+
+- `release_plugin.py`의 MacPilot 버전 갱신은 배포 테스트의 `manifest["version"]` 단일 패턴을 참조한다. 다른 Plugin의 고정 버전 검사에는 패키지별 변수명을 사용하고 릴리스 회귀 검사를 함께 실행한다.
