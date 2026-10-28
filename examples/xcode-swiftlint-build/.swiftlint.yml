@@ -1,0 +1,4 @@
+only_rules:
+  - force_unwrapping
+force_unwrapping:
+  severity: error

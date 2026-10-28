@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an independent generated Xcode project and real Run Script verification for normal/incremental builds, configuration rechecks, lint/missing/non-executable tool failures and recovery, with Script Sandbox enabled and object reuse evidence.
+
 - Add a pinned SwiftPM/SwiftLint 0.65.1 example and reproducible real-build verification for source/configuration incremental rechecks, non-executable/missing tool failures, recovery and executable output. Preserve initial verifier failures and distinguish this Mac result from standalone Xcode/CI/device execution.
 
 
