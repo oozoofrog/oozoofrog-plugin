@@ -6,6 +6,11 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## Refactor 0.2.0 — 2026-10-29
+
+- Add requested SwiftLint build integration for Xcode and SwiftPM projects, including generator-owned configuration, target coverage, pinned tools/configuration, incremental builds and failure propagation.
+- Route integration-only requests directly, preserve existing checks and trust controls, and require real build evidence before claiming integration works. General refactoring does not automatically change build settings.
+
 ## Refactor 0.1.1 — 2026-10-29
 
 - Require SwiftLint diagnostics for Swift work, including analysis-only requests. Reuse valid diagnostics only for matching inputs, configuration and tool version. Missing diagnostics block completion; source analysis is not a substitute.
