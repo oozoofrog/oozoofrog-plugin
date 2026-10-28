@@ -80,6 +80,33 @@ class Sessions(unittest.TestCase):
   self.standard_owner();rpc=self.standard_rpc(reject=True)
   with self.assertRaises(RPCError):self.controller.turn('source-owner','inspect',task='task')
   turns=[p for method,p in rpc.calls if method=='turn/start'];self.assertEqual(1,len(turns));self.assertEqual('default',turns[0]['serviceTierForTurn']);self.assertNotIn('serviceTier',turns[0]);self.assertEqual('not_executed',next(iter(self.controller.state()['harness']['runs'].values()))['state'])
+ def test_post_completion_observation_error_preserves_completed_run(self):
+  from managed_run import RPCError
+  for error in (RPCError('thread/read',{'code':503,'message':'Unavailable'}),TimeoutError('Read timed out')):
+   with self.subTest(error=type(error).__name__):
+    self.standard_owner();rpc=self.standard_rpc();request=rpc.request;reads=0
+    def fail_after_completion(method,params,**kwargs):
+     nonlocal reads
+     if method=='thread/read':
+      reads+=1
+      if reads==2:raise error
+     return request(method,params,**kwargs)
+    rpc.request=fail_after_completion
+    with self.assertRaises(type(error)):self.controller.turn('source-owner','inspect',task='task')
+    state=self.controller.state();run=list(state['harness']['runs'].values())[-1];control=list(state['harness']['controls'].values())[-1]
+    self.assertEqual('completed',run['state']);self.assertEqual('completed',control['state'])
+    self.assertEqual('turn-1',control['accepted']['turn']);self.assertFalse(control['automatic_retry'])
+    self.assertNotIn('turn/interrupt',[method for method,params in rpc.calls])
+ def test_rpc_error_after_acceptance_keeps_outcome_uncertain_and_blocks_new_run(self):
+  from managed_run import RPCError
+  self.standard_owner();rpc=self.standard_rpc()
+  def failed_event(*args):raise RPCError('notification/read',{'code':503,'message':'Unavailable after acceptance'})
+  rpc.next=failed_event
+  with self.assertRaises(RPCError):self.controller.turn('source-owner','inspect',task='task')
+  state=self.controller.state();run=next(iter(state['harness']['runs'].values()));control=next(iter(state['harness']['controls'].values()))
+  self.assertEqual('uncertain',run['state']);self.assertEqual('outcome_unknown',control['state'])
+  packet=h.packet(state,'source-owner');h.transaction(self.path,{'op':'ack','member':'source-owner','revision':packet['revision'],'epoch':packet['epoch'],'digest':h.digest(packet)})
+  with self.assertRaises(h.Invalid):h.transaction(self.path,{'op':'begin','member':'source-owner','task':'task','run':'duplicate'})
  def test_accepted_receipt_turn_retains_cross_member_concurrency_slot(self):
   state=self.controller.state();state['harness']['concurrency']=1
   for event in [{'op':'register','member':'other','role':'core','identity':str(self.proof)},{'op':'assign','member':'other','task':'other-task','purpose':'inspect','context':'synthetic'}]:state=h.apply(state,event)

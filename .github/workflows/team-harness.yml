@@ -45,3 +45,12 @@ jobs:
           python -I -S -B tools/codex-team-harness/make_release.py
           git diff --exit-code -- tools/codex-team-harness/manifest.json
           git diff --check
+
+      - name: Repository sync and distribution regressions
+        run: python -I -S -B -m unittest discover -s scripts/tests -v
+      - name: Swift settings regressions (mock Xcode boundary)
+        run: python -I -S -B -m unittest discover -s plugins/swift-intelligence/tests -v
+      - name: Browser bridge and diagram regressions (Node VM)
+        run: |
+          node --test macpilot/browser/tests/*.test.cjs
+          node --test c4fy/tests/*.test.mjs

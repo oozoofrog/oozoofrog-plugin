@@ -62,6 +62,8 @@ function buildScene(layout,view){const div=document.createElement('div');div.cla
  div.querySelectorAll('.edge,.edge-label').forEach(el=>{const select=()=>details(el.dataset.id,true);el.addEventListener('click',select);el.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();select();}});});return div;
 }
 function transformFor(layout){const fit=Math.min((stage.clientWidth-22)/layout.width,(stage.clientHeight-22)/layout.height,1.4);const s=Math.max(.1,fit)*zoom;return {s,x:Math.max(12,(stage.clientWidth-layout.width*s)/2),y:Math.max(12,(stage.clientHeight-layout.height*s)/2)};}
+// Keep the overview fit, but allow at least 280% absolute scale for large graphs.
+function maximumZoom(){const fitScale=transformFor(currentLayout).s/zoom;return Math.max(2.8,2.8/fitScale);}
 function resize(){if(!scene)return;const t=transformFor(currentLayout);scale=t.s;scene.style.transform=`translate(${t.x}px,${t.y}px) scale(${t.s})`;$('#zoom-value').value=Math.round(t.s*100)+'%';const hint=$('.pan-hint');hint.hidden=currentLayout.width*t.s<=stage.clientWidth;hint.textContent=ko?'드래그 또는 스크롤로 이동':'Drag or scroll to pan';}
 function clearMorph(){stage.querySelectorAll('.scope-morph,.morph-wires').forEach(n=>n.remove());stage.querySelectorAll('[data-morph-hidden]').forEach(n=>{n.style.visibility='';delete n.dataset.morphHidden;});}
 function cancelMotion(){clearMorph();generation++;for(const a of animations)a.cancel();animations=[];stage.querySelectorAll('.scene.old').forEach(n=>n.remove());}
@@ -159,7 +161,7 @@ const q=$('#search').value.trim().toLocaleLowerCase();const match=new Set(curren
 stage.addEventListener('click',e=>{if(!e.target.closest('.node,.edge,.edge-label,.parent-card')){flow=null;filter();}});
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.querySelector('#design-popover:popover-open')){flow=null;filter();}});
  $('#search').oninput=filter;$('#search').onkeydown=e=>{if(e.key==='Escape'){$('#search').value='';filter();}};
-$('#zoom-in').onclick=()=>{cancelMotion();zoom=Math.min(2.8,zoom*1.2);resize();};$('#zoom-out').onclick=()=>{cancelMotion();zoom=Math.max(.6,zoom/1.2);resize();};$('#fit').onclick=()=>{cancelMotion();zoom=1;resize();stage.scrollTo(0,0);};
+$('#zoom-in').onclick=()=>{cancelMotion();zoom=Math.min(maximumZoom(),zoom*1.2);resize();};$('#zoom-out').onclick=()=>{cancelMotion();zoom=Math.max(.6,zoom/1.2);resize();};$('#fit').onclick=()=>{cancelMotion();zoom=1;resize();stage.scrollTo(0,0);};
 new ResizeObserver(()=>{cancelMotion();resize();}).observe(stage);
 reduced.addEventListener('change',()=>{if(reduced.matches){cancelMotion();resize();}});
 function download(text,mime,name){const url=URL.createObjectURL(new Blob([text],{type:mime})),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);}
