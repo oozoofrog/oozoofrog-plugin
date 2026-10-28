@@ -1,5 +1,7 @@
 # oozoofrog-plugin
 
+[리팩토링](refactor/SKILL.md) 0.1.0은 동작을 보존하면서 책임·의존 관계·코드 냄새를 정리하는 skills-only Plugin입니다. 기능 추가, 버그 수정, 포맷 변경만을 위한 요청에는 적용하지 않습니다. 기존 변경과 저장소 검증 규칙을 보존하며 범위가 불명확할 때만 조사 후 질문합니다. SwiftLint 설치 권한은 현재 요청과 저장소 지침을 따릅니다. [설치](docs/plugin-installation.md#refactor) 후 새 대화에서 `$refactor` 또는 `$refactor:refactor`를 사용합니다. [리뷰와 검증 범위](docs/validation/refactor.md)를 확인하세요.
+
 Team Coordination 0.6.1에서 [작업 근거에 따른 협업 조정](team-coordination/references/adaptive-collaboration.md)을 추가했습니다. 초기 배분의 불확실성을 기록하고, 리더가 세션의 실제 결과에 따라 조정하며, 독립 리뷰어가 중요한 배분 판단을 검토합니다. 현재 작업의 조정·프로젝트 규칙·공통 스킬 변경을 구분합니다. 사용자가 지정한 모델과 완료 조건을 보존하며, 자동 모델 라우팅이나 기존 팀의 적용 완료를 뜻하지 않습니다.
 
 [WinPilot](winpilot/SKILL.md) 0.5.1은 기존 Windows Pilot 제어기를 이 저장소로 이관합니다. `$winpilot` 또는 `windows-pilot` 요청으로 Windows 앱·게임을 WGC·UIA로 관찰하고 화면 안내·중지 기능이 있는 전경 입력을 수행합니다. Windows x64 Plugin은 MCP 설정을 포함하고 첫 연결에서 해시를 검증한 독립 실행형 런타임을 설치합니다. 기존 실행 파일명과 도구명은 유지합니다. [설치](docs/plugin-installation.md#winpilot)와 [검증 범위](docs/validation/winpilot.md)를 확인하세요.

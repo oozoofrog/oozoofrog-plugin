@@ -6,6 +6,11 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## Refactor 0.1.0 — 2026-10-29
+
+- Migrate the reviewed personal Refactor skill into standalone source and a matching skills-only Plugin, with marketplace registration and distribution checks.
+- Preserve behavior, scope selection, existing user edits, repository checks and SwiftLint version/configuration guidance. Remove blanket SwiftLint installation permission from the default prompt and clarify analysis-only handling when tools are missing.
+
 ## Team harness [0.6.1] - 2026-10-29
 
 - Add evidence-based adaptive collaboration guidance to Team Coordination: provisional initial allocation, session-level observations, cause-aware leader adjustments and independent review of consequential allocation claims.

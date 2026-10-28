@@ -1,0 +1,4 @@
+interface:
+  display_name: "리팩토링"
+  short_description: "진단으로 범위를 찾고 동작을 보존하는 코드 리팩토링"
+  default_prompt: "$refactor 요청 범위에서 기존 동작을 보존하며 책임과 의존 관계를 정리하고 검증하세요. 범위가 불명확하면 조사 후 후보를 제시해 질문하세요."

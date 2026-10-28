@@ -1,0 +1,25 @@
+{
+  "name": "refactor",
+  "version": "0.1.0",
+  "description": "Use when a user requests behavior-preserving code refactoring, SRP cleanup, clearer responsibilities or dependencies, or reducing code smells under repository lint rules. Not for adding features, fixing behavior, or formatting alone.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "skills": "./skills/",
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
+  "interface": {
+    "displayName": "리팩토링",
+    "shortDescription": "진단으로 범위를 찾고 동작을 보존하는 코드 리팩토링",
+    "longDescription": "Use when a user requests behavior-preserving code refactoring, SRP cleanup, clearer responsibilities or dependencies, or reducing code smells under repository lint rules. Not for adding features, fixing behavior, or formatting alone.",
+    "developerName": "oozoofrog",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "$refactor 요청 범위에서 기존 동작을 보존하며 책임과 의존 관계를 정리하고 검증하세요. 범위가 불명확하면 조사 후 후보를 제시해 질문하세요."
+    ]
+  }
+}
