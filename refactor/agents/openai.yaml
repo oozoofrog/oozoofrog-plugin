@@ -1,4 +1,4 @@
 interface:
   display_name: "리팩토링"
-  short_description: "진단으로 범위를 찾고 동작을 보존하는 코드 리팩토링"
-  default_prompt: "$refactor 요청 범위에서 동작을 보존하며 책임과 의존 관계를 정리하고 검증하세요. Swift에는 SwiftLint 진단을 반드시 사용하세요. 범위가 불명확하면 조사 후 질문하세요."
+  short_description: "동작 보존 리팩토링과 SwiftLint 프로젝트 빌드 통합"
+  default_prompt: "$refactor 기존 동작을 보존하며 리팩토링하고 Swift에는 SwiftLint 진단을 사용하세요. 빌드 통합 요청 시 프로젝트에 SwiftLint를 연결하고 실제 빌드로 검증하세요."

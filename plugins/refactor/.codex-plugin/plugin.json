@@ -1,7 +1,7 @@
 {
   "name": "refactor",
-  "version": "0.1.1",
-  "description": "Use when a user requests behavior-preserving code refactoring, SRP cleanup, clearer responsibilities or dependencies, or reducing code smells under repository lint rules. Not for adding features, fixing behavior, or formatting alone.",
+  "version": "0.2.0",
+  "description": "Use when a user requests behavior-preserving code refactoring, SRP cleanup, clearer responsibilities or dependencies, reducing code smells under repository lint rules, or integrating SwiftLint into project builds. Not for unrelated features, behavior fixes, or formatting alone.",
   "author": {
     "name": "oozoofrog",
     "url": "https://github.com/oozoofrog"
@@ -10,8 +10,8 @@
   "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
   "interface": {
     "displayName": "리팩토링",
-    "shortDescription": "진단으로 범위를 찾고 동작을 보존하는 코드 리팩토링",
-    "longDescription": "Use when a user requests behavior-preserving code refactoring, SRP cleanup, clearer responsibilities or dependencies, or reducing code smells under repository lint rules. Not for adding features, fixing behavior, or formatting alone.",
+    "shortDescription": "동작 보존 리팩토링과 SwiftLint 프로젝트 빌드 통합",
+    "longDescription": "Use when a user requests behavior-preserving code refactoring, SRP cleanup, clearer responsibilities or dependencies, reducing code smells under repository lint rules, or integrating SwiftLint into project builds. Not for unrelated features, behavior fixes, or formatting alone.",
     "developerName": "oozoofrog",
     "category": "Productivity",
     "capabilities": [
@@ -19,7 +19,7 @@
       "Write"
     ],
     "defaultPrompt": [
-      "$refactor 요청 범위에서 동작을 보존하며 책임과 의존 관계를 정리하고 검증하세요. Swift에는 SwiftLint 진단을 반드시 사용하세요. 범위가 불명확하면 조사 후 질문하세요."
+      "$refactor 기존 동작을 보존하며 리팩토링하고 Swift에는 SwiftLint 진단을 사용하세요. 빌드 통합 요청 시 프로젝트에 SwiftLint를 연결하고 실제 빌드로 검증하세요."
     ]
   }
 }

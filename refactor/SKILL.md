@@ -1,11 +1,13 @@
 ---
 name: refactor
-description: Use when a user requests behavior-preserving code refactoring, SRP cleanup, clearer responsibilities or dependencies, or reducing code smells under repository lint rules. Not for adding features, fixing behavior, or formatting alone.
+description: Use when a user requests behavior-preserving code refactoring, SRP cleanup, clearer responsibilities or dependencies, reducing code smells under repository lint rules, or integrating SwiftLint into project builds. Not for unrelated features, behavior fixes, or formatting alone.
 ---
 
 # 리팩토링
 
 기존 동작을 보존하면서 변경 이유와 의존 관계를 명확하게 만든다. 기계적 진단으로 조사 위치를 좁히고, 실제 코드 구조를 근거로 사용자에게 원하는 범위를 직접 묻는다. 범위가 확정되면 분석에서 멈추지 않고 구현·검증까지 진행한다. 분석 전용 요청은 읽기 전용으로 수행한다.
+
+SwiftLint 빌드 통합을 요청하면 [빌드 통합 지침](references/swiftlint-build.md)을 읽고 프로젝트에 연결한 뒤 실제 빌드로 검증한다. 통합만 요청한 경우 리팩토링 범위 인터뷰 없이 통합 작업을 수행한다. 일반 리팩토링에서 빌드 설정을 자동으로 바꾸지는 않는다.
 
 ## 1. 먼저 조사하고 범위를 질문한다
 

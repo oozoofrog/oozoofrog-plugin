@@ -1,6 +1,14 @@
 # Refactor 검토와 검증
 
-2026-10-29에 사용자가 요청한 개인 스킬을 검토해 이 저장소로 이관했다. 배포 파일은 `SKILL.md`, `agents/openai.yaml`, `references/swift.md` 세 개다. 개인 머신 경로·프로젝트 데이터·도구 실행 파일은 포함하지 않는다.
+2026-10-29에 사용자가 요청한 개인 스킬을 검토해 이 저장소로 이관했다. 0.2.0 배포 파일은 `SKILL.md`, `agents/openai.yaml`, `references/swift.md`, `references/swiftlint-build.md` 네 개다. 개인 머신 경로·프로젝트 데이터·도구 실행 파일은 포함하지 않는다.
+
+## 0.2.0: 요청한 프로젝트의 빌드 통합
+
+SwiftLint 빌드 통합 요청을 직접 수행하는 기능을 추가했다. entrypoint와 discovery·UI 문구가 새 지침으로 연결되며, 기존의 프로젝트 통합 추가 금지 문구는 요청 범위에서 구현하는 조건으로 바꿨다. Xcode Run Script·build tool plugin, SwiftPM target 연결, 생성 원본과 도구 버전·설정 보존, 중복 실행 방지, 증분 검사와 종료 코드 전파를 다룬다.
+
+공식 근거는 [SwiftLint Setup](https://github.com/realm/SwiftLint#setup)이다. 프로젝트에 적용할 때는 고정 버전의 문서를 다시 확인한다. 일반 리팩토링이나 도구 설치만으로 빌드 파일을 자동 변경하지 않는다.
+
+저장소 배포 검사 93개, 양쪽 `quick_validate.py`, 미러 일치와 diff 공백 검사를 통과했다. 독립 리뷰는 새 지침의 통합 경로·실패 조건과 배포 표면을 정적으로 검토했다. 대상 개발 프로젝트가 제공되지 않아 실제 Xcode·SwiftPM 통합이나 정상·증분·실패 빌드는 실행하지 않았다. 이 릴리스는 스킬 기능과 배포 구조를 검증한 결과이며, 특정 프로젝트의 빌드 통합 완료를 뜻하지 않는다.
 
 ## 0.1.1: SwiftLint 필수 조건 복원
 
