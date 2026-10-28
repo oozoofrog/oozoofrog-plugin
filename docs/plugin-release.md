@@ -49,3 +49,7 @@ python3 scripts/release_plugin.py install --plugin macpilot --version 3.5.0 --ev
 `--launcher`는 기존 symlink만 원자적으로 교체한다. 일반 파일을 덮어쓰지 않는다. 인수를 생략하면 런처를 바꾸지 않는다. 새 앱의 격리된 MCP handshake·catalog·읽기 검사와 CLI runtime version을 확인한다. 설치 전후 다른 Plugin의 버전·활성화 상태도 비교한다. 기존 MCP와 Codex를 재시작하지 않는다. 현재 대화의 MCP 버전과 새 세션의 Skill 노출은 별도로 확인한다.
 
 같은 저장소의 배포 단계는 `.git/plugin-release.lock`으로 중복 실행을 막는다. 프로세스 비정상 종료로 lock이 남았으면 해당 배포 프로세스와 receipt·원격 상태를 먼저 확인한다. 스크립트는 임의의 lock을 자동 제거하지 않는다. 실패 로그는 `command-*.log`, 마지막 성공 단계와 실패 원인은 `receipt.json`에 남는다. push·공개·설치는 자동 롤백하지 않는다.
+
+## Team Coordination 버전 확인
+
+Team Coordination은 MacPilot 전용 release_plugin.py 대신 자체 번들 생성기를 사용합니다. 버전 변경 시 standalone policy.json, Plugin manifest와 미러 policy, payload policy, bootstrap.py의 VERSION, run.py의 manifest 버전 검사, make_release.py의 VERSION, test_team_harness_distribution.py의 기대 버전을 함께 갱신합니다. make_release.py로 manifest·archive를 재생성한 뒤 저장소 배포 검사와 하네스 검사를 실행합니다. 새 태그·asset으로 게시하며 기존 공개 버전은 덮어쓰지 않습니다. Plugin 갱신은 standalone 설치 저널이나 진행 중인 프로젝트 계약을 이전하지 않습니다.

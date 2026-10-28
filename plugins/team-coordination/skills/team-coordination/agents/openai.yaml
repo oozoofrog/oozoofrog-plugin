@@ -1,4 +1,4 @@
 interface:
   display_name: "Team Coordination"
-  short_description: "Astra teams, internal decisions and collaboration doctor"
-  default_prompt: "Use $team-coordination to form or reuse the Astra-led sidebar team and complete my goal; I delegate necessary collaboration to the leader and members, with decisions handled inside the team and doctor used to diagnose and recover unexpected approvals or stalls within the existing task."
+  short_description: "Direct work, team reuse and collaboration doctor"
+  default_prompt: "Use $team-coordination to complete my goal with minimal coordination overhead: work directly when sufficient, reuse existing owners and required review, and create chats only when I explicitly request them and their benefit is clear."
