@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a pinned SwiftPM/SwiftLint 0.65.1 example and reproducible real-build verification for source/configuration incremental rechecks, non-executable/missing tool failures, recovery and executable output. Preserve initial verifier failures and distinguish this Mac result from standalone Xcode/CI/device execution.
+
 
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
