@@ -10,6 +10,12 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## Local AI Studio 0.3.0 — 2026-10-30
+
+- Add local Whisper speech recognition, transcription and timestamp estimates through a separate `whisper-cli` workflow, with verified large-v3-turbo model identity and read-only reuse.
+- Preserve crop provenance, distinguish JSON segment/token intervals from experimental DTW points, and retain process failures, hallucinations and listening/alignment limits. Transcription does not establish verified sung boundaries or authorize existing subtitle replacement.
+- Update the standalone skill, matching Plugin, discovery metadata and installation documentation. No model weights, runtime binaries or native app integration are bundled.
+
 ## Refactor 0.2.0 — 2026-10-29
 
 - Add requested SwiftLint build integration for Xcode and SwiftPM projects, including generator-owned configuration, target coverage, pinned tools/configuration, incremental builds and failure propagation.
