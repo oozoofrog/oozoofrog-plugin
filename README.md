@@ -60,13 +60,16 @@ Use `$local-ai-studio` on an Apple Silicon Mac to generate and edit images, synt
 
 ```text
 Use $local-ai-studio to transcribe this recording, save an SRT file in the specified folder, and verify the result.
+Use $local-ai-studio with the existing local Whisper model to transcribe this recording and report timestamp estimates with their review status.
 Use $local-ai-studio to generate a teapot image for non-commercial evaluation and verify the PNG file.
 Use $local-ai-studio to translate this English document into Korean and save it as the specified TXT file.
 ```
 
-Available as a standalone skill in `local-ai-studio/` and a skills-only Plugin, version `0.2.1`, with a byte-identical skill copy. The Plugin does not bundle models, runtimes, generated media, credentials, or runner binaries. Setup checks the current source and CLI capabilities, the selected storage location, and available space before downloading only the required models. `/Volumes/eyedisk/AI` is a discovery candidate on the reference Mac, not a universal default. Qwen Image downloads require explicit user acceptance of its license. On a 24 GB Mac, run only one large generator at a time.
+Available as a standalone skill in `local-ai-studio/` and a skills-only Plugin, version `0.3.0`, with a byte-identical skill copy. The Plugin does not bundle models, runtimes, generated media, credentials, or runner binaries. Setup checks the current source and CLI capabilities, the selected storage location, and available space before downloading only the required models. `/Volumes/eyedisk/AI` is a discovery candidate on the reference Mac, not a universal default. Qwen Image downloads require explicit user acceptance of its license. On a 24 GB Mac, run only one large generator at a time.
 
-After setup, inspect supported commands with `ai --help`. Public LocalAIHub source and other local checkouts may expose different capabilities. `READY`, an exit code, or an `Output:` log alone does not establish output quality. Report actual file and format checks separately from preview, playback, and content review. See the [skill](local-ai-studio/SKILL.md), [LocalAIHub setup](local-ai-studio/references/setup.md), [CLI and output contracts](local-ai-studio/references/cli-workflows.md), and [Plugin installation](docs/plugin-installation.md#local-ai-studio).
+Version 0.3.0 also supports local Whisper speech recognition, transcription and timestamp estimates through a separate `whisper-cli` workflow. Reuse verified weights without relocation or a default redownload. This does not require LocalAIHub installation or establish native app support. DTW token points remain experimental alignment estimates; they do not verify sung onset/end or authorize subtitle replacement. See the [Whisper workflow](local-ai-studio/references/whisper.md).
+
+After setup, inspect supported commands with `ai --help` or the selected `whisper-cli --help`. Public LocalAIHub source and other local checkouts may expose different capabilities. `READY`, an exit code, or an `Output:` log alone does not establish output quality. Report actual file and format checks separately from preview, playback, and content review. See the [skill](local-ai-studio/SKILL.md), [LocalAIHub setup](local-ai-studio/references/setup.md), [CLI and output contracts](local-ai-studio/references/cli-workflows.md), and [Plugin installation](docs/plugin-installation.md#local-ai-studio).
 
 ## MacPilot
 
