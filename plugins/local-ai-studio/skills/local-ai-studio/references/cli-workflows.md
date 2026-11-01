@@ -18,6 +18,7 @@ Authority on this Mac: `/Volumes/eyedisk/AI/LocalAIHub/README.md`, `Sources/AIHu
 | Edit source image | `image-edit --image` / Qwen Image 2.1 | New file; normally PNG |
 | Speak text | `tts` / Qwen3-TTS | Directory; `--prefix` identifies produced file(s) |
 | Transcribe recording | `transcribe --audio` / Qwen3-ASR | Stem **without** extension; runtime adds selected format |
+| Local Whisper transcription / timestamp estimates | Separate `whisper-cli`; see [Whisper workflow](whisper.md) | `-of` stem **without** extension; selected flags add formats |
 | Generate video | `video` / Lance-3B | File; normally MP4 |
 | Generate song | `music --prompt` / ACE-Step 1.5 | File ending `.wav`, `.flac`, or `.mp3` |
 | Translate English → Korean | `translate` / OPUS-MT | UTF-8 `.txt` file |
@@ -38,6 +39,8 @@ For Qwen Image 2.1, check the [current Qwen Research License](https://huggingfac
 Current generation width/height must be positive multiples of 32. Do not overwrite the reference image. Model readiness or earlier license acceptance does not establish the rights for a different use.
 
 ### Speech and transcription
+
+The `ai transcribe` examples below use Qwen3-ASR. For a requested Whisper backend, use the separate [Whisper workflow](whisper.md), including model reuse, crop provenance and timestamp limitations. Do not install the LocalAIHub audio group just to use an existing Whisper runtime.
 
 ```sh
 "$AI" tts --text '안녕하세요.' --model custom-voice --voice Sohee --language Korean --output "$OUT" --prefix greeting

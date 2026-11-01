@@ -1,4 +1,4 @@
 interface:
   display_name: "Local AI Studio"
-  short_description: "Local AI Studio 설치·모델 준비·로컬 작업 결과 확인"
-  default_prompt: "$local-ai-studio로 필요한 경우 Local AI Studio와 모델을 설치하고 요청한 작업의 결과를 확인해주세요."
+  short_description: "Local AI Studio 설치·로컬 작업·Whisper 전사와 추정 타임스탬프 확인"
+  default_prompt: "$local-ai-studio로 필요한 모델을 준비해 로컬 작업을 실행하고, 전사·타임스탬프를 요청한 경우 정확도와 검토 범위를 확인해주세요."

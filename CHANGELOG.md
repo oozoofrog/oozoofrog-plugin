@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add an independent generated Xcode project and real Run Script verification for normal/incremental builds, configuration rechecks, lint/missing/non-executable tool failures and recovery, with Script Sandbox enabled and object reuse evidence.
+
+- Add a pinned SwiftPM/SwiftLint 0.65.1 example and reproducible real-build verification for source/configuration incremental rechecks, non-executable/missing tool failures, recovery and executable output. Preserve initial verifier failures and distinguish this Mac result from standalone Xcode/CI/device execution.
+
+
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
@@ -11,12 +16,63 @@
 - Keep AX timeouts unsafe to replay and preserve completed action results and receipt identifiers when a later controller check fails. Distinguish already-satisfied state from delivery and reject missing AX readback as proof of an empty value. Unknown delivery does not authorize automatic retry.
 - Document verification scope and the pinned Agent Desktop reference; retain existing observation, input, permission and WindowServer guards.
 
+## Local AI Studio 0.3.0 — 2026-10-30
+
+- Add local Whisper speech recognition, transcription and timestamp estimates through a separate `whisper-cli` workflow, with verified large-v3-turbo model identity and read-only reuse.
+- Preserve crop provenance, distinguish JSON segment/token intervals from experimental DTW points, and retain process failures, hallucinations and listening/alignment limits. Transcription does not establish verified sung boundaries or authorize existing subtitle replacement.
+- Update the standalone skill, matching Plugin, discovery metadata and installation documentation. No model weights, runtime binaries or native app integration are bundled.
+
+## Refactor 0.2.0 — 2026-10-29
+
+- Add requested SwiftLint build integration for Xcode and SwiftPM projects, including generator-owned configuration, target coverage, pinned tools/configuration, incremental builds and failure propagation.
+- Route integration-only requests directly, preserve existing checks and trust controls, and require real build evidence before claiming integration works. General refactoring does not automatically change build settings.
+
+## Refactor 0.1.1 — 2026-10-29
+
+- Require SwiftLint diagnostics for Swift work, including analysis-only requests. Reuse valid diagnostics only for matching inputs, configuration and tool version. Missing diagnostics block completion; source analysis is not a substitute.
+- Keep installation permissions separate from the mandatory diagnostic requirement and align entrypoint, Swift guidance, invocation prompts and documentation.
+
+## Refactor 0.1.0 — 2026-10-29
+
+- Migrate the reviewed personal Refactor skill into standalone source and a matching skills-only Plugin, with marketplace registration and distribution checks.
+- Preserve behavior, scope selection, existing user edits, repository checks and SwiftLint version/configuration guidance. Remove blanket SwiftLint installation permission from the default prompt and clarify analysis-only handling when tools are missing.
+
+## Team harness [0.6.1] - 2026-10-29
+
+- Add evidence-based adaptive collaboration guidance to Team Coordination: provisional initial allocation, session-level observations, cause-aware leader adjustments and independent review of consequential allocation claims.
+- Separate delivery acceptance from reusable learning, preserve human model choices and original checks, and distinguish task adjustments, project rules and authorized shared-skill maintenance. This adds no automatic router, state schema, permanent audit role or active-team adoption.
+- Team Coordination now defaults to direct work and existing-owner reuse. New chats need explicit creation authority and a concrete benefit; Astra bootstrap is optional. Preserve required independent review and safe ownership while reducing redundant roles, handoffs and status-only wakeups.
+
+## Team harness [0.6.0] - 2026-10-27
+
+- Add a read-only collaboration doctor and a coordinator-led recovery workflow. Inspect configured tool policies and public-tool evidence for exact pending requests, stale packets, direct member questions, identity/decision-route errors, message outcomes, model capacity and declared owner conflicts.
+- Keep already-approved settings unchanged; do not infer a blocked command from generic `waitingOnApproval`, treat send submission as acknowledgement, retry an uncertain producer or work around an observed denial. Recovery plans require current delegation and supported client controls.
+- Expose `run.py collaboration-doctor` and the standalone script, with Python 3.11+ for this optional command. The existing installer doctor remains separate. Add direct regression coverage and preserve the distinction between configuration, observation, native popup behavior and product acceptance.
+
+## Team harness [0.5.9] - 2026-10-27
+
+- Treat an actionable skill invocation as delegation for necessary same-task collaboration to its leader and members. Carry the original human source, team IDs and decision route in every role packet; no separate per-destination or per-message approval is needed within that delegation.
+- Route every member's approval, clarification and choice needs to the leader. Keep ordinary decisions inside the team, continue independent authorized work and consolidate indispensable user actions in the leader's report. Preserve actual permission gates, ownership and independent review.
+- Document official user-wide `approve` overrides for six collaboration/continuation tools, distinct from conversational task authority. One coordinator applies and validates the narrow configuration change; preserve unrelated settings and restrictions. Saving settings does not attest active-session adoption or absence of native popups.
+
+## Team harness [0.5.8] - 2026-10-26
+
+- Carry the human's goal-scoped team coordination instruction and trusted source through role packets. Routine team instructions, questions, review requests and result reporting continue without initial or repeated messaging-approval prompts, including while the user is away.
+- Preserve the original human instruction, exact task/team membership and changes or revocation across formation, resume and handoff. Keep entrypoint guidance, leader instructions and Plugin prompts consistent with the same scope.
+- This release changes coordination guidance. It does not implement pending-prompt detection or automatic approval of native tool permission requests. Plugin installation and active-project contract adoption remain separate.
+
 ## C4fy 0.3.0 — 2026-10-26
 
 - Infer project domains, types and roles with explicit overrides and visible provenance; apply stable domain colors, type shapes and role icons, and preserve assignments in JSON.
 - Add eight theme choices and seven circuit effects. Cyberpunk uses dark-only near-black cards, neon borders and enlarged, more frequent sparks; leaving the theme restores the appearance preference.
 - Preserve readable text and connectors, selected outlines, type decorations outside text, Nouveau corners and Liquid gradients. Export theme fonts, borders, gradients, shadows and scope styling to SVG.
 - Add semantic classification, theme appearance, narrow-screen, selection and export regression checks.
+
+## Team harness [0.5.7] - 2026-10-25
+
+- Start user-requested sidebar teams with a separate Astra project-analysis and formation chat, followed by a tailored coordination-only leader and professionally distinctive teammates. Reuse task-known chats and prevent delegated-role recursive formation.
+- Preserve official app messaging authorization, pending/ready creation receipts, exact requested role models/efforts and the boundary between sidebar guidance and managed adapter enforcement. Plugin installation creates no chats and does not migrate active project contracts.
+- Validate the source-directed live flow through actual Astra formation, role packet acknowledgements, independent scoped review and scoped acceptance. No product writes, recursive teams or cross-chat messages occurred. Installed fresh-chat discovery and provider execution model/tier remain unverified by that trial.
 
 ## C4fy 0.2.0 — 2026-10-25
 
@@ -202,6 +258,7 @@
 - MacPilot `3.2.0`에 macOS 시스템 설정 옆에 붙는 88×88pt 아이콘 전용 권한 안내 패널을 추가했습니다. 설정 창 이동 추적, 다른 앱 전환 시 숨김, 패널 아이콘의 실제 앱 파일 드래그, 우클릭 메뉴의 선택적 자동 추가·권한 전환·요청·재검사를 지원합니다. Finder와 큰 별도 설정 창은 열지 않습니다. Automation은 대상 앱별 macOS 동의를 사용합니다. 일반 제어에 불필요한 입력 모니터링·전체 디스크 접근은 선택 항목으로 남깁니다. 인증·재실행·최종 승인은 사용자가 진행합니다.
 
 ## [Unreleased]
+
 
 - MacPilot에 `permission-setup`과 `mac_permission operation=setup`을 추가했습니다. 실행한 앱 번들을 시스템 설정에 드래그하는 네이티브 창, 설정 바로 열기, Finder 표시와 창 프로세스 기준 권한 상태를 제공합니다. 기본 권한 요청은 유지하며 드롭 수락과 실제 사용자 승인·현재 MCP 권한을 구분합니다. 백그라운드 유지 작업과 다른 작업의 시스템 입력 잠금에서는 권한 요청·설정 실행을 사전에 차단합니다.
 
