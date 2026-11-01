@@ -1,7 +1,7 @@
 {
   "name": "team-coordination",
-  "version": "0.5.6",
-  "description": "Coordinate an enabled leader-and-execution-team workflow with explicit roles, ownership, versioned context acknowledgements, evidence and recovery.",
+  "version": "0.6.1",
+  "description": "Coordinate an existing team or a user-requested new team with minimal overhead; prefer direct work and reuse, preserve ownership and independent review, and diagnose collaboration stalls with doctor.",
   "author": {
     "name": "oozoofrog",
     "url": "https://github.com/oozoofrog"
@@ -10,8 +10,8 @@
   "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
   "interface": {
     "displayName": "Team Coordination",
-    "shortDescription": "Opt-in roles, ownership, evidence and recovery",
-    "longDescription": "Opt-in team guidance and managed pilot, read-only by default with explicitly bounded handoff writing. Runtime source is provided separately in tools/codex-team-harness. Plugin installation does not modify global guidance, runtime, hooks, models or authentication.",
+    "shortDescription": "Direct work, team reuse and collaboration doctor",
+    "longDescription": "Prefer direct work and existing-team reuse. New sidebar chats require explicit human creation authority and a concrete benefit over their coordination cost. A separate Astra bootstrap is optional. Preserve single-writer ownership, required independent review and internal decision routing. Doctor diagnoses and guides bounded recovery of existing collaboration without creating diagnostic teams. Evidence-led adaptation remains task-scoped; installation does not prove active-team adoption.",
     "developerName": "oozoofrog",
     "category": "Productivity",
     "capabilities": [
@@ -19,7 +19,7 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Use $team-coordination for the enabled team workflow and verify current context and ownership."
+      "Use $team-coordination to complete my goal with minimal coordination overhead: work directly when sufficient, reuse existing owners and required review, and create chats only when I explicitly request them and their benefit is clear."
     ]
   }
 }

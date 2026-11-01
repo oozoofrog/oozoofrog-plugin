@@ -1,7 +1,7 @@
 {
   "name": "local-ai-studio",
-  "version": "0.2.1+codex.20260924132008",
-  "description": "Set up Local AI Studio and the needed model group when requested, then use its local ai CLI for media or English-to-Korean translation and verify saved results.",
+  "version": "0.3.0",
+  "description": "Use Local AI Studio for requested local model work, including separate Whisper transcription and timestamp estimates; prepare only needed prerequisites and verify saved results.",
   "author": {
     "name": "oozoofrog",
     "url": "https://github.com/oozoofrog"
@@ -9,8 +9,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Local AI Studio",
-    "shortDescription": "Local AI Studio \uc124\uce58\u00b7\ubaa8\ub378 \uc900\ube44\u00b7\ub85c\uceec \uc791\uc5c5 \uacb0\uacfc \ud655\uc778",
-    "longDescription": "For requested Local AI Studio or on-device model tasks on Apple Silicon, discover the existing CLI or set up LocalAIHub and only the required model group. Do not install for generic media requests. Respect user-selected tools and storage, obtain explicit Qwen license acceptance when needed, and verify actual output separately from readiness. No model weights, media, credentials, MCP, apps or hooks are bundled.",
+    "shortDescription": "Local AI Studio \uc124\uce58\u00b7\ub85c\uceec \uc791\uc5c5\u00b7Whisper \uc804\uc0ac\uc640 \ucd94\uc815 \ud0c0\uc784\uc2a4\ud0ec\ud504 \ud655\uc778",
+    "longDescription": "For requested Local AI Studio or on-device model tasks on Apple Silicon, discover the selected backend or prepare only needed prerequisites. Local Whisper transcription and timestamp estimates use a separate whisper-cli workflow with verified model reuse, crop provenance and experimental DTW limits; this does not establish native app integration. Do not install for generic media requests. Respect selected tools/storage and Qwen license requirements; distinguish output verification from readiness and listening review. No model weights, media, credentials, MCP, apps or hooks are bundled.",
     "developerName": "oozoofrog",
     "category": "Productivity",
     "capabilities": [
@@ -18,7 +18,7 @@
       "Write"
     ],
     "defaultPrompt": [
-      "$local-ai-studio\ub85c \ud544\uc694\ud55c \uacbd\uc6b0 Local AI Studio\uc640 \ubaa8\ub378\uc744 \uc124\uce58\ud558\uace0 \uc694\uccad\ud55c \uc791\uc5c5\uc758 \uacb0\uacfc\ub97c \ud655\uc778\ud574\uc8fc\uc138\uc694."
+      "$local-ai-studio\ub85c \ud544\uc694\ud55c \ubaa8\ub378\uc744 \uc900\ube44\ud574 \ub85c\uceec \uc791\uc5c5\uc744 \uc2e4\ud589\ud558\uace0, \uc804\uc0ac\u00b7\ud0c0\uc784\uc2a4\ud0ec\ud504\ub97c \uc694\uccad\ud55c \uacbd\uc6b0 \uc815\ud655\ub3c4\uc640 \uac80\ud1a0 \ubc94\uc704\ub97c \ud655\uc778\ud574\uc8fc\uc138\uc694."
     ]
   },
   "repository": "https://github.com/oozoofrog/oozoofrog-plugin"
