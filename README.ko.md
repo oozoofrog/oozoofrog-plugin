@@ -87,13 +87,15 @@ Standalone `local-ai-studio/`와 byte-identical skills-only Plugin `0.2.1`을 �
 
 ## MacPilot
 
+3.6은 CLI·MCP 성공과 오류에 공통 전달·재시도 상태를 추가합니다. 전달 불확실·미검증 상태에서는 자동 재전송하지 않습니다. [전달 결과 계약](macpilot/references/delivery-contract.md)을 확인하세요.
+
 `macpilot`는 macOS 앱·창·메뉴·파일·시스템과 브라우저·iOS Simulator 작업을 관찰·실행·검증합니다. 제한 시간 동안 게임 키를 동시에 유지하거나 반복해서 누르며, 전역 키보드·마우스 입력 중 화면 가장자리 효과와 작은 조작 중 안내를 표시합니다. 작업별 멀티 가상 커서, 백그라운드 제어, 라이브 프리뷰, 선택적 private API와 Codex 개선 요청 전송이 필요한 데스크톱 워크플로에 사용합니다.
 
 ```text
 $macpilot로 macOS·브라우저 작업과 화면·시스템 오디오 녹화를 수행하고 결과를 검증하세요.
 ```
 
-원본은 [macpilot/](macpilot/), 배포 사본은 [Plugin 스킬](plugins/macpilot/skills/macpilot/SKILL.md)에서 관리합니다. `3.5.1`은 Swift 코어·CLI·MCP, 작업 격리·취소·포커스, 라이브 캡처·오버레이, 파일·Finder 태그·CoreAudio, Chromium 확장과 Safari Apple Events, 로컬 개선 요청 대기열·Codex app-server 전송을 포함합니다. 실제 OS 커서와 키보드 포커스는 공유하며, 모든 앱·모든 브라우저 기능의 성공을 보장하지 않습니다. [작업별 지원 범위](macpilot/references/workflows.md)에 백엔드별 제약을 명시합니다.
+원본은 [macpilot/](macpilot/), 배포 사본은 [Plugin 스킬](plugins/macpilot/skills/macpilot/SKILL.md)에서 관리합니다. `3.6.0`은 Swift 코어·CLI·MCP, 작업 격리·취소·포커스, 라이브 캡처·오버레이, 파일·Finder 태그·CoreAudio, Chromium 확장과 Safari Apple Events, 로컬 개선 요청 대기열·Codex app-server 전송을 포함합니다. 실제 OS 커서와 키보드 포커스는 공유하며, 모든 앱·모든 브라우저 기능의 성공을 보장하지 않습니다. [작업별 지원 범위](macpilot/references/workflows.md)에 백엔드별 제약을 명시합니다.
 
 3.5는 읽기 전용 `mac_analyze`로 AX 계층 요약·문자열 검색·속성/액션 열거·UTF-16 텍스트 범위·앱 범위 hit test를 제공합니다. 창을 활성화하거나 클릭하지 않으며 외부 AX 라이브러리를 사용하지 않습니다. [UI 분석과 Baepsae 비교](macpilot/references/ui-analysis.md)를 참고하세요.
 

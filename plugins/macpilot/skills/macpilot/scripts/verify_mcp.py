@@ -84,7 +84,15 @@ def tool_error_code(response):
     content = result.get("content", [])
     if not result.get("isError") or not content:
         return None
-    return json.loads(content[0]["text"]).get("code")
+    failure = json.loads(content[0]["text"])
+    disposition = failure.get("disposition", {})
+    expected_retry = {"not_delivered":"safe", "unknown":"unknown", "delivery_uncertain":"unsafe",
+                      "delivered_unverified":"unsafe", "delivered_verified":"unsafe"}
+    check(disposition.get("delivery") in expected_retry
+          and disposition.get("retry") == expected_retry.get(disposition.get("delivery")),
+          "tool error lost its delivery/retry contract", failure)
+    check(result.get("structuredContent") == failure, "MCP text and structured error differ", result)
+    return failure.get("code")
 
 
 subprocess.run(

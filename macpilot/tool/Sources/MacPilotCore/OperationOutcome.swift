@@ -1,16 +1,43 @@
 import Foundation
 
+/// Retry safety concerns duplicate delivery, not permission or task completion.
+public enum DeliveryDisposition: String, Codable, Sendable {
+    case unknown
+    case notDelivered = "not_delivered"
+    case uncertain = "delivery_uncertain"
+    case unverified = "delivered_unverified"
+    case verified = "delivered_verified"
+
+    public var object: [String: String] {
+        let retry = self == .notDelivered ? "safe" : self == .unknown ? "unknown" : "unsafe"
+        return ["delivery": rawValue, "retry": retry]
+    }
+}
+
 /// Additive transport contract. A verified local predicate is never task acceptance.
 public struct OperationOutcome: Codable, Equatable, Sendable {
     public var dispatch: String
     public var effect: String
     public var retry: String
     public var scope: String
-    public init(dispatch: String, effect: String, retry: String, scope: String = "operation") {
+    public var delivery: DeliveryDisposition?
+    public init(dispatch: String, effect: String, retry: String, scope: String = "operation", delivery: DeliveryDisposition? = nil) {
         self.dispatch = dispatch; self.effect = effect; self.retry = retry; self.scope = scope
+        self.delivery = delivery
     }
     public var object: [String: Any] {
-        ["schema":"macpilot-outcome/1", "dispatch":dispatch, "effect":effect, "retry":retry, "scope":scope]
+        ["schema":"macpilot-outcome/1", "dispatch":dispatch, "effect":effect, "retry":retry, "scope":scope,
+         "disposition":disposition.object]
+    }
+    public var disposition: DeliveryDisposition {
+        if let delivery { return delivery }
+        switch dispatch {
+        case "not_sent", "not_needed", "not_applicable": return .notDelivered
+        case "partial_or_unknown": return .uncertain
+        case "sent":
+            return ["postcondition_verified", "postconditions_verified"].contains(effect) ? .verified : .unverified
+        default: return .unknown
+        }
     }
 }
 
@@ -36,6 +63,12 @@ public enum Outcomes {
         }
     }
     public static func result(_ tool: String, arguments: [String: Any], value: [String: Any]) -> OperationOutcome {
+        if let explicit = value["outcome"] as? [String:Any],
+           let dispatch = explicit["dispatch"] as? String, let effect = explicit["effect"] as? String,
+           let retry = explicit["retry"] as? String, let scope = explicit["scope"] as? String {
+            let delivery = (explicit["disposition"] as? [String:String])?["delivery"].flatMap(DeliveryDisposition.init(rawValue:))
+            return OperationOutcome(dispatch:dispatch, effect:effect, retry:retry, scope:scope, delivery:delivery)
+        }
         let status = value["status"] as? String ?? "unknown"
         let read = isRead(tool, arguments: arguments)
         let predicate = predicateTools.contains(tool) || (tool == "mac_browser" && ["verify","wait"].contains(arguments["operation"] as? String ?? ""))
@@ -51,23 +84,34 @@ public enum Outcomes {
                                     retry:matches ? "not_needed" : "read_again", scope:"selected_predicate")
         }
         if status == "workflow_verified" {
-            return OperationOutcome(dispatch:"sent", effect:"postconditions_verified", retry:"not_needed", scope:"declared_workflow_postconditions")
+            let noMutation = (value["run"] as? [String:Any])?["mutationsDispatched"] as? Int == 0
+            return OperationOutcome(dispatch:"sent", effect:"postconditions_verified", retry:"not_needed", scope:"declared_workflow_postconditions",
+                                    delivery:noMutation ? .notDelivered : nil)
         }
         if status == "workflow_postcondition_failed" {
             return OperationOutcome(dispatch:"partial_or_unknown", effect:"predicate_not_met", retry:"observe_before_deciding", scope:"declared_workflow_postconditions")
         }
         if read { return OperationOutcome(dispatch:"not_applicable", effect:"read_completed", retry:"read_again") }
         if status.hasSuffix("_verified") {
-            return OperationOutcome(dispatch:"sent", effect:"postcondition_verified", retry:"not_needed", scope:"operation_postcondition")
+            return OperationOutcome(dispatch:"sent", effect:"postcondition_verified", retry:"not_needed", scope:"operation_postcondition",
+                                    delivery:value["actionDispatched"] as? Bool == false ? .notDelivered : nil)
         }
         if ["task_started", "task_finished", "task_cancelled", "task_resumed", "trace_configured", "image_search_configured", "workflow_saved", "workflow_removed"].contains(status) {
             return OperationOutcome(dispatch:"not_applicable", effect:"state_recorded", retry:"not_needed", scope:"controller_state")
+        }
+        if ["action_requested", "activation_requested", "dispatched_unverified", "shortcut_completed", "script_completed",
+            "open_accepted", "focus_requested", "requested_unverified", "value_unverified", "range_unverified",
+            "focus_unverified", "close_unverified", "minimize_state_unverified",
+            "move_unverified", "resize_unverified", "file_write_unverified", "file_copy_unverified",
+            "file_move_unverified", "tags_unverified"].contains(status) {
+            return OperationOutcome(dispatch:"sent_or_unknown", effect:"unverified", retry:"observe_before_deciding", delivery:.unverified)
         }
         return OperationOutcome(dispatch:"sent_or_unknown", effect:"unverified", retry:"observe_before_deciding")
     }
     public static func attach(_ tool: String, arguments: [String: Any], value: [String: Any]) -> [String: Any] {
         var result = value
         if result["outcome"] == nil { result["outcome"] = self.result(tool, arguments: arguments, value: value).object }
+        result["disposition"] = self.result(tool, arguments:arguments, value:result).disposition.object
         return result
     }
     public static func failure(_ tool: String, arguments: [String: Any], beforeDispatch: Bool) -> OperationOutcome {
@@ -78,5 +122,16 @@ public enum Outcomes {
             return OperationOutcome(dispatch:"not_sent", effect:"not_checked", retry:"correct_precondition")
         }
         return OperationOutcome(dispatch:"partial_or_unknown", effect:"unverified", retry:"observe_before_deciding")
+    }
+
+    public static func failure(_ error: Error, tool: String, arguments: [String:Any], beforeDispatch: Bool,
+                               completedResult: [String:Any]?, improvementRequestID: String? = nil) -> ToolFailure {
+        let original = error as? ToolFailure
+        let outcome = completedResult.map { result(tool, arguments:arguments, value:$0) }
+            ?? original?.outcome ?? failure(tool, arguments:arguments, beforeDispatch:beforeDispatch)
+        let afterAction = completedResult.flatMap { try? jsonData($0) } ?? original?.afterActionJSON
+        return ToolFailure(original?.code ?? "native_error", original?.description ?? error.localizedDescription,
+                           improvementRequestID:improvementRequestID ?? original?.improvementRequestID,
+                           outcome:outcome, afterActionJSON:afterAction)
     }
 }

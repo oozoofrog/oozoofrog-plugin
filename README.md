@@ -58,13 +58,15 @@ After setup, inspect supported commands with `ai --help`. Public LocalAIHub sour
 
 ## MacPilot
 
+Version 3.6 adds a shared delivery/retry disposition to CLI and MCP success and error results. Unknown or uncertain delivery never authorizes automatic replay; see the [delivery contract](macpilot/references/delivery-contract.md).
+
 Use `macpilot` to observe, execute, and verify macOS app, window, menu, file, system, browser, and iOS Simulator tasks. It supports bounded simultaneous game-key holds and repeated taps, visible screen edges and a small notice during system keyboard/mouse input, per-task virtual cursors, background control, live previews, optional private APIs, and sending authorized improvement requests to Codex.
 
 ```text
 Use $macpilot to perform the macOS and browser tasks, record the screen and system audio, and verify the results.
 ```
 
-The source is maintained in [macpilot/](macpilot/), with a distribution copy in the [Plugin skill](plugins/macpilot/skills/macpilot/SKILL.md). Version `3.5.1` includes the Swift core, CLI and MCP implementation, task isolation, cancellation, focus control, live capture and overlays, file operations, Finder tags, CoreAudio, a Chromium extension, Safari Apple Events, and a local improvement-request queue with Codex app-server delivery. The physical OS cursor and keyboard focus remain shared resources. Support varies by app and browser; see the [workflow and backend limits](macpilot/references/workflows.md).
+The source is maintained in [macpilot/](macpilot/), with a distribution copy in the [Plugin skill](plugins/macpilot/skills/macpilot/SKILL.md). Version `3.6.0` includes the Swift core, CLI and MCP implementation, task isolation, cancellation, focus control, live capture and overlays, file operations, Finder tags, CoreAudio, a Chromium extension, Safari Apple Events, and a local improvement-request queue with Codex app-server delivery. The physical OS cursor and keyboard focus remain shared resources. Support varies by app and browser; see the [workflow and backend limits](macpilot/references/workflows.md).
 
 Version 3.5 adds `mac_analyze` for read-only native AX summaries, literal search, attribute/action metadata, UTF-16 text ranges, and app-scoped hit tests. It also reads native text bounds and line ranges. `mac_simulator` adds exact-UDID app lifecycle, PNG/video, iOSContentGroup analysis, and opt-in IndigoHID touch/gesture/button/key input through an isolated driver. Only Simulator features require Xcode and a matching runtime; see [Simulator requirements](macpilot/references/simulator.md). It does not activate or click during AX analysis. See [UI analysis and the Baepsae comparison](macpilot/references/ui-analysis.md).
 

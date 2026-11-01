@@ -5,6 +5,12 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## MacPilot [3.6.0] — 2026-11-01
+
+- Add a common delivery/retry disposition to CLI and MCP success and error responses while preserving existing status and outcome fields.
+- Keep AX timeouts unsafe to replay and preserve completed action results and receipt identifiers when a later controller check fails. Distinguish already-satisfied state from delivery and reject missing AX readback as proof of an empty value. Unknown delivery does not authorize automatic retry.
+- Document verification scope and the pinned Agent Desktop reference; retain existing observation, input, permission and WindowServer guards.
+
 ## C4fy 0.3.0 — 2026-10-26
 
 - Infer project domains, types and roles with explicit overrides and visible provenance; apply stable domain colors, type shapes and role icons, and preserve assignments in JSON.

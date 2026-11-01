@@ -135,3 +135,9 @@ WindowServer 세션을 확인할 수 없으면 `doctor`와 연결 상태는 `des
 조건 대기는 불완전한 AX 수집을 원래 마감 시각 안에서 읽기만 다시 시도합니다. 불완전한 수집 뒤에는 안정 구간을 다시 측정합니다. 후속 완전한 관찰이 해소하지 못한 불확실성은 마감 때 `partial_coverage`로 유지하며, 이전 관찰만으로 현재 조건의 부재나 후조건 실패를 단정하지 않습니다. 워크플로의 이미 보낸 동작은 재전송하지 않습니다. `ConditionTests`는 실제 대기 루프의 내부 관찰 공급자를 사용해 복구·불확실성·안정 구간·보안/정체성 오류와 임시 관찰 정리를 검증합니다. 이 공급자는 도구 인수로 노출하지 않습니다.
 
 기능 검증 보고서 `macpilot-capability-check/2`는 전체 실행에 필수 45개 `(feature, id)`를 요구합니다. `suiteStatus=passed`, `completed=true`, `stage=all`은 검사 본문과 fixture 정리가 모두 성공한 뒤에만 기록합니다. 중단된 실행은 통과한 접두 항목과 본문/정리 오류의 종류를 보존합니다. `image` 단계의 12개 검사나 이전 schema 보고서는 전체 릴리스 근거를 대체하지 않습니다. 릴리스 게이트는 검토한 `scripts/capability_report.py`의 항목 목록을 기준으로 누락·중복·예상 밖 항목을 거부합니다. 호출 측은 실제 프로세스 종료 코드 0도 별도로 확인합니다.
+
+전달 계약 회귀는 `DispositionTests`와 CLI/MCP·capability fixture에서 검사한다. `delayed_enabled` 검사는 해당 wait가 비활성 노드를 수집한 관찰 파일을 확인한 뒤 상태를 변경한다. 고정 지연을 CLI 시작 전에 예약하면 첫 관찰 전에 지연이 끝날 수 있으므로 관찰 횟수 검증에 사용하지 않는다. 최초 실패와 `wait-start-observation.json`을 보존하며 관찰 횟수·완전한 후조건 검사를 완화하지 않는다.
+
+런타임 회귀 정리는 실행이 소유한 overlay·preview·input-activity 호스트를 모두 포함한다. PID와 processStartID를 함께 검증해 종료한 다음 임시 상태를 제거한다. 정리 오류가 본문 검사 결과를 지우지 않도록 보고서를 저장하고 전체 상태를 실패로 기록한다. 입력 안내 호스트의 heartbeat가 살아 있는 상태에서 임시 디렉터리를 지우지 않는다. 종료 직전 자연 종료한 호스트는 `kill(pid, 0)`의 ESRCH로 부재를 재확인한다. `app_identity_unavailable` 오류만으로 종료를 추정하지 않는다.
+
+이미지 검색 회귀에서 픽셀 변경 거부가 나오면 원시 오류와 거부된 스냅샷을 보존한다. 읽기 전용 검색의 `disposition`이 정확히 `not_delivered`·`safe`일 때만 새 관찰로 최대 세 번 조회한다. 조정 횟수는 `readOnlyReconciliations`에 남긴다. 의도적으로 픽셀을 바꾸는 마지막 검사는 이 재조회 경로를 사용하지 않으며, 기존 픽셀 동일성 검사를 유지한다.

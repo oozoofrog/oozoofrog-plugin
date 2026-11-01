@@ -19,7 +19,7 @@ import CryptoKit
         catch let error as ToolFailure {
             if error.outcome != nil { throw error }
             throw ToolFailure(error.code, error.description, improvementRequestID: error.improvementRequestID,
-                              outcome: Outcomes.failure(tool, arguments: arguments, beforeDispatch: true))
+                              outcome: Outcomes.failure(tool, arguments: arguments, beforeDispatch: true), afterActionJSON:error.afterActionJSON)
         }
     }
     private func routeCall(_ tool: String, arguments: [String: Any]) async throws -> [String: Any] {
@@ -76,6 +76,7 @@ import CryptoKit
         let requestedPID = auditPID(arguments)
         var leases: [StateLease] = []
         var enteredDispatch = false
+        var completedResult: [String:Any]?
         var trace: TraceScope?, tracePreparationError: String?
         var actionStarted = DispatchTime.now().uptimeNanoseconds
         defer { inputMonitor = nil; withExtendedLifetime(leases) {} }
@@ -116,6 +117,7 @@ import CryptoKit
             actionStarted = DispatchTime.now().uptimeNanoseconds
             enteredDispatch = true
             var result = try await dispatch(tool, Arguments(arguments))
+            completedResult = result
             if let reason = result["reasonCode"] as? String,
                ["user_input_interrupted","input_monitor_lost"].contains(reason), let taskRecord {
                 try Tasks.interrupt(taskRecord.id, reason: reason, store: baseStore)
@@ -143,9 +145,11 @@ import CryptoKit
             store.audit(tool: tool, status: status, pid: requestedPID)
             let requestID = await Improvements.capture(error,tool:tool,task:taskRecord,store:baseStore)
             let failure = error as? ToolFailure
+            let reported = Outcomes.failure(error, tool:tool, arguments:arguments, beforeDispatch:!enteredDispatch,
+                                            completedResult:completedResult, improvementRequestID:requestID)
             if let trace {
                 _ = try? await Tracing.finish(trace,tool:tool,status:status,
-                                              outcome:failure?.outcome ?? Outcomes.failure(tool,arguments:arguments,beforeDispatch:!enteredDispatch),
+                                              outcome:reported.outcome!,
                                               elapsedMilliseconds:Int((DispatchTime.now().uptimeNanoseconds-actionStarted)/1_000_000),
                                               skipAfterCapture:inputMonitor?.reason != nil,engine:self)
             }
@@ -153,9 +157,7 @@ import CryptoKit
                 try? Tasks.interrupt(taskRecord.id, reason: reason, store: baseStore)
             }
             if error is CancellationError { throw error }
-            throw ToolFailure(failure?.code ?? "native_error", failure?.description ?? error.localizedDescription,
-                              improvementRequestID: requestID ?? failure?.improvementRequestID,
-                              outcome: failure?.outcome ?? Outcomes.failure(tool, arguments: arguments, beforeDispatch: !enteredDispatch))
+            throw reported
         }
     }
     private static func degradedDoctor(store: Store, session: DesktopSession) -> [String: Any] {
@@ -674,9 +676,7 @@ import CryptoKit
                 try ProcessIdentity.require(pid:o.pid,expected:o.processStartID)
                 try store.consume(o); try AX.set(element, kAXValueAttribute, text as CFString)
                 try await Task.sleep(nanoseconds: 100_000_000)
-                let live = AX.boundedString(element, kAXValueAttribute, limit: 65_536)
-                let matches = !live.truncated && live.value == text
-                return ["status":matches ? "value_verified" : "value_unverified", "equalsRequestedText":matches]
+                return AX.valuePostcondition(expected:text, observed:AX.value(element, kAXValueAttribute) as? String)
             case "select_range":
                 let start = try a.integer("start"), length = try a.integer("length")
                 guard let rawValue = AX.value(element, kAXValueAttribute) as? String else {
