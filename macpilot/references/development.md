@@ -1,6 +1,6 @@
 # 개발과 검증
 
-실행 코어·CLI·MCP·AX·캡처·CoreAudio·Codex app-server 연결은 Swift다. 선택적 SimulatorKit 입력 helper는 Objective-C이며 private ABI 실패를 별도 프로세스로 격리한다. 일반 실행은 Universal 배포 앱을 사용하며 Swift 설치가 필요 없다. 브라우저 확장은 JavaScript다. 기본 제어에서 Python과 Node.js는 개발 검증용이다. 선택적 이미지 검색만 명시적으로 설정한 로컬 Python 모델 worker를 사용한다. 패키지는 외부 SwiftPM 의존성이 없다.
+실행 코어·CLI·MCP·AX·캡처·CoreAudio·Codex app-server 연결은 Swift다. 선택적 SimulatorKit 입력 helper는 Objective-C이며 private ABI 실패를 별도 프로세스로 격리한다. 일반 실행은 Apple silicon 전용 배포 앱을 사용하며 Swift 설치가 필요 없다. 브라우저 확장은 JavaScript다. 기본 제어에서 Python과 Node.js는 개발 검증용이다. 선택적 이미지 검색만 명시적으로 설정한 로컬 Python 모델 worker를 사용한다. 패키지는 외부 SwiftPM 의존성이 없다.
 
 ## 검증 명령
 
@@ -8,7 +8,7 @@
 
 ```sh
 xcrun swift test --package-path macpilot/tool
-MACPILOT_UNIVERSAL=1 macpilot/scripts/build.sh
+macpilot/scripts/build.sh
 python3 macpilot/scripts/verify_mcp.py
 python3 macpilot/scripts/verify_connection.py --binary macpilot/bin/MacPilot.app/Contents/MacOS/macpilot
 python3 macpilot/scripts/verify_startup.py --binary macpilot/bin/MacPilot.app/Contents/MacOS/macpilot

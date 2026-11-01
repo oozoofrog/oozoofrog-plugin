@@ -5,7 +5,7 @@ description: macOS 앱·창·메뉴·파일·시스템과 브라우저·iOS Simu
 
 # MacPilot
 
-이 폴더의 `scripts/macpilot`를 사용한다. macOS 14 이상에서 실행한다. 첫 실행은 공개 릴리스의 Universal 앱을 내려받아 고정 SHA-256과 서명을 확인한다. 일반 macOS 제어에는 Swift·Xcode 설치가 필요 없다. 소스 빌드는 명시적으로 `scripts/build.sh`를 실행한다. Simulator 기능에는 선택한 Xcode와 해당 런타임이 필요하다. 외부 SwiftPM 패키지는 없다. 기본 제어에는 Python·Node.js가 필요 없다. 선택적 VisionKit·EmbeddingGemma 2 이미지 검색은 명시적으로 설정한 로컬 Python 환경과 모델을 사용한다. Chromium 확장은 JavaScript를 사용한다. Codex 진단 전송을 설정할 때만 별도 Codex 실행 파일·로그인·모델 연결이 필요하다.
+이 폴더의 `scripts/macpilot`를 사용한다. Apple silicon Mac의 macOS 14 이상에서 실행한다. 첫 실행은 공개 릴리스의 Apple silicon 전용 앱을 내려받아 고정 SHA-256과 서명을 확인한다. 일반 macOS 제어에는 Swift·Xcode 설치가 필요 없다. 소스 빌드는 명시적으로 `scripts/build.sh`를 실행한다. Simulator 기능에는 선택한 Xcode와 해당 런타임이 필요하다. 외부 SwiftPM 패키지는 없다. 기본 제어에는 Python·Node.js가 필요 없다. 선택적 VisionKit·EmbeddingGemma 2 이미지 검색은 명시적으로 설정한 로컬 Python 환경과 모델을 사용한다. Chromium 확장은 JavaScript를 사용한다. Codex 진단 전송을 설정할 때만 별도 Codex 실행 파일·로그인·모델 연결이 필요하다.
 
 현재 채팅의 `mac_*` MCP 도구에 필요한 기능이 있으면 직접 호출한다. 설치된 서버가 구버전이면 이 스킬의 CLI를 사용한다. Plugin은 기존 MCP 설정이나 전역 스킬을 자동 교체하지 않는다. 정확한 인수는 `tools` 출력과 [도구 사용법](references/tools.md)에서 확인한다.
 

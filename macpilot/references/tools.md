@@ -12,7 +12,7 @@
 ./scripts/build.sh
 ```
 
-일반 실행에는 Swift·Xcode가 필요 없다. 런처는 `runtime/distribution.json`의 버전·실행 파일 해시와 앱 서명을 확인하고, 앱이 없거나 다르면 `install-runtime.sh`로 공식 릴리스의 Universal 앱을 내려받는다. 다운로드 실패 시 컴파일로 전환하지 않는다. 소스 개발은 `build.sh` 또는 명시적 `MACPILOT_BUILD_FROM_SOURCE=1`을 사용한다. 배포 빌드는 `MACPILOT_UNIVERSAL=1 scripts/build.sh`로 arm64·x86_64를 포함한다. Simulator만 Xcode·런타임을 요구한다. [Simulator 사용법](simulator.md)을 참고한다.
+일반 실행에는 Swift·Xcode가 필요 없다. 런처는 `runtime/distribution.json`의 버전·실행 파일 해시와 앱 서명을 확인하고, 앱이 없거나 다르면 `install-runtime.sh`로 공식 릴리스의 Apple silicon 전용 앱을 내려받는다. 다운로드 실패 시 컴파일로 전환하지 않는다. 소스 개발은 `build.sh` 또는 명시적 `MACPILOT_BUILD_FROM_SOURCE=1`을 사용한다. 배포 빌드는 `scripts/build.sh`로 arm64만 포함한다. Simulator만 Xcode·런타임을 요구한다. [Simulator 사용법](simulator.md)을 참고한다.
 
 CLI는 성공 시 JSON을 stdout에 출력한다. 인수·권한·대상 오류는 JSON 오류와 종료 코드 2를 반환한다. 도움말은 일반 텍스트다. 빌드 로그는 stderr로 출력한다.
 

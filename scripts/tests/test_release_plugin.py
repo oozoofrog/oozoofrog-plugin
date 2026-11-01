@@ -119,6 +119,17 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual('Fixture-1.0.0-macos-universal.zip', pins['asset'])
         self.assertEqual(self.job.version, pins['version'])
 
+    def test_macpilot_release_is_apple_silicon_only(self):
+        profile = json.loads((SOURCE / 'scripts/releases/macpilot.json').read_text())
+        self.assertEqual(['arm64'], profile['architectures'])
+        self.assertEqual('macos-arm64', profile['asset_platform'])
+
+    def test_arm64_release_rejects_universal_runtime(self):
+        self.test_pin_runtime_records_both_universal_executables()
+        self.job.profile['architectures'] = ['arm64']
+        with self.assertRaisesRegex(release.ReleaseError, 'architecture mismatch'):
+            self.job.pin_runtime()
+
     def test_unrelated_staged_file_stops_release(self):
         (self.root / 'other').write_text('user changes\n')
         self.git('add', 'other')

@@ -14,7 +14,7 @@ WinPilot 0.5.0은 이 MacPilot 전용 스크립트를 사용하지 않는다. [W
 python3 scripts/release_plugin.py prepare --plugin macpilot --version 3.5.0 --evidence macpilot/evidence/release-3.5.0
 ```
 
-MacPilot 원본의 Plugin manifest·Chromium manifest·Swift runtime version·앱 버전과 build 번호·README의 MacPilot 절·설치 문서·배포 검사의 버전을 맞추고 미러를 동기화한다. 실제 기능 변경과 필요한 검사도 완료한다. `MACPILOT_UNIVERSAL=1 macpilot/scripts/build.sh`로 arm64·x86_64 앱과 격리 드라이버를 빌드·서명한다. 이어 `python3 scripts/release_plugin.py pin-runtime --plugin macpilot --version 3.5.0 --evidence macpilot/evidence/release-3.5.0`으로 최종 두 실행 파일의 SHA-256을 `runtime/distribution.json`에 고정하고 미러를 갱신한다. 고정 manifest는 앱 내부에 넣지 않는다. 동일 최종 바이너리로 실제 검증한 뒤 스테이지한다. **해당 배포의 파일과 공용 파일의 해당 hunk만 스테이지한다.** 스크립트는 전체 변경을 자동 스테이지하지 않는다. `commit_paths`는 경로 허용 목록이며, 공용 파일 내부의 변경 권한까지 판별하지 않는다. `git diff --cached`로 공용 파일의 내용을 확인한다.
+MacPilot 원본의 Plugin manifest·Chromium manifest·Swift runtime version·앱 버전과 build 번호·README의 MacPilot 절·설치 문서·배포 검사의 버전을 맞추고 미러를 동기화한다. 실제 기능 변경과 필요한 검사도 완료한다. `macpilot/scripts/build.sh`로 arm64 전용 앱과 격리 드라이버를 빌드·서명한다. 이어 `python3 scripts/release_plugin.py pin-runtime --plugin macpilot --version 3.5.0 --evidence macpilot/evidence/release-3.5.0`으로 최종 두 실행 파일의 SHA-256을 `runtime/distribution.json`에 고정하고 미러를 갱신한다. 고정 manifest는 앱 내부에 넣지 않는다. 동일 최종 바이너리로 실제 검증한 뒤 스테이지한다. **해당 배포의 파일과 공용 파일의 해당 hunk만 스테이지한다.** 스크립트는 전체 변경을 자동 스테이지하지 않는다. `commit_paths`는 경로 허용 목록이며, 공용 파일 내부의 변경 권한까지 판별하지 않는다. `git diff --cached`로 공용 파일의 내용을 확인한다.
 
 ```sh
 python3 scripts/release_plugin.py verify --plugin macpilot --version 3.5.0 --evidence macpilot/evidence/release-3.5.0 --runtime-evidence macpilot/evidence/capabilities-implementation-20261018 --feature-report final-10/result.json --runtime-report runtime-final-02/report.json
@@ -34,7 +34,7 @@ python3 scripts/release_plugin.py package --plugin macpilot --version 3.5.0 --ev
 python3 scripts/release_plugin.py publish --plugin macpilot --version 3.5.0 --evidence macpilot/evidence/release-3.5.0 --notes /absolute/release-notes.md
 ```
 
-패키징은 검증한 커밋에서 Plugin 소스 tar.gz를 만든다. 실제 검사한 ad-hoc 서명 앱을 ZIP으로 묶고 `SHA256SUMS.txt`를 만든다. ZIP은 `ditto --norsrc`로 생성하여 AppleDouble sidecar를 포함하지 않습니다. 깨끗한 임시 경로에서 `ditto`와 `unzip`으로 각각 추출한 뒤 앱 서명과 실행 파일 해시를 확인합니다. 앱은 notarization을 받지 않았다. Plugin은 스킬·소스·고정 runtime manifest를 포함한다. 첫 실행에서 Universal 배포 앱의 두 실행 파일 해시·버전·서명을 검사해 설치한다. Swift·Xcode가 없는 사용자도 일반 macOS 기능을 실행한다. 다운로드 실패 시 컴파일하지 않는다. 소스 빌드는 명시적 선택이다. 이 절차의 설치 단계도 같은 릴리스 앱을 배치한다. Simulator 기능만 선택한 Xcode·런타임을 요구한다.
+패키징은 검증한 커밋에서 Plugin 소스 tar.gz를 만든다. 실제 검사한 ad-hoc 서명 앱을 ZIP으로 묶고 `SHA256SUMS.txt`를 만든다. ZIP은 `ditto --norsrc`로 생성하여 AppleDouble sidecar를 포함하지 않습니다. 깨끗한 임시 경로에서 `ditto`와 `unzip`으로 각각 추출한 뒤 앱 서명과 실행 파일 해시를 확인합니다. 앱은 notarization을 받지 않았다. Plugin은 스킬·소스·고정 runtime manifest를 포함한다. 첫 실행에서 Apple silicon 전용 배포 앱의 두 실행 파일 해시·버전·서명을 검사해 설치한다. Swift·Xcode가 없는 사용자도 일반 macOS 기능을 실행한다. 다운로드 실패 시 컴파일하지 않는다. 소스 빌드는 명시적 선택이다. 이 절차의 설치 단계도 같은 릴리스 앱을 배치한다. Simulator 기능만 선택한 Xcode·런타임을 요구한다.
 
 게시는 검증한 `main` HEAD만 허용한다. 원격 주소와 fast-forward 조건을 검사하고 push 후 원격 commit을 재확인한다. `<plugin>-v<version>` annotated tag가 다른 커밋을 가리키면 중단한다. GitHub draft release에 파일을 올리고 실제로 다시 내려받은 바이트를 비교한 뒤 공개한다. 이미 공개된 release는 같은 파일인지 확인하며 덮어쓰지 않는다. 네트워크 실패 후에는 같은 근거 디렉터리와 단계를 다시 사용한다. 소스·커밋·파일이 달라졌으면 기록을 검토한 뒤 새 배포를 준비한다.
 

@@ -2,6 +2,10 @@
 # Download the exact published runtime. Uses only programs included with macOS.
 set -eu
 umask 077
+if [ "$(/usr/sbin/sysctl -n hw.optional.arm64 2>/dev/null || true)" != 1 ]; then
+    printf '%s\n' 'MacPilot requires Apple silicon. Intel Macs are not supported.' >&2
+    exit 1
+fi
 skill_dir=$(CDPATH= cd -- "$(/usr/bin/dirname -- "$0")/.." && pwd)
 manifest="$skill_dir/runtime/distribution.json"
 version=$(/usr/bin/plutil -extract version raw "$manifest")
@@ -9,7 +13,7 @@ asset=$(/usr/bin/plutil -extract asset raw "$manifest")
 main_sha=$(/usr/bin/plutil -extract mainSHA256 raw "$manifest")
 helper_sha=$(/usr/bin/plutil -extract helperSHA256 raw "$manifest")
 case $version in *[!0-9.]*|'') exit 1;; esac
-case $asset in "MacPilot-$version-macos-universal.zip") ;; *) exit 1;; esac
+case $asset in "MacPilot-$version-macos-arm64.zip") ;; *) exit 1;; esac
 for hash in "$main_sha" "$helper_sha"; do
     [ "${#hash}" -eq 64 ] || { printf '%s\n' 'Published runtime hashes are missing. Use build.sh only for explicit source development.' >&2; exit 1; }
     case $hash in *[!0-9a-f]*) exit 1;; esac
@@ -23,6 +27,9 @@ verify() {
     [ "$(/usr/bin/plutil -extract CFBundleShortVersionString raw "$selected/Contents/Info.plist")" = "$version" ] || return 1
     [ "$(/usr/bin/shasum -a 256 "$selected/Contents/MacOS/macpilot" | /usr/bin/cut -d ' ' -f 1)" = "$main_sha" ] || return 1
     [ "$(/usr/bin/shasum -a 256 "$selected/Contents/MacOS/macpilot-simulator-hid" | /usr/bin/cut -d ' ' -f 1)" = "$helper_sha" ] || return 1
+    for product in macpilot macpilot-simulator-hid; do
+        [ "$(/usr/bin/file -b "$selected/Contents/MacOS/$product")" = 'Mach-O 64-bit executable arm64' ] || return 1
+    done
     /usr/bin/codesign --verify --deep --strict "$selected" >&2
 }
 if verify "$bundle" 2>/dev/null; then exit 0; fi

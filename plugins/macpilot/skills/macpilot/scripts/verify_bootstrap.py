@@ -45,10 +45,12 @@ def main():
             check('fresh prebuilt MCP exposes native analysis and Simulator',{'mac_analyze','mac_simulator'}.issubset(names),toolCount=len(catalog))
             check('fresh prebuilt MCP executes ordinary read',server.call('mac_connection',operation='status')['version']==pins['version'])
             server.close();server=None
-            if Path('/Library/Apple/usr/share/rosetta/rosetta').exists():
-                intel=subprocess.run(['/usr/bin/arch','-x86_64',str(binary),'call','mac_connection','--json','-'],input=json.dumps(dict(operation='status')),capture_output=True,text=True,env=env,timeout=45)
-                (out/'rosetta.stdout.json').write_text(intel.stdout);(out/'rosetta.stderr.log').write_text(intel.stderr)
-                check('x86_64 runtime executes without developer tools under Rosetta',intel.returncode==0 and json.loads(intel.stdout)['version']==pins['version'],runtime='Rosetta on Apple Silicon; not native Intel hardware')
+            for path in (binary, helper):
+                architecture = subprocess.check_output(['/usr/bin/file', '-b', str(path)], text=True).strip()
+                check(path.name+' is arm64 only', architecture == 'Mach-O 64-bit executable arm64', architecture=architecture)
+            native=subprocess.run(['/usr/bin/arch','-arm64',str(binary),'call','mac_connection','--json','-'],input=json.dumps(dict(operation='status')),capture_output=True,text=True,env=env,timeout=45)
+            (out/'arm64.stdout.log').write_text(native.stdout);(out/'arm64.stderr.log').write_text(native.stderr)
+            check('arm64 runtime executes without Rosetta or developer tools',native.returncode==0 and json.loads(native.stdout)['version']==pins['version'])
             # Validation rejects altered signed app bytes without executing them. Missing network is explicit.
             data=helper.read_bytes();helper.write_bytes(data+b'tampered')
             bad=subprocess.run(['/bin/sh',str(skill/'scripts/install-runtime.sh')],capture_output=True,text=True,env=dict(env,HTTPS_PROXY='http://127.0.0.1:1',https_proxy='http://127.0.0.1:1'),timeout=20)
