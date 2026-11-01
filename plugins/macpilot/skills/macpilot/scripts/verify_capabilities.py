@@ -151,7 +151,30 @@ def main():
         if args.stage == 'all':
             def wait(c, **kw): return f.call('mac_wait_for', dict(f.identity, condition=c, timeoutMs=2500, **kw))
             r = wait(condition('ready', 'disabled')); ck('wait','disabled',r['matches'])
-            f.command('enable', .4); r = wait(condition('ready','enabled')); ck('wait','delayed_enabled',r['matches'] and r['attempts'] > 1)
+            # Start the mutation only after this wait has collected a false
+            # observation. CLI startup latency must not consume a fixed delay.
+            previous = set((f.root/'controller').glob('*.json'))
+            pending = f.start('mac_wait_for',dict(f.identity,condition=condition('ready','enabled'),timeoutMs=2500))
+            def observed_disabled():
+                if pending.poll() is not None:
+                    f.finish('mac_wait_for',pending,True)
+                    raise RuntimeError('Wait exited before a disabled observation; raw response preserved')
+                for path in set((f.root/'controller').glob('*.json')) - previous:
+                    try: observation = json.loads(path.read_text())
+                    except (OSError, ValueError): continue
+                    if observation.get('pid') == f.identity['pid'] and any(
+                        n.get('identifier')=='ready' and n.get('enabled') is False for n in observation.get('nodes',[])):
+                        dump(f.out/'wait-start-observation.json',observation)
+                        return True
+                return False
+            try:
+                f.wait(observed_disabled, 3)
+                f.command('enable', .4)
+                r = f.finish('mac_wait_for',pending)
+            finally:
+                if pending.poll() is None:
+                    pending.terminate(); pending.communicate(timeout=5)
+            ck('wait','delayed_enabled',r['matches'] and r['attempts'] > 1)
             f.command('replace', .3); ck('wait','replaced_node',wait(condition('status','equals',text='complete'))['matches'])
             f.command('replace_silent', .3); ck('wait','poll_without_notification',wait(condition('status','contains',text='silent'))['matches'])
             ck('wait','focused',wait(condition('literal','focused'))['matches'])
@@ -169,8 +192,10 @@ def main():
             ck('wait','partial_cannot_prove_absence',r.get('code')=='partial_coverage')
             f.command('duplicate'); r = f.call('mac_wait_for',dict(f.identity,condition=condition('ready','exists')),True)
             ck('wait','duplicate_rejected',r.get('code')=='ambiguous_target')
-            r = f.ax('noop'); ck('outcome','noop_unverified',r['status']=='action_requested' and r['outcome']['effect']=='unverified' and f.state()['clicks']==0)
-            r = f.ax('literal','set_value',text='literal 한글 😀'); ck('outcome','value_postcondition_scoped',r['outcome']['scope']=='operation_postcondition')
+            r = f.ax('noop'); ck('outcome','noop_unverified',r['status']=='action_requested' and r['outcome']['effect']=='unverified' and f.state()['clicks']==0
+                                and r['disposition']=={'delivery':'delivered_unverified','retry':'unsafe'})
+            r = f.ax('literal','set_value',text='literal 한글 😀'); ck('outcome','value_postcondition_scoped',r['outcome']['scope']=='operation_postcondition'
+                                and r['disposition']=={'delivery':'delivered_verified','retry':'unsafe'} and r['postcondition']['state']=='verified')
             # Tracing is opt-in. Default records omit values; screenshots require another opt-in.
             r = f.call('mac_trace',{'operation':'status'}); ck('trace','default_disabled',not r['settings']['enabled'] and r['count']==0)
             f.call('mac_trace',{'operation':'configure','enabled':True,'maxEntries':2})
@@ -197,7 +222,12 @@ def main():
             f.call('mac_workflow',{'operation':'save','definition':plan})
             run_id = str(uuid.uuid4()); literal = 'literal $(not executed) `x` 한글 😀'
             run = dict(f.identity, operation='run',name='fixture_recipe',parameters={'text':literal},runID=run_id)
-            r = f.call('mac_workflow',run); ck('workflow','parameterized_recipe',r['status']=='workflow_verified' and f.state()['text']==literal and f.state()['clicks']==3, result=r)
+            r = f.call('mac_workflow',run)
+            wait_only = f.call('mac_workflow',dict(f.identity,operation='run',definition=dict(name='wait_only',steps=[
+                dict(action='wait',condition=condition('literal','equals',text=literal))])))
+            ck('workflow','parameterized_recipe',r['status']=='workflow_verified' and f.state()['text']==literal and f.state()['clicks']==3
+               and wait_only['run']['mutationsDispatched']==0
+               and wait_only['disposition']=={'delivery':'not_delivered','retry':'safe'}, result=r, waitOnly=wait_only)
             r = f.call('mac_workflow',run); ck('workflow','same_run_not_replayed',r['status']=='workflow_run_exists' and f.state()['clicks']==3)
             r = f.call('mac_workflow',dict(run,parameters={'text':'different'}),True); ck('workflow','run_mismatch_rejected',r.get('code')=='workflow_run_mismatch' and f.state()['clicks']==3)
             bad = dict(name='invalid_late',steps=[press(4),{'action':'shell'}]); r = f.call('mac_workflow',dict(f.identity,operation='run',definition=bad),True)
@@ -239,8 +269,19 @@ def main():
             f.command('image_grid'); time.sleep(.5); o=f.observe(True)
             shutil.copy2(o['screenshot'],args.evidence/'image-grid.png')
             def search(query,**kw):
-                image=f.observe(True)
-                return f.call('mac_image_search',dict(operation='search',observation=image['id'],query=query,**kw))
+                for attempt in range(3):
+                    image=f.observe(True)
+                    result=f.call('mac_image_search',dict(operation='search',observation=image['id'],query=query,**kw),True)
+                    if 'code' not in result: return result
+                    if result.get('code')!='image_changed_during_search' or result.get('disposition')!={'delivery':'not_delivered','retry':'safe'}:
+                        raise RuntimeError(result)
+                    # Reobserve only this read operation. Preserve each refused
+                    # snapshot; never replay an action or weaken pixel equality.
+                    snapshot=f'image-search-refused-{f.sequence:03}.png'
+                    shutil.copy2(image['screenshot'],f.out/snapshot)
+                    report.data.setdefault('readOnlyReconciliations',[]).append(dict(sequence=f.sequence,attempt=attempt+1,snapshot=snapshot))
+                    report.checkpoint()
+                raise RuntimeError('Image changed in all three fresh read attempts; raw errors preserved')
             r=search('folder'); target=next(v for v in f.state()['gridCenters'] if v['id']=='folder'); rect=r['candidates'][0]['imageRect']
             ck('image','real_model_locates_folder',r['accepted'] and abs((rect['x']+rect['width']/2)/o['pixelWidth']-target['x'])<.03 and abs((rect['y']+rect['height']/2)/o['pixelHeight']-target['y'])<.03,result=r)
             template=f.root/'folder-template.png'

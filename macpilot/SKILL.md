@@ -17,6 +17,7 @@ description: macOS 앱·창·메뉴·파일·시스템과 브라우저·iOS Simu
 - private API 사용·추가 조사: [비공개 API 범위](references/private-api.md).
 - 게임 방향키 유지·동시 입력은 `mac_game_input`을 사용한다. `keys` 유지와 `tapKeys` 반복 누르기를 함께 실행한다. 20–10000ms 뒤 모든 키를 해제하고 각 동작 후 실제 게임 상태를 확인한다. [게임 키 유지](references/tools.md#게임-키-유지)를 참고한다.
 - HID·VM·저수준 입력을 검토할 때: [입력 기술 조사](references/macos-input-research.md).
+- 전달·재시도 판정: [전달 결과 계약](references/delivery-contract.md). `disposition.retry`가 `unsafe` 또는 `unknown`이면 입력을 자동 재전송하지 않는다.
 - 조건 대기·공통 결과·사용자 입력 중단·추적·재사용 작업·선택적 VisionKit/EmbeddingGemma 2 검색: [검증과 재사용 기능](references/capabilities.md). 이미지 후보 점수는 클릭 승인이나 업무 완료가 아니다.
 - 읽기 전용 AX 계층·검색·속성/액션·UTF-16 범위·텍스트 레이아웃·hit test: [네이티브 UI 분석](references/ui-analysis.md). 분석은 창을 활성화하거나 클릭하지 않는다.
 - UDID·부팅 식별자를 고정한 Simulator 앱 생명주기·캡처·녹화·UI 분석과 선택적 IndigoHID 입력: [Simulator 백엔드](references/simulator.md). 입력마다 `privateAPI=true`가 필요하며 macOS 전역 입력으로 전환하지 않는다.

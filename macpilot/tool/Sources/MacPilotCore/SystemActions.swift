@@ -299,11 +299,13 @@ private struct TrashRecycleOutcome: @unchecked Sendable {
 
         let matches: () -> Bool
         let accepted: Bool
+        var actionDispatched = true
         switch action {
         case "activate":
             matches = { application.isActive }
             if matches() {
                 accepted = true
+                actionDispatched = false
             } else {
                 try ProcessIdentity.require(pid: pid, expected: processStartID)
                 accepted = application.activate(options: [])
@@ -312,6 +314,7 @@ private struct TrashRecycleOutcome: @unchecked Sendable {
             matches = { application.isHidden }
             if matches() {
                 accepted = true
+                actionDispatched = false
             } else {
                 try ProcessIdentity.require(pid: pid, expected: processStartID)
                 if application.hide() {
@@ -326,6 +329,7 @@ private struct TrashRecycleOutcome: @unchecked Sendable {
             matches = { !application.isHidden && !application.isTerminated }
             if matches() {
                 accepted = true
+                actionDispatched = false
             } else {
                 try ProcessIdentity.require(pid: pid, expected: processStartID)
                 if application.unhide() {
@@ -340,6 +344,7 @@ private struct TrashRecycleOutcome: @unchecked Sendable {
             matches = { application.isTerminated || NSRunningApplication(processIdentifier: pid) == nil }
             if matches() {
                 accepted = true
+                actionDispatched = false
             } else {
                 try ProcessIdentity.require(pid: pid, expected: processStartID)
                 accepted = application.terminate()
@@ -348,6 +353,7 @@ private struct TrashRecycleOutcome: @unchecked Sendable {
             matches = { application.isTerminated || NSRunningApplication(processIdentifier: pid) == nil }
             if matches() {
                 accepted = true
+                actionDispatched = false
             } else {
                 try ProcessIdentity.require(pid: pid, expected: processStartID)
                 accepted = application.forceTerminate()
@@ -359,7 +365,7 @@ private struct TrashRecycleOutcome: @unchecked Sendable {
         guard try await wait(timeoutMilliseconds: timeout, predicate: matches) else {
             throw ToolFailure("verification_timeout", "The \(action) request was accepted, but its postcondition was not observed within \(timeout) ms")
         }
-        return ["status":"app_state_verified", "pid":pid, "action":action,
+        return ["status":"app_state_verified", "pid":pid, "action":action, "actionDispatched":actionDispatched,
                 "active":application.isActive, "hidden":application.isHidden, "terminated":application.isTerminated]
     }
 

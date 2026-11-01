@@ -27,7 +27,8 @@ public struct AXMenuItemInfo: Codable, Equatable {
         if error == .cannotComplete {
             return ToolFailure(
                 "ax_outcome_uncertain",
-                "Accessibility could not confirm \(operation) before its messaging timeout. The target may already have completed it; reobserve and reconcile target state before any retry."
+                "Accessibility could not confirm \(operation) before its messaging timeout. The target may already have completed it; reobserve and reconcile target state before any retry.",
+                outcome: OperationOutcome(dispatch:"partial_or_unknown", effect:"unverified", retry:"observe_before_deciding")
             )
         }
         return ToolFailure("ax_failed", "\(operation) failed (\(error.rawValue)); reobserve before retry")
@@ -55,6 +56,12 @@ public struct AXMenuItemInfo: Codable, Equatable {
     public static func boundedString(_ e: AXUIElement, _ name: String, limit: Int = 4096) -> (value: String, truncated: Bool) {
         guard let raw = value(e, name) as? String else { return ("", false) }
         return boundedString(raw, limit: limit)
+    }
+    public nonisolated static func valuePostcondition(expected: String, observed: String?, limit: Int = 65_536) -> [String:Any] {
+        let available = observed.map { $0.utf8.count <= limit } ?? false
+        let matches = available && observed == expected
+        return ["status":matches ? "value_verified" : "value_unverified", "equalsRequestedText":matches,
+                "postcondition":["scope":"ax_value", "state":!available ? "unavailable" : matches ? "verified" : "mismatch"]]
     }
     public nonisolated static func boundedString(_ raw: String, limit: Int) -> (value: String, truncated: Bool) {
         let limit = max(0, limit)

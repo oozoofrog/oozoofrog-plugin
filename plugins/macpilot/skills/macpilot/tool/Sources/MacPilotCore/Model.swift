@@ -11,9 +11,21 @@ public struct ToolFailure: Error, LocalizedError, CustomStringConvertible, Senda
     public var errorDescription: String? { description }
     public let improvementRequestID: String?
     public let outcome: OperationOutcome?
-    public init(_ code: String, _ description: String, improvementRequestID: String? = nil, outcome: OperationOutcome? = nil) {
+    public let afterActionJSON: Data?
+    public init(_ code: String, _ description: String, improvementRequestID: String? = nil, outcome: OperationOutcome? = nil, afterActionJSON: Data? = nil) {
         self.code = code; self.description = description; self.improvementRequestID = improvementRequestID
         self.outcome = outcome
+        self.afterActionJSON = afterActionJSON
+    }
+    public var object: [String:Any] {
+        var result: [String:Any] = ["code":code, "message":description,
+                                  "disposition":(outcome?.disposition ?? .unknown).object]
+        if let outcome { result["outcome"] = outcome.object }
+        if let improvementRequestID { result["improvementRequestID"] = improvementRequestID }
+        if let afterActionJSON, let action = try? JSONSerialization.jsonObject(with:afterActionJSON) {
+            result["details"] = ["afterAction":action]
+        }
+        return result
     }
 }
 

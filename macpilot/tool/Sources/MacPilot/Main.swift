@@ -146,13 +146,8 @@ private final class BoundedLineReader: @unchecked Sendable {
         fflush(stdout)
     }
 
-    private static func toolErrorResponse(id: Any, code: String, message: String, improvementRequestID:String? = nil, outcome:OperationOutcome? = nil) -> [String: Any] {
-        var failure:[String:Any]=[
-            "code":code,
-            "message":message
-        ]
-        if let improvementRequestID{failure["improvementRequestID"]=improvementRequestID}
-        if let outcome { failure["outcome"] = outcome.object }
+    private static func toolErrorResponse(id: Any, code: String, message: String, improvementRequestID:String? = nil, outcome:OperationOutcome? = nil, afterActionJSON:Data? = nil) -> [String: Any] {
+        let failure = ToolFailure(code, message, improvementRequestID:improvementRequestID, outcome:outcome, afterActionJSON:afterActionJSON).object
         return RPC.success(id:id,result:["content":[["type":"text","text":jsonString(failure)]],"structuredContent":failure,"isError":true])
     }
 
@@ -173,7 +168,7 @@ private final class BoundedLineReader: @unchecked Sendable {
             return RPC.success(id:id,result:["content":content,"structuredContent":result,"isError":false])
         } catch {
             let e = error as? ToolFailure
-            return toolErrorResponse(id:id,code:e?.code ?? "native_error",message:e?.description ?? error.localizedDescription,improvementRequestID:e?.improvementRequestID,outcome:e?.outcome)
+            return toolErrorResponse(id:id,code:e?.code ?? "native_error",message:e?.description ?? error.localizedDescription,improvementRequestID:e?.improvementRequestID,outcome:e?.outcome,afterActionJSON:e?.afterActionJSON)
         }
     }
 
@@ -281,9 +276,8 @@ private final class BoundedLineReader: @unchecked Sendable {
             print(String(data:try jsonData(try await engine.call(name, arguments:input), pretty:true), encoding:.utf8)!)
         } catch {
             let e = error as? ToolFailure
-            var failure:[String:Any]=["status":"error", "code":e?.code ?? "native_error", "message":e?.description ?? error.localizedDescription]
-            if let id=e?.improvementRequestID{failure["improvementRequestID"]=id}
-            if let outcome=e?.outcome{failure["outcome"]=outcome.object}
+            var failure = (e ?? ToolFailure("native_error", error.localizedDescription)).object
+            failure["status"] = "error"
             print(jsonString(failure))
             exit(2)
         }

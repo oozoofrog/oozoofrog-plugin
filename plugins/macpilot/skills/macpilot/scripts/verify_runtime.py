@@ -32,8 +32,8 @@ if out.exists():
     shutil.rmtree(out)
 out.mkdir(parents=True, exist_ok=True, mode=0o700)
 env = os.environ.copy()
-private_state = tempfile.TemporaryDirectory(prefix="macpilot-runtime-")
-state_dir = Path(private_state.name) / "state"
+private_state = Path(tempfile.mkdtemp(prefix="macpilot-runtime-"))
+state_dir = private_state / "state"
 env["MACPILOT_STATE_DIR"] = str(state_dir)
 env["MACPILOT_FIXTURE_DIR"] = str(out / "fixture")
 sequence = 0
@@ -53,6 +53,13 @@ def call(name, args, expected_error=None):
     (out / f"{sequence:02d}-{name}.json").write_text(p.stdout)
     (out / f"{sequence:02d}-{name}.stderr.log").write_text(p.stderr)
     result = json.loads(p.stdout)
+    disposition = result.get("disposition", {})
+    expected_retry = {"not_delivered":"safe", "unknown":"unknown", "delivery_uncertain":"unsafe",
+                      "delivered_unverified":"unsafe", "delivered_verified":"unsafe"}
+    assert disposition.get("delivery") in expected_retry, result
+    assert disposition.get("retry") == expected_retry[disposition["delivery"]], result
+    if "outcome" in result:
+        assert result["outcome"]["disposition"] == disposition, result
     if expected_error:
         accepted=[expected_error] if isinstance(expected_error,str) else expected_error
         assert p.returncode == 2 and result.get("code") in accepted, result
@@ -142,6 +149,10 @@ try:
     check("owned_app_hide_verified", hidden["status"] == "app_state_verified" and hidden["hidden"], hidden)
     shown = call("mac_app", {"pid":p.pid, "processStartID":process_start_id, "action":"unhide", "timeoutMs":3000})
     check("owned_app_unhide_verified", shown["status"] == "app_state_verified" and not shown["hidden"], shown)
+    shown_again = call("mac_app", {"pid":p.pid, "processStartID":process_start_id, "action":"unhide", "timeoutMs":3000})
+    check("already_visible_app_has_no_delivery", shown_again["status"] == "app_state_verified"
+          and shown_again["actionDispatched"] is False
+          and shown_again["disposition"] == {"delivery":"not_delivered","retry":"safe"}, shown_again)
     active = call("mac_app", {"pid":p.pid, "processStartID":process_start_id, "action":"activate", "timeoutMs":3000})
     check("owned_app_activation_verified", active["status"] == "app_state_verified" and active["active"], active)
     o = observe(p.pid, screenshot=True)
@@ -438,14 +449,32 @@ finally:
         p.terminate()
         try: p.wait(timeout=3)
         except subprocess.TimeoutExpired: p.kill(); p.wait()
-    for status in list(state_dir.rglob('overlay-status.json'))+list(state_dir.rglob('preview-status.json')):
+    cleanup_errors = []
+    def process_exists(pid):
+        try: os.kill(pid, 0)
+        except ProcessLookupError: return False
+        except PermissionError: return True
+        return True
+    for status in list(state_dir.rglob('overlay-status.json'))+list(state_dir.rglob('preview-status.json'))+list(state_dir.rglob('input-activity-status.json')):
         try:
             host=json.loads(status.read_text())
-            subprocess.run([str(binary),'call','mac_app','--json','-'],input=json.dumps(dict(pid=host['pid'],processStartID=host['processStartID'],action='force_terminate')),text=True,capture_output=True,env=env,timeout=5)
-        except (OSError,ValueError,subprocess.TimeoutExpired):
-            pass
+            if not process_exists(host['pid']): continue
+            stopped=subprocess.run([str(binary),'call','mac_app','--json','-'],input=json.dumps(dict(pid=host['pid'],processStartID=host['processStartID'],action='force_terminate')),text=True,capture_output=True,env=env,timeout=5)
+            response=json.loads(stopped.stdout)
+            if stopped.returncode and response.get('code') not in ['app_unavailable','stale_app_identity'] and process_exists(host['pid']):
+                cleanup_errors.append(dict(host=host['pid'],response=response))
+        except (OSError,ValueError,KeyError,subprocess.TimeoutExpired) as error:
+            cleanup_errors.append(dict(type=type(error).__name__))
     time.sleep(.2)
-    private_state.cleanup()
+    if not cleanup_errors:
+        try:
+            shutil.rmtree(private_state)
+        except OSError as error:
+            cleanup_errors.append(dict(type=type(error).__name__,message=str(error)))
     log.close()
+    if cleanup_errors:
+        report['status']='failed'; report['cleanupErrors']=cleanup_errors; report['cleanupStateDirectory']=str(state_dir)
     (out/"report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2))
     print(json.dumps(report,ensure_ascii=False,indent=2))
+    if cleanup_errors:
+        raise RuntimeError('Owned runtime cleanup failed; see report.json')
