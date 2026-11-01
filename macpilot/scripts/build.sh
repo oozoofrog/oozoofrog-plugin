@@ -24,8 +24,7 @@ trap cleanup EXIT HUP INT TERM
 # installed bundle. The current bundle stays untouched until the staged app is
 # signed and strictly verified.
 /bin/mkdir -p "$staged_bundle/Contents/MacOS"
-archs=$(/usr/bin/uname -m)
-if [ "${MACPILOT_UNIVERSAL:-0}" = 1 ]; then archs="arm64 x86_64"; fi
+archs=arm64
 for arch in $archs; do
     for product in macpilot macpilot-simulator-hid; do
         /usr/bin/xcrun swift build --package-path "$skill_dir/tool" \
@@ -40,12 +39,8 @@ for arch in $archs; do
     done
 done
 for product in macpilot macpilot-simulator-hid; do
-    if [ "${MACPILOT_UNIVERSAL:-0}" = 1 ]; then
-        /usr/bin/lipo -create "$build_root/$product-arm64" "$build_root/$product-x86_64" \
-            -output "$staged_bundle/Contents/MacOS/$product"
-    else
-        /bin/cp "$build_root/$product-$archs" "$staged_bundle/Contents/MacOS/$product"
-    fi
+    /bin/cp "$build_root/$product-arm64" "$staged_bundle/Contents/MacOS/$product"
+    [ "$(/usr/bin/lipo -archs "$staged_bundle/Contents/MacOS/$product")" = arm64 ] || exit 1
     /bin/chmod 0755 "$staged_bundle/Contents/MacOS/$product"
     /usr/bin/codesign --force --sign - --identifier "local.$product" "$staged_bundle/Contents/MacOS/$product" >&2
 done
@@ -75,8 +70,8 @@ done
 <key>CFBundleName</key><string>MacPilot</string>
 <key>CFBundleIconFile</key><string>MacPilot.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>3.6.0</string>
-<key>CFBundleVersion</key><string>38</string>
+<key>CFBundleShortVersionString</key><string>3.7.0</string>
+<key>CFBundleVersion</key><string>39</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>

@@ -10,6 +10,12 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## MacPilot [3.7.0]
+
+- Apple silicon 전용 배포로 전환했습니다. 메인 실행 파일과 Simulator helper는 arm64만 포함하며 Intel Mac 지원을 종료합니다.
+- 설치 전 Apple silicon을 확인하고, 두 실행 파일의 단일 arm64 아키텍처를 검증합니다. 배포 ZIP 이름은 macos-arm64로 변경했습니다.
+- 첫 다운로드 검사는 Rosetta 강제 실행 대신 arm64 네이티브 실행을 확인합니다.
+
 ## MacPilot [3.6.0] — 2026-11-01
 
 - Add a common delivery/retry disposition to CLI and MCP success and error responses while preserving existing status and outcome fields.

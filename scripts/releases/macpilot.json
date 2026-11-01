@@ -39,10 +39,9 @@
     ]
   ],
   "github_repository": "oozoofrog/oozoofrog-plugin",
-  "asset_platform": "macos-universal",
+  "asset_platform": "macos-arm64",
   "architectures": [
-    "arm64",
-    "x86_64"
+    "arm64"
   ],
   "feature_contract": "macpilot/scripts/capability_report.py"
 }

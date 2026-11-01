@@ -133,7 +133,7 @@ def bump_macpilot(root, version):
     if distribution.exists():
         pins = json.loads(distribution.read_text())
         if pins.get('version') != version:
-            pins.update(version=version, asset=f'MacPilot-{version}-macos-universal.zip', mainSHA256='', helperSHA256='')
+            pins.update(version=version, asset=f'MacPilot-{version}-macos-arm64.zip', mainSHA256='', helperSHA256='')
             changes[distribution] = json.dumps(pins, indent=2) + '\n'
     for name in ('README.md', 'README.ko.md', 'docs/plugin-installation.md'):
         path = root / name
