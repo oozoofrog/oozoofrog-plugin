@@ -165,7 +165,8 @@ class XcodeProjectTests(unittest.TestCase):
             (products / f"{configuration}-iphonesimulator").mkdir(parents=True)
             values = {
                 "swiftASTCommandArguments": [
-                    str(products / "Debug-iphoneos" / "TalkSound.framework")
+                    str(products / "Debug-iphoneos" / "TalkSound.framework"),
+                    "-target", "arm64-apple-ios18.0", "-sdk", "/Xcode/iPhoneOS.sdk"
                 ],
                 "outputFilePath": str(
                     root / "Build" / "TalkSound.build" / "Debug-iphoneos" / "Sound.o"
@@ -175,13 +176,182 @@ class XcodeProjectTests(unittest.TestCase):
             project = MODULE.XcodeProject(root, root / "Talk.xcworkspace", "TalkSound")
             project._scheme_configuration = lambda _: configuration
 
-            project._retarget_configuration(settings, "TalkSound")
+            result = MODULE.subprocess.CompletedProcess([], 0, "/Xcode/iPhoneSimulator.sdk\n", "")
+            with patch.object(MODULE.subprocess, "run", return_value=result):
+                project._retarget_configuration(settings, "TalkSound")
 
         self.assertIn(
             f"{configuration}-iphonesimulator",
             values["swiftASTCommandArguments"][0],
         )
         self.assertIn(f"{configuration}-iphonesimulator", values["outputFilePath"])
+
+    def test_index_cache_tracks_configuration_dependencies_and_refresh(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            container = root / "App.xcodeproj"
+            container.mkdir()
+            (container / "project.pbxproj").write_text("project")
+            dependencies = [root / "Config.xcconfig", root / "App.xcscheme",
+                            root / "contents.xcworkspacedata", root / "Workspace.xcsettings"]
+            for dependency in dependencies:
+                dependency.write_text("OLD")
+            generation = [0]
+
+            def xcode(*arguments):
+                generation[0] += 1
+                return {"App": {"/A.swift": {"swiftASTCommandArguments":
+                    ["-D", f"GEN_{generation[0]}"]}}}
+
+            def load():
+                project = MODULE.XcodeProject(root, container, "App")
+                project._scheme_configuration = lambda _: None
+                project._xcode_json = xcode  # External Xcode unavailable on Linux.
+                return project._index_settings("App")["App"]["/A.swift"]["swiftASTCommandArguments"]
+
+            with patch.object(MODULE, "INDEX_SETTINGS_CACHE", root / "cache"):
+                self.assertEqual(load(), ["-D", "GEN_1"])
+                self.assertEqual(load(), ["-D", "GEN_1"])
+                for index, dependency in enumerate(dependencies, 2):
+                    dependency.write_text("NEW")
+                    self.assertEqual(load(), ["-D", f"GEN_{index}"])
+                dependencies[0].unlink()
+                self.assertEqual(load(), ["-D", "GEN_6"])
+                for cache in (root / "cache").glob("*.json.gz"):
+                    cache.write_bytes(b"broken gzip")
+                with patch.dict(MODULE.os.environ, {"SWIFT_INTELLIGENCE_REFRESH_INDEX_SETTINGS": "1"}):
+                    self.assertEqual(load(), ["-D", "GEN_7"])
+
+    def test_simulator_retarget_updates_target_and_sdk_together(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            products = root / "Build/Products"
+            (products / "Debug-iphonesimulator").mkdir(parents=True)
+            values = {"swiftASTCommandArguments": [
+                "-target", "arm64-apple-ios18.0", "-sdk", "/Xcode/iPhoneOS.sdk",
+                "-F", str(products / "Debug-iphoneos")], "outputFilePath": "A.o"}
+            project = MODULE.XcodeProject(root, root / "App.xcodeproj", "App")
+            project._scheme_configuration = lambda _: "Debug"
+            result = MODULE.subprocess.CompletedProcess([], 0, "/Xcode/iPhoneSimulator.sdk\n", "")
+            with patch.object(MODULE.subprocess, "run", return_value=result):
+                project._retarget_configuration({"App": {"/A.swift": values}}, "App")
+            self.assertEqual(values["swiftASTCommandArguments"], [
+                "-target", "arm64-apple-ios18.0-simulator", "-sdk", "/Xcode/iPhoneSimulator.sdk",
+                "-F", str(products / "Debug-iphonesimulator")])
+
+    def test_simulator_retarget_rewrites_sdk_relative_search_paths(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            products = root / "Build/Products"
+            (products / "Debug-iphonesimulator").mkdir(parents=True)
+            values = {"swiftASTCommandArguments": [
+                "-target", "arm64-apple-ios18.0", "-sdk", "/Xcode/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk",
+                "-I/Xcode/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/usr/include", "-I/toolchain/usr/lib/swift/iphoneos",
+                "-F/Xcode/iPhoneOS.platform/Developer/Library/Frameworks",
+                "-F", str(products / "Debug-iphoneos")]}
+            project = MODULE.XcodeProject(root, root / "App.xcodeproj", "App")
+            project._scheme_configuration = lambda _: "Debug"
+            result = MODULE.subprocess.CompletedProcess([], 0, "/Xcode/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk\n", "")
+            with patch.object(MODULE.subprocess, "run", return_value=result):
+                project._retarget_configuration({"App": {"/A.swift": values}}, "App")
+            self.assertIn("-I/Xcode/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk/usr/include", values["swiftASTCommandArguments"])
+            self.assertIn("-I/toolchain/usr/lib/swift/iphonesimulator", values["swiftASTCommandArguments"])
+
+            self.assertIn("-F/Xcode/iPhoneSimulator.platform/Developer/Library/Frameworks",
+                          values["swiftASTCommandArguments"])
+
+    def test_tvOS_is_not_redirected_to_existing_ios_simulator_products(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            products = root / "Build/Products"
+            (products / "Debug-iphonesimulator").mkdir(parents=True)
+            values = {"swiftASTCommandArguments": ["-target", "arm64-apple-tvos18.0",
+                "-sdk", "/Xcode/AppleTVOS.sdk", "-F", str(products / "Debug-appletvos")]}
+            project = MODULE.XcodeProject(root, root / "App.xcodeproj", "App")
+            project._scheme_configuration = lambda _: "Debug"
+            project._retarget_configuration({"App": {"/A.swift": values}}, "App")
+            self.assertEqual(values["swiftASTCommandArguments"][-1], str(products / "Debug-appletvos"))
+
+    def test_attached_framework_flag_selects_built_simulator(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "Build/Products/Debug-iphonesimulator").mkdir(parents=True)
+            values = {"swiftASTCommandArguments": ["-F" + str(root / "Build/Products/Debug-iphoneos"),
+                "-target", "arm64-apple-ios18.0", "-sdk", "/Xcode/iPhoneOS.sdk"]}
+            project = MODULE.XcodeProject(root, root / "App.xcodeproj", "App")
+            project._scheme_configuration = lambda _: "Debug"
+            result = MODULE.subprocess.CompletedProcess([], 0, "/Xcode/iPhoneSimulator.sdk\n", "")
+            with patch.object(MODULE.subprocess, "run", return_value=result):
+                project._retarget_configuration({"App": {"/A.swift": values}}, "App")
+            self.assertEqual(values["swiftASTCommandArguments"][0],
+                             "-F" + str(root / "Build/Products/Debug-iphonesimulator"))
+
+    def test_simulator_retarget_rejects_unsupported_architecture(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "Build/Products/Debug-iphonesimulator").mkdir(parents=True)
+            values = {"swiftASTCommandArguments": ["-target", "armv7-apple-ios10.0",
+                "-sdk", "/Xcode/iPhoneOS.sdk", "-F", str(root / "Build/Products/Debug-iphoneos")]}
+            original = list(values["swiftASTCommandArguments"])
+            project = MODULE.XcodeProject(root, root / "App.xcodeproj", "App")
+            project._scheme_configuration = lambda _: "Debug"
+            with self.assertRaisesRegex(MODULE.SourceKitError, "Cannot safely retarget"):
+                project._retarget_configuration({"App": {"/A.swift": values}}, "App")
+            self.assertEqual(values["swiftASTCommandArguments"], original)
+
+    def test_simulator_retarget_fails_cleanly_without_xcrun(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "Build/Products/Debug-iphonesimulator").mkdir(parents=True)
+            values = {"swiftASTCommandArguments": ["-target", "arm64-apple-ios18.0",
+                "-sdk", "/Xcode/iPhoneOS.sdk", "-F", str(root / "Build/Products/Debug-iphoneos")]}
+            project = MODULE.XcodeProject(root, root / "App.xcodeproj", "App")
+            project._scheme_configuration = lambda _: "Debug"
+            with patch.object(MODULE.subprocess, "run", side_effect=FileNotFoundError("xcrun")):
+                with self.assertRaisesRegex(MODULE.SourceKitError, "Simulator SDK"):
+                    project._retarget_configuration({"App": {"/A.swift": values}}, "App")
+
+    def test_simulator_retarget_rejects_missing_or_incomplete_compiler_environment(self):
+        for flags in ([], ["-sdk", "/Xcode/iPhoneOS.sdk"], ["-target"],
+                      ["-target", "-sdk", "/Xcode/iPhoneOS.sdk"],
+                      ["-target", "arm64-apple-ios18.0"],
+                      ["-target", "arm64-apple-ios18.0", "-sdk"]):
+            with self.subTest(flags=flags), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / "Build/Products/Debug-iphonesimulator").mkdir(parents=True)
+                values = {"swiftASTCommandArguments": ["-F", str(root / "Build/Products/Debug-iphoneos"), *flags]}
+                project = MODULE.XcodeProject(root, root / "App.xcodeproj", "App")
+                project._scheme_configuration = lambda _: "Debug"
+                with self.assertRaises(MODULE.SourceKitError):
+                    project._retarget_configuration({"App": {"/A.swift": values}}, "App")
+
+    def test_macos_release_override_retargets_unsuffixed_paths(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            values = {"swiftASTCommandArguments": [
+                "-F" + str(root / "Build/Products/Debug"),
+                str(root / "My-App.build/Debug/Objects-normal/arm64/A.o")],
+                "outputFilePath": str(root / "My-App.build/Debug/A.o")}
+            project = MODULE.XcodeProject(root, root / "App.xcodeproj", "App")
+            project._scheme_configuration = lambda _: "Debug"
+            with patch.dict(MODULE.os.environ, {MODULE.CONFIGURATION_ENV: "Release"}):
+                project._retarget_configuration({"App": {"/A.swift": values}}, "App")
+            self.assertEqual(values["swiftASTCommandArguments"], [
+                "-F" + str(root / "Build/Products/Release"),
+                str(root / "My-App.build/Release/Objects-normal/arm64/A.o")])
+            self.assertEqual(values["outputFilePath"], str(root / "My-App.build/Release/A.o"))
+
+    def test_macos_retarget_preserves_nested_build_object_directories(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            original = root / "Build/Intermediates.noindex/Foo.build/Debug/Foo.build/Objects-normal/arm64/Foo.o"
+            expected = root / "Build/Intermediates.noindex/Foo.build/Release/Foo.build/Objects-normal/arm64/Foo.o"
+            values = {"swiftASTCommandArguments": [str(original)], "outputFilePath": str(original)}
+            project = MODULE.XcodeProject(root, root / "App.xcodeproj", "App")
+            with patch.dict(MODULE.os.environ, {MODULE.CONFIGURATION_ENV: "Release"}):
+                project._retarget_configuration({"App": {"/A.swift": values}}, "App")
+            self.assertEqual(values["swiftASTCommandArguments"], [str(expected)])
+            self.assertEqual(values["outputFilePath"], str(expected))
 
     def test_shared_index_database_falls_back_when_locked(self):
         with tempfile.TemporaryDirectory() as directory:

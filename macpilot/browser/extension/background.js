@@ -37,12 +37,18 @@ async function dispatch(r){
     default:return await dom(r);
   }
 }
+function respond(id,body){
+  let response={type:'response',id,...body};
+  if(new TextEncoder().encode(JSON.stringify(response)).length>1048576)
+    response={type:'response',id,error:{code:'response_too_large',message:'Response exceeds the native message limit; request a smaller result.'}};
+  port.postMessage(response);
+}
 function connect(){
   port=chrome.runtime.connectNative(HOST);
   port.onMessage.addListener(message=>{
     if(message.type==='connected'){connectionID=message.connectionID;state.connected=true;state.error='';reconnect=1000;chrome.storage.local.set({bridgeState:{...state,connectionID}});return;}
     if(message.type!=='command')return;
-    dispatch(message.payload).then(result=>port.postMessage({type:'response',id:message.id,result}),error=>port.postMessage({type:'response',id:message.id,error:{code:error.code||'browser_error',message:error.message}}));
+    dispatch(message.payload).then(result=>respond(message.id,{result}),error=>respond(message.id,{error:{code:error.code||'browser_error',message:error.message}}));
   });
   port.onDisconnect.addListener(()=>{
     state.connected=false;state.error=chrome.runtime.lastError?.message||'Native host disconnected';

@@ -419,7 +419,7 @@ class Controller:
   expected=change['requested']if configuration_operation else session(self.state(),member)['policy_expected']
   if expected.get('service_tier')=='normal':
    catalog=self.catalog();validate_choice(catalog,expected['model'],expected['reasoning_effort']);resolution=profiles.resolve_service_tier(catalog,expected['model'],'normal');profiles.require_tier_contract(self.rpc,resolution)
-  operation='turn-'+secrets.token_hex(16)
+  operation='turn-'+secrets.token_hex(16);completed=False
   # Normal is explicit for each new idle turn; configured tier may remain unknown.
   try:
    with open(str(self.path)+'.lock','a')as lock:
@@ -469,6 +469,12 @@ class Controller:
     if method=='item/completed'and p.get('item',{}).get('type')=='agentMessage':text.append(p['item'].get('text',''))
     if method=='turn/completed'and p.get('turn',{}).get('id')==turn:
      h.require(p['turn'].get('status')=='completed','Turn failed: '+json.dumps(p['turn'].get('error')))
+     completed=True
+     # Persist execution evidence before fallible post-turn configuration reads.
+     if not receipt_only:
+      event={'op':'finish','run':operation,'outcome':'completed','evidence':'Observed turn/completed '+turn}
+      if type(usage)is int:event['usage']=usage
+      h.transaction(self.path,event)
      after=self.inspect(member);body='\n'.join(text)
      if packet_handoff:self.event('control_packet_received',handoff=packet_handoff,turn=turn,text=body,observation=after)
      elif configuration_operation:
@@ -477,22 +483,20 @@ class Controller:
        tier=self.refresh_owned_configuration(member);h.require(profiles.tier_matches(tier,change['requested']['tier_resolution'],params['model'],params['effort']),'Configuration service tier unavailable/substituted')
       proof={'model_reasoning':'configured_observed','service_tier':'accepted_per_turn_only'if change['requested'].get('service_tier')=='normal'else 'configured_observed'if change['requested'].get('service_tier')else 'unavailable','persistent_service_tier':'unavailable'if change['requested'].get('service_tier')=='normal'else 'see_configured_receipt','provider_execution':'unavailable'}
       self.event('control_result',operation=configuration_operation,state='configuration_pending_turn',evidence={'configured_observed':after,'runtime_observed':runtime_unknown(),'pending_next_turn':True,'verification_scope':proof})
-     else:
-      event={'op':'finish','run':operation,'outcome':'completed','evidence':'Observed turn/completed '+turn}
-      if type(usage)is int:event['usage']=usage
-      h.transaction(self.path,event)
      self.event('control_result',operation=operation,state='completed',evidence={'turn':turn,'usage':usage if type(usage)is int else None,'configured_observed':after,'runtime_observed':runtime_unknown()})
      return {'turn':turn,'text':body,'before':before,'after':after,'accepted':accepted,'runtime_observed':runtime_unknown()}
    raise TimeoutError('Turn completion unknown; do not resend')
   except Exception as exc:
-   if 'turn'in locals():
+   if 'turn'in locals()and not completed:
     try:self.rpc.request('turn/interrupt',{'threadId':identity['thread'],'turnId':turn},timeout=3)
     except Exception:pass
-   if operation in self.state()['harness'].get('controls',{}):self.event('control_result',operation=operation,state='rejected'if hasattr(exc,'code')else 'outcome_unknown',evidence={'error':str(exc),'automatic_retry':False})
+   # An RPC error after turn/start acceptance is not a dispatch rejection.
+   rejected='turn'not in locals()and hasattr(exc,'code')
+   if operation in self.state()['harness'].get('controls',{}):self.event('control_result',operation=operation,state='completed'if completed else 'rejected'if rejected else 'outcome_unknown',evidence={'error':str(exc),'automatic_retry':False})
    if packet_handoff:self.event('control_handoff_failure',handoff=packet_handoff,reason=str(exc),unknown=True)
    if configuration_operation:self.event('control_result',operation=configuration_operation,state='outcome_unknown',evidence={'error':str(exc),'automatic_retry':False})
-   elif operation in self.state()['harness']['runs']:
-    h.transaction(self.path,{'op':'finish','run':operation,'outcome':'not_executed'if hasattr(exc,'code')else 'uncertain','evidence':str(exc)})
+   elif self.state()['harness']['runs'].get(operation,{}).get('state')=='active':
+    h.transaction(self.path,{'op':'finish','run':operation,'outcome':'completed'if completed else 'not_executed'if rejected else 'uncertain','evidence':str(exc)})
    raise
  def deliver_packet(self,hid):
   x=self.state()['harness']['handoffs'][hid]

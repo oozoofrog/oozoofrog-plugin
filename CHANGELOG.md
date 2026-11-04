@@ -1,3 +1,12 @@
+## Unreleased — review corrections
+
+- Preserve completed Team Coordination execution evidence when a follow-up read fails; diagnose coordinator-only denial and capacity signals.
+- Verify the actual Windows pointer position and target before physical button input, including cursor confinement. Interactive Windows regression remains required before release.
+- Keep MacPilot read-only text predicates valid across expected content changes, bound UTF-8 browser responses, and reclaim expired or invalid upload slots.
+- Invalidate Swift build settings for configuration dependencies and keep SDK, target, architecture and configuration overrides consistent.
+- Debounce repository sync on content changes and reject an explicit branch mismatch before staging or committing.
+- Allow large C4fy diagrams to zoom to readable absolute scale independently of the overview fit.
+
 # Changelog
 
 ## Unreleased

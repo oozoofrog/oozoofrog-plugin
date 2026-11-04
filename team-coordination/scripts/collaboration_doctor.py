@@ -210,10 +210,10 @@ def inspect_threads(snapshot, reads, members, destination, tools, report):
         status = mapping(thread.get('status'))
         if identifier in allowed and 'waitingOnApproval' in status.get('activeFlags', []):
             waiting.add(identifier)
-        if identifier not in members:
+        if identifier not in allowed:
             continue
         preview = str(thread.get('preview', '')).casefold()
-        if any(phrase in preview for phrase in LEGACY_PACKET_TEXT):
+        if identifier in members and any(phrase in preview for phrase in LEGACY_PACKET_TEXT):
             report.finding('STALE_MESSAGING_PACKET', 'warning', 'Legacy messaging restrictions remain in the initial packet; inspect any newer packet acknowledgement before refreshing.', thread_id=identifier)
             report.action('refresh_role_packet', thread_id=identifier, destination=destination,
                           condition='Only if current instructions remain stale; verify current human delegation, owner and previous dispatch outcome first.')
@@ -231,11 +231,11 @@ def inspect_threads(snapshot, reads, members, destination, tools, report):
                     'user denied', 'approval review rejected', 'denied by policy')):
                 report.finding('TOOL_PERMISSION_DENIED', 'error', 'An actual denial must be preserved; changing policy is not a retry workaround.', thread_id=identifier, tool=name, item_id=item.get('id'))
                 report.action('honor_observed_denial', thread_id=identifier, tool=name)
-            if members[identifier].get('role') in MEMBER_ROLES and name in USER_INPUT_TOOLS:
+            if members.get(identifier, {}).get('role') in MEMBER_ROLES and name in USER_INPUT_TOOLS:
                 report.finding('MEMBER_DIRECT_USER_PROMPT', 'warning', 'A member used a human-input tool instead of the team decision route.', thread_id=identifier, item_id=item.get('id'))
                 report.action('route_decision_to_leader', thread_id=identifier, destination=destination,
                               condition='Resolve from existing delegation/evidence; do not invent a human answer.')
-            elif (members[identifier].get('role') in MEMBER_ROLES
+            elif (members.get(identifier, {}).get('role') in MEMBER_ROLES
                   and item.get('type') == 'agentMessage'
                   and item.get('phase') in ('final_answer', 'final')
                   and any(phrase in text_content(item).casefold() for phrase in QUESTION_CANDIDATES)):

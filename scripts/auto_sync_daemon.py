@@ -44,7 +44,47 @@ def git_status(repo_root: Path) -> str:
     )
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or "git status failed")
-    return result.stdout.strip()
+    status = result.stdout.strip()
+    if not status:
+        return ""
+
+    # Porcelain describes path state, not content: successive edits can all be
+    # " M file". Include both index and worktree contents in the debounce key.
+    digest = hashlib.sha256(status.encode("utf-8"))
+    for args in (
+        ["git", "diff", "--no-ext-diff", "--no-textconv", "--binary"],
+        ["git", "diff", "--cached", "--no-ext-diff", "--no-textconv", "--binary"],
+    ):
+        diff = subprocess.run(args, cwd=repo_root, capture_output=True, check=True)
+        digest.update(diff.stdout)
+        digest.update(b"\0")
+    untracked = subprocess.run(
+        ["git", "ls-files", "--others", "--exclude-standard", "-z"],
+        cwd=repo_root, capture_output=True, check=True,
+    )
+    for name in untracked.stdout.split(b"\0"):
+        if not name:
+            continue
+        path = repo_root / os.fsdecode(name)
+        digest.update(name + b"\0")
+        if path.is_symlink():
+            # Hash the link, never read an arbitrary target outside the repo.
+            digest.update(os.fsencode(os.readlink(path)))
+        elif path.is_dir():
+            # ls-files reports an untracked embedded repository as a directory.
+            # Its HEAD can change while its outer porcelain entry stays "??".
+            head = subprocess.run(
+                ["git", "rev-parse", "--verify", "HEAD"], cwd=path,
+                capture_output=True, check=False,
+            )
+            digest.update(head.stdout)
+            digest.update(git_status(path).encode("utf-8"))
+        else:
+            with path.open("rb") as stream:
+                for block in iter(lambda: stream.read(1024 * 1024), b""):
+                    digest.update(block)
+        digest.update(b"\0")
+    return digest.hexdigest()
 
 
 def run_sync(
