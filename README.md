@@ -1,142 +1,103 @@
 # oozoofrog-plugin
 
-Team Coordination 0.6.1 adds [adaptive collaboration](team-coordination/references/adaptive-collaboration.md): initial assignments carry uncertainty, the leader adjusts from session outcomes, and an independent reviewer checks consequential allocation claims. Current-task adjustments, project rules and shared-skill maintenance remain separate. Human model choices and acceptance criteria stay binding; this is guidance, not an automatic model router or verified active-team adoption.
-
-[WinPilot](winpilot/SKILL.md) 0.5.1 migrates the existing Windows Pilot controller into this repository. Use `$winpilot` (formerly `windows-pilot`) to observe Windows apps and games with WGC/UIA and perform foreground input with a visible stop control. The Windows x64 Plugin includes MCP configuration and installs a hash-pinned self-contained runtime on first connection. Existing executable and tool names remain compatible. See [installation](docs/plugin-installation.md#winpilot) and [validation](docs/validation/winpilot.md).
-
-[Team Coordination `0.6.0`](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.6.0) adds [collaboration doctor](team-coordination/references/doctor.md) for unexpected approval prompts and stalls. It separates configured policy, exact pending actions, old role packets, message receipts and owner uncertainty, then guides supported recovery within the human-delegated task. Already-approved settings stay unchanged; generic approval flags never justify guessed retries. Members continue routing decisions internally. See [Plugin installation](docs/plugin-installation.md#team-coordination).
-
-[Team harness `0.5.6`](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.5.6) fixes recipient creation config merging and adds explicit same-ID paused-recipient settings repair plus versioned stale-packet refresh. Exact identity, permission, owner-evidence and canonical-byte checks remain required. Installation and project adoption are separate; no automatic load, recovery or model turn is added. See the [Korean explanation and update procedure](README.ko.md#팀-하네스-056).
-
-Team harness `0.5.5` adds no-follow symlink inventory to the management-aware handoff baseline while retaining cross-tool handoff, strict product baselines and bounded recipient writing. It includes the locally reviewed `0.5.0`–`0.5.4` changes in one public release after `0.4.1`. Installation and project adoption remain separate operations.
-
-The [team-harness `0.5.5` release](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.5.5) includes [exact-command permission recovery](team-coordination/references/diagnostics.md) for known-not-executed environment initialization failures. It preserves the closed result and requires ordinary command-specific tool authorization, current independent review and a fresh ACK. Installation does not refresh existing project contracts. See the [Korean explanation and update procedure](README.ko.md#팀-하네스-055).
+Codex Plugins for code navigation, desktop automation, product design, writing, and other focused workflows. Choose the Plugins that fit your work and install them individually.
 
 English | [한국어](README.ko.md)
 
-[Astra Implementation Prompt](astra-implementation-prompt/SKILL.md) is a skills-only Plugin. Use when the user asks Astra Max to prepare an implementation prompt for review and a later user-selected implementation chat. Do not use for ordinary implementation requests. It presents the full prompt before asking whether to start a Sol Ultra or Terra Ultra implementation chat.
+## Install
 
-Example: `Use $astra-implementation-prompt to prepare an implementation prompt with Astra Max for my review and choice of implementation model.`
+Register the remote marketplace, then install a Plugin. This example selects Swift Intelligence; the catalog below lists the other selectors.
 
-[Interface First Design](interface-first-design/SKILL.md) (`interface-first-design` 0.1.0) is a skills-only Plugin. Use when designing, implementing, or reviewing product UI, especially when explanatory prose substitutes for clear structure, visible controls, or state feedback. Applies to product screens and interactions, not agent communication or technical documentation. It preserves essential text and data while making actions and recovery visible. Distribution checks cover packaging; behavioral evaluation and live UI verification are separate. See [installation](docs/plugin-installation.md#interface-first-design). [Validation method, results and limits](docs/validation/interface-first-design.md).
+```sh
+codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
+codex plugin add swift-intelligence@oozoofrog-plugin
+codex plugin list --json
+```
 
-Invocation: `Use $interface-first-design to design or review this product UI with visible actions, clear states, and preserved meaning.`
+For another Plugin, replace `swift-intelligence` with its name: the selector is `<plugin>@oozoofrog-plugin`, where `<plugin>` is the name you choose. To refresh an already registered Git marketplace before installing, run `codex plugin marketplace upgrade oozoofrog-plugin`.
 
-[Korean Product Writing](korean-product-writing/SKILL.md) edits Korean product copy while preserving facts, conditions and requested components. Its skills-only Plugin is opt-in guidance without runtime/hooks. One reused six-case regression passed after earlier failures; [validation history and limits](drafts/korean-product-writing/tests/regression-v4/results.md) remain public. Installation and automatic loading were not tested.
+These commands fetch the published remote marketplace, not unpublished changes in this checkout. The catalog below describes the **local checkout**, so a listed Plugin or change may not yet be published remotely. For local checkout registration, platform requirements, existing installations, and standalone options, see [Plugin installation](docs/plugin-installation.md).
 
-After installation, invoke explicitly: `Use $korean-product-writing to edit this screen’s title, description and button while preserving facts and conditions.` This is an invocation example, not a completed installation or automatic-loading test.
+A local package, remote publication, installation and enablement, skill exposure in a new chat, and verified behavior are separate states. Check each state relevant to your task; repository tests alone do not establish installation or runtime behavior.
 
-[Audit](audit/SKILL.md) reviews skill, repository and task instructions within the requested scope. [Choice Interview](choice-interview/SKILL.md) conducts adaptive interviews with single, multiple and text responses; its mixed-form template is included. Both are available as matching skills-only Plugins, without hooks or runtime installation.
+## Choose a Plugin
 
-## Refactor
+Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed documentation in this checkout.
 
-[Refactor](refactor/SKILL.md) 0.2.0 is a skills-only Plugin. Use when a user requests behavior-preserving code refactoring, SRP cleanup, clearer responsibilities or dependencies, reducing code smells under repository lint rules, or integrating SwiftLint into project builds. Not for unrelated features, behavior fixes, or formatting alone. It preserves existing user edits and repository checks, asks for scope only when needed, and reports lint, test, build and runtime evidence separately. Swift work, including analysis-only requests, requires SwiftLint diagnostics under the repository’s version and configuration. Reuse valid diagnostics for unchanged inputs; if diagnostics are unavailable, report the blocker and keep the Swift work incomplete. Installation follows the current request and environment permissions. On request, it integrates SwiftLint into project builds using the existing Xcode or SwiftPM structure, avoids duplicate lint runs, and verifies execution and failure propagation through actual builds. See the [build integration guide](refactor/references/swiftlint-build.md) and [verified SwiftPM example](examples/swiftlint-build/README.md) and [verified Xcode Run Script example](examples/xcode-swiftlint-build/README.md).
+| Plugin selector | Use it for |
+| --- | --- |
+| `swift-intelligence@oozoofrog-plugin` | [Semantic Swift navigation](plugins/swift-intelligence/skills/swift-intelligence/SKILL.md) using SourceKit. macOS, Xcode with Command Line Tools, and Python 3 are required; the Plugin includes MCP configuration. |
+| `local-ai-studio@oozoofrog-plugin` | [Requested local AI Studio or on-device model work](local-ai-studio/SKILL.md), including separate Whisper transcription and timestamp estimates on Apple Silicon. See [model setup](#local-ai-studio). |
+| `macpilot@oozoofrog-plugin` | [macOS, browser, and iOS Simulator workflows](macpilot/SKILL.md), including desktop control and recording. The Plugin does not automatically register MCP; see [MacPilot](#macpilot). |
+| `team-coordination@oozoofrog-plugin` | [Explicitly requested team coordination](team-coordination/SKILL.md), including tailored sidebar teams, ownership, and evidence. See [team coordination](#team-coordination). |
+| `korean-travel-guidebook@oozoofrog-plugin` | [Korean HTML travel guides](korean-travel-guidebook/SKILL.md) with itinerary, accessibility, and practical travel information. |
+| `obsidian-projects@oozoofrog-plugin` | [Maintain project records and links](obsidian-projects/SKILL.md) when asked to organize an Obsidian vault. |
+| `outcome-brief@oozoofrog-plugin` | [Develop task briefs and completion criteria](outcome-brief/SKILL.md) when instruction coaching or a reusable brief is requested. |
+| `verify-work@oozoofrog-plugin` | [Apply a project-owned evidence workflow](verify-work/SKILL.md) to repeated failures or a requested verification contract. |
+| `jev-native@oozoofrog-plugin` | [Native macOS app workflows](jev-native/SKILL.md) with a virtual cursor and target preview. Its runtime and credentials are separate from the skills-only Plugin. |
+| `audit@oozoofrog-plugin` | [Audit skills, AGENTS.md, and task instructions](audit/SKILL.md) for conflicting scope or unclear completion criteria. |
+| `choice-interview@oozoofrog-plugin` | [Conduct an adaptive user or stakeholder interview](choice-interview/SKILL.md) when an interview is requested. |
+| `korean-product-writing@oozoofrog-plugin` | [Write or edit Korean product copy and guidance](korean-product-writing/SKILL.md), preserving facts and conditions; excludes literary creation and legal contract texts. |
+| `interface-first-design@oozoofrog-plugin` | [Design or review product screens and interactions](interface-first-design/SKILL.md); see [scope](#interface-first-design). |
+| `winpilot@oozoofrog-plugin` | [WinPilot observes and controls Windows apps and games](winpilot/SKILL.md). The Windows x64 Plugin includes MCP configuration and installs a hash-pinned runtime on first connection. See [installation](docs/plugin-installation.md#winpilot). |
+| `c4fy@oozoofrog-plugin` | [Create source-backed C4 architecture maps](c4fy/SKILL.md) as standalone HTML; see [C4fy](#c4fy). |
+| `refactor@oozoofrog-plugin` | [Refactor code while preserving behavior](refactor/SKILL.md), or integrate SwiftLint into project builds; see [Refactor](#refactor). |
+| `astra-implementation-prompt@oozoofrog-plugin` | [Prepare an implementation prompt with Astra Max for review](astra-implementation-prompt/SKILL.md), before the user chooses whether and how to start an implementation chat. See [scope](#astra-implementation-prompt). |
 
-Install with `codex plugin add refactor@oozoofrog-plugin` after refreshing this marketplace. Invoke `$refactor` or `$refactor:refactor` in a new chat. See [installation](docs/plugin-installation.md#refactor) and [review and validation](docs/validation/refactor.md).
+## Examples
 
-## C4fy
+After installing the relevant Plugin, ask for a task within its scope. For example:
 
-[C4fy](c4fy/SKILL.md) creates source-backed C4 context, container, component, and code diagrams as standalone HTML with a soft rounded UI, animated C1/C2/C3/C4 drill-down, source details, automatic domain/type/role classification, and SVG/JSON export. Use it for C4 architecture maps and hierarchical system explanations, including optional component-level code structure, not generic flowcharts or sequence diagrams. It is an original implementation; Archify is conceptual inspiration, not copied code or a runtime dependency.
+```text
+Use $swift-intelligence to find the implementations and references of this Swift protocol.
+Use $local-ai-studio with my existing local Whisper model to transcribe this recording and report timestamp estimates and their review status.
+Use $interface-first-design to review this product screen's actions, states, and recovery paths.
+Use $c4fy to map this repository's architecture with source evidence, including code structure for the components that need it.
+Use $astra-implementation-prompt to prepare an implementation prompt with Astra Max for my review and choice of implementation model.
+```
 
-Use `$c4fy` to explain a repository through C1/C2/C3/C4 with source evidence; add C4 only for components whose code structure needs explanation. Node.js 18+ generates an offline HTML viewer; reduced-motion preferences disable transitions. The [model contract](c4fy/references/model.md) describes scope rules, evidence and export limits. Source and [Plugin mirror](plugins/c4fy/skills/c4fy/SKILL.md) are included; install with `codex plugin add c4fy@oozoofrog-plugin` after registering this marketplace. Installation and fresh-session discovery require separate checks.
-
-## JEV Native stable source
-
-The [stable native controller source](tools/jev-native/README.md) and [companion skill](jev-native/SKILL.md) are included from a pinned public commit. No binary or installed runtime is replaced. [Provenance and deferred newer revisions](docs/jev-native-source.md) distinguish source/unit verification from live desktop behavior.
-
-## Portable personal workflows
-
-Skills-only packages now include [Korean Travel Guidebook](korean-travel-guidebook/SKILL.md), [Obsidian Projects](obsidian-projects/SKILL.md), [Outcome Brief](outcome-brief/SKILL.md) and [Verify Work](verify-work/SKILL.md). They preserve user-selected scope and project-owned verification. The travel package includes an OFL-licensed unmodified Nanum Gothic font and fictional example; no real trip data is bundled. Machine-specific agreements and project state are omitted from the portable copies.
-
-The [user-skill inventory](docs/user-skill-inventory.md) distinguishes current packages, external dependencies and unresolved source revisions. [The historical Korean-writing draft](drafts/korean-product-writing/STATUS.md) preserves failed trials separately from the current canonical skill.
-
-## Team harness migration
-
-The [team-coordination skill](team-coordination/SKILL.md) defaults to direct work and existing-owner reuse. New sidebar chats require an explicit human creation request and a concrete benefit over coordination cost. A separate Astra bootstrap is optional; role catalogs do not require a full roster. Preserve required independent review and safe write ownership. [Startup guidance](team-coordination/references/sidebar-startup.md) also prevents recursive formation, unchanged status relays and reactivation of completed work. Release 0.6.1 includes this guidance; active teams require explicit adoption.
-
-The opt-in [team-coordination skill](team-coordination/SKILL.md) and skills-only Plugin use the public payload. The installer, managed runtime and tests live in [tools/codex-team-harness](tools/codex-team-harness/README.md). [Version 0.5.5](https://github.com/oozoofrog/oozoofrog-plugin/releases/tag/team-harness-v0.5.5) removes internal token allowances, reservations and arbitrary review/context-count stops while preserving actual permissions, provider errors, ownership, failure evidence and fresh independent review. Pre-0.5 contracts need explicit [exact-byte contract migration](tools/codex-team-harness/payload/team-coordination/references/migration.md). Existing 0.5+ schema-2 projects need quiescent `policy_refresh`, fresh packets and real ACKs only when the effective contract differs; a matching contract needs no repeat migration; the 0.5.5 runtime changes the effective contract; [changed observations/corrections](tools/codex-team-harness/payload/team-coordination/references/diagnostics.md) retain prior results and require applicable scope. Requested Normal defaults, Astra/Sol high and Luna medium reasoning, and [session model control](tools/codex-team-harness/payload/team-coordination/references/session-control.md) remain; actual availability and execution are separate evidence. Plugin installation does not install global guidance/runtime or migrate projects. See the [Korean explanation and update procedure](README.ko.md#팀-하네스-055).
-
-Codex plugins for Swift code navigation (`swift-intelligence`), local model setup and execution (`local-ai-studio`), and macOS and browser automation with screen and system audio recording (`macpilot`).
+These are requests, not examples of verified results.
 
 ## Local AI Studio
 
-Use `$local-ai-studio` on an Apple Silicon Mac to generate and edit images, synthesize and transcribe speech, generate video and music, and translate English into Korean through Local AI Studio's `ai` CLI. The skill verifies and delivers the saved results. When a requested Local AI Studio or on-device model task needs LocalAIHub or a missing model, it prepares the source and only the required model group before continuing. A generic media request does not start a large installation. User-selected tools, models, storage locations, and formats take precedence.
+The skills-only Plugin uses Local AI Studio or selected on-device tools on Apple Silicon. For a requested task, it prepares only missing prerequisites and model groups needed for that task. A general media request alone does not start a large installation. The Plugin does not bundle models or runtimes. Qwen Image setup requires explicit acceptance of the applicable license; check the selected model's terms and any commercial licensing before use. See [setup and license conditions](local-ai-studio/references/setup.md) and [CLI workflows](local-ai-studio/references/cli-workflows.md).
 
-```text
-Use $local-ai-studio to transcribe this recording, save an SRT file in the specified folder, and verify the result.
-Use $local-ai-studio with the existing local Whisper model to transcribe this recording and report timestamp estimates with their review status.
-Use $local-ai-studio to generate a teapot image for non-commercial evaluation and verify the PNG file.
-Use $local-ai-studio to translate this English document into Korean and save it as the specified TXT file.
-```
-
-Available as a standalone skill in `local-ai-studio/` and a skills-only Plugin, version `0.3.0`, with a byte-identical skill copy. The Plugin does not bundle models, runtimes, generated media, credentials, or runner binaries. Setup checks the current source and CLI capabilities, the selected storage location, and available space before downloading only the required models. `/Volumes/eyedisk/AI` is a discovery candidate on the reference Mac, not a universal default. Qwen Image downloads require explicit user acceptance of its license. On a 24 GB Mac, run only one large generator at a time.
-
-Version 0.3.0 also supports local Whisper speech recognition, transcription and timestamp estimates through a separate `whisper-cli` workflow. Reuse verified weights without relocation or a default redownload. This does not require LocalAIHub installation or establish native app support. DTW token points remain experimental alignment estimates; they do not verify sung onset/end or authorize subtitle replacement. See the [Whisper workflow](local-ai-studio/references/whisper.md).
-
-After setup, inspect supported commands with `ai --help` or the selected `whisper-cli --help`. Public LocalAIHub source and other local checkouts may expose different capabilities. `READY`, an exit code, or an `Output:` log alone does not establish output quality. Report actual file and format checks separately from preview, playback, and content review. See the [skill](local-ai-studio/SKILL.md), [LocalAIHub setup](local-ai-studio/references/setup.md), [CLI and output contracts](local-ai-studio/references/cli-workflows.md), and [Plugin installation](docs/plugin-installation.md#local-ai-studio).
+Local Whisper uses a separate `whisper-cli` workflow and can reuse verified weights. It does not imply native app integration. Timestamps, including experimental DTW points, are estimates and do not verify sung boundaries or authorize subtitle replacement. See the [Whisper workflow and limits](local-ai-studio/references/whisper.md).
 
 ## MacPilot
 
-Version 3.6 adds a shared delivery/retry disposition to CLI and MCP success and error results. Unknown or uncertain delivery never authorizes automatic replay; see the [delivery contract](macpilot/references/delivery-contract.md).
+This checkout's Plugin manifest and pinned Apple silicon-only runtime asset specify version `3.7.0`. MacPilot requires an Apple silicon Mac with macOS 14 or later; screen and system audio recording requires macOS 15 or later, and Simulator workflows require Xcode and a matching runtime. The Plugin includes CLI and MCP implementations but does not automatically register an MCP server. See [installation](docs/plugin-installation.md#macpilot), [CLI and MCP setup](macpilot/references/tools.md), and [workflow limits](macpilot/references/workflows.md).
 
-Use `macpilot` to observe, execute, and verify macOS app, window, menu, file, system, browser, and iOS Simulator tasks. It supports bounded simultaneous game-key holds and repeated taps, visible screen edges and a small notice during system keyboard/mouse input, per-task virtual cursors, background control, live previews, optional private APIs, and sending authorized improvement requests to Codex.
+During global keyboard or mouse input, MacPilot displays screen-edge effects and a small notice. Input Monitoring detects other input sources; user input or loss of monitoring interrupts the task. Resume requires an explicit request and a fresh observation. See [capabilities](macpilot/references/capabilities.md). Unknown or uncertain action delivery does not authorize automatic replay; see the [delivery contract](macpilot/references/delivery-contract.md).
 
-```text
-Use $macpilot to perform the macOS and browser tasks, record the screen and system audio, and verify the results.
-```
+## Team coordination
 
-The source is maintained in [macpilot/](macpilot/), with a distribution copy in the [Plugin skill](plugins/macpilot/skills/macpilot/SKILL.md). Version `3.7.0` includes the Swift core, CLI and MCP implementation, task isolation, cancellation, focus control, live capture and overlays, file operations, Finder tags, CoreAudio, a Chromium extension, Safari Apple Events, and a local improvement-request queue with Codex app-server delivery. The physical OS cursor and keyboard focus remain shared resources. Support varies by app and browser; see the [workflow and backend limits](macpilot/references/workflows.md).
+Team coordination is opt-in. It prefers direct work and reuse of an existing team; new sidebar chats require an explicit request and a concrete benefit. A separate Astra bootstrap is optional. Installing the Plugin does not create chats, install the global harness, or adopt existing project contracts. See [sidebar startup](team-coordination/references/sidebar-startup.md).
 
-Version 3.5 adds `mac_analyze` for read-only native AX summaries, literal search, attribute/action metadata, UTF-16 text ranges, and app-scoped hit tests. It also reads native text bounds and line ranges. `mac_simulator` adds exact-UDID app lifecycle, PNG/video, iOSContentGroup analysis, and opt-in IndigoHID touch/gesture/button/key input through an isolated driver. Only Simulator features require Xcode and a matching runtime; see [Simulator requirements](macpilot/references/simulator.md). It does not activate or click during AX analysis. See [UI analysis and the Baepsae comparison](macpilot/references/ui-analysis.md).
+Version 0.6.1 adds [adaptive collaboration](team-coordination/references/adaptive-collaboration.md) guidance based on observed outcomes; it does not automatically route models or establish adoption by an active team. For stalls, use [collaboration doctor](team-coordination/references/doctor.md). See the [team harness guide](tools/codex-team-harness/README.md) and [Korean update procedures](README.ko.md#팀-하네스-055) for setup, migration, and recovery.
 
-Version 3.4 adds AX condition waits, scoped operation outcomes, yield on external input, opt-in action traces, and explicit reusable recipes with postconditions and replay protection. Optional image search is disabled by default; it uses VisionKit and local EmbeddingGemma 2, caches vectors, and abstains on weak or ambiguous matches. See [capability usage and limits](macpilot/references/capabilities.md).
+## Astra Implementation Prompt
 
-Requires an Apple silicon Mac with macOS 14 or later. First use downloads the pinned Apple silicon-only release app and verifies executable hashes and its ad-hoc signature. Ordinary macOS control needs no Swift or Xcode installation. Explicit source development uses `scripts/build.sh`. The base controller has no Python/Node.js runtime or external SwiftPM dependencies. Optional VisionKit + EmbeddingGemma 2 image search uses an explicitly configured local Python environment and model. The Chromium extension and site access, Safari Automation, and Safari JavaScript from Apple Events require separate enablement. Use [`mac_record`](macpilot/references/recording.md) to record and inspect MP4 screen and system audio captures on macOS 15 or later. Use [`mac_browser_developer`](macpilot/references/browser-developer-settings.md) to inspect and prepare Safari or Chrome developer settings, then enable a selected setting after user approval. Sending improvement requests to Codex requires an explicitly configured destination, login, and model connection. Ordinary local control does not require a model.
+Use when the user asks Astra Max to prepare an implementation prompt for review and a later user-selected implementation chat. Do not use for ordinary implementation requests. The full prompt is presented for review; the user chooses the implementation model and whether to start a new chat. Preparing a prompt alone does not authorize implementation or chat creation. See the [workflow](astra-implementation-prompt/references/workflow.md).
 
-Use [`mac_connection`](macpilot/references/mcp-recovery.md) to inspect server and parent process identities, permissions, and the CLI/MCP execution scope. CLI `connection-check` verifies a separate isolated MCP session without restarting existing servers or Codex. A passing probe does not establish that the current chat reconnected.
+## Interface First Design
 
-For permission setup, use `mac_permission operation=setup` with `kind=all` or CLI `permission-setup`. MacPilot opens native macOS System Settings with an 88×88pt icon-only attached guide. Drag the guide’s app icon into the permission list, or use optional auto-add from the icon’s context menu. Finder and a separate settings dashboard are not opened. The guide follows the Settings window, hides when another app becomes active, and supports per-app Automation requests. A short icon-and-hand animation demonstrates the user’s drag; it stops when the user grabs the icon and respects Reduce Motion. The user completes native authentication and final approval. See [permission setup](macpilot/references/permission-setup.md).
+Use when designing, implementing, or reviewing product UI, especially when explanatory prose substitutes for clear structure, visible controls, or state feedback. Applies to product screens and interactions, not agent communication or technical documentation. See the [skill](interface-first-design/SKILL.md) and [validation scope](docs/validation/interface-first-design.md).
 
-Use current MCP tools directly when they expose the required feature; otherwise use the skill's CLI. The Plugin does not automatically replace global skills, MCP configuration, or browser profiles. Remote publication, installation, enablement, and availability in a new session are separate checks. See the [skill](macpilot/SKILL.md), [CLI and MCP setup](macpilot/references/tools.md), [development and validation](macpilot/references/development.md), and [installation guide](docs/plugin-installation.md#macpilot).
+## Refactor
 
-Make changes in the source directory, then update the distribution copy with `python3 scripts/sync_skill_mirrors.py --package macpilot --write`. Binaries, build caches, screenshots, and logs are excluded from Git and the distribution copy.
+Use when a user requests behavior-preserving code refactoring, SRP cleanup, clearer responsibilities or dependencies, reducing code smells under repository lint rules, or integrating SwiftLint into project builds. Not for unrelated features, behavior fixes, or formatting alone. Swift work, including analysis-only requests, requires SwiftLint diagnostics using the repository's configuration; valid diagnostics can be reused when inputs, configuration, and tool version match. If diagnostics are unavailable, report the blocker and leave the Swift work incomplete. See [Swift guidance](refactor/references/swift.md), [build integration](refactor/references/swiftlint-build.md), and [validation](docs/validation/refactor.md).
 
-## Swift Intelligence
+## C4fy
 
-`swift-intelligence` uses Xcode's SourceKit-LSP for read-only lookup of Swift definitions, references, implementations, types, symbols, and diagnostics. It is provided only in `plugins/swift-intelligence/` because it requires an MCP server. It does not install Python packages beyond Python 3 itself or add an external MCP binary.
+C4fy creates source-backed C1/C2/C3/C4 architecture maps with optional component-level code structure. Use it for hierarchical C4 explanations, not generic flowcharts or sequence diagrams. Node.js 18 or later generates the standalone HTML viewer. See the [model contract](c4fy/references/model.md) for evidence and scope.
 
-## Historical validation records
+## More documentation
 
-Validation records for removed skills describe their state at the time. The [GPT Please validation record](docs/gptplease-transport-validation.md) does not describe a currently available feature. Read the [model policy review](docs/model-routing-review.md) and [validation record](docs/model-routing-validation.md) separately from current capabilities. `scripts/model_routing_eval.py` is an offline tool for checking existing synthetic and observed records.
+- [Installation and Plugin-specific requirements](docs/plugin-installation.md)
+- [Release procedure](docs/plugin-release.md) and [changelog](CHANGELOG.md)
+- [Team harness installation and recovery](tools/codex-team-harness/README.md)
+- [JEV Native source and provenance](docs/jev-native-source.md)
+- [Historical validation](docs/gptplease-transport-validation.md) for removed GPT Please functionality; it is not a current Plugin.
 
-## Installation
-
-Install only the Plugins you need. These commands use the changes published in the remote marketplace.
-
-```bash
-codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
-codex plugin add swift-intelligence@oozoofrog-plugin
-codex plugin add local-ai-studio@oozoofrog-plugin
-codex plugin add macpilot@oozoofrog-plugin
-```
-
-See [Plugin installation](docs/plugin-installation.md) for requirements and standalone installation options.
-
-## Validation
-
-For versioning, verified commits, GitHub releases, and selective installation, use the [Plugin release procedure](docs/plugin-release.md).
-
-```bash
-python3 -m unittest discover -s scripts/tests -v
-python3 scripts/sync_skill_mirrors.py --package local-ai-studio
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py local-ai-studio
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/local-ai-studio/skills/local-ai-studio
-python3 scripts/sync_skill_mirrors.py --package macpilot
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py macpilot
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/macpilot/skills/macpilot
-xcrun swift test --package-path macpilot/tool
-python3 macpilot/scripts/verify_mcp.py
-git diff --check
-```
-
-Repository distribution tests check Plugin manifests and the marketplace catalog. Validate remote registration and installation separately through the CLI with a separate `CODEX_HOME`, without changing existing installations or credentials. Follow the Plugin-specific validation guidance when changing Swift Intelligence. See [CHANGELOG.md](CHANGELOG.md) for the change history.
+Plugin-specific references and validation records describe their own scope and limits. Historical records do not establish current availability or behavior.

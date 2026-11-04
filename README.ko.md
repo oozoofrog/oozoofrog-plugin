@@ -16,6 +16,8 @@ Team Coordination [`0.6.0`](https://github.com/oozoofrog/oozoofrog-plugin/releas
 
 [English](README.md) | 한국어
 
+[Astra Implementation Prompt](astra-implementation-prompt/SKILL.md)는 Astra Max로 구현 프롬프트를 작성해 검토하려는 명시적 요청에 사용합니다. 전체 프롬프트를 검토한 뒤 사용자가 구현 모델과 새 채팅 시작 여부를 선택합니다. 일반 구현 요청에는 적용하지 않습니다. [작업 절차](astra-implementation-prompt/references/workflow.md)를 확인하세요.
+
 [Interface First Design](interface-first-design/SKILL.md) (`interface-first-design` 0.1.0)은 제품 UI를 설계·구현·검토할 때 사용합니다. 설명문이 화면 구조·보이는 조작·상태 피드백을 대신하는 경우에 특히 유용합니다. 기능 이름·사용자 콘텐츠·실제 데이터·오류·동의 안내는 보존합니다. 에이전트의 답변이나 기술 문서에는 적용하지 않습니다. 런타임이나 hooks가 없는 skills-only Plugin이며, 배포 검사와 행동 평가·실제 UI 검증은 구분합니다. [설치 안내](docs/plugin-installation.md#interface-first-design)를 참고하세요. [검증 결과와 한계](docs/validation/interface-first-design.md).
 
 호출 예: `$interface-first-design으로 이 제품 UI의 구조·조작·상태를 설계하거나 검토해 주세요. 필요한 문구와 데이터의 의미는 유지해 주세요.`

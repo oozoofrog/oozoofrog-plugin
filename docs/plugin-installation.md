@@ -20,7 +20,7 @@ Plugin 설치는 기존 `~/.codex/skills/team-coordination` standalone 런타임
 
 ## 기존 Plugin
 
-Repository marketplace에는 `swift-intelligence`, `local-ai-studio`, `macpilot`가 있습니다. 필요한 Plugin만 선택합니다. 아래 명령은 해당 변경이 원격에 반영된 뒤 사용합니다.
+아래는 `swift-intelligence`, `local-ai-studio`, `macpilot`의 설치 예시입니다. 전체 목록은 [Plugin 카탈로그](../README.md#choose-a-plugin)를 확인하고 필요한 Plugin만 선택합니다. 아래 명령은 해당 변경이 원격에 반영된 뒤 사용합니다.
 
 ```bash
 codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
