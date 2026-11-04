@@ -10,6 +10,7 @@ import CryptoKit
     public let cursorID: String
     public let transport: InvocationTransport
     private var inputMonitor: UserInputMonitor?
+    private var foregroundActivity: InputActivityScope?
     public init(store: Store, baseStore: Store? = nil, task: TaskRecord? = nil, cursorID: String = "primary", transport: InvocationTransport = .cli) {
         self.store = store; self.baseStore = baseStore ?? store; self.taskRecord = task; self.cursorID = cursorID
         self.transport = transport
@@ -25,15 +26,20 @@ import CryptoKit
     private func routeCall(_ tool: String, arguments: [String: Any]) async throws -> [String: Any] {
         // Diagnostics must remain available while a task owns the execution lock.
         if tool == "mac_connection" { return try await ConnectionDiagnostics.call(Arguments(arguments), transport: transport) }
+        if tool == "mac_cursors", arguments["operation"] as? String == "stop" {
+            let a = Arguments(arguments)
+            try a.only(["operation", "taskID", "cursorID"])
+            if a.values["cursorID"] != nil { _ = try Store.pointerName(a.string("cursorID")) }
+            let selected = a.values["taskID"] == nil ? store : try Tasks.state(a.string("taskID"), in: baseStore)
+            return try await DesktopOverlayActions.stop(selected)
+        }
         if tool == "mac_workflow", ["runs","run_status"].contains(arguments["operation"] as? String ?? "") {
             var value = arguments; var selected = store
             if value["taskID"] != nil { selected = try Tasks.state(Arguments(value).string("taskID"),in:baseStore); value.removeValue(forKey:"taskID") }
             return try Workflows.inspect(Arguments(value),store:selected)
         }
         if tool == "mac_task" {
-            let lease = try baseStore.lease(".tasks.lock")
-            defer { withExtendedLifetime(lease) {} }
-            return try Tasks.call(Arguments(arguments), store: baseStore)
+            return try await Tasks.callWithHandoff(Arguments(arguments), store: baseStore)
         }
         var input = arguments
         let cursor = try Arguments(input).string("cursorID", default: "primary", limit: 64)
@@ -56,7 +62,7 @@ import CryptoKit
                 while !Task.isCancelled {
                     do {
                         let current = try Tasks.load(record.id, in: baseStore)
-                        if current.status == "interrupted" { return }
+                        if current.status == "interrupted" || current.controlRequestID != record.controlRequestID { worker.cancel(); return }
                         try Tasks.requireActive(current)
                         try await Task.sleep(nanoseconds: 80_000_000)
                     } catch {
@@ -79,9 +85,10 @@ import CryptoKit
         var completedResult: [String:Any]?
         var trace: TraceScope?, tracePreparationError: String?
         var actionStarted = DispatchTime.now().uptimeNanoseconds
-        defer { inputMonitor = nil; withExtendedLifetime(leases) {} }
+        defer { if !reuseLease { foregroundActivity?.finish(); foregroundActivity = nil }; inputMonitor = nil; withExtendedLifetime(leases) {} }
         do {
             try Task.checkCancellation()
+            if tool == "mac_window" { _ = try Self.windowArguments(Arguments(arguments)) }
             if !reuseLease { leases.append(try store.lease(".execution.lock")) }
             if let pid = requestedPID {
                 if let expected = taskRecord?.pid, expected != pid { throw ToolFailure("task_target_mismatch", "Observation belongs to a different target") }
@@ -89,18 +96,29 @@ import CryptoKit
                 // operation validates its full arguments and start identity itself.
                 if !reuseLease { leases.append(try baseStore.lease(".target-\(pid).lock")) }
             }
-            let foregroundAction = arguments["route"] as? String == "global" || tool == "mac_activate" || tool == "mac_focus"
-                || (tool == "mac_workflow" && arguments["allowGlobalInput"] as? Bool == true)
-                || tool == "mac_permission"
-                || (tool == "mac_browser_developer" && arguments["operation"] as? String != "status")
-                || (tool == "mac_app" && arguments["action"] as? String == "activate")
-                || ((tool == "mac_launch" || tool == "mac_open") && (arguments["activate"] as? Bool ?? (tool == "mac_open")))
+            let foregroundAction = Self.requiresForegroundControl(tool, arguments: arguments)
+                || (tool == "mac_ax" && arguments["operation"] as? String == "focus" && requestedPID == NSWorkspace.shared.frontmostApplication?.processIdentifier)
+            // Bootstrap needs foreground/lease protection but cannot require
+            // the monitoring permission that this native UI helps users grant.
+            let permissionBootstrap = tool == "mac_permission" && arguments["operation"] as? String == "setup"
+            let foregroundInterference = foregroundAction || permissionBootstrap
+            if foregroundAction, taskRecord == nil {
+                throw ToolFailure("foreground_task_required", "Begin a foreground task and let the user choose Start control before this action")
+            }
             if taskRecord?.preserveForeground == true,
-               foregroundAction || tool == "mac_script" || (tool == "mac_shortcuts" && arguments["operation"] as? String != "list") {
+               foregroundInterference || tool == "mac_script" || (tool == "mac_shortcuts" && arguments["operation"] as? String != "list") {
                 throw ToolFailure("foreground_required", "Use a task with preserveForeground=false for foreground input, activation or unrestricted scripts")
             }
-            if !reuseLease, foregroundAction || tool == "mac_script" || tool == "mac_shortcuts" {
+            if !reuseLease, foregroundInterference || tool == "mac_script" || tool == "mac_shortcuts" {
                 leases.append(try baseStore.lease(".system-input.lock"))
+            }
+            if foregroundAction, let taskRecord {
+                try ControlHandoff.requireGrant(taskID: taskRecord.id, store: baseStore, expectedEpoch: taskRecord.controlRequestID)
+                if foregroundActivity == nil {
+                    foregroundActivity = try await InputActivityScope.begin(store: baseStore,
+                        kind: arguments["route"] as? String == "global" ? (["mac_key", "mac_type", "mac_game_input"].contains(tool) ? "키보드" : "마우스") : "키보드·마우스",
+                        taskID: taskRecord.id, epoch: taskRecord.controlRequestID ?? "", permitsAppSwitch: arguments["route"] as? String != "global")
+                }
             }
             try Task.checkCancellation()
             let desktopSession = DesktopSession.current()
@@ -114,13 +132,16 @@ import CryptoKit
             do { trace = try await Tracing.begin(tool:tool,arguments:arguments,engine:self) }
             catch { tracePreparationError = (error as? ToolFailure)?.code ?? "trace_preparation_failed" }
             try Task.checkCancellation()
+            // Tracing and activity startup can yield. A revoked grant must not
+            // reach even a non-global foreground mutation during that gap.
+            if foregroundAction { try foregroundActivity?.verify() }
             actionStarted = DispatchTime.now().uptimeNanoseconds
             enteredDispatch = true
             var result = try await dispatch(tool, Arguments(arguments))
             completedResult = result
             if let reason = result["reasonCode"] as? String,
                ["user_input_interrupted","input_monitor_lost"].contains(reason), let taskRecord {
-                try Tasks.interrupt(taskRecord.id, reason: reason, store: baseStore)
+                try Tasks.interrupt(taskRecord.id, reason: reason, store: baseStore, controlRequestID: taskRecord.controlRequestID)
                 result["taskStatus"] = "interrupted"
             }
             if taskRecord?.preserveForeground == true, foreground != NSWorkspace.shared.frontmostApplication?.processIdentifier {
@@ -154,12 +175,29 @@ import CryptoKit
                                               skipAfterCapture:inputMonitor?.reason != nil,engine:self)
             }
             if let reason = failure?.code, ["user_input_interrupted","input_monitor_lost"].contains(reason), let taskRecord {
-                try? Tasks.interrupt(taskRecord.id, reason: reason, store: baseStore)
+                try? Tasks.interrupt(taskRecord.id, reason: reason, store: baseStore, controlRequestID: taskRecord.controlRequestID)
             }
             if error is CancellationError { throw error }
             throw reported
         }
     }
+    nonisolated static func requiresForegroundControl(_ tool: String, arguments: [String: Any]) -> Bool {
+        let operation = arguments["operation"] as? String ?? ""
+        if arguments["route"] as? String == "global" { return true }
+        switch tool {
+        case "mac_activate", "mac_focus", "mac_reveal", "mac_script": return true
+        case "mac_permission": return operation != "setup"
+        case "mac_shortcuts": return operation != "list"
+        case "mac_workflow": return arguments["allowGlobalInput"] as? Bool == true
+        case "mac_browser_developer": return operation != "status"
+        case "mac_app": return ["activate", "hide", "unhide", "terminate", "force_terminate"].contains(arguments["action"] as? String ?? "")
+        case "mac_window": return operation != "state"
+        case "mac_browser": return ["open", "select"].contains(operation) && arguments["activate"] as? Bool == true
+        case "mac_launch", "mac_open": return arguments["activate"] as? Bool ?? (tool == "mac_open")
+        default: return false
+        }
+    }
+
     private static func degradedDoctor(store: Store, session: DesktopSession) -> [String: Any] {
         ["status": "ok", "version": MacPilotRuntime.version, "os": ProcessInfo.processInfo.operatingSystemVersionString,
          "desktopSession": session.object, "permissions": DesktopSession.unknownPermissions, "permissionsStatus": "not_probed",
@@ -179,7 +217,10 @@ import CryptoKit
     }
     func checkWorkflowState() throws {
         try Task.checkCancellation(); try inputMonitor?.verify()
-        if let taskRecord { try Tasks.requireActive(Tasks.load(taskRecord.id,in:baseStore)) }
+        if let taskRecord {
+            try Tasks.requireActive(Tasks.load(taskRecord.id,in:baseStore))
+            if !taskRecord.preserveForeground { try ControlHandoff.requireGrant(taskID: taskRecord.id, store: baseStore, expectedEpoch: taskRecord.controlRequestID) }
+        }
     }
     func executeWorkflowStep(_ tool:String,arguments:[String:Any]) async throws -> [String:Any] {
         guard ["mac_ax","mac_key"].contains(tool) else { throw ToolFailure("invalid_workflow","Unsupported nested tool") }
@@ -414,7 +455,7 @@ import CryptoKit
         return ["status":"action_requested", "pid":pid, "item":try encodedObject(item),
                 "verification":"Accessibility accepted the menu action; observe and verify the requested application postcondition"]
     }
-    private func window(_ a: Arguments) async throws -> [String: Any] {
+    nonisolated static func windowArguments(_ a: Arguments) throws -> (operation: String, origin: CGPoint?, size: CGSize?) {
         let operation = try a.string("operation")
         let allowed: [String]
         switch operation {
@@ -441,6 +482,10 @@ import CryptoKit
             origin = nil
             size = nil
         }
+        return (operation, origin, size)
+    }
+    private func window(_ a: Arguments) async throws -> [String: Any] {
+        let (operation, origin, size) = try Self.windowArguments(a)
         let observation = try fresh(a)
         if operation == "state" {
             return ["status":"window_state", "operation":operation,
@@ -635,7 +680,7 @@ import CryptoKit
             let o = try await observe(pid: pid, processStartID: processStartID, windowID: id, screenshot: a.bool("screenshot", default: true),
                 maxNodes: a.integer("maxNodes", default: 200, range: 1...1000), maxDepth: a.integer("maxDepth", default: 10, range: 1...30),
                 captureTimeoutMilliseconds: a.integer("captureTimeoutMs", default: 10_000, range: 100...60_000), privateAPI: a.bool("privateAPI"))
-            _ = try await DesktopOverlayActions.ensure(store,observation:o)
+            _ = try await DesktopOverlayActions.ensure(store,observation:o,transport:transport)
             return ["status":"observed", "observation":o.object, "foregroundPID":NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0,
                     "coordinateSystem":"global logical points, top-left origin; image coordinates use returned pixel dimensions"]
         case "mac_activate":
@@ -716,14 +761,14 @@ import CryptoKit
                                           processStartID: o.processStartID, windowFrame: o.windowFrame, cursorID: cursorID, label:label))
             var result: [String: Any] = ["status":"virtual_pointer_moved", "cursorID":cursorID, "virtualPointer":["x":p.x,"y":p.y], "systemCursorBefore":before, "systemCursorAfter":cursorObject(), "eventsPosted":0]
             result["hitCandidates"] = AX.hits(o, point:p).prefix(8).map { ["node":$0.id,"role":$0.role,"title":$0.title,"actions":$0.actions] as [String:Any] }
-            result["desktopOverlay"] = try await DesktopOverlayActions.ensure(store,observation:o)
+            result["desktopOverlay"] = try await DesktopOverlayActions.ensure(store,observation:o,transport:transport)
             return result
         case "mac_cursors":
             try a.only(["operation", "observation"])
             let o = try fresh(a), operation = try a.string("operation")
             if operation == "remove" { try store.remove(Store.pointerName(cursorID)) }
             else if operation == "hide" || operation == "show" {
-                _ = try await DesktopOverlayActions.ensure(store,observation:o)
+                if operation == "show" { _ = try await DesktopOverlayActions.ensure(store,observation:o,transport:transport) }
                 _ = try await DesktopOverlayActions.control(store,enabled:operation == "show")
             } else if operation != "list" { throw ToolFailure("invalid_argument", "operation must be list, remove, hide or show") }
             return ["status":"cursors", "cursors":try store.pointers(o).map { try encodedObject($0) },"desktopOverlay":DesktopOverlayActions.status(store)]
@@ -800,8 +845,7 @@ import CryptoKit
                 event.location = p; event.flags = []; Input.address(event, observation: o); events = [event]
             }
             try Task.checkCancellation()
-            let activity = route == "global" ? try await InputActivityScope.begin(store: baseStore, kind: "마우스") : nil
-            defer { activity?.finish() }
+            let activity = route == "global" ? foregroundActivity : nil
             let before = cursorObject(); try store.consume(o)
             var posted = 0
             var pendingRelease: CGEvent?
@@ -878,8 +922,7 @@ import CryptoKit
                 throw ToolFailure("invalid_argument", "Temporary ASCII selection requires route=global")
             }
             try Task.checkCancellation()
-            let activity = route == "global" ? try await InputActivityScope.begin(store: baseStore, kind: "키보드") : nil
-            defer { activity?.finish() }
+            let activity = route == "global" ? foregroundActivity : nil
             try store.consume(o)
             let sourceScope = sourceMode == "ascii" ? try KeyboardInputSourceScope() : nil
             var pending: [CGEvent] = []
@@ -955,8 +998,7 @@ import CryptoKit
                 throw ToolFailure("invalid_argument","Temporary ASCII selection requires route=global and the selected foreground app")
             }
             try Task.checkCancellation()
-            let activity = route == "global" ? try await InputActivityScope.begin(store: baseStore, kind: "키보드") : nil
-            defer { activity?.finish() }
+            let activity = route == "global" ? foregroundActivity : nil
             try store.consume(o)
             let sourceScope = sourceMode == "ascii" ? try KeyboardInputSourceScope() : nil
             defer { sourceScope?.restore() }

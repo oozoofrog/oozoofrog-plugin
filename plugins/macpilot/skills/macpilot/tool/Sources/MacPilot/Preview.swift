@@ -163,6 +163,8 @@ private final class PreviewPanel: NSPanel {
                   record.status == "active", record.deadline > Date() else { stop(); return }
         }
         if let data = try? store.read("preview-command.json"), let command = try? JSONSerialization.jsonObject(with:data) as? [String:Any],
+           command["hostPID"] as? Int32 == getpid(),
+           command["hostStartID"] as? String == ProcessIdentity.startID(pid:getpid()),
            let next = command["sequence"] as? String, next != sequence {
             sequence = next
             switch command["operation"] as? String {
@@ -189,6 +191,7 @@ private final class PreviewPanel: NSPanel {
             "frameAgeSeconds":frameDate.map { Date().timeIntervalSince($0) } ?? -1,
             "frameSHA256":frameHash,"lastFrame":frameDate.map { ISO8601DateFormatter().string(from:$0) } ?? "",
             "updatedAt":ISO8601DateFormatter().string(from:Date()),"windowID":observation.windowID,
+            "targetPID":observation.pid,"targetStartID":observation.processStartID,"observationID":observation.id,
             "error":error ?? "", "screenshot":store.root.appendingPathComponent("preview-frame.png").path]
         if let data = try? jsonData(state) { try? store.write(data,to:store.root.appendingPathComponent("preview-status.json")) }
     }
@@ -264,6 +267,7 @@ private final class PreviewPanel: NSPanel {
     var feedbackRegions:[CGRect]=[],feedbackVisible=false
     var enabled=true,stopped=false,sequence="",observationID="",highlightVisible=false
     var targetWindowID:UInt32=0,regionCount=0,targetSequence=""
+    var stopReason = "", activityAt = 0.0
     init(store:Store) throws {
         self.store=store;owner=try store.lease(".overlay-owner.lock");super.init()
         outline.contentView=FocusOutlineView(frame:.zero);configure(outline)
@@ -279,19 +283,33 @@ private final class PreviewPanel: NSPanel {
     }
     func tick() {
         guard !stopped else{return}
+        if let data = try? store.read("overlay-command.json"),
+           let command = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           command["operation"] as? String == "stop",
+           command["hostPID"] as? Int32 == getpid(),
+           command["hostStartID"] as? String == ProcessIdentity.startID(pid: getpid()),
+           let next = command["sequence"] as? String {
+            sequence = next; stop(reason: "requested"); return
+        }
         if store.root.lastPathComponent.hasPrefix("task-") {
             guard let parent=try? Store(root:store.root.deletingLastPathComponent()),
-                  let task=try? Tasks.load(String(store.root.lastPathComponent.dropFirst(5)),in:parent),
-                  task.status=="active",task.deadline>Date() else{stop();return}
+                  let task=try? Tasks.load(String(store.root.lastPathComponent.dropFirst(5)),in:parent) else{stop(reason:"task_unavailable");return}
+            do { try Tasks.requireActive(task) }
+            catch { stop(reason:(error as? ToolFailure)?.code ?? "task_unavailable");return }
         }
         if let data=try? store.read("overlay-command.json"),let command=try? JSONSerialization.jsonObject(with:data) as? [String:Any],
+           command["operation"] as? String != "stop",
            let next=command["sequence"] as? String,next != sequence {
             sequence=next;enabled=command["enabled"] as? Bool ?? true
         }
-        guard let data=try? store.read("overlay-target.json"),let target=try? JSONSerialization.jsonObject(with:data) as? [String:Any],
-              let id=target["observation"] as? String,let o=try? store.load(id),
+        guard let data=try? store.read("overlay-target.json"),let target=try? JSONDecoder().decode(OverlayTarget.self,from:data) else{stop(reason:"target_unavailable");return}
+        if let reason = target.endReason(currentOwnerStartID: target.ownerPID.flatMap { ProcessIdentity.startID(pid:$0) }) {
+            stop(reason:reason);return
+        }
+        let id=target.observation
+        guard let o=try? store.load(id),
               ProcessIdentity.startID(pid:o.pid)==o.processStartID else{stop();return}
-        observationID=id;targetWindowID=o.windowID;targetSequence=target["targetSequence"] as? String ?? ""
+        observationID=id;targetWindowID=o.windowID;targetSequence=target.targetSequence;activityAt=target.activityAt
         let rows=CGWindowListCopyWindowInfo([.optionAll,.excludeDesktopElements],kCGNullWindowID) as? [[String:Any]] ?? []
         guard let row=rows.first(where:{($0[kCGWindowNumber as String] as? UInt32)==o.windowID && ($0[kCGWindowOwnerPID as String] as? Int32)==o.pid}),
               let bounds=row[kCGWindowBounds as String] as? [String:Any],let frame=CGRect(dictionaryRepresentation:bounds as CFDictionary) else{stop();return}
@@ -319,9 +337,7 @@ private final class PreviewPanel: NSPanel {
             view.visibleRects=regions.map{CGRect(x:$0.minX-frame.minX,y:frame.maxY-$0.maxY,width:$0.width,height:$0.height)}
             view.needsDisplay=true
         }
-        let activity=target["activityAt"] as? Double ?? 0
-        let audit=(try? FileManager.default.attributesOfItem(atPath:store.root.appendingPathComponent("audit.jsonl").path)[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0
-        let age=Date().timeIntervalSince1970-max(activity,audit)
+        let age=Date().timeIntervalSince1970-target.activityAt
         outline.alphaValue=age<0.7 ? 1 : 0.6
         highlightVisible=visible
         if visible{outline.order(.above,relativeTo:Int(o.windowID))}else{outline.orderOut(nil)}
@@ -372,10 +388,14 @@ private final class PreviewPanel: NSPanel {
         let result:[String:Any]=["status":stopped ? "stopped":"running","pid":getpid(),"processStartID":ProcessIdentity.startID(pid:getpid()) ?? "",
                                 "sequence":sequence,"observation":observationID,"targetSequence":targetSequence,"overlayEnabled":enabled,"overlayCount":count,
                                 "highlightVisible":highlightVisible,"targetWindowID":targetWindowID,"motionRule":"cubic_bezier_minimum_jerk","animationCount":motions.count,"positions":positions.mapValues{["x":$0.x,"y":$0.y]},"visibleRegionCount":regionCount,"outlineWindowID":outline.windowNumber,"cursorStyle":"arrow","cursorSurface":"desktop","labelKind":"action_or_target","updatedAt":Date().timeIntervalSince1970]
-        if let data=try? jsonData(result){try? store.write(data,to:store.root.appendingPathComponent("overlay-status.json"))}
+        var status = result; status["stopReason"] = stopReason; status["idleLimitSeconds"] = OverlayTarget.idleLimit
+        status["activityAt"] = activityAt
+        if let data=try? jsonData(status){try? store.write(data,to:store.root.appendingPathComponent("overlay-status.json"))}
     }
-    func stop() {
-        stopped=true;timer?.invalidate();animationTimer?.invalidate();outline.orderOut(nil);cursors.values.forEach{$0.orderOut(nil)};highlightVisible=false;persist(count:0)
+    func stop(reason: String = "target_unavailable") {
+        guard !stopped else { return }
+        stopReason=reason;stopped=true;timer?.invalidate();animationTimer?.invalidate();outline.orderOut(nil);cursors.values.forEach{$0.orderOut(nil)};highlightVisible=false;feedbackVisible=false
+        motions.removeAll();persist(count:0)
         NSApplication.shared.terminate(nil)
     }
     static func run(store:Store) throws {

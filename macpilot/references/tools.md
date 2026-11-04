@@ -83,7 +83,7 @@ AX 트리는 선택한 창 내부만 수집한다. 메뉴 막대의 전역 트�
 
 `route=process`는 원시 PID 대상 입력이다. 현재 fixture에서 키보드 수신은 확인했고 원시 마우스의 클릭·드래그·스크롤 수신은 확인하지 못했다. 기본 AX 클릭과 별도 기능으로 취급한다.
 
-`route=global`은 사용자와 공유하는 실제 입력 경로다. 전경 앱과 좌표의 가림 여부가 맞을 때만 실행한다. `mac_activate`는 별도 명시 동작이며 관찰 UUID를 소모한다. 전경 변경 후에는 새 관찰을 사용한다.
+`route=global`은 사용자와 공유하는 실제 입력 경로다. 먼저 `mac_task operation=begin preserveForeground=false`로 전경 작업을 만들고, 전체 화면 안내에서 사용자가 ‘제어 시작’을 선택한 뒤 반환된 `task.id`를 각 호출의 `taskID`로 전달한다. 인계 버튼은 에이전트가 대신 누르지 않는다. 전경 앱과 좌표의 가림 여부가 맞을 때만 실행한다. `mac_activate`는 별도 명시 동작이며 관찰 UUID를 소모한다. 인계나 전경 변경 후에는 새 관찰을 사용한다.
 
 ## 앱·창·메뉴와 시스템 작업
 
@@ -167,6 +167,8 @@ MCP `mac_observe`는 결과 JSON과 최대 3 MB의 PNG를 반환한다. 어느 A
 
 `mac_task`, `mac_cursors`, `mac_focus`, `mac_preview`, `mac_files`, `mac_system`, `mac_browser`, `mac_private`, `mac_improvement`의 사용 조건과 예시는 [작업별 워크플로](workflows.md)에 있다. `mac_browser_developer`의 상태 조회·설정 화면 준비·사용자 승인 후 활성화는 [브라우저 개발자 설정](browser-developer-settings.md)에 있다. 공개 API 외의 창 정체성 선택은 [비공개 API 범위](private-api.md)를 읽는다.
 
+커서 잔류 정리는 `mac_cursors`의 `operation=stop`으로 실행한다. `{"operation":"stop"}`은 기본 상태의 표시 호스트를, `{"operation":"stop","taskID":"UUID"}`는 해당 작업의 표시 호스트를 종료한다. 이 동작은 관찰을 요구하지 않으며 작업이 취소·종료·만료된 뒤에도 사용할 수 있다. `hide`·프리뷰 종료와 구분한다. 일반 MCP 서버는 종료하지 않는다.
+
 ## 검증
 
 ```sh
@@ -198,7 +200,7 @@ python3 ./scripts/verify_mcp.py
 문자 키가 IME에 소비되면 명시적으로 `inputSource="ascii"`를 선택한다. 이 모드는 global 전경에서만 허용하며 원래 입력 소스를 복구한다. 이벤트 전송과 실제 이동·게임 결과를 별도로 검증한다. 각 동작 후 새 관찰을 사용한다.
 
 
-전역 키보드·마우스 입력에는 모든 디스플레이의 3pt 가장자리 효과와 ‘MacPilot 조작 중 · 키보드/마우스’ 안내가 표시된다. 안내는 포커스나 클릭을 받지 않는다. 동작 줄이기 설정에서는 가장자리 효과를 고정한다. 완료·취소·오류·소유 프로세스 종료 시 숨기며, 안내 호스트가 사라지면 추가 입력을 중단하고 눌린 키를 해제한다. process 경로와 AX 작업에는 이 전역 입력 안내를 표시하지 않는다.
+전경 작업 시작 전의 전체 화면 인계 안내는 포커스와 클릭을 받는다. 사용자가 ‘제어 시작’을 선택한 뒤에는 모든 디스플레이에 제어 상태를 표시하는 비활성 안내를 유지한다. 전역 키보드·마우스 입력 중에는 사용하는 장치와 3pt 가장자리 효과도 표시한다. 제어 중 상태 안내는 포커스나 클릭을 받지 않는다. 동작 줄이기 설정에서는 가장자리 효과를 고정한다. 작업 종료·취소·사용자 입력·기한 만료 시 인계를 해제한다. 안내 호스트가 사라지면 추가 전경 동작을 거부하고 눌린 키를 해제한다. 백그라운드 process 경로와 AX 작업만으로는 전경 인계를 시작하지 않는다.
 
 
 읽기 전용 `mac_analyze`의 summary·search·inspect·read_text·hit_test는 [네이티브 UI 분석](ui-analysis.md)을 따른다. summary/search가 반환한 새 관찰 ID를 이후 동작에 사용한다.

@@ -220,9 +220,38 @@ import ApplicationServices
         guard let executable = Bundle.main.executableURL else { throw ToolFailure("app_bundle_required", "Cannot locate MacPilot.app") }
         let controller = PermissionSetupController(applicationURL: try applicationURL(executable: executable), plan: plan, targetBundleID: targetBundleID)
         NSApplication.shared.setActivationPolicy(.accessory)
-        controller.show()
-        controller.openSettings()
+        // Bootstrap only: permission setup cannot require Input Monitoring
+        // before the user has a way to grant it. This focused one-shot choice
+        // opens native Settings; it never creates a reusable input grant.
+        let handoff = ControlHandoffOverlay()
+        let previousPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
+        let previousIdentity = previousPID.flatMap { ProcessIdentity.startID(pid: $0) }
+        func dismissPending() {
+            guard !handoff.panels.isEmpty else { return }
+            let returnFocus = NSWorkspace.shared.frontmostApplication?.processIdentifier == getpid()
+            handoff.hide()
+            if returnFocus, let pid = previousPID, let identity = previousIdentity, ProcessIdentity.startID(pid: pid) == identity {
+                NSRunningApplication(processIdentifier: pid)?.activate(options: [])
+            }
+            NSApplication.shared.terminate(nil)
+        }
+        handoff.decide = { [weak handoff] accepted in
+            guard let handoff, handoff.ownsFocus else { return }
+            guard !accepted || ControlHandoffOverlay.inputReleased else { return }
+            if accepted { handoff.hide(); controller.show(); controller.openSettings() }
+            else { dismissPending() }
+        }
+        let focusObserver = NotificationCenter.default.addObserver(forName: NSApplication.didResignActiveNotification,
+            object: NSApplication.shared, queue: .main) { _ in Task { @MainActor in dismissPending() } }
+        let focusDeadline = Date().addingTimeInterval(2)
+        let focusTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+            Task { @MainActor in
+                if !handoff.panels.isEmpty, Date() > focusDeadline, !handoff.ownsFocus { dismissPending() }
+            }
+        }
+        defer { NotificationCenter.default.removeObserver(focusObserver); focusTimer.invalidate() }
+        handoff.show(goal: plan.map(\.label).joined(separator: " · "), permissionOnly: true)
         NSApplication.shared.run()
-        withExtendedLifetime(controller) {}
+        withExtendedLifetime((controller, handoff)) {}
     }
 }

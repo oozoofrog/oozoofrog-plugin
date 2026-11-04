@@ -80,11 +80,13 @@ WindowServer 인벤토리의 alpha=1이 전체 사각형의 불투명도를 뜻�
 ASCII 입력 소스 전환은 별도 IME AX utility 창을 만들 수 있다. private 창 ID를 재검사할 때 관찰한 frame/title 후보만 조회한다. 관련 없는 utility 창의 private ID 실패 때문에 게임 입력 전체를 중단하지 않는다. 원래 대상의 private ID·frame/title·유일성 검사는 유지한다.
 
 
-전역 입력 안내는 `python3 macpilot/scripts/verify_input_activity.py --binary /absolute/MacPilot.app/Contents/MacOS/macpilot --fixture /absolute/macpilot-fixture --evidence /absolute/new-evidence-directory`로 검증한다. 격리된 상태와 소유한 fixture에서 실제 화면 표시·포커스 유지·클릭 통과·완료와 취소 시 숨김·안내 호스트 종료 후 입력 중단과 키 해제를 검사한다. 렌더링된 `during-input.png`와 `after-input.png`를 직접 검수한다. 호스트 종료 검사는 이 실행이 시작한 격리된 안내 프로세스만 대상으로 한다.
+전역 입력 안내는 `python3 macpilot/scripts/verify_control_handoff.py --binary /absolute/MacPilot.app/Contents/MacOS/macpilot --fixture /absolute/macpilot-fixture --evidence /absolute/new-evidence-directory`로 검증한다. 기존 `verify_input_activity.py`도 같은 인수로 이 검사를 실행한다. 격리된 상태와 소유한 fixture에서 인계 전 입력 차단·Return 자동 수락 거부·나중에·Esc·대기 중 취소·포커스 복귀·실제 화면 표시·클릭 통과·호출 사이 입력 중단·재개 시 새 인계·호스트 종료 후 키 해제를 검사한다. `pending-handoff.png`·`active-handoff.png`·`ended-handoff.png`·`after-handoff.png`를 직접 검수한다. 호스트 종료 검사는 이 실행이 시작한 격리된 안내 프로세스만 대상으로 한다.
+
+전경 작업의 인계 대기와 제어 상태를 구분한다. `preserveForeground=false` 작업의 시작·재개는 모든 화면의 포커스 있는 안내에서 사용자가 ‘제어 시작’을 선택해야 한다. Return이나 타이머로 자동 수락하지 않는다. 인계 대기 동안에는 작업 입력·전경 변경이 없어야 하며 ‘나중에’·Esc·취소·시간 초과·호스트 종료는 권한을 주지 않아야 한다. 인계 후 새 관찰을 사용한다. 호출 사이의 사용자 입력도 작업을 중단해야 하며 다음 호출과 재개가 오래된 인계를 재사용하지 않아야 한다. 인계 대기 중에는 `.tasks.lock`을 유지하지 않으므로 상태 조회와 취소가 가능해야 한다. 테스트가 소유한 격리 인계 UI의 합성 입력 검사는 실제 사용자 인계나 물리 키보드·마우스 검사와 구분한다. 일반 작업에서는 에이전트가 인계 버튼을 누르지 않는다. 다중 디스플레이·전체 화면 앱·VoiceOver는 실제로 수행한 범위를 따로 기록한다.
 
 다른 앱의 전체 화면에서는 `fullScreenAuxiliary`만으로 안내의 실제 노출을 보장할 수 없다. UI 호스트를 `.accessory`로 실행하고 `canJoinAllApplications`도 지정한다. 패널 생성 직후부터 반복 생성하지 말고 다음 tick에서 실제 표시 상태가 정착할 시간을 둔다. 안내 패널의 active Space와 WindowServer onscreen 목록을 함께 확인한다. `NSWindow.isVisible`이나 내부 상태만으로 전체 화면 표시 성공을 판정하지 않는다. 실제 게임의 디스플레이 캡처로 별도 확인한다.
 
-안내 호스트의 시작·응답 지연 검사는 격리된 소유 호스트만 2.4초 정지한다. 실제 표시 확인 전 입력이 없고, 대기 중 소유 레코드가 갱신되며, 호스트 재개 후 입력과 종료 시 해제가 이루어지는지 확인한다. 시작 대기는 최대 5초다. 실제 화면·위치·피해에 변화가 없으면 전송 결과와 무관하게 현재 게임 입력 경로는 실패로 기록한다.
+입력 상태 안내 호스트의 시작·응답 지연 검사는 격리된 소유 호스트만 2.4초 정지한다. 실제 표시 확인 전 입력이 없고, 대기 중 소유 레코드가 갱신되며, 호스트 재개 후 입력과 종료 시 해제가 이루어지는지 확인한다. 입력 상태 안내의 표시 대기는 최대 5초다. 작업 시작 전 전체 화면 인계의 사용자 선택 대기와 구분한다. 실제 화면·위치·피해에 변화가 없으면 전송 결과와 무관하게 현재 게임 입력 경로는 실패로 기록한다.
 
 
 ## 조건 대기와 선택 기능 회귀
@@ -139,5 +141,9 @@ WindowServer 세션을 확인할 수 없으면 `doctor`와 연결 상태는 `des
 전달 계약 회귀는 `DispositionTests`와 CLI/MCP·capability fixture에서 검사한다. `delayed_enabled` 검사는 해당 wait가 비활성 노드를 수집한 관찰 파일을 확인한 뒤 상태를 변경한다. 고정 지연을 CLI 시작 전에 예약하면 첫 관찰 전에 지연이 끝날 수 있으므로 관찰 횟수 검증에 사용하지 않는다. 최초 실패와 `wait-start-observation.json`을 보존하며 관찰 횟수·완전한 후조건 검사를 완화하지 않는다.
 
 런타임 회귀 정리는 실행이 소유한 overlay·preview·input-activity 호스트를 모두 포함한다. PID와 processStartID를 함께 검증해 종료한 다음 임시 상태를 제거한다. 정리 오류가 본문 검사 결과를 지우지 않도록 보고서를 저장하고 전체 상태를 실패로 기록한다. 입력 안내 호스트의 heartbeat가 살아 있는 상태에서 임시 디렉터리를 지우지 않는다. 종료 직전 자연 종료한 호스트는 `kill(pid, 0)`의 ESRCH로 부재를 재확인한다. `app_identity_unavailable` 오류만으로 종료를 추정하지 않는다.
+
+커서 잔류 회귀는 `python3 macpilot/scripts/verify_overlay_lifecycle.py --binary /absolute/MacPilot.app/Contents/MacOS/macpilot --fixture /absolute/macpilot-fixture --evidence /absolute/new-directory`로 실행한다. 대상 fixture를 살려 둔 상태에서 MCP 종료·30초 CLI 유휴·명시적 stop 이후 표시 창과 정확한 표시 호스트 프로세스가 모두 사라지는지 검사한다. 취소·만료된 작업은 오래된 관찰 없이 정리할 수 있어야 한다. 프리뷰 종료 뒤 커서는 독립적으로 유지하고 명시적 커서 종료로 정리한다. 일반 감사 로그의 갱신은 표시 기한을 연장하지 않아야 한다. 단순 `overlayCount=0`·`overlayEnabled=false`·상태 파일의 `stopped`만으로 프로세스 종료를 판정하지 않는다. 종료 직후 재시작은 이전 PID·시작 ID의 종료 확인 뒤에만 수행한다.
+
+프리뷰 대상 전환은 `python3 macpilot/scripts/verify_preview_live.py --binary /absolute/MacPilot.app/Contents/MacOS/macpilot --evidence /absolute/new-directory --samples 6`으로 검사한다. 격리한 두 창이 5Hz 색상·이진 순번 패턴을 그린다. 저장된 캡처 PNG와 실제 프리뷰 창의 PNG에서 대상 번호·순번을 읽어 비교한다. A에서 B로 바꾼 뒤 응답의 대상 정체성, 이전 호스트의 종료, B의 실제 표시를 확인한다. `frameCount`·해시 증가만으로 대상 전환이나 화면 전달 성공을 판정하지 않는다. fixture의 정확한 프로세스 정체성과 계속 갱신되는 상태를 각 표본 전후에 확인한다. fixture가 종료되거나 멈춘 실행은 제품 지연의 근거가 아니다. 시작 시 창 배치가 변하면 `not_delivered`·`safe`인 읽기 전용 `stale_observation`에만 최대 세 번 새 관찰을 허용하고 원래 응답을 보존한다. 입력·시작·종료 동작을 자동 재전송하지 않는다.
 
 이미지 검색 회귀에서 픽셀 변경 거부가 나오면 원시 오류와 거부된 스냅샷을 보존한다. 읽기 전용 검색의 `disposition`이 정확히 `not_delivered`·`safe`일 때만 새 관찰로 최대 세 번 조회한다. 조정 횟수는 `readOnlyReconciliations`에 남긴다. 의도적으로 픽셀을 바꾸는 마지막 검사는 이 재조회 경로를 사용하지 않으며, 기존 픽셀 동일성 검사를 유지한다.

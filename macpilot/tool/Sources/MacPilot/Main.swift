@@ -201,11 +201,9 @@ private final class BoundedLineReader: @unchecked Sendable {
                 return
             }
             if command == "permission-setup" {
+                try DesktopSession.current().requireAvailable()
                 guard args.count <= 3 else { throw ToolFailure("invalid_argument", "permission-setup [KIND] [TARGET_BUNDLE_ID]") }
-                var request: [String: Any] = ["kind": args.count >= 2 ? args[1] : "all", "operation": "setup", "timeoutMs": 60_000]
-                if args.count == 3 { request["targetBundleID"] = args[2] }
-                let result = try await Engine(store: Store(), transport: .cli).call("mac_permission", arguments: request)
-                print(String(data: try jsonData(result, pretty: true), encoding: .utf8)!)
+                try PermissionSetup.run(kind: args.count >= 2 ? args[1] : "all", targetBundleID: args.count >= 3 ? args[2] : "com.apple.Safari")
                 return
             }
             if command == "tools" { print(String(data: try jsonData(ToolCatalog.tools, pretty:true), encoding:.utf8)!); return }

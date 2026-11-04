@@ -39,7 +39,7 @@
 - AX 사용 전에는 [`AXIsProcessTrustedWithOptions`](https://developer.apple.com/documentation/applicationservices/1459186-axisprocesstrustedwithoptions)를 조회한다. 프롬프트 요청과 사용자의 시스템 설정 승인을 구분한다.
 - Quartz 입력 전에는 [`CGPreflightPostEventAccess`](https://developer.apple.com/documentation/coregraphics/cgpreflightposteventaccess%28%29)를 조회한다. 요청이 필요할 때만 `CGRequestPostEventAccess`를 호출한다.
 - 화면 캡처 전에는 [`CGPreflightScreenCaptureAccess`](https://developer.apple.com/documentation/coregraphics/cgpreflightscreencaptureaccess%28%29)를 조회하거나 [`SCContentSharingPicker`](https://developer.apple.com/documentation/screencapturekit/sccontentsharingpicker)를 사용한다. 픽커는 사용자가 선택한 콘텐츠 범위만 승인한다.
-- event tap으로 실제 입력을 관찰하는 기능에는 별도의 [`CGPreflightListenEventAccess`](https://developer.apple.com/documentation/coregraphics/cgpreflightlisteneventaccess%28%29)가 필요하다. MacPilot의 일반 제어는 입력을 후킹하지 않으며 이 권한을 요청하지 않는다.
+- event tap으로 실제 입력을 관찰하는 기능에는 별도의 [`CGPreflightListenEventAccess`](https://developer.apple.com/documentation/coregraphics/cgpreflightlisteneventaccess%28%29)가 필요하다. 전경 작업의 제어 인계와 전역 입력은 이 권한이 있어야 실행한다. 수동 감시는 사용자 이벤트를 가로채거나 내용을 저장하지 않는다. 인계 전의 전체 화면 안내만 포커스를 받아 시작·취소 선택을 받는다.
 - `NSAppleScript` 또는 `osascript`가 다른 앱을 제어하면 Automation 동의를 확인한다. 앱 패키징에는 [`NSAppleEventsUsageDescription`](https://developer.apple.com/documentation/bundleresources/information-property-list/nsappleeventsusagedescription)과, hardened runtime에서 [`com.apple.security.automation.apple-events`](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.security.automation.apple-events)를 함께 검토한다.
 - `NSPasteboard.general`은 실행 중인 앱이 공유한다. 읽기와 쓰기는 사용자 요청에 포함된 경우에만 수행하고, 요청한 데이터 형식만 다룬다.
 - 권한 승인은 이벤트 전송 성공이나 대상 앱의 상태 변경을 증명하지 않는다. 각 입력 뒤에 새 관찰과 작업별 후조건을 확인한다.

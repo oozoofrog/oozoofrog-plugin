@@ -1,6 +1,8 @@
 # 시스템 설정 옆의 작은 권한 안내 패널
 
-`mac_permission operation=setup` 또는 CLI `permission-setup`은 **macOS 권한 설정 창을 열고 그 옆에 앱 아이콘만 있는 88×88pt 패널을 표시**한다. 사용자가 패널의 MacPilot 아이콘을 실제 권한 목록으로 끌어 넣는다. 아이콘은 `NSWorkspace.icon(forFile:)`로 얻고 드래그에는 실행한 `MacPilot.app`의 실제 파일 URL을 사용한다. Finder를 열거나 Finder의 아이콘을 가져오지 않는다. 독립적인 큰 설정 대시보드는 만들지 않는다.
+`mac_permission operation=setup` 또는 CLI `permission-setup`은 먼저 모든 화면에 포커스 있는 안내를 표시한다. 사용자가 **‘설정 열기’**를 선택하면 macOS 권한 설정 창을 열고 그 옆에 앱 아이콘만 있는 88×88pt 패널을 표시한다. **‘나중에’**·Esc로 취소할 수 있으며 자동으로 설정 창을 열지 않는다. 이 일회성 선택은 Input Monitoring 권한이 없어도 사용할 수 있다. 일반 전경 작업이나 전역 입력의 제어 권한을 부여하지 않는다.
+
+사용자가 패널의 MacPilot 아이콘을 실제 권한 목록으로 끌어 넣는다. 아이콘은 `NSWorkspace.icon(forFile:)`로 얻고 드래그에는 실행한 `MacPilot.app`의 실제 파일 URL을 사용한다. Finder를 열거나 Finder의 아이콘을 가져오지 않는다. 독립적인 큰 설정 대시보드는 만들지 않는다.
 
 ```sh
 ./scripts/macpilot permission-setup
@@ -12,7 +14,7 @@
 {"kind":"all","operation":"setup","timeoutMs":10000}
 ```
 
-현재 MCP가 구버전이면 설치된 스킬의 CLI를 사용한다. CLI 기본값과 앱을 Finder에서 실행했을 때의 기본값은 `all`이다. 아이콘 우클릭 메뉴의 이전·다음 권한으로 접근성·기기 제어 → 화면·시스템 오디오 → Safari Automation을 순서대로 설정한다. 우클릭 메뉴의 ‘다른 권한’으로 항목 하나를 열 수도 있다. 입력 모니터링·전체 디스크 접근은 일반 제어의 기본 권한이 아니므로 명시적으로 선택한다.
+현재 MCP가 구버전이면 설치된 스킬의 CLI를 사용한다. CLI 기본값과 앱을 Finder에서 실행했을 때의 기본값은 `all`이다. 아이콘 우클릭 메뉴의 이전·다음 권한으로 접근성·기기 제어 → 화면·시스템 오디오 → Safari Automation을 순서대로 설정한다. 우클릭 메뉴의 ‘다른 권한’으로 항목 하나를 열 수도 있다. 전경 제어 인계와 전역 입력에는 입력 모니터링도 필요하므로 해당 항목을 명시적으로 선택해 설정한다. 전체 디스크 접근은 일반 제어의 기본 권한이 아니다.
 
 ## 직접 드래그와 선택적 자동 추가
 
@@ -47,7 +49,7 @@ Automation 기본 대상은 `com.apple.Safari`다. `targetBundleID`, CLI 두 번
 
 드롭 수락은 목록 추가나 권한 승인을 보장하지 않는다. 자동 추가의 `registered`·`already_listed`는 시스템 설정에서 MacPilot 표시 이름을 확인한 결과다. 목록이 설치 경로나 코드 해시를 노출하지 않으므로 `rowIdentity=display_name_only`로 구분한다. Automation은 미실행·승인 필요·거부·알 수 없는 결과를 구분한다. 요청을 한 번 시도한 같은 항목은 안내 창 안에서 반복 요청하지 않고 설정 확인을 안내한다. 시간 초과 뒤에도 시스템 요청 창이 남아 있을 수 있다.
 
-`mac_permission operation=request`는 접근성·화면 캡처·이벤트 전송·입력 모니터링의 기존 요청을 지원한다. `setup`·요청에는 전경을 사용할 수 있는 작업과 공유 입력 잠금이 필요하다. `taskID`를 지정하면 `preserveForeground=false`를 사용한다. raw SwiftPM 바이너리는 드래그 대상으로 쓰지 않으며 서명된 `bin/MacPilot.app`을 먼저 빌드한다. 앱 경로는 전용 드래그 pasteboard로만 전달하며 일반 클립보드와 TCC 데이터베이스는 수정하지 않는다.
+`mac_permission operation=request`는 접근성·화면 캡처·이벤트 전송·입력 모니터링의 기존 요청을 지원하며, 제어 인계를 받은 `preserveForeground=false` 작업의 `taskID`가 필요하다. 입력 모니터링을 처음 설정할 때는 `operation=setup` 또는 CLI `permission-setup inputMonitoring`을 사용한다. 이 일회성 안내는 일반 전경 작업의 제어 권한을 만들지 않는다. raw SwiftPM 바이너리는 드래그 대상으로 쓰지 않으며 서명된 `bin/MacPilot.app`을 먼저 빌드한다. 앱 경로는 전용 드래그 pasteboard로만 전달하며 일반 클립보드와 TCC 데이터베이스는 수정하지 않는다.
 
 평상시에는 실제 앱 아이콘 하나만 표시한다. 제목·설명·버튼은 상시 표시하지 않는다. 안내는 툴팁·VoiceOver로 제공하며, 추가 동작은 아이콘의 우클릭 메뉴에 둔다. [디자인 비교와 구현 근거](permission-design.md)를 참고한다.
 

@@ -39,7 +39,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ["swift-intelligence", "local-ai-studio", "macpilot", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing", "interface-first-design", "winpilot", "c4fy"],
+            ["swift-intelligence", "local-ai-studio", "macpilot", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing", "interface-first-design", "winpilot", "c4fy", "astra-implementation-prompt"],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -226,7 +226,7 @@ class PluginDistributionTests(unittest.TestCase):
         source = REPO_ROOT / "local-ai-studio"
         plugin = REPO_ROOT / "plugins" / source.name
         mirror = plugin / "skills" / source.name
-        skill_files = {"SKILL.md", "agents/openai.yaml", "references/cli-workflows.md", "references/setup.md"}
+        skill_files = {"SKILL.md", "agents/openai.yaml", "references/cli-workflows.md", "references/setup.md", "references/whisper.md"}
         self.assertEqual(skill_files, set(tree_files(source)))
         self.assertEqual(tree_files(source), tree_files(mirror))
         # Exact allowlist excludes weights, generated media, credentials and binaries.
@@ -240,7 +240,7 @@ class PluginDistributionTests(unittest.TestCase):
                 self.assertFalse(path.is_symlink(), path)
         manifest = json.loads((plugin / ".codex-plugin" / "plugin.json").read_text())
         self.assertEqual(source.name, manifest["name"])
-        self.assertEqual("0.2.1", manifest["version"].split("+")[0])
+        self.assertEqual("0.3.0", manifest["version"].split("+")[0])
         self.assertEqual("./skills/", manifest["skills"])
         for key in ("mcpServers", "apps", "hooks"):
             self.assertNotIn(key, manifest)

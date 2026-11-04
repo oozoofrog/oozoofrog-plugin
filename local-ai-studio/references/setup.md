@@ -2,6 +2,8 @@
 
 Read when LocalAIHub, its `ai` CLI, or the model group needed for a requested Local AI Studio or on-device model task is absent. Installing a missing prerequisite is in scope for that request; a generic media request does not authorize a large local download. Install only the needed group. Keep source checkout, model storage, and generated output distinct.
 
+For a selected Whisper backend, follow [Whisper discovery and setup](whisper.md) instead. It uses a separate runtime and model, and does not require LocalAIHub or its `audio` group.
+
 ## Find what is already present
 
 Check the user's source/app/CLI path first, then the configured `AIHUB_ROOT`, `~/Library/Application Support/Local AI Studio/config.json`, `command -v ai`, and a plausible existing source checkout. Confirm any `ai` candidate with `--help` and `status`; a command named `ai` may be unrelated. Do not overwrite an existing checkout, app, CLI, model root, or generated files. If a configured external volume is unmounted, restore or ask for that volume instead of silently moving its data to the internal disk.
