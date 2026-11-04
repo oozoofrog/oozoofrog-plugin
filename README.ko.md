@@ -10,6 +10,8 @@
 
 [English](README.md) | 한국어
 
+[Astra Implementation Prompt](astra-implementation-prompt/SKILL.md)는 Astra Max로 구현 프롬프트를 작성해 검토하려는 명시적 요청에 사용합니다. 전체 프롬프트를 검토한 뒤 사용자가 구현 모델과 새 채팅 시작 여부를 선택합니다. 일반 구현 요청에는 적용하지 않습니다. 로컬 패키지 존재는 게시·설치·새 채팅 노출을 뜻하지 않습니다. [작업 절차](astra-implementation-prompt/references/workflow.md)를 확인하세요.
+
 [Interface First Design](interface-first-design/SKILL.md) (`interface-first-design` 0.1.0)은 제품 UI를 설계·구현·검토할 때 사용합니다. 설명문이 화면 구조·보이는 조작·상태 피드백을 대신하는 경우에 특히 유용합니다. 기능 이름·사용자 콘텐츠·실제 데이터·오류·동의 안내는 보존합니다. 에이전트의 답변이나 기술 문서에는 적용하지 않습니다. 런타임이나 hooks가 없는 skills-only Plugin이며, 배포 검사와 행동 평가·실제 UI 검증은 구분합니다. [설치 안내](docs/plugin-installation.md#interface-first-design)를 참고하세요. [검증 결과와 한계](docs/validation/interface-first-design.md).
 
 호출 예: `$interface-first-design으로 이 제품 UI의 구조·조작·상태를 설계하거나 검토해 주세요. 필요한 문구와 데이터의 의미는 유지해 주세요.`
@@ -31,6 +33,10 @@ Skills-only 패키지로 [한국어 여행 가이드북](korean-travel-guidebook
 [전체 후보 목록](docs/user-skill-inventory.md)은 현재 패키지·외부 의존성·미확인 소스를 구분합니다. [한국어 글쓰기의 과거 초안](drafts/korean-product-writing/STATUS.md)은 이전 실패 이력을 최신 원본과 구별해 보존합니다.
 
 ## 팀 하네스 0.5.6
+
+별도 사이드바 팀을 시작하도록 요청하면 [team-coordination](team-coordination/SKILL.md)은 먼저 Astra 채팅을 만들거나 기존 채팅을 재사용합니다. Astra가 프로젝트를 분석한 뒤 적절한 리더와 팀원 채팅을 구성합니다. 각 팀원에는 업무에 맞는 판단 관점과 협업 성격을 지정합니다. [시작 절차](team-coordination/references/sidebar-startup.md)는 공식 앱 도구를 사용하며, 기존 팀 재사용과 하위 역할의 팀 중복 생성 방지를 명시합니다. 사이드바 채팅 생성과 관리 어댑터 등록은 별개입니다. 설명 질문이나 설치만으로 채팅을 만들지 않습니다. 이 경로 수정은 미출시 소스이며, 설치본 반영과 실제 시작 동작은 아직 검증하지 않았습니다.
+
+목표를 정해 팀 협업을 요청하면 해당 팀의 작업 지시·질의·검토 요청·결과 회신을 함께 지시한 것으로 적용합니다. 스킬은 실제 사용자 지시와 출처를 역할 패킷에 전달합니다. 사용자가 자리를 비워도 같은 작업 범위의 팀 소통은 최초 승인이나 반복 승인을 묻지 않고 이어갑니다. [팀 소통 범위와 근거 확인](team-coordination/references/sidebar-startup.md#task-scoped-communication-without-approval-prompts)을 따릅니다.
 
 수신 세션을 만들 때 지정한 모델·추론 수준과 승인된 샌드박스 설정을 함께 보존합니다. 충돌하는 모델이나 추론 설정은 생성 전에 거부합니다. 권한·네트워크·승인 범위를 넓히지 않습니다.
 
@@ -77,19 +83,28 @@ Swift 의미론 탐색용 `swift-intelligence`, 로컬 모델 설치·실행용 
 
 ```text
 $local-ai-studio로 이 녹음을 전사해 지정한 폴더에 SRT로 저장하고 결과를 확인해주세요.
+$local-ai-studio로 기존 로컬 Whisper 모델을 재사용해 녹음을 전사하고, 추정 타임스탬프와 검토 상태를 알려주세요.
 $local-ai-studio로 비상업적 평가용 찻주전자 이미지를 만들고 PNG 파일을 확인해주세요.
 $local-ai-studio로 이 영어 문서를 한국어로 번역해 지정한 TXT 파일로 저장해주세요.
 ```
 
-Standalone `local-ai-studio/`와 byte-identical skills-only Plugin `0.2.1`을 제공합니다. Plugin에 모델·런타임·생성 미디어·인증·실행기 바이너리는 포함하지 않습니다. 설치 시 현재 소스·CLI 기능, 선택한 저장 위치와 용량을 확인하고 필요한 모델만 받습니다. `/Volumes/eyedisk/AI`는 참조 Mac의 발견 후보일 뿐 보편적인 기본값이 아닙니다. Qwen Image 다운로드에는 사용자의 명시적 라이선스 동의가 필요합니다. 24 GB Mac에서는 대형 생성 모델을 한 번에 하나만 실행합니다.
+Standalone `local-ai-studio/`와 byte-identical skills-only Plugin `0.3.0`을 제공합니다. Plugin에 모델·런타임·생성 미디어·인증·실행기 바이너리는 포함하지 않습니다. 설치 시 현재 소스·CLI 기능, 선택한 저장 위치와 용량을 확인하고 필요한 모델만 받습니다. `/Volumes/eyedisk/AI`는 참조 Mac의 발견 후보일 뿐 보편적인 기본값이 아닙니다. Qwen Image 다운로드에는 사용자의 명시적 라이선스 동의가 필요합니다. 24 GB Mac에서는 대형 생성 모델을 한 번에 하나만 실행합니다.
 
-설치 후 `ai --help`로 지원 명령을 확인합니다. 공개 LocalAIHub 소스와 다른 로컬 체크아웃의 기능이 다를 수 있습니다. `READY`·종료 코드·`Output:` 로그만으로 결과 품질을 주장하지 않으며 실제 파일·형식·미리보기/재생/내용 확인 여부를 구분해 전달합니다. [스킬 본문](local-ai-studio/SKILL.md), [LocalAIHub 설치](local-ai-studio/references/setup.md), [명령·출력 규칙](local-ai-studio/references/cli-workflows.md), [Plugin 설치 안내](docs/plugin-installation.md#local-ai-studio)를 참고하세요.
+버전 0.3.0에는 별도 `whisper-cli`를 사용하는 로컬 Whisper 음성 인식·전사·추정 타임스탬프 흐름도 있습니다. 검증된 모델은 이동하거나 기본 재다운로드하지 않고 재사용합니다. 이 흐름은 LocalAIHub 설치가 필요하지 않으며, 네이티브 앱의 Whisper 지원을 뜻하지 않습니다. DTW 토큰 시점은 실험적 정렬 추정값입니다. 실제 노래 시작·끝의 검증이나 기존 자막 교체 근거로 단정하지 않습니다. [Whisper 참고](local-ai-studio/references/whisper.md)를 확인하세요.
+
+설치 후 선택한 실행기의 `ai --help` 또는 `whisper-cli --help`로 지원 명령을 확인합니다. 공개 LocalAIHub 소스와 다른 로컬 체크아웃의 기능이 다를 수 있습니다. `READY`·종료 코드·`Output:` 로그만으로 결과 품질을 주장하지 않으며 실제 파일·형식·미리보기/재생/내용 확인 여부를 구분해 전달합니다. [스킬 본문](local-ai-studio/SKILL.md), [LocalAIHub 설치](local-ai-studio/references/setup.md), [명령·출력 규칙](local-ai-studio/references/cli-workflows.md), [Plugin 설치 안내](docs/plugin-installation.md#local-ai-studio)를 참고하세요.
 
 ## MacPilot
 
 3.6은 CLI·MCP 성공과 오류에 공통 전달·재시도 상태를 추가합니다. 전달 불확실·미검증 상태에서는 자동 재전송하지 않습니다. [전달 결과 계약](macpilot/references/delivery-contract.md)을 확인하세요.
 
-`macpilot`는 macOS 앱·창·메뉴·파일·시스템과 브라우저·iOS Simulator 작업을 관찰·실행·검증합니다. 제한 시간 동안 게임 키를 동시에 유지하거나 반복해서 누르며, 전역 키보드·마우스 입력 중 화면 가장자리 효과와 작은 조작 중 안내를 표시합니다. 작업별 멀티 가상 커서, 백그라운드 제어, 라이브 프리뷰, 선택적 private API와 Codex 개선 요청 전송이 필요한 데스크톱 워크플로에 사용합니다.
+다음 제어 인계·커서 수명·프리뷰 대상 변경은 현재 checkout의 미출시 소스입니다. 게시되거나 설치된 런타임의 동작으로 검증한 결과가 아닙니다.
+
+`macpilot`는 macOS 앱·창·메뉴·파일·시스템과 브라우저·iOS Simulator 작업을 관찰·실행·검증합니다. 제한 시간 동안 게임 키를 동시에 유지하거나 반복해서 누릅니다. 전경 작업 전에는 모든 화면에 전체 화면 안내를 띄우고 포커스를 옮깁니다. 작업 목표를 표시하고 사용자가 **‘제어 시작’**을 선택할 때까지 기다립니다. **‘나중에’** 또는 Esc로 취소할 수 있으며 자동으로 시작하지 않습니다. 제어 중에는 상태 안내를 유지하고, 호출 사이에 대기할 때도 사용자가 직접 입력하면 중단합니다. 재개할 때는 새 인계와 관찰이 필요합니다. 전경 작업과 전역 입력에는 인계를 받은 `taskID`가 필요합니다. 작업별 멀티 가상 커서, 백그라운드 제어, 라이브 프리뷰, 선택적 private API와 Codex 개선 요청 전송이 필요한 데스크톱 워크플로에 사용합니다.
+
+커서·대상 테두리는 새 표시 요청 없이 30초가 지나거나 MCP 호출자·작업이 종료되면 사라집니다. `mac_cursors operation=stop`은 오래된 관찰 없이 표시 호스트까지 종료하며 취소·만료된 작업에서도 사용할 수 있습니다. 프리뷰 종료와 구분하며 저장된 커서 위치는 유지합니다.
+
+다른 창의 관찰로 프리뷰를 시작하면 기존 프리뷰 호스트를 종료하고 새 대상의 첫 프레임을 확인합니다. 응답에서 프리뷰 호스트와 대상 앱의 PID·시작 ID·창 ID를 구분합니다.
 
 ```text
 $macpilot로 macOS·브라우저 작업과 화면·시스템 오디오 녹화를 수행하고 결과를 검증하세요.
@@ -107,7 +122,7 @@ macOS 14 이상에서 실행합니다. 첫 실행은 고정 해시와 서명을 
 
 `mac_simulator`는 UDID·기기·부팅 정체성을 확인하고 앱 생명주기·PNG·동영상·iOSContentGroup 분석을 제공합니다. IndigoHID 입력은 별도 프로세스이며 매 호출의 `privateAPI=true`가 필요합니다. Simulator 기능에만 Xcode와 해당 런타임이 필요합니다. [Simulator 사용법](macpilot/references/simulator.md)을 참고하세요.
 
-권한 설정은 `mac_permission operation=setup kind=all` 또는 CLI `permission-setup`으로 진행합니다. macOS 시스템 설정 옆에 앱 아이콘만 있는 88×88pt 안내 패널을 붙입니다. 사용자가 패널의 아이콘을 권한 목록으로 끌어 넣거나 아이콘 우클릭 메뉴에서 ‘자동으로 추가’를 선택할 수 있습니다. Finder나 큰 별도 설정 창은 열지 않습니다. 패널은 설정 창 이동을 따라가고 다른 앱이 활성화되면 숨습니다. 아이콘과 잡는 손 모양의 짧은 시연이 직접 드래그를 안내합니다. 사용자가 아이콘을 잡으면 시연을 멈추며 동작 줄이기를 따릅니다. Automation은 앱별 macOS 동의 요청을 사용하며, 시스템 인증과 최종 승인은 사용자가 직접 진행합니다. [권한 설정](macpilot/references/permission-setup.md)을 참고하세요.
+권한 설정은 `mac_permission operation=setup kind=all` 또는 CLI `permission-setup`으로 진행합니다. 전체 화면 안내에서 사용자가 ‘설정 열기’를 선택하면 시스템 설정을 엽니다. 이 일회성 선택은 Input Monitoring 권한 없이 사용할 수 있으며 일반 입력 제어 권한을 주지 않습니다. macOS 시스템 설정 옆에 앱 아이콘만 있는 88×88pt 안내 패널을 붙입니다. 사용자가 패널의 아이콘을 권한 목록으로 끌어 넣거나 아이콘 우클릭 메뉴에서 ‘자동으로 추가’를 선택할 수 있습니다. Finder나 큰 별도 설정 창은 열지 않습니다. 패널은 설정 창 이동을 따라가고 다른 앱이 활성화되면 숨습니다. 아이콘과 잡는 손 모양의 짧은 시연이 직접 드래그를 안내합니다. 사용자가 아이콘을 잡으면 시연을 멈추며 동작 줄이기를 따릅니다. Automation은 앱별 macOS 동의 요청을 사용하며, 시스템 인증과 최종 승인은 사용자가 직접 진행합니다. [권한 설정](macpilot/references/permission-setup.md)을 참고하세요.
 
 현재 MCP 도구가 필요한 기능을 제공하면 직접 사용하고, 구버전이면 이 스킬의 CLI를 사용합니다. Plugin은 전역 스킬·MCP 설정·사용자 브라우저 프로필을 자동 교체하지 않습니다. 원격 게시·설치·활성화·새 세션 노출은 별도입니다. [스킬 본문](macpilot/SKILL.md), [CLI·MCP](macpilot/references/tools.md), [개발·검증](macpilot/references/development.md), [설치 안내](docs/plugin-installation.md#macpilot)를 참고하세요.
 

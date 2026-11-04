@@ -19,20 +19,48 @@ public struct TaskRecord: Codable {
     public var created: Date
     public var deadline: Date
     public var interruptionReason: String? = nil
+    public var controlRequestID: String? = nil
     public var object: [String: Any] {
         (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(self))) as? [String: Any] ?? [:]
     }
 }
 
 public enum Tasks {
+    private struct ControlFailure: Codable {
+        var taskID: String
+        var epoch: String?
+        var reason: String
+    }
+    private static func controlFailureName(_ id: String, epoch: String?) -> String {
+        "task-\(id)-control-failure-\(epoch ?? "unassigned").json"
+    }
+    static func queueControlFailure(_ id: String, epoch: String?, reason: String, store: Store) throws {
+        try store.write(JSONEncoder().encode(ControlFailure(taskID: id, epoch: epoch, reason: reason)),
+            to: store.root.appendingPathComponent(controlFailureName(id, epoch: epoch)))
+    }
     public static func id(_ raw: String) throws -> String {
         guard let uuid = UUID(uuidString: raw) else { throw ToolFailure("invalid_argument", "taskID must be a UUID") }
         return uuid.uuidString.lowercased()
     }
     public static func load(_ raw: String, in store: Store) throws -> TaskRecord {
         let key = try id(raw)
-        guard let record = try? JSONDecoder().decode(TaskRecord.self, from: store.read("task-\(key).json")), record.id == key else {
+        guard var record = try? JSONDecoder().decode(TaskRecord.self, from: store.read("task-\(key).json")), record.id == key else {
             throw ToolFailure("missing_task", "Task does not exist in this MacPilot state directory")
+        }
+        if ["active", "awaiting_control"].contains(record.status),
+           let data = try? store.read(controlFailureName(key, epoch: record.controlRequestID)),
+           let failure = try? JSONDecoder().decode(ControlFailure.self, from: data),
+           failure.taskID == key, failure.epoch == record.controlRequestID,
+           let lease = try? store.lease(".tasks.lock") {
+            defer { withExtendedLifetime(lease) {} }
+            // A failure record survives transient nonblocking-lock contention.
+            // Recheck the epoch under lock so old failures cannot stop a resume.
+            if var current = try? JSONDecoder().decode(TaskRecord.self, from: store.read("task-\(key).json")),
+               current.controlRequestID == failure.epoch, ["active", "awaiting_control"].contains(current.status) {
+                current.status = "interrupted"; current.interruptionReason = failure.reason
+                try save(current, in: store); record = current
+                try store.remove(controlFailureName(key, epoch: failure.epoch))
+            }
         }
         return record
     }
@@ -48,13 +76,45 @@ public enum Tasks {
         guard record.deadline > Date() else { throw ToolFailure("task_expired", "Task deadline elapsed") }
         if let pid = record.pid, let identity = record.processStartID { try ProcessIdentity.require(pid: pid, expected: identity) }
     }
-    public static func interrupt(_ id: String, reason: String, store: Store) throws {
+    public static func interrupt(_ id: String, reason: String, store: Store, controlRequestID: String? = nil) throws {
         let lease = try store.lease(".tasks.lock"); defer { withExtendedLifetime(lease) {} }
         var record = try load(id, in: store)
-        guard record.status == "active" else { return }
+        if let controlRequestID, record.controlRequestID != controlRequestID { return }
+        guard ["active", "awaiting_control"].contains(record.status) else { return }
         record.status = "interrupted"; record.interruptionReason = reason; try save(record, in: store)
     }
+    @MainActor public static func callWithHandoff(_ a: Arguments, store: Store) async throws -> [String: Any] {
+        if let id = a.values["taskID"] as? String { _ = try? load(id, in: store) }
+        let result = try call(a, store: store)
+        if ["begin", "resume"].contains(try a.string("operation")),
+           let object = result["task"] as? [String: Any], let id = object["id"] as? String,
+           let task = try? load(id, in: store), !task.preserveForeground {
+            do { try await ControlHandoff.request(taskID: id, store: store) }
+            catch {
+                let failureReason = (error as? ToolFailure)?.code ?? "control_handoff_cancelled"
+                try? queueControlFailure(id, epoch: task.controlRequestID, reason: failureReason, store: store)
+                // Task locking is nonblocking. Reconcile a transient status read
+                // without holding a lease across this asynchronous retry.
+                for _ in 0..<20 {
+                    do {
+                        let lease = try store.lease(".tasks.lock"); defer { withExtendedLifetime(lease) {} }
+                        var current = try load(id, in: store)
+                        if current.controlRequestID == task.controlRequestID, ["active", "awaiting_control"].contains(current.status) {
+                            current.status = "interrupted"; current.interruptionReason = failureReason; try save(current, in: store)
+                        }
+                        break
+                    }
+                    catch { try? await Task.sleep(nanoseconds: 20_000_000) }
+                }
+                throw error
+            }
+            var accepted = result; accepted["task"] = try load(id, in: store).object
+            accepted["controlHandoff"] = "granted_by_user"; return accepted
+        }
+        return result
+    }
     @MainActor public static func call(_ a: Arguments, store: Store) throws -> [String: Any] {
+        let lease = try store.lease(".tasks.lock"); defer { withExtendedLifetime(lease) {} }
         let operation = try a.string("operation")
         switch operation {
         case "begin":
@@ -96,11 +156,14 @@ public enum Tasks {
                         try state.remove(name); try state.remove(reference + ".png")
                     }
                 }
+                // Reserve a new epoch before releasing the task lock. Late
+                // cleanup from the interrupted worker cannot affect this resume.
+                if !record.preserveForeground { record.controlRequestID = UUID().uuidString.lowercased() }
                 record.status = "active"; record.interruptionReason = nil; try save(record, in: store)
                 return ["status":"task_resumed", "task":record.object, "verification":"Controller state resumed; make a fresh observation before input"]
             }
             if operation != "status" {
-                guard ["active","interrupted"].contains(record.status) else { return ["status": "task_\(record.status)", "task": record.object] }
+                guard ["active","interrupted","awaiting_control"].contains(record.status) else { return ["status": "task_\(record.status)", "task": record.object] }
                 record.status = operation == "cancel" ? "cancelled" : "finished"
                 try save(record, in: store)
             }

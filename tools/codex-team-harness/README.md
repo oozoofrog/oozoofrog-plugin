@@ -59,6 +59,8 @@ Rollback compares all affected current bytes before restoring originals; unexpec
 
 ## Managed sample
 
+For user-requested separate sidebar chats, follow [Astra analysis and team formation](payload/team-coordination/references/sidebar-startup.md) through official app tools. Astra inspects the project before choosing and creating an appropriate separate leader and distinctive professional teammates. This skill startup path is separate from the managed-run pilot and explicit handoff lifecycle below. Installing the bundle starts no chats or project migration.
+
 From this verified `tools/codex-team-harness/` source directory:
 
 ```sh

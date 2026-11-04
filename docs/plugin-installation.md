@@ -10,7 +10,7 @@ WinPilot 0.5.1은 [스킬](../winpilot/SKILL.md)과 MCP 설정을 함께 제공�
 
 ## 기존 Plugin
 
-Repository marketplace에는 `swift-intelligence`, `local-ai-studio`, `macpilot`가 있습니다. 필요한 Plugin만 선택합니다. 아래 명령은 해당 변경이 원격에 반영된 뒤 사용합니다.
+아래는 `swift-intelligence`, `local-ai-studio`, `macpilot`의 설치 예시입니다. 전체 로컬 목록은 [Plugin 카탈로그](../README.md#choose-a-plugin)를 확인하고 필요한 Plugin만 선택합니다. 아래 명령은 해당 변경이 원격에 반영된 뒤 사용합니다.
 
 ```bash
 codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
@@ -37,11 +37,11 @@ Swift Intelligence는 macOS, Command Line Tools를 포함한 Xcode, Python 3가 
 
 `macpilot` Plugin `3.6.0`은 macOS·브라우저·Simulator 작업용 스킬, SwiftPM 소스·테스트, Chromium 확장, 빌드 런처와 검증 스크립트를 포함합니다. 새 작업에서 `$macpilot` 또는 `$macpilot:macpilot`로 호출합니다. 현재 MCP에 필요한 기능이 없으면 설치된 스킬의 `scripts/macpilot` CLI를 사용합니다. Plugin은 MCP 서버를 자동 등록하지 않습니다. `mac_record`의 화면·영역·시스템 오디오 MP4 녹화에는 macOS 15 이상이 필요합니다. [녹화 범위와 검증](../macpilot/references/recording.md)을 확인하세요. [CLI·선택적 MCP 설정](../macpilot/references/tools.md)을 참고하세요. MCP가 끊겼으면 [연결 진단과 복구](../macpilot/references/mcp-recovery.md)의 `mac_connection`·`connection-check`를 사용합니다. 기존 연결·Codex 앱을 자동 재시작하지 않습니다.
 
-macOS 14 이상에서 실행합니다. CLI 첫 실행은 고정 해시와 서명을 확인한 Universal 배포 앱을 내려받습니다. 일반 macOS 제어에는 Swift·Xcode 설치가 필요 없습니다. 사용하는 기능에 따라 Accessibility·Screen Recording·Automation 권한이 필요합니다. 기본 제어에는 모델·API 키·외부 SwiftPM 패키지·Python·Node.js가 필요하지 않습니다. 선택적 VisionKit·EmbeddingGemma 2 검색만 명시적으로 설정한 로컬 Python 환경과 고정 모델을 사용합니다. 전역 입력 중 다른 입력 출처를 감지하려면 Input Monitoring 권한이 필요합니다. 조건 대기·추적·재사용 작업과 이미지 검색은 [기능 사용법](../macpilot/references/capabilities.md)을 확인하세요. Codex 진단 전송을 사용할 때만 별도 Codex 실행 파일·로그인·모델 연결이 필요합니다.
+macOS 14 이상에서 실행합니다. CLI 첫 실행은 고정 해시와 서명을 확인한 Universal 배포 앱을 내려받습니다. 일반 macOS 제어에는 Swift·Xcode 설치가 필요 없습니다. 사용하는 기능에 따라 Accessibility·Screen Recording·Automation 권한이 필요합니다. 기본 제어에는 모델·API 키·외부 SwiftPM 패키지·Python·Node.js가 필요하지 않습니다. 선택적 VisionKit·EmbeddingGemma 2 검색만 명시적으로 설정한 로컬 Python 환경과 고정 모델을 사용합니다. 현재 checkout의 미출시 소스에서 전경 제어 인계와 전역 입력 중 다른 입력 출처 감지에는 Input Monitoring 권한이 필요합니다. 전경 작업은 전체 화면 안내에서 사용자가 제어 시작을 선택해야 시작되며, 호출 사이에도 직접 입력하면 중단합니다. 이 소스 변경의 게시·설치된 런타임 동작은 확인하지 않았습니다. 조건 대기·추적·재사용 작업과 이미지 검색은 [기능 사용법](../macpilot/references/capabilities.md)을 확인하세요. Codex 진단 전송을 사용할 때만 별도 Codex 실행 파일·로그인·모델 연결이 필요합니다.
 
 `mac_simulator`는 UDID·기기·부팅 정체성을 확인하고 앱 생명주기·PNG·동영상·iOSContentGroup 분석을 제공합니다. IndigoHID 입력은 별도 프로세스이며 매 호출의 `privateAPI=true`가 필요합니다. Simulator 기능에만 Xcode와 해당 런타임이 필요합니다. [Simulator 사용법](../macpilot/references/simulator.md)을 참고하세요.
 
-권한을 설정하려면 설치된 스킬의 `scripts/macpilot permission-setup`을 실행합니다. macOS 시스템 설정 옆에 앱 아이콘만 있는 88×88pt 안내 패널을 붙입니다. 짧은 드래그 시연은 최대 두 번 재생하고, 아이콘을 잡으면 멈추며 동작 줄이기를 따릅니다. 사용자가 패널의 앱 아이콘을 권한 목록으로 드래그하거나 아이콘 우클릭 메뉴에서 선택적 자동 추가를 사용할 수 있습니다. Finder나 큰 별도 설정 창은 열지 않습니다. Automation은 대상 앱별 macOS 동의 요청을 사용합니다. 시스템 인증과 최종 승인은 사용자가 직접 진행합니다. [권한 설정](../macpilot/references/permission-setup.md)을 확인하세요.
+권한을 설정하려면 설치된 스킬의 `scripts/macpilot permission-setup`을 실행합니다. 현재 미출시 소스에서는 먼저 전체 화면 안내에서 사용자가 ‘설정 열기’를 선택해야 시스템 설정을 엽니다. 이 일회성 설정 안내는 Input Monitoring 권한이 없어도 사용할 수 있으며 일반 입력 제어 권한을 주지 않습니다. macOS 시스템 설정 옆에 앱 아이콘만 있는 88×88pt 안내 패널을 붙입니다. 짧은 드래그 시연은 최대 두 번 재생하고, 아이콘을 잡으면 멈추며 동작 줄이기를 따릅니다. 사용자가 패널의 앱 아이콘을 권한 목록으로 드래그하거나 아이콘 우클릭 메뉴에서 선택적 자동 추가를 사용할 수 있습니다. Finder나 큰 별도 설정 창은 열지 않습니다. Automation은 대상 앱별 macOS 동의 요청을 사용합니다. 시스템 인증과 최종 승인은 사용자가 직접 진행합니다. [권한 설정](../macpilot/references/permission-setup.md)을 확인하세요.
 
 Chromium은 `browser/extension/`을 로드하고 `mac_browser install_host`로 해당 확장 ID의 Swift native host를 등록합니다. 필요한 사이트 접근은 확장 팝업에서 허용합니다. Safari는 확장 없이 Apple Events를 사용하며 Safari의 Allow JavaScript from Apple Events가 켜져 있어야 DOM 동작을 실행합니다. `mac_browser_developer`로 Safari·Chrome 개발자 설정을 조회·준비하고 사용자의 네이티브 확인 후 선택한 설정을 켤 수 있습니다. [개발자 설정과 승인 범위](../macpilot/references/browser-developer-settings.md)를 확인하세요. Safari의 교차 출처 프레임·다운로드·screenshot은 호스트 브라우저 또는 네이티브 도구가 필요합니다. 설치 조건·전체 지원 범위는 [작업별 워크플로](../macpilot/references/workflows.md)에 있습니다.
 
@@ -53,7 +53,9 @@ Chromium은 `browser/extension/`을 로드하고 `mac_browser install_host`로 �
 
 ## Local AI Studio
 
-`local-ai-studio`는 Local AI Studio를 사용한 이미지·음성·영상·음악·영어→한국어 번역 작업을 수행하는 skills-only Plugin `0.2.1`입니다. Local AI Studio 또는 온디바이스 모델 작업을 요청했는데 LocalAIHub나 필요한 모델 그룹이 없으면 현재 소스를 확인해 로컬에 설치한 뒤 결과를 검증·전달합니다. 일반 미디어 요청만으로 설치를 시작하지 않습니다. 새 작업에서 `$local-ai-studio` 또는 `$local-ai-studio:local-ai-studio`로 호출할 수 있으며 사용자가 선택한 도구·모델·출력 위치·형식을 우선합니다.
+버전 0.3.0은 별도 `whisper-cli`를 사용하는 [Whisper 전사·추정 타임스탬프 흐름](../local-ai-studio/references/whisper.md)도 제공합니다. 기존 모델 재사용, crop 오프셋, DTW 실패와 정확도 한계를 구분합니다. 별도 CLI 지침이며 네이티브 앱 통합을 뜻하지 않습니다.
+
+`local-ai-studio`는 Local AI Studio를 사용한 이미지·음성·영상·음악·영어→한국어 번역 작업을 수행하는 skills-only Plugin `0.3.0`입니다. Local AI Studio 또는 온디바이스 모델 작업을 요청했는데 LocalAIHub나 필요한 모델 그룹이 없으면 현재 소스를 확인해 로컬에 설치한 뒤 결과를 검증·전달합니다. 일반 미디어 요청만으로 설치를 시작하지 않습니다. 새 작업에서 `$local-ai-studio` 또는 `$local-ai-studio:local-ai-studio`로 호출할 수 있으며 사용자가 선택한 도구·모델·출력 위치·형식을 우선합니다.
 
 아직 푸시하지 않은 checkout을 시험하려면 저장소 루트에서 `codex plugin marketplace add "$PWD"`로 등록한 뒤 `codex plugin add local-ai-studio@oozoofrog-plugin`를 사용하세요. 기존 `oozoofrog-plugin` marketplace가 있으면 source가 원격인지 해당 checkout인지 먼저 확인합니다. Standalone을 선택하면 `local-ai-studio/`를 skill-installer로 설치하되 Plugin과 중복 설치하지 않고 기존 전역 스킬을 임의로 덮어쓰지 않습니다.
 

@@ -13,17 +13,20 @@ enum InputOwnership {
 
 /// Passive monitoring only: never swallows, remaps, records, or replays user input.
 final class UserInputMonitor {
+    static let monitoredTypes: [CGEventType] = [.keyDown, .keyUp, .flagsChanged, .mouseMoved,
+        .leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp, .otherMouseDown, .otherMouseUp,
+        .leftMouseDragged, .rightMouseDragged, .otherMouseDragged, .scrollWheel]
     private var tap: CFMachPort?
     private var source: CFRunLoopSource?
     private(set) var reason: String?
     private(set) var externalEvents = 0
-    init() throws {
+    private let ownsEvent: (CGEvent) -> Bool
+    init(ownsEvent: @escaping (CGEvent) -> Bool = InputOwnership.owns) throws {
+        self.ownsEvent = ownsEvent
         guard CGPreflightListenEventAccess() else {
             throw ToolFailure("input_monitor_denied", "Global input needs Input Monitoring so MacPilot can yield to the user before sending events")
         }
-        let types: [CGEventType] = [.keyDown, .keyUp, .flagsChanged, .mouseMoved, .leftMouseDown, .leftMouseUp,
-                                    .rightMouseDown, .otherMouseDown, .leftMouseDragged, .rightMouseDragged, .scrollWheel]
-        let mask = types.reduce(CGEventMask(0)) { $0 | (CGEventMask(1) << $1.rawValue) }
+        let mask = Self.monitoredTypes.reduce(CGEventMask(0)) { $0 | (CGEventMask(1) << $1.rawValue) }
         tap = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap, options: .listenOnly,
                                eventsOfInterest: mask, callback: { _, type, event, raw in
             guard let raw else { return Unmanaged.passUnretained(event) }
@@ -39,11 +42,11 @@ final class UserInputMonitor {
         guard CGEvent.tapIsEnabled(tap: tap) else { throw ToolFailure("input_monitor_unavailable", "Input monitoring did not start") }
     }
     // Kept separate for tests of event provenance without a system event tap.
-    init(testing: Bool) {}
+    init(testing: Bool) { ownsEvent = InputOwnership.owns }
     func receive(_ type: CGEventType, event: CGEvent) {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             reason = "input_monitor_lost"
-        } else if !InputOwnership.owns(event) {
+        } else if !ownsEvent(event) {
             externalEvents += 1; reason = "user_input_interrupted"
         }
     }

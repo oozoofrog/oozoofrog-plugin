@@ -11,7 +11,7 @@ public enum ToolCatalog {
     private static let observation = str("Fresh observation UUID from mac_observe. Expires after 30 seconds and one target mutation.")
     private static let node = str("Node ID from this observation's AX tree.")
     private static let processStartID = str("Exact process start identity returned with this PID by mac_apps.")
-    private static let route = str("process targets only PID and is app-dependent; global uses the shared system cursor/keyboard and requires foreground.", choices:["process","global"])
+    private static let route = str("process targets only PID and is app-dependent; global uses the shared system cursor/keyboard and requires a foreground task whose native full-screen handoff the user explicitly accepted.", choices:["process","global"])
     private static let x: [String: Any] = ["type":"number", "minimum":-1e7, "maximum":1e7]
     private static let space = str("Coordinate units. Default window. All origins top-left.", choices:["screen","window","image","normalized"])
     private static let strings: [String: Any] = ["type":"array", "items":["type":"string"], "maxItems":8]
@@ -122,15 +122,19 @@ public enum ToolCatalog {
                   "previousParentPID":int("Previous parent PID; requires previousParentStartID",min:1),
                   "previousParentStartID":str("Previous parent processStartID from connection status"),
                   "timeoutMs":int("Probe-only deadline; default 10000, plus bounded child cleanup",min:500,max:30000)], ["operation"],read:true),
-            spec("mac_task", "Begin, inspect, cancel or finish isolated MacPilot work. Background preservation is the default. Cancellation interrupts active task calls.",
-                 ["operation":str("Task operation; resume is explicit after user-input interruption", choices:["begin","list","status","cancel","finish","resume"]),
-                  "taskID":str("Task UUID for status, cancel and finish"), "goal":str("Explicit task intent; up to 4096 UTF-8 bytes"),
+            spec("mac_task", "Begin, inspect, cancel or finish isolated MacPilot work. Background preservation is the default. Foreground begin/resume waits for the user to choose Start control in a full-screen native handoff; never click that production UI for the user. User input revokes control even between calls. Cancellation remains available while awaiting handoff.",
+                 ["operation":str("Task operation; foreground begin/resume requires a new explicit native user handoff", choices:["begin","list","status","cancel","finish","resume"]),
+                  "taskID":str("Task UUID for status, cancel, finish and resume"), "goal":str("Explicit task intent; up to 4096 UTF-8 bytes"),
                   "expected":str("Explicit expected postcondition; up to 4096 UTF-8 bytes"), "pid":int("Optional bound PID",min:1),
                   "processStartID":processStartID, "windowID":int("Optional bound window",min:1,max:Int(UInt32.max)),
                   "preserveForeground":["type":"boolean","default":true],
                   "durationSeconds":int("Deadline from creation; default 1800 seconds",min:1,max:28800)], ["operation"]),
-            spec("mac_cursors", "List/remove virtual cursors or hide/show desktop arrows and target highlight. Independent of preview visibility; no system events.",
-                 ["operation":str("Cursor operation",choices:["list","remove","hide","show"]), "observation":observation], ["operation","observation"]),
+            spec("mac_cursors", "List/remove virtual cursors, hide/show desktop feedback, or stop this state's feedback host. Stop needs no observation and remains available for cancelled/expired tasks; it confirms hidden feedback and exact process exit without deleting pointers. Preview visibility is independent. Feedback expires after 30 seconds without target activity, or when its owning MCP exits.",
+                 ["operation":str("Cursor operation; stop terminates this state's desktop feedback only",choices:["list","remove","hide","show","stop"]), "observation":observation], ["operation"],
+                 variants:[
+                    ["properties":["operation":["const":"stop"]], "not":["required":["observation"]]],
+                    ["properties":["operation":["enum":["list","remove","hide","show"]]], "required":["observation"]]
+                 ]),
             spec("mac_private", "Inspect private SPI exports or explicitly map AX windows to WindowServer IDs. Exported research symbols are not called.",
                  ["operation":str("Private API operation",choices:["catalog","window_ids"]), "enabled":["type":"boolean","default":false],
                   "pid":int("Owner PID",min:1), "processStartID":processStartID], ["operation"],read:true),
@@ -257,7 +261,7 @@ public enum ToolCatalog {
                   "timeoutMs":int("Timeout in milliseconds; default 10000",min:100,max:60000),
                   "maxOutputBytes":int("Maximum bytes retained for each output stream; default 65536",min:1,max:1048576)],
                  ["language","source"], destructive:true, idempotent:false, openWorld:true),
-            spec("mac_permission", "Request a macOS permission, or open native System Settings with a small attached icon guide. User drag is the default; the guide offers optional auto-add. Requires a foreground-capable task and the shared input lease. User approval in System Settings is required.",
+            spec("mac_permission", "Request a macOS permission with a user-granted foreground task, or launch consent-gated native permission onboarding with operation=setup. Setup has a one-shot full-screen user choice and grants no reusable keyboard/mouse control; Input Monitoring is not a bootstrap prerequisite. Native System Settings approval remains user-only.",
                  ["kind":str("Permission",choices:["all","accessibility","screenCapture","postEvent","inputMonitoring","automation","fullDiskAccess","files","clipboard"]),
                   "operation":str("Default request shows the OS prompt for the four system permissions; setup opens native System Settings with an attached drag icon. all guides through required lists and Safari Automation",choices:["request","setup"]),
                   "targetBundleID":str("Automation target for setup; default com.apple.Safari"),

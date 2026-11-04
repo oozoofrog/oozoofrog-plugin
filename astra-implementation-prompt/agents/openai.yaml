@@ -1,0 +1,4 @@
+interface:
+  display_name: "Astra Implementation Prompt"
+  short_description: "Review Astra prompts before starting implementation"
+  default_prompt: "Use $astra-implementation-prompt to prepare an implementation prompt with Astra Max for my review and choice of implementation model."
