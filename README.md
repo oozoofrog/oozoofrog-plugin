@@ -14,6 +14,10 @@ The [team-harness `0.5.5` release](https://github.com/oozoofrog/oozoofrog-plugin
 
 English | [한국어](README.ko.md)
 
+[Astra Implementation Prompt](astra-implementation-prompt/SKILL.md) is a skills-only Plugin. Use when the user asks Astra Max to prepare an implementation prompt for review and a later user-selected implementation chat. Do not use for ordinary implementation requests. It presents the full prompt before asking whether to start a Sol Ultra or Terra Ultra implementation chat.
+
+Example: `Use $astra-implementation-prompt to prepare an implementation prompt with Astra Max for my review and choice of implementation model.`
+
 [Interface First Design](interface-first-design/SKILL.md) (`interface-first-design` 0.1.0) is a skills-only Plugin. Use when designing, implementing, or reviewing product UI, especially when explanatory prose substitutes for clear structure, visible controls, or state feedback. Applies to product screens and interactions, not agent communication or technical documentation. It preserves essential text and data while making actions and recovery visible. Distribution checks cover packaging; behavioral evaluation and live UI verification are separate. See [installation](docs/plugin-installation.md#interface-first-design). [Validation method, results and limits](docs/validation/interface-first-design.md).
 
 Invocation: `Use $interface-first-design to design or review this product UI with visible actions, clear states, and preserved meaning.`

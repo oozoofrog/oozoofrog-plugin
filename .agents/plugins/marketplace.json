@@ -195,6 +195,18 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Productivity"
+    },
+    {
+      "name": "astra-implementation-prompt",
+      "source": {
+        "source": "local",
+        "path": "./plugins/astra-implementation-prompt"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
     }
   ]
 }
