@@ -1,0 +1,9 @@
+{
+  "manifest_version": 3,
+  "name": "mac-cu",
+  "version": "1.1.1",
+  "description": "Lets the mac-cu MCP server (Claude Code, Codex) operate tabs of this Chrome: the browser tool with \"engine\": \"extension\".",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlbSikkX42VVldyO0IWGrtz7zAd1lE95OceAU4hq0lTXEFNpFyf7uQkx0YeL4v5KEAw0Dv9Xxkg3QCpg9ovBcN1fXDLvvkB+MakPETMTPlRC6a6wDC+grPFm5MRPEnPesWK6mUKA0LniMVJmJrvwg+FF5HbfJ5TwOCFBhLSoNMhe7Lg9OKpfQ1ePDui/9qS4R/7LvrUqQQC9mPWKadz7NuxIFLOFSqm/mEI68b6e/8bn8MYZFlya/1EkyYqWmGSV3m28CAUhKRIJalAEo399LJLE9d78qqBbt6wn8Acd5gXUeMyRWKgdXNlp/ZtCAviwB1yZ5cPWJWUbp6RTRu2DifwIDAQAB",
+  "permissions": ["debugger", "tabs", "nativeMessaging", "alarms"],
+  "background": {"service_worker": "background.js"}
+}

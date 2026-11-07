@@ -29,10 +29,22 @@
       "category": "Productivity"
     },
     {
-      "name": "macpilot",
+      "name": "mac-computer-use",
       "source": {
         "source": "local",
-        "path": "./plugins/macpilot"
+        "path": "./plugins/mac-computer-use"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "simulator-pilot",
+      "source": {
+        "source": "local",
+        "path": "./plugins/simulator-pilot"
       },
       "policy": {
         "installation": "AVAILABLE",

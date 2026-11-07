@@ -39,7 +39,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ["swift-intelligence", "local-ai-studio", "macpilot", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing", "interface-first-design", "winpilot", "c4fy", "astra-implementation-prompt"],
+            ["swift-intelligence", "local-ai-studio", "mac-computer-use", "simulator-pilot", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing", "interface-first-design", "winpilot", "c4fy", "astra-implementation-prompt"],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -129,94 +129,52 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertFalse(any(part in {"bin", "obj", "artifacts", "evidence"} for name in files for part in Path(name).parts))
         self.assertNotIn("game-start-reference.png", runtime["files"])
 
-    def test_macpilot_distribution(self) -> None:
-        source = REPO_ROOT / "macpilot"
-        plugin = REPO_ROOT / "plugins" / source.name
-        mirror = plugin / "skills" / source.name
+    def test_replacement_desktop_packages(self) -> None:
         from test_sync_skill_mirrors import load_module
-        module = load_module()
-        self.assertIn(source.name, module.PACKAGES)
-        self.assertEqual(module.package_files(source), module.package_files(mirror))
-        for relative in ("assets/app-icon.png", "assets/README.md",
-                         "tool/Package.swift", "tool/Sources/MacPilot/Main.swift",
-                         "tool/Sources/MacPilotCore/Engine.swift",
-                         "tool/Sources/MacPilotFixture/main.swift",
-                         "tool/Tests/MacPilotCoreTests/CoreTests.swift",
-                         "scripts/verify_mcp.py", "scripts/verify_connection.py", "scripts/verify_runtime.py", "scripts/verify_features.py",
-                         "scripts/verify_browser.mjs", "scripts/verify_safari.py", "scripts/verify_preview_drag.swift", "browser/extension/manifest.json",
-                         "browser/extension/background.js", "browser/extension/content.js", "browser/extension/popup.html",
-                         "browser/extension/popup.js", "references/workflows.md", "references/private-api.md", "references/development.md",
-                         "tool/Sources/MacPilotCore/Tasks.swift", "tool/Sources/MacPilotCore/ConnectionDiagnostics.swift",
-                         "tool/Tests/MacPilotCoreTests/ConnectionTests.swift", "references/mcp-recovery.md",
-                         "tool/Sources/MacPilotCore/PermissionSetup.swift", "tool/Sources/MacPilotCore/PermissionCenter.swift",
-                         "tool/Sources/MacPilotCore/PermissionGuide.swift",
-                         "tool/Sources/MacPilotCore/PermissionDragOnboarding.swift",
-                         "scripts/verify_permissions_none.py", "scripts/verify_input.py",
-                         "scripts/permission_unprivileged_probe.swift",
-                         "scripts/permission_probe_launcher.swift", "scripts/permission_probe_control.py",
-                         "references/permission-validation.md",
-                         "tool/Tests/MacPilotCoreTests/PermissionSetupTests.swift",
-                         "references/permission-setup.md", "scripts/verify_permission_drag.swift", "tool/Sources/MacPilotCore/BrowserBridge.swift",
-                         "tool/Sources/MacPilotCore/SafariBridge.swift", "tool/Sources/MacPilotCore/Improvements.swift",
-                         "tool/Sources/MacPilotCore/BrowserDeveloperSettings.swift",
-                         "tool/Tests/MacPilotCoreTests/BrowserDeveloperTests.swift",
-                         "scripts/verify_browser_developer.py", "references/browser-developer-settings.md",
-                         "tool/Sources/MacPilotCore/Recording.swift", "tool/Tests/MacPilotCoreTests/RecordingTests.swift",
-                         "scripts/verify_recording_chrome.mjs", "scripts/verify_recording_lifecycle.py", "references/recording.md",
-                         "references/capabilities.md", "scripts/verify_capabilities.py",
-                         "references/ui-analysis.md", "scripts/verify_analysis.py",
-                         "references/simulator.md", "scripts/verify_simulator.py", "scripts/verify_bootstrap.py", "scripts/install-runtime.sh", "runtime/distribution.json",
-                         "tool/Sources/MacPilotCore/Simulator.swift", "tool/Sources/MacPilotSimulatorHID/main.m", "tool/Fixtures/SimulatorFixture.m",
-                         "tool/Tests/MacPilotCoreTests/SimulatorTests.swift",
-                         "tool/Sources/MacPilotCore/UIAnalysis.swift", "tool/Tests/MacPilotCoreTests/UIAnalysisTests.swift",
-                         "runtime/image_search_worker.py", "runtime/embeddinggemma2-manifest.json", "runtime/requirements-image-search.txt",
-                         "tool/Sources/MacPilotCapabilityFixture/main.swift",
-                         "tool/Sources/MacPilotCore/Conditions.swift", "tool/Sources/MacPilotCore/OperationOutcome.swift",
-                         "tool/Sources/MacPilotCore/UserInputMonitor.swift", "tool/Sources/MacPilotCore/Tracing.swift",
-                         "tool/Sources/MacPilotCore/ImageSearch.swift", "tool/Sources/MacPilotCore/ImageSearchPipeline.swift",
-                         "tool/Sources/MacPilotCore/Workflows.swift"):
-            self.assertTrue((mirror / relative).is_file(), relative)
-        for relative in ("scripts/macpilot", "scripts/build.sh", "scripts/install-runtime.sh", "scripts/verify_simulator.py"):
-            if os.name == "nt":
-                mode = subprocess.check_output(["git", "ls-files", "--stage", "--", (mirror / relative).relative_to(REPO_ROOT).as_posix()], cwd=REPO_ROOT, text=True).split()[0]
-                self.assertEqual("100755", mode, relative)
-            else:
-                self.assertTrue((mirror / relative).stat().st_mode & 0o111, relative)
-        for relative in module.GENERATED_PATHS[source.name]:
-            self.assertFalse((mirror / relative).exists(), relative)
-        manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text())
-        self.assertEqual(source.name, manifest["name"])
-        self.assertEqual("3.6.0", manifest["version"])
-        self.assertEqual(manifest["version"], json.loads((source / "browser/extension/manifest.json").read_text())["version"])
-        frontmatter = (source / "SKILL.md").read_text().split("---", 2)[1]
-        self.assertEqual({"name", "description"}, {line.split(":", 1)[0] for line in frontmatter.splitlines() if ":" in line})
-        self.assertIn("description: " + manifest["description"], frontmatter)
-
-        self.assertEqual("./skills/", manifest["skills"])
-        for key in ("mcpServers", "apps", "hooks"):
-            self.assertNotIn(key, manifest)
-        for relative in (".mcp.json", ".app.json", "hooks"):
-            self.assertFalse((plugin / relative).exists(), relative)
-        metadata = {}
-        for line in (source / "agents/openai.yaml").read_text().splitlines():
-            if line.startswith("  ") and ": " in line:
-                key, value = line.strip().split(": ", 1)
-                metadata[key] = json.loads(value)
-        self.assertEqual(metadata["display_name"], manifest["interface"]["displayName"])
-        self.assertEqual(metadata["short_description"], manifest["interface"]["shortDescription"])
-        prompts = manifest["interface"]["defaultPrompt"]
-        self.assertIn(metadata["default_prompt"], prompts)
-        self.assertTrue(1 <= len(prompts) <= 3)
-        for prompt in prompts:
-            self.assertIn("$macpilot", prompt)
-            self.assertLessEqual(len(prompt), 128)
         from test_document_links import local_targets
-        for document in source.rglob("*.md"):
-            for target in local_targets(document.read_text(encoding="utf-8")):
-                self.assertTrue((document.parent / target).exists(), (document, target))
+        module = load_module()
+        for name in ("mac-computer-use", "simulator-pilot"):
+            with self.subTest(package=name):
+                source = REPO_ROOT / name
+                plugin = REPO_ROOT / "plugins" / name
+                self.assertEqual((source, plugin), module.mirror_paths(REPO_ROOT, name))
+                self.assertEqual(module.package_files(source), module.package_files(plugin))
+                manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text())
+                claude = json.loads((plugin / ".claude-plugin/plugin.json").read_text())
+                self.assertEqual(manifest["name"], claude["name"])
+                self.assertEqual(manifest["version"], claude["version"])
+                self.assertEqual(manifest["description"], claude["description"])
+                skill = plugin / manifest["skills"] / name
+                description = (skill / "SKILL.md").read_text().split("description: ", 1)[1].split("\n", 1)[0]
+                self.assertEqual(description, manifest["description"])
+                self.assertEqual(description, manifest["interface"]["longDescription"])
+                self.assertIn(description, (REPO_ROOT / "README.md").read_text())
+                metadata = dict(line.strip().split(": ", 1) for line in (skill / "agents/openai.yaml").read_text().splitlines() if line.startswith("  "))
+                self.assertEqual(json.loads(metadata["display_name"]), manifest["interface"]["displayName"])
+                self.assertEqual(json.loads(metadata["short_description"]), manifest["interface"]["shortDescription"])
+                self.assertIn(json.loads(metadata["default_prompt"]), manifest["interface"]["defaultPrompt"])
+                self.assertIn("$" + name, json.loads(metadata["default_prompt"]))
+                for root in (source, plugin):
+                    for document in [root / "README.md", *(root / "skills").rglob("*.md")]:
+                        for target in local_targets(document.read_text()):
+                            self.assertTrue((document.parent / target).exists(), (document, target))
+                files = module.package_files(plugin)
+                for prefix in module.GENERATED_PATHS.get(name, ()):
+                    self.assertFalse(any(p == prefix or p.startswith(prefix + "/") for p in files), prefix)
+        # setup.py reads its version from the Plugin root; hooks import the sibling types.
+        plugin = REPO_ROOT / "plugins/mac-computer-use"
+        for path in (".claude-plugin/plugin.json", "hooks/hooks.json", "hooks/register.tsx", "types/index.d.ts",
+                     "skills/mac-computer-use/scripts/setup.py", "skills/mac-computer-use/scripts/mac-cu-src/Daemon.swift",
+                     "skills/mac-computer-use/assets/mac-cu-icon.png"):
+            self.assertTrue((plugin / path).is_file(), path)
+        daemon = (plugin / "skills/mac-computer-use/scripts/mac-cu-src/Daemon.swift").read_text()
+        self.assertNotIn("talk-ios-plugins", daemon)
+        self.assertNotIn("update-plugins.sh", daemon)
+        for path in ("scripts/release_plugin.py", "scripts/releases/macpilot.json"):
+            self.assertFalse((REPO_ROOT / path).exists(), path)
 
     def test_retired_packages_are_not_distributed(self) -> None:
-        for name in ("gptplease", "gptpro", "gptwork", "astra-orchestrator", "jev-start", "jev-blender-use", "jev-computer-use",
+        for name in ("macpilot", "gptplease", "gptpro", "gptwork", "astra-orchestrator", "jev-start", "jev-blender-use", "jev-computer-use",
                      "astra-team-building", "figma-computer-use", "session-continuity",
                      "ponytail-beck-tdd", "unreal-agent"):
             self.assertFalse((REPO_ROOT / name / "SKILL.md").exists())

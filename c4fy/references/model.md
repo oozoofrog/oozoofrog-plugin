@@ -22,7 +22,7 @@ An original JSON model feeds the independent renderer. Reference semantics: [C4 
 }
 ```
 
-This miniature example is fictional. The bundled MacPilot example is pinned to real source.
+This miniature example is fictional. The bundled historical MacPilot example is pinned to real source.
 
 ## Fields
 
@@ -60,7 +60,7 @@ For example, these additions to a fictional Editor component named `editor-core`
 }
 ```
 
-This is an excerpt to merge into a complete model, not a standalone input. The bundled MacPilot example shows selected `BrowserBridge` methods and `BrowserConnection` at its pinned commit; omitted branches remain explicit. No child view means no drill action. Level tabs follow the current scope lineage, and the same-level selector switches authored alternatives. Code views reuse the complete-view fit, bottom pagination, node focus, morph-return, reduced motion, source links and SVG/JSON exports.
+This is an excerpt to merge into a complete model, not a standalone input. The bundled historical MacPilot example shows selected `BrowserBridge` methods and `BrowserConnection` at its pinned commit; omitted branches remain explicit. No child view means no drill action. Level tabs follow the current scope lineage, and the same-level selector switches authored alternatives. Code views reuse the complete-view fit, bottom pagination, node focus, morph-return, reduced motion, source links and SVG/JSON exports.
 
 ## Layout and text
 

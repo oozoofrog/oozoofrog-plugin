@@ -3,3 +3,10 @@ __pycache__/
 .build/
 .DS_Store
 .gptpro/
+
+# Retired runtime leftovers are local user data, never distribution inputs.
+/macpilot/
+/plugins/macpilot/
+
+# Supplied local development captures stay on disk, outside source distribution.
+/mac-computer-use/docs/development/

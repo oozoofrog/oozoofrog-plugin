@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mac Computer Use"
+  short_description: "Operate Mac apps, browser pages and iOS web views"
+  default_prompt: "Use $mac-computer-use to read and operate Calculator on my Mac."

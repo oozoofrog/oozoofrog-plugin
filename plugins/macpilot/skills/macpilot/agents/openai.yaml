@@ -1,4 +1,0 @@
-interface:
-  display_name: "MacPilot"
-  short_description: "macOS·브라우저·Simulator 제어, UI 분석과 전체 화면 제어 인계"
-  default_prompt: "$macpilot로 macOS·브라우저·Simulator 작업과 녹화를 수행하고 실제 결과를 검증하세요."

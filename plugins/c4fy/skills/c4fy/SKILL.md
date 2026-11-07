@@ -9,7 +9,7 @@ Build C1/C2/C3/C4 from one semantic model. C4fy is an original renderer; Archify
 
 ## Author from the owning source
 
-Read [model contract](references/model.md) and the matching parts of [the MacPilot example](examples/macpilot.c4.json). For repository work, inspect manifests, executable entry points, actual calls and persistence operations. Pin the credential-free repository URL and commit; use committed source ranges, and disclose relevant uncommitted changes. A valid source range does not establish that its text supports the claim.
+Read [model contract](references/model.md) and the matching parts of [the historical MacPilot example](examples/historical/macpilot.c4.json). For repository work, inspect manifests, executable entry points, actual calls and persistence operations. Pin the credential-free repository URL and commit; use committed source ranges, and disclose relevant uncommitted changes. A valid source range does not establish that its text supports the claim.
 
 - C1: people and systems around one internal system.
 - C2: applications/process roles and data stores inside one system. A container is not necessarily Docker. Do not promote a source file or module to an independently executing container.
@@ -45,7 +45,7 @@ node /path/to/c4fy/tests/browser.mjs output.html evidence-directory
 
 Install/use Playwright only in the development environment; it is not a runtime dependency. `C4FY_PLAYWRIGHT_PATH` may point to its `index.mjs`; `C4FY_CHROME` can name a Chrome executable. The browser probe targets a C1/C2/C3 fixture with a scoped system visible in C1, not every possible custom model. For other models adapt checks to the requested views, and do not claim this fixture probe as universal validation.
 
-The bundled `tests/browser-code.mjs output.html evidence-directory` probe additionally checks the MacPilot example’s C3↔C4 morph, code evidence/relationships, SVG/JSON exports, legacy inputs and all four levels at 1440/390/320 pixels.
+The bundled `tests/browser-code.mjs output.html evidence-directory` probe additionally checks the historical MacPilot example’s C3↔C4 morph, code evidence/relationships, SVG/JSON exports, legacy inputs and all four levels at 1440/390/320 pixels.
 
 Inspect rendered light/dark screenshots and animated transitions. Confirm readable labels, correct scope boundaries, no route/node collisions and usable narrow screens. Browser automation is not perceptual approval. Exported SVG is a static view; the JSON preserves the complete model. Neither export is a runtime or deployment test of the depicted system.
 

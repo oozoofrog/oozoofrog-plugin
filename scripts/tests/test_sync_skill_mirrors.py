@@ -55,29 +55,27 @@ class SyncSkillMirrorsTests(unittest.TestCase):
         with self.assertRaises(self.module.SyncError):
             self.module.sync_one(self.source, self.mirror, write=True)
 
-    def test_macpilot_builds_and_observation_evidence_are_not_distributed(self) -> None:
-        source = self.root / "macpilot"
-        mirror = self.root / "plugins/macpilot/skills/macpilot"
-        source.mkdir()
-        (source / "SKILL.md").write_text("---\nname: macpilot\n---\n")
-        code = source / "tool/Sources/MacPilot/Main.swift"
-        code.parent.mkdir(parents=True)
-        code.write_text("import AppKit\n")
-        for prefix in self.module.GENERATED_PATHS["macpilot"]:
+    def test_plugin_source_layout_and_local_data_exclusions(self) -> None:
+        source = self.root / "mac-computer-use"
+        mirror = self.root / "plugins/mac-computer-use"
+        skill = source / "skills/mac-computer-use"
+        skill.mkdir(parents=True)
+        (skill / "SKILL.md").write_text("---\nname: mac-computer-use\n---\n")
+        manifest = source / ".claude-plugin/plugin.json"
+        manifest.parent.mkdir()
+        manifest.write_text('{"version":"1.26.1"}')
+        for prefix in self.module.GENERATED_PATHS[source.name]:
             generated = source / prefix
-            generated.mkdir(parents=True)
-            (generated / "private-data").write_text("must remain local")
-            (generated / "generated-link").symlink_to(code)
+            generated.parent.mkdir(parents=True, exist_ok=True)
+            generated.write_text("must remain local")
         result = self.module.sync_one(source, mirror, write=True)
         self.assertTrue(result["current"])
-        self.assertEqual(
-            {"SKILL.md", "tool/Sources/MacPilot/Main.swift"},
-            set(self.module.package_files(mirror)),
-        )
-        self.assertEqual(code.read_bytes(), (mirror / code.relative_to(source)).read_bytes())
-        for prefix in self.module.GENERATED_PATHS["macpilot"]:
+        self.assertEqual({"skills/mac-computer-use/SKILL.md", ".claude-plugin/plugin.json"},
+                         set(self.module.package_files(mirror)))
+        for prefix in self.module.GENERATED_PATHS[source.name]:
             self.assertFalse((mirror / prefix).exists())
-            self.assertTrue((source / prefix / "private-data").is_file())
+            self.assertTrue((source / prefix).is_file())
+
 
 
 if __name__ == "__main__":

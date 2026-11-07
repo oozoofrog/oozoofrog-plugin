@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check or atomically regenerate standalone Skill Plugin mirrors."""
+"""Check or atomically regenerate Skill and Plugin-shaped source mirrors."""
 
 from __future__ import annotations
 
@@ -13,10 +13,17 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-PACKAGES = ("local-ai-studio", "macpilot", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing", "interface-first-design", "winpilot", "c4fy", "astra-implementation-prompt")
+PACKAGES = ("local-ai-studio", "mac-computer-use", "simulator-pilot", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing", "interface-first-design", "winpilot", "c4fy", "astra-implementation-prompt")
 IGNORED_NAMES = {".DS_Store", "__pycache__"}
 IGNORED_SUFFIXES = {".pyc", ".pyo"}
-GENERATED_PATHS = {"macpilot": ("bin", "evidence", "tool/.build", "tool/.swiftpm"), "winpilot": ("evidence", "tool/bin", "tool/obj", "tool/artifacts")}
+# Preserve the supplied Plugin-shaped sources, including manifest-relative setup paths.
+PLUGIN_PACKAGES = {"mac-computer-use", "simulator-pilot"}
+GENERATED_PATHS = {
+    "mac-computer-use": ("docs/development", "skills/mac-computer-use/scripts/mac-cu",
+                         "skills/mac-computer-use/scripts/focus-overlay",
+                         "skills/mac-computer-use/browser-profile", "skills/mac-computer-use/always-allow.txt"),
+    "winpilot": ("evidence", "tool/bin", "tool/obj", "tool/artifacts"),
+}
 
 
 class SyncError(Exception):
@@ -28,7 +35,8 @@ def repository_root() -> Path:
 
 
 def package_files(root: Path) -> dict[str, tuple[int, str]]:
-    if not (root / "SKILL.md").is_file():
+    if not ((root / "SKILL.md").is_file() or
+            (root.name in PLUGIN_PACKAGES and (root / "skills" / root.name / "SKILL.md").is_file())):
         raise SyncError(f"Not a Skill package: {root}")
     files: dict[str, tuple[int, str]] = {}
     for path in sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix()):
@@ -51,6 +59,8 @@ def package_files(root: Path) -> dict[str, tuple[int, str]]:
 
 def mirror_paths(root: Path, name: str) -> tuple[Path, Path] | None:
     source = root / name
+    if name in PLUGIN_PACKAGES:
+        return source, root / "plugins" / name
     if not (source / "SKILL.md").is_file():
         return None
     mirror = root / "plugins" / name / "skills" / name
@@ -59,7 +69,7 @@ def mirror_paths(root: Path, name: str) -> tuple[Path, Path] | None:
 
 def sync_one(source: Path, mirror: Path, *, write: bool) -> dict[str, Any]:
     source_files = package_files(source)
-    mirror_files = package_files(mirror) if (mirror / "SKILL.md").is_file() else {}
+    mirror_files = package_files(mirror) if mirror.exists() else {}
     current = source_files == mirror_files
     result: dict[str, Any] = {
         "name": source.name,
