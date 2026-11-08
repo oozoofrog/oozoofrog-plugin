@@ -39,7 +39,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ['swift-intelligence', 'local-ai-studio', 'team-coordination', 'korean-travel-guidebook', 'obsidian-projects', 'outcome-brief', 'verify-work', 'jev-native', 'audit', 'choice-interview', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'astra-implementation-prompt'],
+            ['swift-intelligence', 'local-ai-studio', 'team-coordination', 'korean-travel-guidebook', 'obsidian-projects', 'outcome-brief', 'verify-work', 'jev-native', 'audit', 'choice-interview', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'astra-implementation-prompt', 'openai-decisions'],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -60,6 +60,28 @@ class PluginDistributionTests(unittest.TestCase):
                     self.assertEqual("https://github.com/oozoofrog/oozoofrog-plugin", manifest["repository"])
                 skill_root = plugin_root / manifest["skills"] / entry["name"]
                 self.assertTrue((skill_root / "SKILL.md").is_file())
+
+    def test_openai_decisions_distribution(self) -> None:
+        from test_document_links import local_targets
+        source = REPO_ROOT / "openai-decisions"
+        plugin = REPO_ROOT / "plugins/openai-decisions"
+        manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text())
+        metadata = {}
+        for line in (source / "agents/openai.yaml").read_text().splitlines():
+            if line.startswith("  ") and ": " in line:
+                key, value = line.strip().split(": ", 1)
+                metadata[key] = json.loads(value)
+        self.assertEqual(metadata["display_name"], manifest["interface"]["displayName"])
+        self.assertEqual(metadata["short_description"], manifest["interface"]["shortDescription"])
+        self.assertEqual([metadata["default_prompt"]], manifest["interface"]["defaultPrompt"])
+        self.assertIn(manifest["description"], (REPO_ROOT / "README.md").read_text())
+        for root in (source, plugin):
+            for path in root.rglob("*"):
+                self.assertFalse(path.is_symlink(), path)
+            for document in root.rglob("*.md"):
+                self.assertNotIn("/Users/oozoofrog", document.read_text())
+                for target in local_targets(document.read_text()):
+                    self.assertTrue((document.parent / target).is_file(), (document, target))
 
     def test_refactor_distribution(self) -> None:
         from test_sync_skill_mirrors import load_module

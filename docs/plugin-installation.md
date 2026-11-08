@@ -1,5 +1,18 @@
 # Plugin installation
 
+## OpenAI Decisions
+
+`openai-decisions@oozoofrog-plugin`은 [스킬](../openai-decisions/SKILL.md)만 제공합니다. 기존 `openai_decide` MCP/Pi 도구나 `openai-decisions` CLI가 있으면 이를 사용하고, 없으면 [공식 CLI 직접 호출](../openai-decisions/references/cli.md)을 따릅니다. Plugin 설치는 MCP 서버·API 키·과금 계정을 자동 등록하지 않습니다. API 키는 기존 비밀 입력·자격증명 저장소로 전달하고 설정 파일이나 대화에 복사하지 않습니다.
+
+`openai-decisions` 0.1.0을 설치하려면 등록한 marketplace를 갱신한 뒤 선택한 Plugin을 추가합니다. marketplace가 없으면 먼저 `codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main`으로 등록합니다.
+
+```sh
+codex plugin marketplace upgrade oozoofrog-plugin
+codex plugin add openai-decisions@oozoofrog-plugin
+```
+
+기존 standalone 스킬 별칭은 새 소스로 연결할 수 있으며 도구 실행 경로와 인증 설정은 유지합니다.
+
 ## WinPilot
 
 Windows x64에서 `codex plugin marketplace upgrade oozoofrog-plugin` 후 `codex plugin add winpilot@oozoofrog-plugin`을 실행합니다. marketplace가 없으면 `codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main`으로 먼저 등록합니다.

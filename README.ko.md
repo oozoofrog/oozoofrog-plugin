@@ -32,6 +32,10 @@ Team Coordination [`0.6.0`](https://github.com/oozoofrog/oozoofrog-plugin/releas
 
 공개 commit으로 고정한 [네이티브 제어기 소스](tools/jev-native/README.md)와 [동반 스킬](jev-native/SKILL.md)을 포함합니다. 바이너리·기존 설치본은 교체하지 않습니다. [출처와 보류한 최신 변경](docs/jev-native-source.md)에서 소스·단위 검사와 실제 데스크톱 동작을 구분합니다.
 
+## OpenAI Decisions
+
+[openai-decisions](openai-decisions/SKILL.md)는 텍스트·JSON·이미지의 분류, 참/거짓 확률, 기준표 점수를 OpenAI Decisions API로 구합니다. 기존 MCP/Pi 도구 또는 공통 CLI를 사용하며, 도구가 없을 때는 공식 OpenAI CLI 직접 호출 절차를 제공합니다. skills-only Plugin 설치와 도구 등록·키 보관·API 과금 설정은 별개입니다. [설치와 실행 조건](docs/plugin-installation.md#openai-decisions)을 확인하세요.
+
 ## 재사용 가능한 개인 작업 스킬
 
 Skills-only 패키지로 [한국어 여행 가이드북](korean-travel-guidebook/SKILL.md), [Obsidian 프로젝트 기록](obsidian-projects/SKILL.md), [Outcome Brief](outcome-brief/SKILL.md), [Verify Work](verify-work/SKILL.md)를 제공합니다. 사용자가 선택한 범위와 프로젝트 검증을 유지합니다. 여행 패키지의 예시는 가상이며 수정하지 않은 나눔고딕과 OFL 원문을 보존합니다. 기기별 합의·개인 프로젝트 상태는 공개본에서 제외했습니다.

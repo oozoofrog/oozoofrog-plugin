@@ -1,0 +1,4 @@
+interface:
+  display_name: "OpenAI Decisions"
+  short_description: "Classify and score evidence with OpenAI Decisions"
+  default_prompt: "Use $openai-decisions to classify this evidence, estimate probabilities, and score it against explicit criteria."

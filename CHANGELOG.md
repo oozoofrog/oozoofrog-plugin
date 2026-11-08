@@ -14,6 +14,10 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## OpenAI Decisions [0.1.0] — 2026-11-08
+
+- Add `openai-decisions` as standalone skill source and a matching skills-only Plugin, with marketplace registration, discovery metadata, portable CLI guidance, and preserved existing MCP/CLI credential configuration.
+
 ## MacPilot [3.7.0]
 
 - Apple silicon 전용 배포로 전환했습니다. 메인 실행 파일과 Simulator helper는 arm64만 포함하며 Intel Mac 지원을 종료합니다.

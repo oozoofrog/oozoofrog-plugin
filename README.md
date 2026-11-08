@@ -42,6 +42,7 @@ Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed 
 | `c4fy@oozoofrog-plugin` | [Create source-backed C4 architecture maps](c4fy/SKILL.md) as standalone HTML; see [C4fy](#c4fy). |
 | `refactor@oozoofrog-plugin` | [Refactor code while preserving behavior](refactor/SKILL.md), or integrate SwiftLint into project builds; see [Refactor](#refactor). |
 | `astra-implementation-prompt@oozoofrog-plugin` | [Prepare an implementation prompt with Astra Max for review](astra-implementation-prompt/SKILL.md), before the user chooses whether and how to start an implementation chat. See [scope](#astra-implementation-prompt). |
+| `openai-decisions@oozoofrog-plugin` | [Call the OpenAI Decisions API](openai-decisions/SKILL.md) for text, JSON, image classification, probabilities, and rubric scores; see [scope and prerequisites](#openai-decisions). |
 
 ## Examples
 
@@ -84,6 +85,12 @@ Use when a user requests behavior-preserving code refactoring, SRP cleanup, clea
 ## C4fy
 
 C4fy creates source-backed C1/C2/C3/C4 architecture maps with optional component-level code structure. Use it for hierarchical C4 explanations, not generic flowcharts or sequence diagrams. Node.js 18 or later generates the standalone HTML viewer. See the [model contract](c4fy/references/model.md) for evidence and scope.
+
+## OpenAI Decisions
+
+Call the OpenAI Decisions API directly to classify text, JSON, or images, estimate predicate probabilities, or score against an ordered rubric. Use for explicit Decisions API requests or bounded semantic judgments that benefit from measured probabilities; not for general chat or free-form extraction.
+
+The skills-only Plugin uses an existing `openai_decide` MCP/Pi tool or `openai-decisions` CLI. If those are unavailable, it documents direct calls through the official OpenAI CLI. Plugin installation does not register tools, provision credentials, or enable API billing. See [CLI prerequisites](openai-decisions/references/cli.md) and [installation](docs/plugin-installation.md#openai-decisions).
 
 ## More documentation
 
