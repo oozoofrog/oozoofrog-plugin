@@ -102,7 +102,7 @@ Standalone `local-ai-studio/`와 byte-identical skills-only Plugin `0.3.0`을 �
 
 제공된 원본의 `skills/<name>/` 구조를 유지하며 `plugins/<name>/`에 설치 가능한 전체 패키지를 미러링합니다. mac-computer-use 1.26.1은 Python 3와 Xcode Command Line Tools로 mac-cu를 빌드합니다. Simulator Pilot 1.8.0은 Swift로 CLI를 빌드하며, Simulator 화면 입력은 mac-computer-use와 Xcode 27 이상이 필요합니다. 제공 CLI의 KakaoTalk 전용 스킴 등 기본값은 실제 프로젝트에 맞게 확인합니다.
 
-판단 기능은 OpenAI Decisions API를 사용합니다. 메뉴바의 설정에서 `gpt-6-luna`와 API 키를 설정하고 합성 텍스트로 연결을 확인합니다. 키는 Keychain에 저장합니다. 사이드 메인 툴바의 모듈은 결합·분리·기본 배치 복원을 지원하며 LCD는 불투명하게 유지합니다.
+판단 기능은 OpenAI Decisions API를 사용합니다. 메뉴바의 설정에서 `gpt-6-luna`와 API 키를 설정하고 합성 텍스트로 연결을 확인하고 실제 요청 본문·검증된 응답·소요 시간·오류를 표시합니다. 키와 인증 헤더는 표시하지 않습니다. 키는 Keychain에 저장합니다. 사이드 메인 툴바의 모듈은 결합·분리·기본 배치 복원을 지원하며 LCD는 불투명하게 유지합니다.
 
 ## Swift Intelligence
 

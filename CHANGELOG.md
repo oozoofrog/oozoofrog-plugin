@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Show the actual synthetic Decisions connection-check request, validated response, elapsed time and failure/cancellation details in the resizable Settings window. Keep API keys and authentication headers out of the read-only reports.
+
 - Add per-device floating toolbars with detachable/rejoinable modules, saved layouts, visible drag grips and consistent resize/icon labels. Preserve guest input and restore attached panel positions after moving the device.
 - Configure OpenAI Decisions judgments from the menu bar with a Keychain-backed API key, asynchronous synthetic connection checks and request cancellation. Preserve completed action results when verification fails.
 

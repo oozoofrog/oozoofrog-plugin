@@ -37,6 +37,8 @@ WinPilot은 [Windows 개발·배포 절차](../winpilot/references/development.m
 swiftc mac-computer-use/skills/mac-computer-use/scripts/mac-cu-src/DecisionService.swift mac-computer-use/tests/decision-service-selfcheck.swift -o /tmp/mac-cu-decision-check
 /tmp/mac-cu-decision-check
 python3 mac-computer-use/tests/check-decision-answer.py
+swiftc -parse-as-library mac-computer-use/skills/mac-computer-use/scripts/mac-cu-src/DecisionService.swift mac-computer-use/skills/mac-computer-use/scripts/mac-cu-src/DecisionSettingsWindow.swift mac-computer-use/tests/decision-settings-selfcheck.swift -o /tmp/mac-cu-decision-settings-check
+/tmp/mac-cu-decision-settings-check
 bash mac-computer-use/tests/check-simulator-gestures.sh
 ```
 

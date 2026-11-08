@@ -99,3 +99,5 @@ plugin.
 MIT
 
 The simulator LCD window uses an opaque device body without a title bar. Drag its device/status capsule to move it; its menu provides focus mode, size, minimize and close. Home, rotation, folding and capture sit below the LCD, with auxiliary controls at the side. See [device window controls](references/device-window.md).
+
+The menu bar Settings connection check displays the actual synthetic request body and validated response, including elapsed time and failures. It uses saved settings and excludes API keys and authentication headers from its read-only reports.

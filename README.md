@@ -78,7 +78,7 @@ schemes remain in the supplied CLI; follow the project build instructions for yo
 
 Plugin installation alone does not register mac-cu MCP. Run the installed skill's setup script
 for the selected host, grant required macOS permissions, and start a new session.
-Judgments use the OpenAI Decisions API. Configure `gpt-6-luna` and an API key in the menu bar’s Settings window; keys are stored in Keychain. Connection checks send synthetic text only.
+Judgments use the OpenAI Decisions API. Configure `gpt-6-luna` and an API key in the menu bar’s Settings window; keys are stored in Keychain. Connection checks send synthetic text only and show the actual request body, validated response, elapsed time and errors without API keys or authentication headers.
 The native simulator LCD uses an opaque device body without a title bar, with a draggable capsule, device menu, detachable sidebar modules and focus mode. Modules can join the floating main toolbar, separate into independent panels, or return to their default layout. Preview opacity remains independent. See [device window controls](mac-computer-use/skills/mac-computer-use/references/device-window.md).
 
 See [installation and migration](docs/plugin-installation.md#mac-computer-use-and-simulator-pilot).

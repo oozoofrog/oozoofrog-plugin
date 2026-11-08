@@ -96,7 +96,10 @@ from `tabs`), `back`, `forward`, `reload`, `page` (numbered elements and the pag
 
 OpenAI Decisions (`gpt-6-luna`) answers questions about text, a window, or a browser page.
 The menu bar's settings window saves the model and an API key in Keychain, and can test the
-connection using synthetic text only. Alternatively set `OPENAI_API_KEY` in the MCP session or
+connection using synthetic text only. The settings window shows the actual request URL/JSON body,
+validated response and elapsed time, or the failure/cancellation result. These read-only reports exclude
+API keys and Authorization headers and stay in memory. The probe uses saved settings; save edits first.
+Alternatively set `OPENAI_API_KEY` in the MCP session or
 daemon environment. Key precedence is Keychain, current MCP session, then daemon environment;
 the menu bar uses the daemon context, not an MCP session. A saved model takes precedence over
 `MAC_CU_DECISION_MODEL` in the session and daemon environment. The only supported model is
