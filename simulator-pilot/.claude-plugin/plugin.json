@@ -1,8 +1,0 @@
-{
-  "name": "simulator-pilot",
-  "description": "Use for iOS Simulator app launch, logs, screen interaction, test data and change verification. Use mac-computer-use for screen controls; follow the project build instructions for compilation. Excludes Mac desktop/browser/web view tasks and account signup.",
-  "version": "1.8.0",
-  "author": {
-    "name": "KakaoTalk iOS Team"
-  }
-}

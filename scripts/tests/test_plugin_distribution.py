@@ -39,7 +39,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ["swift-intelligence", "local-ai-studio", "mac-computer-use", "simulator-pilot", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing", "interface-first-design", "winpilot", "c4fy", "astra-implementation-prompt"],
+            ["swift-intelligence", "local-ai-studio", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing", "interface-first-design", "winpilot", "c4fy", "astra-implementation-prompt"],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -129,49 +129,14 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertFalse(any(part in {"bin", "obj", "artifacts", "evidence"} for name in files for part in Path(name).parts))
         self.assertNotIn("game-start-reference.png", runtime["files"])
 
-    def test_replacement_desktop_packages(self) -> None:
+    def test_mac_automation_packages_are_external(self) -> None:
         from test_sync_skill_mirrors import load_module
-        from test_document_links import local_targets
         module = load_module()
         for name in ("mac-computer-use", "simulator-pilot"):
-            with self.subTest(package=name):
-                source = REPO_ROOT / name
-                plugin = REPO_ROOT / "plugins" / name
-                self.assertEqual((source, plugin), module.mirror_paths(REPO_ROOT, name))
-                self.assertEqual(module.package_files(source), module.package_files(plugin))
-                manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text())
-                claude = json.loads((plugin / ".claude-plugin/plugin.json").read_text())
-                self.assertEqual(manifest["name"], claude["name"])
-                self.assertEqual(manifest["version"], claude["version"])
-                self.assertEqual(manifest["description"], claude["description"])
-                skill = plugin / manifest["skills"] / name
-                description = (skill / "SKILL.md").read_text().split("description: ", 1)[1].split("\n", 1)[0]
-                self.assertEqual(description, manifest["description"])
-                self.assertEqual(description, manifest["interface"]["longDescription"])
-                self.assertIn(description, (REPO_ROOT / "README.md").read_text())
-                metadata = dict(line.strip().split(": ", 1) for line in (skill / "agents/openai.yaml").read_text().splitlines() if line.startswith("  "))
-                self.assertEqual(json.loads(metadata["display_name"]), manifest["interface"]["displayName"])
-                self.assertEqual(json.loads(metadata["short_description"]), manifest["interface"]["shortDescription"])
-                self.assertIn(json.loads(metadata["default_prompt"]), manifest["interface"]["defaultPrompt"])
-                self.assertIn("$" + name, json.loads(metadata["default_prompt"]))
-                for root in (source, plugin):
-                    for document in [root / "README.md", *(root / "skills").rglob("*.md")]:
-                        for target in local_targets(document.read_text()):
-                            self.assertTrue((document.parent / target).exists(), (document, target))
-                files = module.package_files(plugin)
-                for prefix in module.GENERATED_PATHS.get(name, ()):
-                    self.assertFalse(any(p == prefix or p.startswith(prefix + "/") for p in files), prefix)
-        # setup.py reads its version from the Plugin root; hooks import the sibling types.
-        plugin = REPO_ROOT / "plugins/mac-computer-use"
-        for path in (".claude-plugin/plugin.json", "hooks/hooks.json", "hooks/register.tsx", "types/index.d.ts",
-                     "skills/mac-computer-use/scripts/setup.py", "skills/mac-computer-use/scripts/mac-cu-src/Daemon.swift",
-                     "skills/mac-computer-use/assets/mac-cu-icon.png"):
-            self.assertTrue((plugin / path).is_file(), path)
-        daemon = (plugin / "skills/mac-computer-use/scripts/mac-cu-src/Daemon.swift").read_text()
-        self.assertNotIn("talk-ios-plugins", daemon)
-        self.assertNotIn("update-plugins.sh", daemon)
-        for path in ("scripts/release_plugin.py", "scripts/releases/macpilot.json"):
-            self.assertFalse((REPO_ROOT / path).exists(), path)
+            self.assertNotIn(name, module.PACKAGES)
+            self.assertFalse((REPO_ROOT / name).exists())
+            self.assertFalse((REPO_ROOT / "plugins" / name).exists())
+        self.assertIn("https://github.com/oozoofrog/mac-pilot", (REPO_ROOT / "README.md").read_text())
 
     def test_retired_packages_are_not_distributed(self) -> None:
         for name in ("macpilot", "gptplease", "gptpro", "gptwork", "astra-orchestrator", "jev-start", "jev-blender-use", "jev-computer-use",

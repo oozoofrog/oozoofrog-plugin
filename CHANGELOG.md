@@ -2,17 +2,13 @@
 
 ## Unreleased
 
-- Show the actual synthetic Decisions connection-check request, validated response, elapsed time and failure/cancellation details in the resizable Settings window. Keep API keys and authentication headers out of the read-only reports.
+- Move Mac desktop and iOS Simulator automation into the independent [Mac Pilot repository](https://github.com/oozoofrog/mac-pilot). Remove their source packages, duplicate Plugin mirrors and catalog entries from this repository while preserving user state and development evidence at the new project.
 
-- Add per-device floating toolbars with detachable/rejoinable modules, saved layouts, visible drag grips and consistent resize/icon labels. Preserve guest input and restore attached panel positions after moving the device.
-- Configure OpenAI Decisions judgments from the menu bar with a Keychain-backed API key, asynchronous synthetic connection checks and request cancellation. Preserve completed action results when verification fails.
 
-- Replace mac-cu’s standard simulator window decoration with an opaque device body, draggable status capsule, labeled control bar, fold popover, side tools, focus mode and accessible device menu. Keep preview opacity independent, retain the existing simulator input/backend and add manual contact cleanup, display bounds fitting and active-display capture saving with failure feedback. Add native chrome/input regression checks and isolated live validation guidance.
+
 
 - Add `astra-implementation-prompt`: draft an implementation prompt with Astra Max, review it, and optionally start an approved Sol Ultra or Terra Ultra implementation chat. Local packaging does not publish or install the Plugin.
 
-- Replace MacPilot in the local catalog with the user-supplied mac-computer-use 1.26.1 and simulator-pilot 1.8.0 packages, preserving their source layout and adding filtered Plugin mirrors, discovery metadata and installation guidance. Remove the tracked legacy implementation and its dedicated release automation; preserve local runtime data and existing user installations.
-- Make mac-cu update guidance manual for this distribution, removing the original private marketplace updater. Move detailed operations into references, retain the old C4 source-pinned example explicitly as a historical fixture. No publication, global installation, activation or live desktop verification is implied.
 - Carry the human's goal-scoped team coordination instruction and trusted source through role packets. Routine team instructions, questions, review requests and result reporting continue without initial or repeated messaging-approval prompts, including while the user is away; preserve official tool authority, task membership and revocation checks.
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.

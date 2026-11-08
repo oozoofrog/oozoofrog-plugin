@@ -75,7 +75,7 @@ Plugin만 설치하면 스킬 안내만 추가됩니다. 전역 지침·런타�
 
 [실행·복구 도구](tools/codex-team-harness/README.md), [변경된 관찰·수정 절차](tools/codex-team-harness/payload/team-coordination/references/diagnostics.md), [소스 이전 이력](docs/team-harness-migration.md)을 함께 제공합니다. 이전 `0.4.1`과 `0.1.1-public.1` 릴리스는 복구 참조로 보존합니다.
 
-Swift 의미론 탐색용 `swift-intelligence`, 로컬 모델 설치·실행용 `local-ai-studio`, Mac 앱·브라우저·웹뷰 제어용 `mac-computer-use`와 iOS 시뮬레이터 작업용 `simulator-pilot`를 제공합니다.
+Swift 의미론 탐색용 `swift-intelligence`와 로컬 모델 설치·실행용 `local-ai-studio`를 제공합니다. Mac·iOS 시뮬레이터 자동화는 별도 [Mac Pilot 프로젝트](https://github.com/oozoofrog/mac-pilot)로 이전했습니다.
 
 ## Local AI Studio
 
@@ -94,16 +94,6 @@ Standalone `local-ai-studio/`와 byte-identical skills-only Plugin `0.3.0`을 �
 
 설치 후 선택한 실행기의 `ai --help` 또는 `whisper-cli --help`로 지원 명령을 확인합니다. 공개 LocalAIHub 소스와 다른 로컬 체크아웃의 기능이 다를 수 있습니다. `READY`·종료 코드·`Output:` 로그만으로 결과 품질을 주장하지 않으며 실제 파일·형식·미리보기/재생/내용 확인 여부를 구분해 전달합니다. [스킬 본문](local-ai-studio/SKILL.md), [LocalAIHub 설치](local-ai-studio/references/setup.md), [명령·출력 규칙](local-ai-studio/references/cli-workflows.md), [Plugin 설치 안내](docs/plugin-installation.md#local-ai-studio)를 참고하세요.
 
-## Mac Computer Use and Simulator Pilot
-
-`mac-computer-use`는 Mac 앱·브라우저 페이지·iOS 웹뷰를 mac-cu MCP로 조작합니다. 더 적합한 API·CLI가 없는 desktop UI 작업, 웹뷰 검사, mac-cu 설정·모드 변경에 씁니다. iOS 시뮬레이터 앱 실행·로그·테스트 데이터·수정 확인은 `simulator-pilot`으로 진행합니다.
-
-`simulator-pilot`은 iOS 시뮬레이터 앱 실행·로그·화면 조작·테스트 데이터·동작 확인에 씁니다. 화면 조작에는 mac-computer-use를 사용하고 컴파일은 프로젝트의 빌드 지침을 따릅니다. Mac desktop·브라우저·웹뷰 작업과 계정 가입은 범위 밖입니다.
-
-제공된 원본의 `skills/<name>/` 구조를 유지하며 `plugins/<name>/`에 설치 가능한 전체 패키지를 미러링합니다. mac-computer-use 1.26.1은 Python 3와 Xcode Command Line Tools로 mac-cu를 빌드합니다. Simulator Pilot 1.8.0은 Swift로 CLI를 빌드하며, Simulator 화면 입력은 mac-computer-use와 Xcode 27 이상이 필요합니다. 제공 CLI의 KakaoTalk 전용 스킴 등 기본값은 실제 프로젝트에 맞게 확인합니다.
-
-판단 기능은 OpenAI Decisions API를 사용합니다. 메뉴바의 설정에서 `gpt-6-luna`와 API 키를 설정하고 합성 텍스트로 연결을 확인하고 실제 요청 본문·검증된 응답·소요 시간·오류를 표시합니다. 키와 인증 헤더는 표시하지 않습니다. 키는 Keychain에 저장합니다. 사이드 메인 툴바의 모듈은 결합·분리·기본 배치 복원을 지원하며 LCD는 불투명하게 유지합니다.
-
 ## Swift Intelligence
 
 `swift-intelligence`는 Xcode의 SourceKit-LSP로 Swift 정의, 참조, 구현, 타입, 심볼 및 진단을 읽기 전용으로 조회합니다. MCP 서버가 필요한 Plugin이므로 `plugins/swift-intelligence/`에만 제공합니다. Python 3 외의 Python 패키지나 외부 MCP 바이너리를 추가로 설치하지 않습니다.
@@ -120,8 +110,6 @@ Standalone `local-ai-studio/`와 byte-identical skills-only Plugin `0.3.0`을 �
 codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
 codex plugin add swift-intelligence@oozoofrog-plugin
 codex plugin add local-ai-studio@oozoofrog-plugin
-codex plugin add mac-computer-use@oozoofrog-plugin
-codex plugin add simulator-pilot@oozoofrog-plugin
 ```
 
 다른 Plugin의 요구 사항과 standalone 설치는 [Plugin 설치 안내](docs/plugin-installation.md)를 참고하세요.
@@ -135,9 +123,6 @@ python3 -m unittest discover -s scripts/tests -v
 python3 scripts/sync_skill_mirrors.py --package local-ai-studio
 python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py local-ai-studio
 python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/local-ai-studio/skills/local-ai-studio
-python3 scripts/sync_skill_mirrors.py --package mac-computer-use --package simulator-pilot
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py mac-computer-use/skills/mac-computer-use
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py simulator-pilot/skills/simulator-pilot
 git diff --check
 ```
 

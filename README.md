@@ -28,8 +28,6 @@ Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed 
 | --- | --- |
 | `swift-intelligence@oozoofrog-plugin` | [Semantic Swift navigation](plugins/swift-intelligence/skills/swift-intelligence/SKILL.md) using SourceKit. macOS, Xcode with Command Line Tools, and Python 3 are required; the Plugin includes MCP configuration. |
 | `local-ai-studio@oozoofrog-plugin` | [Requested local AI Studio or on-device model work](local-ai-studio/SKILL.md), including separate Whisper transcription and timestamp estimates on Apple Silicon. See [model setup](#local-ai-studio). |
-| `mac-computer-use@oozoofrog-plugin` | [Operate Mac apps, browser pages and iOS web views](mac-computer-use/skills/mac-computer-use/SKILL.md). See [setup and scope](#mac-computer-use-and-simulator-pilot). |
-| `simulator-pilot@oozoofrog-plugin` | [Run and inspect iOS Simulator apps, logs and test data](simulator-pilot/skills/simulator-pilot/SKILL.md). See [setup and scope](#mac-computer-use-and-simulator-pilot). |
 | `team-coordination@oozoofrog-plugin` | [Explicitly requested team coordination](team-coordination/SKILL.md), including tailored sidebar teams, ownership, and evidence. See [team coordination](#team-coordination). |
 | `korean-travel-guidebook@oozoofrog-plugin` | [Korean HTML travel guides](korean-travel-guidebook/SKILL.md) with itinerary, accessibility, and practical travel information. |
 | `obsidian-projects@oozoofrog-plugin` | [Maintain project records and links](obsidian-projects/SKILL.md) when asked to organize an Obsidian vault. |
@@ -64,25 +62,6 @@ The skills-only Plugin uses Local AI Studio or selected on-device tools on Apple
 
 Local Whisper uses a separate `whisper-cli` workflow and can reuse verified weights. It does not imply native app integration. Timestamps, including experimental DTW points, are estimates and do not verify sung boundaries or authorize subtitle replacement. See the [Whisper workflow and limits](local-ai-studio/references/whisper.md).
 
-## Mac Computer Use and Simulator Pilot
-
-`mac-computer-use`: Operate Mac apps, browser pages and iOS web views with the mac-cu MCP server. Use for desktop UI tasks without a better API or CLI, web view inspection, or mac-cu setup and modes. Route iOS Simulator app launch, logs, test data and change verification through simulator-pilot.
-
-`simulator-pilot`: Use for iOS Simulator app launch, logs, screen interaction, test data and change verification. Use mac-computer-use for screen controls; follow the project build instructions for compilation. Excludes Mac desktop/browser/web view tasks and account signup.
-
-The supplied source packages keep their `skills/<name>/` layout; `plugins/<name>/` mirrors the
-installable package, including manifest-relative setup resources. mac-computer-use 1.26.1 builds
-mac-cu with Python 3 and Xcode Command Line Tools. Simulator Pilot 1.8.0 builds its CLI with Swift;
-Simulator screen input requires mac-computer-use and Xcode 27 or later. Project-specific KakaoTalk
-schemes remain in the supplied CLI; follow the project build instructions for your app.
-
-Plugin installation alone does not register mac-cu MCP. Run the installed skill's setup script
-for the selected host, grant required macOS permissions, and start a new session.
-Judgments use the OpenAI Decisions API. Configure `gpt-6-luna` and an API key in the menu bar’s Settings window; keys are stored in Keychain. Connection checks send synthetic text only and show the actual request body, validated response, elapsed time and errors without API keys or authentication headers.
-The native simulator LCD uses an opaque device body without a title bar, with a draggable capsule, device menu, detachable sidebar modules and focus mode. Modules can join the floating main toolbar, separate into independent panels, or return to their default layout. Preview opacity remains independent. See [device window controls](mac-computer-use/skills/mac-computer-use/references/device-window.md).
-
-See [installation and migration](docs/plugin-installation.md#mac-computer-use-and-simulator-pilot).
-
 ## Team coordination
 
 Team coordination is opt-in and starts only on an explicit request. Installing the Plugin does not create team chats, install the global harness, or adopt existing project contracts. The current unreleased source routes a requested sidebar team through a separate Astra project-analysis chat, then tailored leader and teammate chats. Task-scoped instructions, questions, reviews, and reports are covered by the user's team request within the [documented communication scope](team-coordination/references/sidebar-startup.md#task-scoped-communication-without-approval-prompts). Source guidance does not establish installed behavior or live startup.
@@ -100,6 +79,10 @@ Use when designing, implementing, or reviewing product UI, especially when expla
 ## C4fy
 
 C4fy creates source-backed C1/C2/C3/C4 architecture maps with optional component-level code structure. Use it for hierarchical C4 explanations, not generic flowcharts or sequence diagrams. Node.js 18 or later generates the standalone HTML viewer. See the [model contract](c4fy/references/model.md) for evidence and scope.
+
+## External Mac automation project
+
+Mac desktop and iOS Simulator automation now live in the independent [Mac Pilot repository](https://github.com/oozoofrog/mac-pilot), with their own marketplace and releases.
 
 ## More documentation
 

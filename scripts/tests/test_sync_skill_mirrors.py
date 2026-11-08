@@ -56,11 +56,13 @@ class SyncSkillMirrorsTests(unittest.TestCase):
             self.module.sync_one(self.source, self.mirror, write=True)
 
     def test_plugin_source_layout_and_local_data_exclusions(self) -> None:
-        source = self.root / "mac-computer-use"
-        mirror = self.root / "plugins/mac-computer-use"
-        skill = source / "skills/mac-computer-use"
+        source = self.root / "fixture-plugin"
+        mirror = self.root / "plugins/fixture-plugin"
+        skill = source / "skills/fixture-plugin"
+        self.module.PLUGIN_PACKAGES.add(source.name)
+        self.module.GENERATED_PATHS[source.name] = ("development", "skills/fixture-plugin/runtime", "skills/fixture-plugin/profile")
         skill.mkdir(parents=True)
-        (skill / "SKILL.md").write_text("---\nname: mac-computer-use\n---\n")
+        (skill / "SKILL.md").write_text("---\nname: fixture-plugin\n---\n")
         manifest = source / ".claude-plugin/plugin.json"
         manifest.parent.mkdir()
         manifest.write_text('{"version":"1.26.1"}')
@@ -70,7 +72,7 @@ class SyncSkillMirrorsTests(unittest.TestCase):
             generated.write_text("must remain local")
         result = self.module.sync_one(source, mirror, write=True)
         self.assertTrue(result["current"])
-        self.assertEqual({"skills/mac-computer-use/SKILL.md", ".claude-plugin/plugin.json"},
+        self.assertEqual({"skills/fixture-plugin/SKILL.md", ".claude-plugin/plugin.json"},
                          set(self.module.package_files(mirror)))
         for prefix in self.module.GENERATED_PATHS[source.name]:
             self.assertFalse((mirror / prefix).exists())

@@ -13,15 +13,12 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-PACKAGES = ("local-ai-studio", "mac-computer-use", "simulator-pilot", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing", "interface-first-design", "winpilot", "c4fy", "astra-implementation-prompt")
+PACKAGES = ("local-ai-studio", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing", "interface-first-design", "winpilot", "c4fy", "astra-implementation-prompt")
 IGNORED_NAMES = {".DS_Store", "__pycache__"}
 IGNORED_SUFFIXES = {".pyc", ".pyo"}
 # Preserve the supplied Plugin-shaped sources, including manifest-relative setup paths.
-PLUGIN_PACKAGES = {"mac-computer-use", "simulator-pilot"}
+PLUGIN_PACKAGES: set[str] = set()
 GENERATED_PATHS = {
-    "mac-computer-use": ("docs/development", "skills/mac-computer-use/scripts/mac-cu",
-                         "skills/mac-computer-use/scripts/focus-overlay",
-                         "skills/mac-computer-use/browser-profile", "skills/mac-computer-use/always-allow.txt"),
     "winpilot": ("evidence", "tool/bin", "tool/obj", "tool/artifacts"),
 }
 

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Simulator Pilot"
-  short_description: "iOS Simulator launch, logs, controls and verification"
-  default_prompt: "Use $simulator-pilot to launch an app in the booted iOS Simulator and show its logs."

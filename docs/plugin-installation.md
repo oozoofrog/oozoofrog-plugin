@@ -10,14 +10,12 @@ WinPilot 0.5.1은 [스킬](../winpilot/SKILL.md)과 MCP 설정을 함께 제공�
 
 ## 기존 Plugin
 
-아래는 `swift-intelligence`, `local-ai-studio`, `mac-computer-use`, `simulator-pilot`의 설치 예시입니다. 전체 로컬 목록은 [Plugin 카탈로그](../README.md#choose-a-plugin)를 확인하고 필요한 Plugin만 선택합니다. 아래 명령은 해당 변경이 원격에 반영된 뒤 사용합니다.
+아래는 `swift-intelligence`, `local-ai-studio`의 설치 예시입니다. 전체 로컬 목록은 [Plugin 카탈로그](../README.md#choose-a-plugin)를 확인하고 필요한 Plugin만 선택합니다. 아래 명령은 해당 변경이 원격에 반영된 뒤 사용합니다.
 
 ```bash
 codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
 codex plugin add swift-intelligence@oozoofrog-plugin
 codex plugin add local-ai-studio@oozoofrog-plugin
-codex plugin add mac-computer-use@oozoofrog-plugin
-codex plugin add simulator-pilot@oozoofrog-plugin
 ```
 
 2026-10-17에 저장소와 marketplace 이름을 `codex-skills`에서 `oozoofrog-plugin`으로 바꿨습니다. 현재 원격 등록 주소는 `oozoofrog/oozoofrog-plugin`이고 플러그인 선택자는 `<plugin>@oozoofrog-plugin`입니다. 개별 플러그인 이름은 유지합니다. GitHub 저장소의 이름 변경과 Codex의 marketplace·설치 식별자 변경은 별개입니다. 기존 `@codex-skills` 설치·활성화 상태와 사용자 데이터는 자동 이전하거나 삭제하지 않습니다. 새 이름으로 전환할 때는 `codex plugin list --json`의 기존 설치 목록을 확인하고 필요한 플러그인만 선택합니다. 이전 설치본이 있는 상태에서 새 선택자를 추가하면 중복 노출될 수 있습니다.
@@ -32,42 +30,9 @@ codex plugin add simulator-pilot@oozoofrog-plugin
 
 Swift Intelligence는 macOS, Command Line Tools를 포함한 Xcode, Python 3가 필요합니다. Xcode에 포함된 `sourcekit-lsp`를 실행하며 외부 MCP 바이너리나 Python 패키지를 설치하지 않습니다. Swift Intelligence 설치 후 Codex를 다시 시작하고 새 작업을 열어 Skill과 MCP 도구를 로드하십시오. 자세한 내용은 [Swift Intelligence 설치 및 사용](../plugins/swift-intelligence/docs/installation-and-usage.md)을 참고하세요.
 
-## Mac Computer Use and Simulator Pilot
+## 별도 Mac 자동화 프로젝트
 
-이 checkout은 제공된 `mac-computer-use` 1.26.1과 `simulator-pilot` 1.8.0을 별도 Plugin으로 배포합니다.
-Mac 앱·브라우저·iOS 웹뷰 조작과 mac-cu 설정·모드는 [mac-computer-use](../mac-computer-use/skills/mac-computer-use/SKILL.md),
-iOS 시뮬레이터 앱 실행·로그·화면 조작·테스트 데이터·수정 확인은 [simulator-pilot](../simulator-pilot/skills/simulator-pilot/SKILL.md)을 씁니다.
-API·CLI 등 더 적합한 수단이 있으면 그 수단을 먼저 씁니다.
-
-게시 전 로컬 checkout을 시험할 때는 저장소 루트에서 `codex plugin marketplace add "$PWD"`로 등록합니다.
-같은 marketplace 이름이 이미 있으면 source가 이 checkout인지 먼저 확인합니다. 원격 설치 명령은 게시된 snapshot에만 적용됩니다.
-
-```sh
-codex plugin add mac-computer-use@oozoofrog-plugin
-codex plugin add simulator-pilot@oozoofrog-plugin
-codex plugin list --json
-```
-
-mac-computer-use는 Python 3, Xcode Command Line Tools의 `swiftc`, macOS가 필요합니다. Plugin 설치만으로 MCP는 등록되지 않습니다.
-설치된 `skills/mac-computer-use/`를 `<SKILL_DIR>`로 삼아 `python3 "<SKILL_DIR>/scripts/setup.py" --agent codex`를 실행합니다.
-Claude Code이면 `--agent claude`를 씁니다. 이 단계는 사용자 지원 폴더에 앱을 빌드하고 선택 호스트의 MCP 설정을 변경하므로, 요청한 설정 범위에서 실행합니다.
-앱 제어에는 Accessibility, 창 캡처에는 Screen Recording, Apple Events 브라우저 경로에는 Automation 등 해당 권한을 사용자가 허용해야 합니다.
-설정 후 새 세션에서 도구 노출과 실제 읽은 스킬 경로를 확인합니다. 선택적 Chrome 확장 설정은 [패키지 안내](../mac-computer-use/skills/mac-computer-use/README.md)를 따릅니다.
-
-Simulator Pilot의 `tool/sim-pilot.swift`는 처음 사용할 때 `swiftc -O`로 `~/.local/bin/sim-pilot`에 빌드합니다.
-Xcode와 해당 Simulator 런타임이 필요하고 화면 조작은 mac-computer-use의 MCP `simulator` 도구를 사용합니다(Xcode 27+ 입력).
-KakaoTalk 스킴·번들 ID 등 제공된 프로젝트 전용 기본값을 실제 프로젝트에 맞게 확인하세요. 빌드·계정 가입용 외부 스킬은 이 카탈로그에 포함되지 않습니다.
-`decide`·`pick`·verify는 OpenAI Decisions API를 사용합니다. 메뉴바 설정에서 `gpt-6-luna`와 API 키를 설정합니다. 키는 Keychain에 저장하며 연결 확인에는 합성 텍스트만 사용합니다. 화면·접근성 트리는 요청한 판단에만 전송합니다. 로컬 AX/HID 조작에는 API 키가 필요하지 않습니다.
-
-원본은 `<name>/skills/<name>/`를 가진 Plugin 패키지이고 배포 미러는 `plugins/<name>/`입니다.
-`python3 scripts/sync_skill_mirrors.py --package mac-computer-use --package simulator-pilot --write`로 갱신합니다.
-단독 스킬이 필요하면 해당 `skills/<name>/` 경로를 사용하되, mac-cu setup은 상위 `.claude-plugin/plugin.json`의 버전도 읽으므로 **mac-computer-use는 전체 패키지 구조를 유지**해야 합니다.
-Plugin과 standalone 중복 설치를 피하고 기존 전역 경로를 임의로 덮어쓰지 않습니다.
-
-MacPilot의 추적된 구현·카탈로그·전용 릴리스 자동화는 제거했습니다. 기존 설치본, MCP 등록, 로그인 프로필과 로컬 실행 자료는 자동 삭제·이전하지 않습니다.
-전환 시 기존 MCP와 중복 스킬 여부를 직접 확인하세요. 이전 런타임의 scan·승인·signed-stream·receipt 보장을 새 패키지에 적용하지 않습니다.
-이 배포에서는 호스트에서 선택 Plugin을 업데이트한 뒤 설치본 setup을 다시 실행합니다. 다른 marketplace의 업데이트 스크립트를 호출하지 않습니다.
-저장소 배포 검사, 원격 게시, 설치·활성화, 새 세션 노출, 실제 앱 동작 검증은 각각 별도입니다.
+Mac·iOS 시뮬레이터 자동화 패키지는 [Mac Pilot](https://github.com/oozoofrog/mac-pilot)에서 설치·개발·배포합니다. 이 저장소의 카탈로그에는 포함하지 않습니다. 기존 사용자 설정·Keychain·프로필·캡처는 유지하며 별도 저장소의 이전 안내를 따릅니다.
 
 ## Local AI Studio
 
