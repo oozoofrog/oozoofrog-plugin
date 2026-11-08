@@ -2,11 +2,15 @@
 
 ## Unreleased
 
+- Add per-device floating toolbars with detachable/rejoinable modules, saved layouts, visible drag grips and consistent resize/icon labels. Preserve guest input and restore attached panel positions after moving the device.
+- Configure OpenAI Decisions judgments from the menu bar with a Keychain-backed API key, asynchronous synthetic connection checks and request cancellation. Preserve completed action results when verification fails.
+
+- Replace mac-cu’s standard simulator window decoration with an opaque device body, draggable status capsule, labeled control bar, fold popover, side tools, focus mode and accessible device menu. Keep preview opacity independent, retain the existing simulator input/backend and add manual contact cleanup, display bounds fitting and active-display capture saving with failure feedback. Add native chrome/input regression checks and isolated live validation guidance.
+
 - Add `astra-implementation-prompt`: draft an implementation prompt with Astra Max, review it, and optionally start an approved Sol Ultra or Terra Ultra implementation chat. Local packaging does not publish or install the Plugin.
 
-- MacPilot: match the requested target PID, process generation and window before reusing a preview. When the target changes, confirm the previous host exited and wait for the new target's first frame before reporting start. Validate both saved capture pixels and the rendered preview window against changing target/sequence patterns.
-- MacPilot: stop stale desktop cursor/outline hosts after 30 seconds without a feedback request, on MCP owner exit, or when the task/target becomes invalid. Add observation-free `mac_cursors operation=stop` with exact-process exit confirmation, including cleanup of cancelled/expired tasks. Preserve preview independence and saved pointer data.
-- MacPilot: require an explicit user handoff in a focused full-screen notice before foreground task work. Show the goal, Start control, Later and Esc cancellation without automatic start. Keep a visible task status and monitor user input between calls; revoke control on interruption and require a new handoff on resume. Foreground/global calls require an authorized task instead of bypassing the notice.
+- Replace MacPilot in the local catalog with the user-supplied mac-computer-use 1.26.1 and simulator-pilot 1.8.0 packages, preserving their source layout and adding filtered Plugin mirrors, discovery metadata and installation guidance. Remove the tracked legacy implementation and its dedicated release automation; preserve local runtime data and existing user installations.
+- Make mac-cu update guidance manual for this distribution, removing the original private marketplace updater. Move detailed operations into references, retain the old C4 source-pinned example explicitly as a historical fixture. No publication, global installation, activation or live desktop verification is implied.
 - Carry the human's goal-scoped team coordination instruction and trusted source through role packets. Routine team instructions, questions, review requests and result reporting continue without initial or repeated messaging-approval prompts, including while the user is away; preserve official tool authority, task membership and revocation checks.
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.

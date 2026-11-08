@@ -90,10 +90,12 @@ plugin.
   native messaging host of the Chrome extension (the same program; it answers only mac-cu itself, and the
   extension runs only the protocol commands the browser tool needs)
 - `chrome-extension/`: the mac-cu Chrome extension (the browser tool with `"engine": "extension"`)
-- `verify-prompts.md`: the prompts for `act` verify and `decide`, tested on Calculator
+- `verify-prompts.md`: the prompts for `act` verify and `decide`
 - `scripts/setup.py`: builds and signs mac-cu.app, connects it to Claude Code and/or Codex, and restarts it
 - `scripts/focus.py`, `scripts/focus-overlay.swift`: the glow and preview of the target window
 
 ## License
 
 MIT
+
+The simulator LCD window uses an opaque device body without a title bar. Drag its device/status capsule to move it; its menu provides focus mode, size, minimize and close. Home, rotation, folding and capture sit below the LCD, with auxiliary controls at the side. See [device window controls](references/device-window.md).

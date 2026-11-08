@@ -641,19 +641,19 @@ func simulatorTool(_ arguments: [String: Any]) throws -> [String: Any] {
 /// Both tool buttons and MCP use the existing backend, serialized on handleQueue.
 func executeSimulatorCommand(_ arguments: [String: Any], device: NSObject, activity: SimulatorToolActivity) throws -> [String: Any] {
     let id = udid(of: device)
-    DispatchQueue.main.async { simulatorWindows[id]?.toolbox.start(activity) }
+    DispatchQueue.main.async { simulatorWindows[id]?.commandStarted(activity) }
     do {
         let result = try simulatorDeviceTool(arguments, device: device)
         if ["hinge", "rotate", "button"].contains(activity.action),
            case let .success(screen) = Result(catching: { try activeScreen(of: device) }) {
             DispatchQueue.main.async { simulatorWindows[id]?.show(screen) }
         }
-        DispatchQueue.main.async { simulatorWindows[id]?.toolbox.finish(activity, response: result) }
+        DispatchQueue.main.async { simulatorWindows[id]?.commandFinished(activity, response: result) }
         return result
     } catch {
         let message = (error as? ToolError)?.message ?? error.localizedDescription
         DispatchQueue.main.async {
-            simulatorWindows[id]?.toolbox.finish(activity, response: ["isError": true, "content": [["type": "text", "text": message]]])
+            simulatorWindows[id]?.commandFinished(activity, response: ["isError": true, "content": [["type": "text", "text": message]]])
         }
         throw error
     }

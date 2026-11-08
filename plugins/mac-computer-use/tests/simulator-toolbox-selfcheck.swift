@@ -35,8 +35,12 @@ struct SimulatorToolboxSelfcheck {
                             assert(near(geometry.body, simulatorDeviceLayout(in: size, screen: screen, bezel: bezel, toolsVisible: open).body))
                             let viewport = CGRect(origin: .zero, size: size)
                             assert(viewport.contains(geometry.body) && geometry.body.contains(geometry.lcd))
-                            assert(abs(geometry.body.maxY - (size.height - 16)) < 0.001)
+                            assert(abs(geometry.body.maxY - (size.height - 16 - simulatorHandleSpace)) < 0.001)
                             assert(abs(geometry.lcd.width / geometry.lcd.height - screen.width / screen.height) < 0.001)
+                            assert(viewport.contains(geometry.handle) && !geometry.handle.intersects(geometry.body))
+                            assert(viewport.contains(geometry.controls) && !geometry.controls.intersects(geometry.body))
+                            assert(viewport.contains(geometry.rail) && !geometry.rail.intersects(geometry.body))
+                            assert(viewport.contains(geometry.resize))
                             if open { assert(viewport.contains(geometry.tools) && !geometry.body.intersects(geometry.tools)) }
                             let localLCD = geometry.lcd.offsetBy(dx: -geometry.tools.minX, dy: -geometry.tools.minY)
                             for expanded in [true, false] {
@@ -68,10 +72,10 @@ struct SimulatorToolboxSelfcheck {
                         for _ in 0..<50 {
                             for open in [true, false] {
                                 let envelope = simulatorLCDContentSize(forLCD: lcd.size, bezel: bezel, toolsVisible: open)
-                                let geometry = simulatorDeviceLayout(in: envelope, screen: screen, bezel: bezel, toolsVisible: open)
+                                let geometry = simulatorDeviceLayout(in: envelope, screen: screen, bezel: bezel, toolsVisible: open, lcdSizeLimit: original.size)
                                 lcd = CGRect(origin: .zero, size: geometry.lcd.size)
                                 assert(near(lcd, original, tolerance: 0.000001), "Toggle fitting must not accumulate LCD scale changes")
-                                assert(abs(geometry.body.minX - 16) < 0.001 && abs(envelope.height - geometry.body.maxY - 16) < 0.001)
+                                assert(geometry.body.minX >= 16 - 0.001 && abs(envelope.height - geometry.body.maxY - 16 - simulatorHandleSpace) < 0.001)
                                 let tools = simulatorToolboxSize(forLCD: lcd.size, bezel: bezel)
                                 assert(tools.width >= 280 && tools.width <= 360 && tools.height >= 344 && tools.height <= 576)
                             }
@@ -99,6 +103,7 @@ struct SimulatorToolboxSelfcheck {
         let window = NSWindow(contentRect: CGRect(origin: .zero, size: size), styleMask: .borderless, backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
         window.contentView = content
+        let initialContentSize = content.bounds.size // NSWindow normalizes fractional requested points.
         defer { window.close() }
         content.needsLayout = true
         content.layoutSubtreeIfNeeded()
@@ -176,7 +181,7 @@ struct SimulatorToolboxSelfcheck {
         while latest == 0 && Date() < deadline { pump(0.01) }
         pump(0.15)
         assert(staleOpen == 0 && staleClose == 0 && latest == 1, "Only the latest completion may hide or resize")
-        assert(!box.isHidden && content.toolsVisible && content.bounds.width == size.width)
+        assert(!box.isHidden && content.toolsVisible && content.bounds.size == initialContentSize, "Only the current transition may resize the normalized native window")
         assert(controls.allSatisfy { $0.isHiddenOrHasHiddenAncestor ? !$0.isEnabled && $0.isAccessibilityHidden() : $0.isEnabled && !$0.isAccessibilityHidden() })
         for (frame, target) in zip(box.visibleGlassFrames, targets) { assert(near(frame, target, tolerance: 0.1)) }
         assert(input.stringValue == "전환 중에도 남을 draft" && requests == 0)
@@ -206,7 +211,7 @@ struct SimulatorToolboxSelfcheck {
         pump(0.01)
         content.animateTools(true) { reopened += 1 }
         pump(1.2)
-        assert(cancelled == 0 && reopened == 1 && !box.isHidden && box.visibleGlassFrames == targets, "An animated reversal during the first 60ms must finish open")
+        assert(cancelled == 0 && reopened == 1 && !box.isHidden && box.visibleGlassFrames == targets, "An animated reversal during the first 60ms must finish open: cancelled=\(cancelled), reopened=\(reopened), hidden=\(box.isHidden)")
         content.animateTools(false) { cancelled += 1 }
         pump(0.42)
         content.animateTools(true) { reopened += 1 }
@@ -258,7 +263,7 @@ struct SimulatorToolboxSelfcheck {
                         let layout = simulatorDeviceLayout(in: size, screen: screen, bezel: device.bezel, toolsVisible: open)
                         assert(CGRect(origin: .zero, size: size).contains(layout.body))
                         assert(layout.body.contains(layout.lcd))
-                        assert(abs(size.height - layout.body.maxY - 16) < 0.001)
+                        assert(abs(size.height - layout.body.maxY - 16 - simulatorHandleSpace) < 0.001)
                         assert(abs(layout.lcd.width / layout.lcd.height - screen.width / screen.height) < 0.001)
                         if open { assert(!layout.body.intersects(layout.tools) && layout.tools.maxX <= size.width) }
                     }

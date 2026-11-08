@@ -93,6 +93,7 @@ func simulatorToolboxViewRequest(_ input: String) -> [String: Any] {
 
 final class SimulatorToolboxView: NSView {
     var onRun: ([String: Any]) -> Void = { _ in }
+    var onAvailabilityChanged: (Bool) -> Void = { _ in }
     var confirmAction: (String) -> Bool = SimulatorToolboxView.confirm
     private(set) var screenSize = CGSize(width: 1, height: 1)
     private(set) var busy = false
@@ -128,6 +129,7 @@ final class SimulatorToolboxView: NSView {
     private var animationTargets: [CGRect] = []
     private var animationRequested = false
     private var animationCompleted = false
+    private var settlement: DispatchWorkItem?
     private var transitionCompletion: (() -> Void)?
     var retractionLCD = CGRect(x: -simulatorToolboxWidth, y: 0, width: simulatorToolboxWidth, height: simulatorToolboxHeight) {
         didSet { if oldValue != retractionLCD { needsLayout = true } }
@@ -251,6 +253,19 @@ final class SimulatorToolboxView: NSView {
         components.append(Component(glass: glass, control: control, row: row, column: column, columns: columns, span: span))
     }
 
+    func setFloatingPresentation(_ visible: Bool) {
+        expanded = visible
+        isHidden = !visible
+        transitioning = false
+        animationVersion += 1
+        settlement?.cancel(); settlement = nil
+        transitionCompletion = nil
+        report.close()
+        clipsToBounds = true
+        needsLayout = true
+        updateInteraction()
+    }
+
     func updateScreen(_ size: CGSize, name: String, foldable: Bool, rotation: String = "rot0") {
         screenSize = size
         angleGlass?.isHidden = !foldable
@@ -307,6 +322,7 @@ final class SimulatorToolboxView: NSView {
     }
 
     private func updateInteraction() {
+        onAvailabilityChanged(busy || manualPending)
         for item in components {
             let visible = acceptsInput && !item.glass.isHidden && bounds.contains(item.glass.frame)
             item.glass.setAccessibilityHidden(!visible)
@@ -331,6 +347,7 @@ final class SimulatorToolboxView: NSView {
     private func finishTransitionIfReady() {
         guard transitioning, animationCompleted, expanded || glassIsRetracted else { return }
         transitioning = false
+        settlement?.cancel(); settlement = nil
         clipsToBounds = !expanded
         needsLayout = true
         updateInteraction()
@@ -340,6 +357,8 @@ final class SimulatorToolboxView: NSView {
     }
 
     private func animateFrames(_ targets: [CGRect]) {
+        settlement?.cancel()
+        settlement = nil
         animationVersion += 1
         let version = animationVersion
         animationTargets = targets
@@ -354,6 +373,19 @@ final class SimulatorToolboxView: NSView {
             self.finishTransitionIfReady()
         }
         let animate = animationRequested && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        if #available(macOS 15, *), animate {
+            // The native bridge can drop completion for a property retargeted during its initial
+            // delay, leaving subpixel residuals forever. Settle once after the spring's response
+            // envelope; generation checks and cancellation preserve every live reversal.
+            let work = DispatchWorkItem { [weak self] in
+                guard let self, self.animationVersion == version, self.transitioning else { return }
+                for (i, item) in self.components.enumerated() { item.glass.frame = targets[i] }
+                self.animationCompleted = true
+                self.finishTransitionIfReady()
+            }
+            settlement = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.85, execute: work)
+        }
         for (index, item) in components.enumerated() {
             if #available(macOS 15, *), animate, !item.glass.isHidden {
                 let motion = SimulatorToolboxMotion(row: item.row, column: item.column)
@@ -421,8 +453,14 @@ final class SimulatorToolboxView: NSView {
         status.menu = menu
         NSAccessibility.post(element: status, notification: .valueChanged)
     }
-    private func submit(_ arguments: [String: Any]) {
-        guard acceptsInput, !busy, !manualPending else { return }
+    func submitFromChrome(_ arguments: [String: Any]) { submit(arguments, fromChrome: true) }
+    func showResponse() { showReport(status) }
+    func showResponse(from anchor: NSView) {
+        if report.isShown { report.close() }
+        else { report.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: .maxX) }
+    }
+    private func submit(_ arguments: [String: Any], fromChrome: Bool = false) {
+        guard (fromChrome || acceptsInput), !busy, !manualPending else { return }
         lastManual = arguments
         manualPending = true
         status.title = "대기 중 · 직접 조작"
@@ -448,7 +486,7 @@ final class SimulatorToolboxView: NSView {
         submit(["action": "paste", "text": text])
     }
     @objc private func showReport(_ sender: NSButton) {
-        guard acceptsInput, sender.isEnabled else { return }
+        guard sender.isEnabled else { return }
         if report.isShown { report.close() }
         else { report.show(relativeTo: sender.bounds, of: sender, preferredEdge: .maxX) }
     }

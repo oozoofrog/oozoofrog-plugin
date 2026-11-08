@@ -7,6 +7,7 @@
 // objects (ROCKRemoteProxy): they answer messages, not key-value coding.
 
 import AppKit
+import UniformTypeIdentifiers
 
 /// The screens of a booted simulator that have a framebuffer (the descriptors of its io ports).
 func framebufferScreens(of device: NSObject) -> [NSObject] {
@@ -100,9 +101,11 @@ final class SimulatorScreenView: NSView {
             mask.setAffineTransform(CGAffineTransform(rotationAngle: (degrees[rotation] ?? 0) * .pi / 180))
             layer!.mask = mask
         } else { layer!.mask = nil }
-        touchOverlay.layout(viewport: bounds, screen: shownPoints)
+        touchOverlay.layout(viewport: bounds, screen: shownPoints, backingScale: window?.backingScaleFactor ?? 2)
         CATransaction.commit()
     }
+
+    override func viewDidChangeBackingProperties() { super.viewDidChangeBackingProperties(); needsLayout = true }
 
     // MARK: Input
 
@@ -115,13 +118,7 @@ final class SimulatorScreenView: NSView {
     /// A point of this view in points of the simulator's screen as shown; nil outside the screen unless clamped.
     func screenPoint(_ event: NSEvent, clamp: Bool) -> CGPoint? {
         let p = convert(event.locationInWindow, from: nil)  // From the bottom left.
-        let left = bounds.midX - shownPoints.width * scale / 2, bottom = bounds.midY - shownPoints.height * scale / 2
-        var s = CGPoint(x: (p.x - left) / scale, y: shownPoints.height - (p.y - bottom) / scale)
-        if clamp {
-            s = CGPoint(x: min(max(s.x, 0), shownPoints.width), y: min(max(s.y, 0), shownPoints.height))
-        } else if !CGRect(origin: .zero, size: shownPoints).contains(s) {
-            return nil
-        }
+        guard let s = simulatorScreenPoint(p, viewport: bounds, screen: shownPoints, clamp: clamp) else { return nil }
         if !clamp, let deviceMask, !deviceMask.contains(s, size: shownPoints, rotation: rotation) { return nil }
         return s
     }
@@ -129,6 +126,8 @@ final class SimulatorScreenView: NSView {
     // Mouse: one finger; with Option held when the button goes down, two fingers mirrored about the screen's center
     // (pinch and rotate, as Simulator.app does).
     var touching = false, twoFingers = false
+    var lastFingers: (CGPoint, CGPoint?)?
+    var keyboardEnabled = true
 
     func fingers(_ event: NSEvent, clamp: Bool) -> (CGPoint, CGPoint?)? {
         guard let p = screenPoint(event, clamp: clamp) else { return nil }
@@ -140,17 +139,20 @@ final class SimulatorScreenView: NSView {
         twoFingers = event.modifierFlags.contains(.option)
         guard let (p, q) = fingers(event, clamp: false) else { return }
         touching = true
+        lastFingers = (p, q)
         owner?.touch(p, q, phase: 0)
     }
 
     override func mouseDragged(with event: NSEvent) {
         guard touching, let (p, q) = fingers(event, clamp: true) else { return }
+        lastFingers = (p, q)
         owner?.touch(p, q, phase: 1)
     }
 
     override func mouseUp(with event: NSEvent) {
         guard touching, let (p, q) = fingers(event, clamp: true) else { return }
         touching = false
+        lastFingers = nil
         owner?.touch(p, q, phase: 2)
     }
 
@@ -164,6 +166,7 @@ final class SimulatorScreenView: NSView {
     }
 
     override func keyDown(with event: NSEvent) {
+        guard keyboardEnabled else { return }
         if event.isARepeat { return }
         if let button = button(for: event) { owner?.button(button); return }
         guard let usage = hidUsages[event.keyCode] else { return }
@@ -190,7 +193,7 @@ final class SimulatorScreenView: NSView {
     }
 
     override func flagsChanged(with event: NSEvent) {
-        guard let usage = hidUsages[event.keyCode] else { return }
+        guard keyboardEnabled, let usage = hidUsages[event.keyCode] else { return }
         if event.keyCode == 0x39 {  // Caps Lock: one press for each change (it switches the input language on iOS when set so).
             owner?.key(usage, down: true)
             owner?.key(usage, down: false)
@@ -202,8 +205,17 @@ final class SimulatorScreenView: NSView {
     }
 
     override func resignFirstResponder() -> Bool {
-        owner?.releaseKeys()
+        releaseInput()
         return super.resignFirstResponder()
+    }
+
+    /// Release only this view's manual contacts; agent gestures have their own cancellation lifecycle.
+    func releaseInput() {
+        var contacts: [(CGPoint, CGPoint?)] = []
+        if touching, let fingers = lastFingers { contacts.append(fingers) }
+        if let p = scrollFinger { contacts.append((p, nil)) }
+        touching = false; twoFingers = false; lastFingers = nil; scrollFinger = nil
+        owner?.releaseManualInput(contacts: contacts)
     }
 
     // Scroll: a finger drag (trackpad: down when the gesture begins, up when it ends; mouse wheel: one short drag for
@@ -252,7 +264,11 @@ final class SimulatorWindow: NSObject, NSWindowDelegate {
     let view: SimulatorScreenView
     let toolbox: SimulatorToolboxView
     let content: SimulatorLCDContentView
-    private let toolboxToggle = NSButton(title: "도구", target: nil, action: nil)
+    private(set) var toolbarDocking: SimulatorToolbarDocking?
+    private var applyingFrame = false
+    private var manipulating = false
+    private var capturePending = false
+    private var toolsBeforeFocus = false
     let token = NSUUID()
     var screen: NSObject?
     var surface: IOSurfaceRef?
@@ -280,15 +296,18 @@ final class SimulatorWindow: NSObject, NSWindowDelegate {
         let watch = ((device.value(forKey: "runtime") as? NSObject)?.value(forKey: "name") as? String ?? "").hasPrefix("watchOS")
         toolbox = SimulatorToolboxView(deviceName: device.value(forKey: "name") as? String ?? "Simulator", isWatch: watch)
         content = SimulatorLCDContentView(lcd: view, tools: toolbox, appearance: simulatorDeviceAppearance(device))
-        window = NSWindow(contentRect: view.frame, styleMask: [.titled, .closable, .resizable, .miniaturizable],
+        window = SimulatorDeviceWindow(contentRect: view.frame, styleMask: [.borderless, .closable, .resizable, .miniaturizable],
                           backing: .buffered, defer: false)
         super.init()
         window.isReleasedWhenClosed = false
         window.isOpaque = false
         window.backgroundColor = .clear
-        window.titlebarAppearsTransparent = true
+        window.isMovable = true
+        window.isMovableByWindowBackground = false
+        window.alphaValue = 1
         window.hasShadow = false
         window.collectionBehavior.insert(.moveToActiveSpace)
+        content.externalToolbar = true
         window.contentView = content
         view.owner = self
         window.makeFirstResponder(view)  // Keys typed in the window go to the simulator without a click first.
@@ -303,23 +322,38 @@ final class SimulatorWindow: NSObject, NSWindowDelegate {
                 _ = try? executeSimulatorCommand(arguments, device: self.device, activity: activity)
             }
         }
-        toolboxToggle.target = self
-        toolboxToggle.action = #selector(toggleToolbox)
-        toolboxToggle.setButtonType(.toggle)
-        toolboxToggle.image = NSImage(systemSymbolName: "slider.horizontal.3", accessibilityDescription: nil)
-        toolboxToggle.imagePosition = .imageLeading
-        toolboxToggle.toolTip = "도구 · ⇧⌘T"
-        toolboxToggle.setAccessibilityLabel("도구")
-        let accessory = NSTitlebarAccessoryViewController()
-        accessory.layoutAttribute = .right
-        toolboxToggle.frame = NSRect(x: 0, y: 0, width: 76, height: 24)
-        accessory.view = toolboxToggle
-        window.addTitlebarAccessoryViewController(accessory)
+        content.chrome.onRun = { [weak self] arguments in
+            guard let self else { return }
+            self.view.releaseInput()
+            self.capturePending = arguments["action"] as? String == "screenshot"
+            self.toolbox.submitFromChrome(arguments)
+        }
+        toolbox.onAvailabilityChanged = { [weak self] busy in self?.content.chrome.setBusy(busy) }
+        content.chrome.onMenu = { [weak self] in self?.deviceMenu() ?? NSMenu() }
+        content.chrome.onTools = { [weak self] in self?.toggleToolbox() }
+        content.chrome.onKeyboard = { [weak self] in self?.toggleKeyboard() }
+        content.chrome.onTouches = { [weak self] in self?.toggleTouches() }
+        content.chrome.onResponse = { [weak self] anchor in self?.toolbox.showResponse(from: anchor) }
+        content.chrome.grip.onManipulate = { [weak self] in self?.manipulating = true; self?.view.releaseInput() }
+        content.chrome.grip.onEndManipulate = { [weak self] in self?.manipulating = false; self?.constrainToScreen(); self?.toolbarDocking?.deviceDidMove() }
+        content.chrome.resize.onManipulate = { [weak self] in self?.manipulating = true; self?.view.releaseInput() }
+        content.chrome.resize.onEndManipulate = { [weak self] in self?.manipulating = false; self?.constrainToScreen(); self?.toolbarDocking?.deviceDidMove() }
         window.delegate = self
         window.center()
         show(active)
         resizeLCD(CGSize(width: points.width * fit, height: points.height * fit))
-        if UserDefaults.standard.bool(forKey: "simulatorToolbox.\(id)") { toggleToolbox() }
+        let docking = SimulatorToolbarDocking(ownerID: id, name: deviceName, device: window, chrome: content.chrome, tools: toolbox)
+        toolbarDocking = docking
+        docking.onInputCleanup = { [weak self] in
+            self?.view.releaseInput()
+            self?.window.endEditing(for: nil)
+            self?.content.chrome.closePopovers()
+        }
+        docking.onDeviceMenu = { [weak self] in self?.deviceMenu() ?? NSMenu() }
+        docking.onStateChange = { menuBar?.refreshWindowStatus() }
+        docking.onSettings = { DecisionSettingsWindow.shared.show() }
+        docking.restoreDeviceFrame()
+        if UserDefaults.standard.bool(forKey: "simulatorToolbox.\(id)") { setToolbox(true) }
         // shortcut: folds and turns are read from CoreDevice every 2 seconds (0.15 s each); use the screen's
         // displayPropertiesChanged callback if this lags or costs too much.
         timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in self?.refresh() }
@@ -330,6 +364,7 @@ final class SimulatorWindow: NSObject, NSWindowDelegate {
         displayRefresh.changed()
         let previous = view.shownPoints
         if self.active?.id != active?.id || self.active?.rotation != active?.rotation {
+            view.releaseInput()
             view.touchOverlay.clear()
             previewView?.touchOverlay.clear()
         }
@@ -354,11 +389,14 @@ final class SimulatorWindow: NSObject, NSWindowDelegate {
             content.screenCornerFraction = mask.cornerFraction * CGFloat(mask.bitmap.pixelsWide) / CGFloat(min(mask.bitmap.pixelsWide, mask.bitmap.pixelsHigh))
         } else { content.screenCornerFraction = content.deviceAppearance.fallbackCorner / min(points.width, points.height) }
         view.needsLayout = true
-        if previous != points && previous.width > 1 && previous.height > 1 {
+        if !manipulating && previous != points && previous.width > 1 && previous.height > 1 {
             let scale = min(view.bounds.width / previous.width, view.bounds.height / previous.height)
             resizeLCD(CGSize(width: points.width * scale, height: points.height * scale))
         }
         toolbox.updateScreen(points, name: active?.name ?? "LCD", foldable: active?.foldable ?? false, rotation: view.rotation)
+        let runtime = (device.value(forKey: "runtime") as? NSObject)?.value(forKey: "name") as? String ?? "OS"
+        content.chrome.updateDevice(name: deviceName, runtime: runtime, connected: surface != nil && isBooted(device),
+                                    foldable: active?.foldable ?? false, isWatch: isWatch, rotation: view.rotation, primaryDisplay: active?.primary ?? true)
         if active?.foldable == true && !angleRefreshPending {
             angleRefreshPending = true
             handleQueue.async { [weak self] in
@@ -366,7 +404,7 @@ final class SimulatorWindow: NSObject, NSWindowDelegate {
                 let angle = try? hingeAngle(of: self.device)
                 DispatchQueue.main.async { [weak self] in
                     self?.angleRefreshPending = false
-                    if let angle { self?.toolbox.updateAngle(angle) }
+                    if let angle { self?.toolbox.updateAngle(angle); self?.content.chrome.updateAngle(angle) }
                 }
             }
         }
@@ -398,20 +436,37 @@ final class SimulatorWindow: NSObject, NSWindowDelegate {
         let size = view.shownPoints
         let rect = CGRect(x: view.bounds.midX - size.width * view.scale / 2, y: view.bounds.midY - size.height * view.scale / 2,
                           width: size.width * view.scale, height: size.height * view.scale)
-        let shapes = Dictionary(uniqueKeysWithValues: simulatorWindows.values.filter { $0 !== self }.map { open in
+        var shapes = Dictionary(uniqueKeysWithValues: simulatorWindows.values.filter { $0 !== self }.map { open in
             (open.window.windowNumber, open.content.opaqueFrames.map { open.window.convertToScreen(open.content.convert($0, to: nil)) })
         })
+        for open in simulatorWindows.values {
+            for (number, frames) in open.toolbarDocking?.opaqueWindowShapes ?? [:] { shapes[number] = frames }
+        }
         return simulatorWindowNeedsPreview(window, ignoring: Set(simulatorWindows.values.compactMap { $0.preview?.panel.windowNumber })
-            .union(SimulatorPreviewStacks.shared.windowNumbers), contentFrame: window.convertToScreen(view.convert(rect, to: nil)), shapedWindows: shapes)
+            .union(SimulatorPreviewStacks.shared.windowNumbers)
+            .union(toolbarDocking?.panelWindowNumbers ?? []), contentFrame: window.convertToScreen(view.convert(rect, to: nil)), shapedWindows: shapes)
     }
 
     @objc func toggleToolbox() {
         // Move focus before hiding the tools so their field editor cannot keep taking keys invisibly.
+        view.releaseInput()
         window.makeFirstResponder(view)
+        if content.focused { toggleFocus(); if content.toolsVisible { return } }
+        setToolbox(!content.toolsVisible)
+    }
+
+    private func setToolbox(_ expanded: Bool, completion: @escaping () -> Void = {}) {
         let lcd = view.bounds.size
-        let expanded = !content.toolsVisible
-        toolboxToggle.state = expanded ? .on : .off
+        content.chrome.toolsVisible = expanded
+        content.chrome.updateControls()
         UserDefaults.standard.set(expanded, forKey: "simulatorToolbox.\(id)")
+        if let toolbarDocking {
+            content.toolsVisible = expanded
+            toolbarDocking.setAdvancedVisible(expanded)
+            menuBar?.refreshWindowStatus()
+            completion()
+            return
+        }
         if expanded { content.toolsVisible = true; resizeLCD(lcd) }
         content.animateTools(expanded) { [weak self] in
             guard let self else { return }
@@ -419,6 +474,7 @@ final class SimulatorWindow: NSObject, NSWindowDelegate {
             self.content.needsLayout = true
             self.content.layoutSubtreeIfNeeded()
             menuBar?.refreshWindowStatus()
+            completion()
         }
     }
 
@@ -428,18 +484,123 @@ final class SimulatorWindow: NSObject, NSWindowDelegate {
         let points = content.screen
         let minimumScale = 160 / max(1, max(points.width, points.height))
         let minimum = simulatorLCDContentSize(forLCD: CGSize(width: points.width * minimumScale, height: points.height * minimumScale),
-                                             bezel: content.deviceAppearance.bezel, toolsVisible: content.toolsVisible)
+                                             bezel: content.deviceAppearance.bezel, toolsVisible: !content.externalToolbar && content.toolsVisible, focused: content.focused, externalToolbar: content.externalToolbar)
         window.contentMinSize = CGSize(width: min(visible.width, minimum.width), height: min(visible.height - chrome, minimum.height))
         guard !window.styleMask.contains(.fullScreen) else { content.needsLayout = true; return }
-        let requested = simulatorLCDContentSize(forLCD: size, bezel: content.deviceAppearance.bezel, toolsVisible: content.toolsVisible)
+        let requested = simulatorLCDContentSize(forLCD: size, bezel: content.deviceAppearance.bezel, toolsVisible: !content.externalToolbar && content.toolsVisible, focused: content.focused, externalToolbar: content.externalToolbar)
         let desired = CGSize(width: min(visible.width, max(minimum.width, requested.width)),
                              height: min(visible.height - chrome, max(minimum.height, requested.height)))
         var frame = window.frameRect(forContentRect: CGRect(origin: .zero, size: desired))
         frame.origin = CGPoint(x: min(max(window.frame.minX, visible.minX), visible.maxX - frame.width),
                                y: min(max(window.frame.maxY - frame.height, visible.minY), visible.maxY - frame.height))
+        content.lcdSizeLimit = size
+        applyingFrame = true
         window.setFrame(frame, display: true)
+        applyingFrame = false
         content.needsLayout = true
         content.layoutSubtreeIfNeeded()
+    }
+
+    func commandStarted(_ activity: SimulatorToolActivity) {
+        toolbox.start(activity)
+        content.chrome.showFeedback("실행 중 · " + activity.title)
+    }
+
+    func commandFinished(_ activity: SimulatorToolActivity, response: [String: Any]) {
+        toolbox.finish(activity, response: response)
+        let failed = response["isError"] as? Bool == true
+        let items = response["content"] as? [[String: Any]] ?? []
+        let message = items.compactMap { $0["text"] as? String }.joined(separator: " ")
+        content.chrome.showFeedback(failed ? "실패 · " + message : "응답 완료 · " + activity.title, failed: failed)
+        guard capturePending, activity.source == "직접 조작", activity.action == "screenshot" else { return }
+        capturePending = false
+        guard !failed else { return }
+        // Multi-display screenshots label the active image; never save the inactive black cover by accident.
+        guard let data = simulatorActiveCaptureData(items) else { content.chrome.showFeedback("캡처 실패 · 이미지 없음", failed: true); return }
+        let save = NSSavePanel()
+        save.allowedContentTypes = [.jpeg]
+        save.nameFieldStringValue = "Simulator-\(id.prefix(8))-\(Int(Date().timeIntervalSince1970)).jpg"
+        save.beginSheetModal(for: window) { [weak self] result in
+            guard let self else { return }
+            guard result == .OK, let url = save.url else { self.content.chrome.showFeedback("캡처 저장 취소"); return }
+            do {
+                try data.write(to: url, options: .atomic)
+                self.content.chrome.showFeedback("저장됨 · " + url.lastPathComponent)
+            } catch { self.content.chrome.showFeedback("저장 실패 · " + error.localizedDescription, failed: true) }
+        }
+    }
+
+    @objc func toggleFocus() {
+        view.releaseInput()
+        window.makeFirstResponder(view)
+        content.chrome.closePopovers()
+        let size = view.bounds.size
+        if !content.focused {
+            toolsBeforeFocus = content.toolsVisible
+            content.animateTools(false, animated: false) {}
+        }
+        content.focused.toggle()
+        if !content.focused, toolsBeforeFocus { content.animateTools(true, animated: false) {} }
+        content.chrome.toolsVisible = content.toolsVisible
+        content.chrome.updateControls()
+        toolbarDocking?.setAdvancedVisible(content.toolsVisible)
+        toolbarDocking?.setFocused(content.focused)
+        resizeLCD(size)
+    }
+    @objc private func toggleKeyboard() {
+        view.releaseInput()
+        view.keyboardEnabled.toggle()
+        content.chrome.keyboardEnabled = view.keyboardEnabled
+        content.chrome.updateControls()
+        window.makeFirstResponder(view)
+    }
+    @objc private func toggleTouches() {
+        let visible = !content.chrome.touchesVisible
+        content.chrome.touchesVisible = visible
+        view.touchOverlay.layer.isHidden = !visible
+        previewView?.touchOverlay.layer.isHidden = !visible
+        content.chrome.updateControls()
+    }
+    @objc private func showDecisionSettings() { DecisionSettingsWindow.shared.show() }
+    @objc private func closeDevice() { window.close() }
+    @objc private func minimizeDevice() { view.releaseInput(); window.miniaturize(nil) }
+    @objc private func resizeDevice(_ sender: NSMenuItem) {
+        view.releaseInput()
+        if sender.tag == 0 { window.center(); constrainToScreen(); return }
+        let scale = CGFloat(sender.tag) / 100
+        resizeLCD(CGSize(width: view.shownPoints.width * scale, height: view.shownPoints.height * scale))
+    }
+    @objc private func showToolResponse() {
+        if content.focused { toggleFocus() }
+        if let toolbarDocking { toolbarDocking.showStatusResponse(); return }
+        if !content.toolsVisible { setToolbox(true) { [weak self] in self?.toolbox.showResponse() } }
+        else { toolbox.showResponse() }
+    }
+    func deviceMenu() -> NSMenu {
+        let menu = NSMenu(title: "기기")
+        func add(_ title: String, _ selector: Selector, state: Bool = false, tag: Int = 0) {
+            let item = NSMenuItem(title: title, action: selector, keyEquivalent: "")
+            item.target = self; item.state = state ? .on : .off; item.tag = tag
+            menu.addItem(item)
+        }
+        add("집중 모드", #selector(toggleFocus), state: content.focused)
+        add("고급 도구 · ⇧⌘T", #selector(toggleToolbox), state: content.toolsVisible)
+        add("활동 및 캡처 응답", #selector(showToolResponse))
+        add("판단 API 설정…", #selector(showDecisionSettings))
+        add("키보드 입력", #selector(toggleKeyboard), state: view.keyboardEnabled)
+        add("터치 표시", #selector(toggleTouches), state: content.chrome.touchesVisible)
+        if let toolbarDocking {
+            let layout = NSMenuItem(title: "도구 배치 · 분리와 재결합", action: nil, keyEquivalent: "")
+            layout.submenu = toolbarDocking.menu(includeDeviceMenu: false)
+            menu.addItem(layout)
+        }
+        menu.addItem(.separator())
+        for percentage in [50, 75, 100] { add("크기 \(percentage)%", #selector(resizeDevice(_:)), tag: percentage) }
+        add("화면 중앙으로 이동", #selector(resizeDevice(_:)))
+        menu.addItem(.separator())
+        add("최소화", #selector(minimizeDevice))
+        add("창 닫기", #selector(closeDevice))
+        return menu
     }
 
     func preparePreview() {
@@ -450,6 +611,7 @@ final class SimulatorWindow: NSObject, NSWindowDelegate {
             image.layer?.backgroundColor = NSColor.clear.cgColor
             image.layer?.cornerRadius = 12
             image.layer?.masksToBounds = true
+            image.touchOverlay.layer.isHidden = !content.chrome.touchesVisible
             previewView = image
             preview = SimulatorPreviewWindow(title: window.title, screenView: image,
                                             onOpen: { [weak self] in if let self { bringSimulatorWindowToFront(self) } },
@@ -519,20 +681,25 @@ final class SimulatorWindow: NSObject, NSWindowDelegate {
                 let current = self.displayRefresh.finish(ticket)
                 if !booted { self.window.close(); return }
                 guard current, case let .success(active) = result else { return }
-                if active?.id != self.active?.id || active?.rotation != self.active?.rotation { self.show(active) }
+                self.show(active)
             }
         }
     }
 
     // MARK: Input, sent on handleQueue: one at a time with the tools' requests, which use the same HID connection.
 
-    func perform(_ work: @escaping (HIDLink, ActiveScreen?) -> Void) {
+    func perform(completion: (() -> Void)? = nil, _ work: @escaping (HIDLink, ActiveScreen?) -> Void) {
         let device = self.device, active = self.active
-        handleQueue.async { if let link = try? hidLink(for: device) { work(link, active) } }
+        handleQueue.async {
+            defer { completion?() }
+            if let link = try? hidLink(for: device) { work(link, active) }
+        }
     }
 
     func touch(_ point: CGPoint, _ second: CGPoint?, phase: UInt64) {
-        perform { $0.touch(point, phase: phase, screen: $1, second: second) }
+        // mouseUp/scroll end is itself a safety release, even if focus never changes.
+        let finish = phase == 2 ? DecisionPendingRequests.beginInputCleanup() : nil
+        perform(completion: finish) { $0.touch(point, phase: phase, screen: $1, second: second) }
     }
 
     /// A drag over about 0.15 s: a pan (and so a scroll view) recognizes it, where a touch that ends where it began
@@ -550,13 +717,29 @@ final class SimulatorWindow: NSObject, NSWindowDelegate {
     }
 
     func key(_ usage: UInt64, down: Bool) {
-        if down { heldKeys.insert(usage) } else { heldKeys.remove(usage) }
-        perform { link, _ in link.key(usage, down: down) }
+        var finish: (() -> Void)?
+        if down { heldKeys.insert(usage) }
+        else if heldKeys.remove(usage) != nil { finish = DecisionPendingRequests.beginInputCleanup() }
+        perform(completion: finish) { link, _ in link.key(usage, down: down) }
     }
 
     /// Lets go of the keys held when the window stops taking the keyboard, so none stays down in the simulator.
-    func releaseKeys() {
-        for usage in heldKeys { key(usage, down: false) }
+    func releaseKeys() { releaseManualInput(contacts: []) }
+
+    /// Safety cleanup stays on the HID queue, after interrupting a network decision wait.
+    /// No second HID transport or global session mutation is introduced.
+    func releaseManualInput(contacts: [(CGPoint, CGPoint?)]) {
+        let keys = heldKeys
+        guard !keys.isEmpty || !contacts.isEmpty else { return }
+        heldKeys.removeAll()
+        let finish = DecisionPendingRequests.beginInputCleanup()
+        let device = self.device, active = self.active
+        handleQueue.async {
+            defer { finish() }
+            guard let link = try? hidLink(for: device) else { return }
+            for usage in keys { link.key(usage, down: false) }
+            for (point, second) in contacts { link.touch(point, phase: 2, screen: active, second: second) }
+        }
     }
 
     func button(_ usage: UInt64) {
@@ -578,18 +761,48 @@ final class SimulatorWindow: NSObject, NSWindowDelegate {
     }
 
     func windowDidResignKey(_ notification: Notification) {
-        releaseKeys()
+        view.releaseInput()
+        content.chrome.grip.cancelDrag()
+        content.chrome.resize.cancelDrag()
+        content.chrome.closePopovers()
         menuBar?.refreshWindowStatus()
     }
 
-    func windowDidMiniaturize(_ notification: Notification) { menuBar?.refreshWindowStatus() }
-    func windowDidDeminiaturize(_ notification: Notification) { menuBar?.refreshWindowStatus() }
+    func windowDidMiniaturize(_ notification: Notification) { view.releaseInput(); toolbarDocking?.suspend(); menuBar?.refreshWindowStatus() }
+    func windowDidDeminiaturize(_ notification: Notification) { toolbarDocking?.resume(); menuBar?.refreshWindowStatus() }
     func windowDidChangeOcclusionState(_ notification: Notification) { menuBar?.refreshWindowStatus() }
-    func windowDidMove(_ notification: Notification) { menuBar?.refreshWindowStatus() }
-    func windowDidChangeScreen(_ notification: Notification) { menuBar?.refreshWindowStatus() }
+    func windowDidMove(_ notification: Notification) {
+        // Never apply a corrective frame during performDrag or setFrame's delegate reentry.
+        if !window.inLiveResize && !manipulating && !applyingFrame { constrainToScreen() }
+        if !applyingFrame { toolbarDocking?.deviceDidMove() }
+        menuBar?.refreshWindowStatus()
+    }
+    func windowDidChangeScreen(_ notification: Notification) { constrainToScreen(); menuBar?.refreshWindowStatus() }
+    func windowDidChangeScreenProfile(_ notification: Notification) { constrainToScreen() }
+    func windowDidResize(_ notification: Notification) {
+        if !applyingFrame { content.lcdSizeLimit = nil; view.releaseInput() }
+        content.needsLayout = true
+        toolbarDocking?.deviceDidMove()
+        menuBar?.refreshWindowStatus()
+    }
+    private func constrainToScreen() {
+        guard !applyingFrame, !manipulating, let visible = window.screen?.visibleFrame else { return }
+        let frame = simulatorConstrainedFrame(window.frame, to: visible)
+        guard frame != window.frame else { return }
+        applyingFrame = true
+        window.setFrame(frame, display: true)
+        applyingFrame = false
+        content.needsLayout = true
+    }
 
     func windowWillClose(_ notification: Notification) {
-        releaseKeys()
+        view.releaseInput()
+        content.chrome.grip.cancelDrag()
+        content.chrome.resize.cancelDrag()
+        content.chrome.closePopovers()
+        toolbarDocking?.close()
+        toolbox.setFloatingPresentation(false) // Cancels any outstanding toolbox transition.
+        toolbox.report.close()
         view.touchOverlay.clear()
         timer?.invalidate()
         stopCallbacks()
@@ -617,6 +830,7 @@ func bringSimulatorWindowToFront(_ open: SimulatorWindow) {
     open.window.deminiaturize(nil)
     NSApp.activate(ignoringOtherApps: true)
     open.window.makeKeyAndOrderFront(nil)
+    open.toolbarDocking?.resume()
     menuBar?.refreshWindowStatus()
 }
 
@@ -668,11 +882,13 @@ func simulatorWindowAction(_ device: NSObject, active: ActiveScreen?, close: Boo
     return """
         Opened a window with the live screen of \(name)\(active.map { " (\($0.name))" } ?? ""), \
         \(Int(points.width))×\(Int(points.height)) points, shown \(Int(presentation.size.width))×\(Int(presentation.size.height)) on the Mac. \
-        The device container uses \(material) and \(presentation.masked ? "the simulator model's display mask" : "rounded display corners as a fallback"). \
-        Right-side tool components are \(presentation.tools ? "shown" : "hidden"); 도구 or Shift-Command-T toggles them. \
+        The borderless device has an opaque LCD, a drag handle with a device menu, and Home/Rotate/Fold/Capture controls. Surrounding controls use \(material) and the LCD uses \(presentation.masked ? "the simulator model's display mask" : "rounded display corners as a fallback"). \
+        The floating main sidebar groups device information, basic controls, auxiliary input, folding, advanced tools and status. \
+        Module grips and layout menus detach/rejoin real control panels; the main sidebar can follow this device or move independently. \
+        Advanced tools are \(presentation.tools ? "shown" : "hidden"); the 고급 도구 button or Shift-Command-T toggles them. Layout is saved per device. \
         Colored numbered fingers follow sent touches and fade on lift. It follows folds and turns, and closes when the simulator \
         shuts down. The user can use the simulator in it: clicks and drags touch (Option-drag: two fingers), the keyboard \
         types into it, scrolling scrolls (the crown on Apple Watch), Shift-Command-H presses home and Shift-Command-L lock. \
-        Close it with its close button or window with close: true.
+        The device menu provides focus mode, size, minimize and close. Drag the visible lower-right grip to resize. Preview opacity never changes the LCD. Close from the device menu or window with close: true.
         """
 }

@@ -21,7 +21,7 @@ git diff --check
 ```
 
 통과한 배포 검사는 파일·메타데이터·로컬 링크의 일관성을 확인합니다. mac-cu setup 실행, 사용자 권한 설정, MCP 연결, 앱 UI 및 Simulator 동작은 증명하지 않습니다.
-전경 desktop 시험은 잠금 해제된 대화형 desktop에서 직렬 실행하고 입력 보호 조건을 유지합니다.
+전경 desktop 시험은 잠금 해제된 대화형 desktop에서 직렬 실행하고 입력 보호 조건을 유지합니다. LCD 창은 [격리 네이티브 검증](mac-cu-device-window-validation.md)에 따라 별도 bundle의 앱으로 확인하며, 사용자 전역 앱·설치 캐시를 교체하지 않습니다.
 게시가 요청되면 해당 변경만 검토해 커밋·푸시한 뒤 원격 `.agents/plugins/marketplace.json`과 manifest를 확인합니다.
 설치가 요청되면 선택 marketplace source와 설치본 경로·파일을 확인하고 새 세션 노출·실제 동작을 별도로 검증합니다.
 [설치와 전환](plugin-installation.md#mac-computer-use-and-simulator-pilot)을 따릅니다.
@@ -30,3 +30,14 @@ git diff --check
 
 WinPilot은 [Windows 개발·배포 절차](../winpilot/references/development.md)를 따릅니다.
 각 Plugin의 실제 런타임·패키징 요구 사항은 그 패키지의 지침을 사용하며 새 패키지에 일반화하지 않습니다.
+
+## Native decision and toolbar checks
+
+```sh
+swiftc mac-computer-use/skills/mac-computer-use/scripts/mac-cu-src/DecisionService.swift mac-computer-use/tests/decision-service-selfcheck.swift -o /tmp/mac-cu-decision-check
+/tmp/mac-cu-decision-check
+python3 mac-computer-use/tests/check-decision-answer.py
+bash mac-computer-use/tests/check-simulator-gestures.sh
+```
+
+These checks use synthetic data and isolated preferences. They do not establish real API credentials or physical pointer/keyboard behavior. Follow the [native window validation procedure](mac-cu-device-window-validation.md) for an isolated app and serialized desktop checks.

@@ -28,7 +28,8 @@ Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed 
 | --- | --- |
 | `swift-intelligence@oozoofrog-plugin` | [Semantic Swift navigation](plugins/swift-intelligence/skills/swift-intelligence/SKILL.md) using SourceKit. macOS, Xcode with Command Line Tools, and Python 3 are required; the Plugin includes MCP configuration. |
 | `local-ai-studio@oozoofrog-plugin` | [Requested local AI Studio or on-device model work](local-ai-studio/SKILL.md), including separate Whisper transcription and timestamp estimates on Apple Silicon. See [model setup](#local-ai-studio). |
-| `macpilot@oozoofrog-plugin` | [macOS, browser, and iOS Simulator workflows](macpilot/SKILL.md), including desktop control and recording. The Plugin does not automatically register MCP; see [MacPilot](#macpilot). |
+| `mac-computer-use@oozoofrog-plugin` | [Operate Mac apps, browser pages and iOS web views](mac-computer-use/skills/mac-computer-use/SKILL.md). See [setup and scope](#mac-computer-use-and-simulator-pilot). |
+| `simulator-pilot@oozoofrog-plugin` | [Run and inspect iOS Simulator apps, logs and test data](simulator-pilot/skills/simulator-pilot/SKILL.md). See [setup and scope](#mac-computer-use-and-simulator-pilot). |
 | `team-coordination@oozoofrog-plugin` | [Explicitly requested team coordination](team-coordination/SKILL.md), including tailored sidebar teams, ownership, and evidence. See [team coordination](#team-coordination). |
 | `korean-travel-guidebook@oozoofrog-plugin` | [Korean HTML travel guides](korean-travel-guidebook/SKILL.md) with itinerary, accessibility, and practical travel information. |
 | `obsidian-projects@oozoofrog-plugin` | [Maintain project records and links](obsidian-projects/SKILL.md) when asked to organize an Obsidian vault. |
@@ -63,11 +64,24 @@ The skills-only Plugin uses Local AI Studio or selected on-device tools on Apple
 
 Local Whisper uses a separate `whisper-cli` workflow and can reuse verified weights. It does not imply native app integration. Timestamps, including experimental DTW points, are estimates and do not verify sung boundaries or authorize subtitle replacement. See the [Whisper workflow and limits](local-ai-studio/references/whisper.md).
 
-## MacPilot
+## Mac Computer Use and Simulator Pilot
 
-This checkout's Plugin manifest and pinned Universal runtime asset specify version `3.6.0`. MacPilot requires macOS 14 or later; screen and system audio recording requires macOS 15 or later, and Simulator workflows require Xcode and a matching runtime. The Plugin includes CLI and MCP implementations but does not automatically register an MCP server. See [installation](docs/plugin-installation.md#macpilot), [CLI and MCP setup](macpilot/references/tools.md), and [workflow limits](macpilot/references/workflows.md).
+`mac-computer-use`: Operate Mac apps, browser pages and iOS web views with the mac-cu MCP server. Use for desktop UI tasks without a better API or CLI, web view inspection, or mac-cu setup and modes. Route iOS Simulator app launch, logs, test data and change verification through simulator-pilot.
 
-The current source requires an explicit full-screen user handoff before foreground control, interrupts control on direct user input, and requires a new handoff and observation to resume. Cursor feedback lifetime and preview target changes are also described in the [current workflows](macpilot/references/workflows.md). These source changes are unreleased; their presence here does not verify behavior in a published or installed runtime. For the source's interruption and resume conditions, see [capabilities](macpilot/references/capabilities.md). Unknown or uncertain action delivery does not authorize automatic replay; see the [delivery contract](macpilot/references/delivery-contract.md).
+`simulator-pilot`: Use for iOS Simulator app launch, logs, screen interaction, test data and change verification. Use mac-computer-use for screen controls; follow the project build instructions for compilation. Excludes Mac desktop/browser/web view tasks and account signup.
+
+The supplied source packages keep their `skills/<name>/` layout; `plugins/<name>/` mirrors the
+installable package, including manifest-relative setup resources. mac-computer-use 1.26.1 builds
+mac-cu with Python 3 and Xcode Command Line Tools. Simulator Pilot 1.8.0 builds its CLI with Swift;
+Simulator screen input requires mac-computer-use and Xcode 27 or later. Project-specific KakaoTalk
+schemes remain in the supplied CLI; follow the project build instructions for your app.
+
+Plugin installation alone does not register mac-cu MCP. Run the installed skill's setup script
+for the selected host, grant required macOS permissions, and start a new session.
+Judgments use the OpenAI Decisions API. Configure `gpt-6-luna` and an API key in the menu bar’s Settings window; keys are stored in Keychain. Connection checks send synthetic text only.
+The native simulator LCD uses an opaque device body without a title bar, with a draggable capsule, device menu, detachable sidebar modules and focus mode. Modules can join the floating main toolbar, separate into independent panels, or return to their default layout. Preview opacity remains independent. See [device window controls](mac-computer-use/skills/mac-computer-use/references/device-window.md).
+
+See [installation and migration](docs/plugin-installation.md#mac-computer-use-and-simulator-pilot).
 
 ## Team coordination
 

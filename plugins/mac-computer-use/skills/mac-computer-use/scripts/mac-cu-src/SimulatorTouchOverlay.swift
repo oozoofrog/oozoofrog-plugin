@@ -8,6 +8,19 @@ func simulatorTouchPosition(_ point: CGPoint, viewport: CGRect, screen: CGSize) 
                    y: viewport.midY - (point.y - screen.height / 2) * scale)
 }
 
+/// The inverse fit uses AppKit points; Retina backing pixels never enter input coordinates.
+func simulatorScreenPoint(_ point: CGPoint, viewport: CGRect, screen: CGSize, clamp: Bool) -> CGPoint? {
+    guard screen.width > 0, screen.height > 0, viewport.width > 0, viewport.height > 0 else { return nil }
+    let scale = min(viewport.width / screen.width, viewport.height / screen.height)
+    var result = CGPoint(x: screen.width / 2 + (point.x - viewport.midX) / scale,
+                         y: screen.height / 2 - (point.y - viewport.midY) / scale)
+    if clamp {
+        result.x = min(max(result.x, 0), screen.width)
+        result.y = min(max(result.y, 0), screen.height)
+    } else if !CGRect(origin: .zero, size: screen).contains(result) { return nil }
+    return result
+}
+
 /// Viewer-only feedback. These layers never hit-test or change the simulator's pixels or input.
 final class SimulatorTouchOverlay {
     let layer = CALayer()
@@ -18,9 +31,11 @@ final class SimulatorTouchOverlay {
 
     init() { layer.zPosition = 10; layer.masksToBounds = true }
 
-    func layout(viewport: CGRect, screen: CGSize) {
+    func layout(viewport: CGRect, screen: CGSize, backingScale: CGFloat = 2) {
         layer.frame = viewport
         self.screen = screen
+        layer.contentsScale = backingScale
+        for marker in markers.values { marker.sublayers?.forEach { $0.contentsScale = backingScale } }
         for (id, point) in positions { markers[id]?.position = simulatorTouchPosition(point, viewport: layer.bounds, screen: screen) ?? .zero }
     }
 
@@ -47,8 +62,9 @@ final class SimulatorTouchOverlay {
             marker.opacity = 0
             let fade = CABasicAnimation(keyPath: "opacity")
             fade.fromValue = 1; fade.toValue = 0; fade.duration = 0.22
-            marker.add(fade, forKey: "lift")
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) { [weak self] in
+            let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            if !reduceMotion { marker.add(fade, forKey: "lift") }
+            DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0 : 0.22)) { [weak self] in
                 guard let self, self.lifts[id] == token else { return }
                 marker.removeFromSuperlayer()
                 self.markers[id] = nil; self.positions[id] = nil; self.lifts[id] = nil
@@ -73,7 +89,7 @@ final class SimulatorTouchOverlay {
         let number = CATextLayer()
         number.string = "\(id)"; number.font = NSFont.systemFont(ofSize: 17, weight: .bold); number.fontSize = 17
         number.foregroundColor = NSColor.white.cgColor; number.alignmentMode = .center
-        number.contentsScale = NSScreen.main?.backingScaleFactor ?? 2
+        number.contentsScale = layer.contentsScale
         number.frame = CGRect(x: 0, y: 7, width: 36, height: 23)
         marker.addSublayer(number)
         layer.addSublayer(marker)

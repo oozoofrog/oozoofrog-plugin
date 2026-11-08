@@ -75,7 +75,7 @@ Plugin만 설치하면 스킬 안내만 추가됩니다. 전역 지침·런타�
 
 [실행·복구 도구](tools/codex-team-harness/README.md), [변경된 관찰·수정 절차](tools/codex-team-harness/payload/team-coordination/references/diagnostics.md), [소스 이전 이력](docs/team-harness-migration.md)을 함께 제공합니다. 이전 `0.4.1`과 `0.1.1-public.1` 릴리스는 복구 참조로 보존합니다.
 
-Swift 의미론 탐색용 `swift-intelligence`, 로컬 모델 설치·실행용 `local-ai-studio`, macOS·브라우저 제어와 화면·시스템 오디오 녹화용 `macpilot`를 제공합니다.
+Swift 의미론 탐색용 `swift-intelligence`, 로컬 모델 설치·실행용 `local-ai-studio`, Mac 앱·브라우저·웹뷰 제어용 `mac-computer-use`와 iOS 시뮬레이터 작업용 `simulator-pilot`를 제공합니다.
 
 ## Local AI Studio
 
@@ -94,39 +94,15 @@ Standalone `local-ai-studio/`와 byte-identical skills-only Plugin `0.3.0`을 �
 
 설치 후 선택한 실행기의 `ai --help` 또는 `whisper-cli --help`로 지원 명령을 확인합니다. 공개 LocalAIHub 소스와 다른 로컬 체크아웃의 기능이 다를 수 있습니다. `READY`·종료 코드·`Output:` 로그만으로 결과 품질을 주장하지 않으며 실제 파일·형식·미리보기/재생/내용 확인 여부를 구분해 전달합니다. [스킬 본문](local-ai-studio/SKILL.md), [LocalAIHub 설치](local-ai-studio/references/setup.md), [명령·출력 규칙](local-ai-studio/references/cli-workflows.md), [Plugin 설치 안내](docs/plugin-installation.md#local-ai-studio)를 참고하세요.
 
-## MacPilot
+## Mac Computer Use and Simulator Pilot
 
-3.6은 CLI·MCP 성공과 오류에 공통 전달·재시도 상태를 추가합니다. 전달 불확실·미검증 상태에서는 자동 재전송하지 않습니다. [전달 결과 계약](macpilot/references/delivery-contract.md)을 확인하세요.
+`mac-computer-use`는 Mac 앱·브라우저 페이지·iOS 웹뷰를 mac-cu MCP로 조작합니다. 더 적합한 API·CLI가 없는 desktop UI 작업, 웹뷰 검사, mac-cu 설정·모드 변경에 씁니다. iOS 시뮬레이터 앱 실행·로그·테스트 데이터·수정 확인은 `simulator-pilot`으로 진행합니다.
 
-다음 제어 인계·커서 수명·프리뷰 대상 변경은 현재 checkout의 미출시 소스입니다. 게시되거나 설치된 런타임의 동작으로 검증한 결과가 아닙니다.
+`simulator-pilot`은 iOS 시뮬레이터 앱 실행·로그·화면 조작·테스트 데이터·동작 확인에 씁니다. 화면 조작에는 mac-computer-use를 사용하고 컴파일은 프로젝트의 빌드 지침을 따릅니다. Mac desktop·브라우저·웹뷰 작업과 계정 가입은 범위 밖입니다.
 
-`macpilot`는 macOS 앱·창·메뉴·파일·시스템과 브라우저·iOS Simulator 작업을 관찰·실행·검증합니다. 제한 시간 동안 게임 키를 동시에 유지하거나 반복해서 누릅니다. 전경 작업 전에는 모든 화면에 전체 화면 안내를 띄우고 포커스를 옮깁니다. 작업 목표를 표시하고 사용자가 **‘제어 시작’**을 선택할 때까지 기다립니다. **‘나중에’** 또는 Esc로 취소할 수 있으며 자동으로 시작하지 않습니다. 제어 중에는 상태 안내를 유지하고, 호출 사이에 대기할 때도 사용자가 직접 입력하면 중단합니다. 재개할 때는 새 인계와 관찰이 필요합니다. 전경 작업과 전역 입력에는 인계를 받은 `taskID`가 필요합니다. 작업별 멀티 가상 커서, 백그라운드 제어, 라이브 프리뷰, 선택적 private API와 Codex 개선 요청 전송이 필요한 데스크톱 워크플로에 사용합니다.
+제공된 원본의 `skills/<name>/` 구조를 유지하며 `plugins/<name>/`에 설치 가능한 전체 패키지를 미러링합니다. mac-computer-use 1.26.1은 Python 3와 Xcode Command Line Tools로 mac-cu를 빌드합니다. Simulator Pilot 1.8.0은 Swift로 CLI를 빌드하며, Simulator 화면 입력은 mac-computer-use와 Xcode 27 이상이 필요합니다. 제공 CLI의 KakaoTalk 전용 스킴 등 기본값은 실제 프로젝트에 맞게 확인합니다.
 
-커서·대상 테두리는 새 표시 요청 없이 30초가 지나거나 MCP 호출자·작업이 종료되면 사라집니다. `mac_cursors operation=stop`은 오래된 관찰 없이 표시 호스트까지 종료하며 취소·만료된 작업에서도 사용할 수 있습니다. 프리뷰 종료와 구분하며 저장된 커서 위치는 유지합니다.
-
-다른 창의 관찰로 프리뷰를 시작하면 기존 프리뷰 호스트를 종료하고 새 대상의 첫 프레임을 확인합니다. 응답에서 프리뷰 호스트와 대상 앱의 PID·시작 ID·창 ID를 구분합니다.
-
-```text
-$macpilot로 macOS·브라우저 작업과 화면·시스템 오디오 녹화를 수행하고 결과를 검증하세요.
-```
-
-원본은 [macpilot/](macpilot/), 배포 사본은 [Plugin 스킬](plugins/macpilot/skills/macpilot/SKILL.md)에서 관리합니다. `3.6.0`은 Swift 코어·CLI·MCP, 작업 격리·취소·포커스, 라이브 캡처·오버레이, 파일·Finder 태그·CoreAudio, Chromium 확장과 Safari Apple Events, 로컬 개선 요청 대기열·Codex app-server 전송을 포함합니다. 실제 OS 커서와 키보드 포커스는 공유하며, 모든 앱·모든 브라우저 기능의 성공을 보장하지 않습니다. [작업별 지원 범위](macpilot/references/workflows.md)에 백엔드별 제약을 명시합니다.
-
-3.5는 읽기 전용 `mac_analyze`로 AX 계층 요약·문자열 검색·속성/액션 열거·UTF-16 텍스트 범위·앱 범위 hit test를 제공합니다. 창을 활성화하거나 클릭하지 않으며 외부 AX 라이브러리를 사용하지 않습니다. [UI 분석과 Baepsae 비교](macpilot/references/ui-analysis.md)를 참고하세요.
-
-3.4는 AX 조건 대기, 범위를 명시한 공통 결과, 다른 입력 출처 감지 시 중단, 선택적 동작 추적, 후조건과 재실행 차단이 있는 명시적 재사용 작업을 추가합니다. 이미지 검색은 기본 비활성이며 VisionKit과 로컬 EmbeddingGemma 2를 사용합니다. 후보 벡터를 재사용하고 낮은 점수나 중복 후보는 선택하지 않습니다. [사용법과 검증 범위](macpilot/references/capabilities.md)를 확인하세요.
-
-macOS 14 이상에서 실행합니다. 첫 실행은 고정 해시와 서명을 확인한 Universal 배포 앱을 내려받습니다. 일반 macOS 제어에는 Swift·Xcode 설치가 필요 없습니다. 기본 제어에는 Python·Node.js 런타임과 외부 SwiftPM 패키지가 없습니다. 선택적 VisionKit·EmbeddingGemma 2 검색은 별도로 설정한 로컬 Python 환경과 모델을 사용합니다. Chromium 확장·사이트 접근과 Safari Automation·JavaScript from Apple Events는 별도 활성화가 필요합니다. 화면·시스템 오디오는 [`mac_record`](macpilot/references/recording.md)로 MP4에 녹화하고 검사합니다(macOS 15+). Safari·Chrome 개발자 설정은 [`mac_browser_developer`](macpilot/references/browser-developer-settings.md)로 조회·준비하고 사용자 승인 후 켤 수 있습니다. Codex 개선 요청 전송에는 명시적 목적지 설정과 로그인·모델 연결이 필요합니다. 일반 로컬 제어는 모델을 요구하지 않습니다.
-
-[`mac_connection`](macpilot/references/mcp-recovery.md)으로 서버·부모 프로세스 신원, 권한과 CLI/MCP 호출 경로를 확인합니다. CLI `connection-check`는 기존 서버·Codex를 재시작하지 않고 격리된 새 MCP를 검사합니다. 별도 검사 성공을 현재 대화의 재연결 성공으로 취급하지 않습니다.
-
-`mac_simulator`는 UDID·기기·부팅 정체성을 확인하고 앱 생명주기·PNG·동영상·iOSContentGroup 분석을 제공합니다. IndigoHID 입력은 별도 프로세스이며 매 호출의 `privateAPI=true`가 필요합니다. Simulator 기능에만 Xcode와 해당 런타임이 필요합니다. [Simulator 사용법](macpilot/references/simulator.md)을 참고하세요.
-
-권한 설정은 `mac_permission operation=setup kind=all` 또는 CLI `permission-setup`으로 진행합니다. 전체 화면 안내에서 사용자가 ‘설정 열기’를 선택하면 시스템 설정을 엽니다. 이 일회성 선택은 Input Monitoring 권한 없이 사용할 수 있으며 일반 입력 제어 권한을 주지 않습니다. macOS 시스템 설정 옆에 앱 아이콘만 있는 88×88pt 안내 패널을 붙입니다. 사용자가 패널의 아이콘을 권한 목록으로 끌어 넣거나 아이콘 우클릭 메뉴에서 ‘자동으로 추가’를 선택할 수 있습니다. Finder나 큰 별도 설정 창은 열지 않습니다. 패널은 설정 창 이동을 따라가고 다른 앱이 활성화되면 숨습니다. 아이콘과 잡는 손 모양의 짧은 시연이 직접 드래그를 안내합니다. 사용자가 아이콘을 잡으면 시연을 멈추며 동작 줄이기를 따릅니다. Automation은 앱별 macOS 동의 요청을 사용하며, 시스템 인증과 최종 승인은 사용자가 직접 진행합니다. [권한 설정](macpilot/references/permission-setup.md)을 참고하세요.
-
-현재 MCP 도구가 필요한 기능을 제공하면 직접 사용하고, 구버전이면 이 스킬의 CLI를 사용합니다. Plugin은 전역 스킬·MCP 설정·사용자 브라우저 프로필을 자동 교체하지 않습니다. 원격 게시·설치·활성화·새 세션 노출은 별도입니다. [스킬 본문](macpilot/SKILL.md), [CLI·MCP](macpilot/references/tools.md), [개발·검증](macpilot/references/development.md), [설치 안내](docs/plugin-installation.md#macpilot)를 참고하세요.
-
-이후 변경은 원본에서 수행하고 `python3 scripts/sync_skill_mirrors.py --package macpilot --write`로 배포 사본에 반영합니다. 바이너리·빌드 캐시·화면·로그 증거는 Git과 배포 사본에서 제외합니다.
+판단 기능은 OpenAI Decisions API를 사용합니다. 메뉴바의 설정에서 `gpt-6-luna`와 API 키를 설정하고 합성 텍스트로 연결을 확인합니다. 키는 Keychain에 저장합니다. 사이드 메인 툴바의 모듈은 결합·분리·기본 배치 복원을 지원하며 LCD는 불투명하게 유지합니다.
 
 ## Swift Intelligence
 
@@ -144,7 +120,8 @@ macOS 14 이상에서 실행합니다. 첫 실행은 고정 해시와 서명을 
 codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
 codex plugin add swift-intelligence@oozoofrog-plugin
 codex plugin add local-ai-studio@oozoofrog-plugin
-codex plugin add macpilot@oozoofrog-plugin
+codex plugin add mac-computer-use@oozoofrog-plugin
+codex plugin add simulator-pilot@oozoofrog-plugin
 ```
 
 다른 Plugin의 요구 사항과 standalone 설치는 [Plugin 설치 안내](docs/plugin-installation.md)를 참고하세요.
@@ -158,11 +135,9 @@ python3 -m unittest discover -s scripts/tests -v
 python3 scripts/sync_skill_mirrors.py --package local-ai-studio
 python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py local-ai-studio
 python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/local-ai-studio/skills/local-ai-studio
-python3 scripts/sync_skill_mirrors.py --package macpilot
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py macpilot
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/macpilot/skills/macpilot
-xcrun swift test --package-path macpilot/tool
-python3 macpilot/scripts/verify_mcp.py
+python3 scripts/sync_skill_mirrors.py --package mac-computer-use --package simulator-pilot
+python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py mac-computer-use/skills/mac-computer-use
+python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py simulator-pilot/skills/simulator-pilot
 git diff --check
 ```
 

@@ -87,17 +87,17 @@ let simulatorHandleSpace: CGFloat = 56
 let simulatorControlSpace: CGFloat = 76
 let simulatorRailSpace: CGFloat = 64
 
-func simulatorLCDContentSize(forLCD lcd: CGSize, bezel: CGFloat, toolsVisible: Bool, focused: Bool = false) -> CGSize {
+func simulatorLCDContentSize(forLCD lcd: CGSize, bezel: CGFloat, toolsVisible: Bool, focused: Bool = false, externalToolbar: Bool = false) -> CGSize {
     let tools = simulatorToolboxSize(forLCD: lcd, bezel: bezel)
-    let mainWidth = max(simulatorChromeWidth, lcd.width + 2 * bezel + (focused ? 0 : simulatorRailSpace))
+    let mainWidth = max(simulatorChromeWidth, lcd.width + 2 * bezel + (focused || externalToolbar ? 0 : simulatorRailSpace))
     return CGSize(width: mainWidth + 32 + (toolsVisible ? simulatorToolboxGap + tools.width : 0),
-                  height: max(lcd.height + 2 * bezel, toolsVisible ? tools.height : 0) + 32 + simulatorHandleSpace + (focused ? 0 : simulatorControlSpace))
+                  height: max(lcd.height + 2 * bezel, toolsVisible ? tools.height : 0) + 32 + simulatorHandleSpace + (focused ? 0 : externalToolbar ? 48 : simulatorControlSpace))
 }
 
-func simulatorDeviceLayout(in size: CGSize, screen: CGSize, bezel: CGFloat, toolsVisible: Bool, focused: Bool = false) -> SimulatorDeviceLayout {
+func simulatorDeviceLayout(in size: CGSize, screen: CGSize, bezel: CGFloat, toolsVisible: Bool, focused: Bool = false, lcdSizeLimit: CGSize? = nil, externalToolbar: Bool = false) -> SimulatorDeviceLayout {
     let aspect = max(1, screen.width) / max(1, screen.height)
-    let railSpace: CGFloat = focused ? 0 : simulatorRailSpace
-    let bottom: CGFloat = focused ? 0 : simulatorControlSpace
+    let railSpace: CGFloat = focused || externalToolbar ? 0 : simulatorRailSpace
+    let bottom: CGFloat = focused ? 0 : externalToolbar ? 48 : simulatorControlSpace
     let availableWidth = max(1, size.width - 32 - 2 * bezel - railSpace - (toolsVisible ? simulatorToolboxGap : 0))
     let toolLimit = max(0, availableWidth - 1)
     var widthLimitedHeight = availableWidth / aspect
@@ -115,7 +115,7 @@ func simulatorDeviceLayout(in size: CGSize, screen: CGSize, bezel: CGFloat, tool
         }
     }
     let availableHeight = max(1, size.height - 32 - simulatorHandleSpace - bottom)
-    let height = max(1, min(widthLimitedHeight, availableHeight - 2 * bezel))
+    let height = max(1, min(widthLimitedHeight, availableHeight - 2 * bezel, lcdSizeLimit?.height ?? .greatestFiniteMagnitude))
     let lcdSize = CGSize(width: height * aspect, height: height)
     let preferred = simulatorToolboxSize(forLCD: lcdSize, bezel: bezel)
     let toolSize = CGSize(width: min(toolLimit, preferred.width), height: max(1, min(preferred.height, availableHeight)))
@@ -133,7 +133,7 @@ func simulatorDeviceLayout(in size: CGSize, screen: CGSize, bezel: CGFloat, tool
         tools: CGRect(x: left + mainWidth, y: top - toolSize.height, width: simulatorToolboxGap + toolSize.width, height: toolSize.height),
         handle: handle, controls: controls,
         rail: CGRect(x: body.maxX + 16, y: top - min(200, body.height), width: 48, height: min(200, body.height)),
-        resize: CGRect(x: body.maxX - 20, y: body.minY - 8, width: 28, height: 28))
+        resize: CGRect(x: externalToolbar ? body.maxX - 36 : body.maxX + 16, y: max(2, body.minY - 42), width: 36, height: 36))
 }
 
 /// Keep the entire device, handle and controls on the destination display after moves and resizes.

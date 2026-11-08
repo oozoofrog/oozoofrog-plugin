@@ -12,3 +12,4 @@
 - Root Markdown and `docs/**/*.md` local file links are checked by `scripts/tests/test_document_links.py`; include the repository test suite when changing those links.
 - Distinguish supported browser configuration and file uploads from native thread tools' send capabilities.
 - Preserve unrelated Plugin documentation and retired user consultation/profile data during distribution changes.
+- For explicitly authorized history sanitization, preserve current work and unrelated data, cover all local refs including tool checkpoints and reflogs, and verify the object store after pruning. Keep local cleanup distinct from remote publication; do not reproduce removed identifiers in documentation or commit messages.
