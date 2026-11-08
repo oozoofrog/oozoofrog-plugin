@@ -1,0 +1,43 @@
+name: Plugin distribution
+
+on:
+  pull_request:
+    paths:
+      - '.agents/plugins/**'
+      - 'plugins/**'
+      - 'scripts/**'
+      - '**/SKILL.md'
+      - '**/agents/openai.yaml'
+      - '**/*.md'
+      - '.github/workflows/plugin-distribution.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.agents/plugins/**'
+      - 'plugins/**'
+      - 'scripts/**'
+      - '**/SKILL.md'
+      - '**/agents/openai.yaml'
+      - '**/*.md'
+      - '.github/workflows/plugin-distribution.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12.12'
+      - name: Distribution and documentation checks
+        run: python -I -S -B -m unittest discover -s scripts/tests -v
+      - name: Skill mirrors
+        run: python -I -S -B scripts/sync_skill_mirrors.py
+      - name: Whitespace checks
+        run: git diff --check

@@ -24,14 +24,6 @@ def tree_files(root: Path) -> dict[str, tuple[int, bytes]]:
     return files
 
 class PluginDistributionTests(unittest.TestCase):
-    def test_team_runtime_plugin_policy_and_portable_versions_are_consistent(self):
-        runtime = REPO_ROOT / "tools/codex-team-harness"
-        version = json.loads((runtime / "manifest.json").read_text())["version"]
-        plugin = json.loads((REPO_ROOT / "plugins/team-coordination/.codex-plugin/plugin.json").read_text())
-        self.assertEqual(version, plugin["version"])
-        for path in (runtime / "payload/team-coordination/policy.json", REPO_ROOT / "team-coordination/policy.json", REPO_ROOT / "plugins/team-coordination/skills/team-coordination/policy.json"):
-            self.assertEqual(version, json.loads(path.read_text())["version"])
-
     def test_marketplace_points_to_available_plugins(self) -> None:
         marketplace = json.loads(
             (REPO_ROOT / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8")
@@ -39,7 +31,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ['swift-intelligence', 'local-ai-studio', 'team-coordination', 'korean-travel-guidebook', 'obsidian-projects', 'outcome-brief', 'verify-work', 'jev-native', 'audit', 'choice-interview', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'astra-implementation-prompt', 'openai-decisions'],
+            ['swift-intelligence', 'local-ai-studio', 'jev-native', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'astra-implementation-prompt', 'openai-decisions'],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -203,7 +195,9 @@ class PluginDistributionTests(unittest.TestCase):
     def test_retired_packages_are_not_distributed(self) -> None:
         for name in ("gptplease", "gptpro", "gptwork", "astra-orchestrator", "jev-start", "jev-blender-use", "jev-computer-use",
                      "astra-team-building", "figma-computer-use", "session-continuity",
-                     "ponytail-beck-tdd", "unreal-agent"):
+                     "ponytail-beck-tdd", "unreal-agent",
+                     "team-coordination", "audit", "outcome-brief", "verify-work",
+                     "choice-interview", "obsidian-projects", "korean-travel-guidebook"):
             self.assertFalse((REPO_ROOT / name / "SKILL.md").exists())
             self.assertFalse((REPO_ROOT / "plugins" / name / ".codex-plugin" / "plugin.json").exists())
 

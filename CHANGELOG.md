@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Remove `team-coordination`, `audit`, `outcome-brief`, `verify-work`, `choice-interview`, `obsidian-projects`, and `korean-travel-guidebook` from standalone sources, Plugin mirrors, and the marketplace. Retire the bundled team harness, its CI and installation guidance. Preserve historical records and user data; installed copies require separate removal.
+
 - Move Mac desktop and iOS Simulator automation into the independent [Mac Pilot repository](https://github.com/oozoofrog/mac-pilot), removing their source packages, duplicate mirrors and catalog entries here while preserving user data at the new project.
 
 - Add `astra-implementation-prompt`: draft an implementation prompt with Astra Max, review it, and optionally start an approved Sol Ultra or Terra Ultra implementation chat.

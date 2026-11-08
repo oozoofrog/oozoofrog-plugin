@@ -28,14 +28,7 @@ Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed 
 | --- | --- |
 | `swift-intelligence@oozoofrog-plugin` | [Semantic Swift navigation](plugins/swift-intelligence/skills/swift-intelligence/SKILL.md) using SourceKit. macOS, Xcode with Command Line Tools, and Python 3 are required; the Plugin includes MCP configuration. |
 | `local-ai-studio@oozoofrog-plugin` | [Requested local AI Studio or on-device model work](local-ai-studio/SKILL.md), including separate Whisper transcription and timestamp estimates on Apple Silicon. See [model setup](#local-ai-studio). |
-| `team-coordination@oozoofrog-plugin` | [Explicitly requested team coordination](team-coordination/SKILL.md), including tailored sidebar teams, ownership, and evidence. See [team coordination](#team-coordination). |
-| `korean-travel-guidebook@oozoofrog-plugin` | [Korean HTML travel guides](korean-travel-guidebook/SKILL.md) with itinerary, accessibility, and practical travel information. |
-| `obsidian-projects@oozoofrog-plugin` | [Maintain project records and links](obsidian-projects/SKILL.md) when asked to organize an Obsidian vault. |
-| `outcome-brief@oozoofrog-plugin` | [Develop task briefs and completion criteria](outcome-brief/SKILL.md) when instruction coaching or a reusable brief is requested. |
-| `verify-work@oozoofrog-plugin` | [Apply a project-owned evidence workflow](verify-work/SKILL.md) to repeated failures or a requested verification contract. |
 | `jev-native@oozoofrog-plugin` | [Native macOS app workflows](jev-native/SKILL.md) with a virtual cursor and target preview. Its runtime and credentials are separate from the skills-only Plugin. |
-| `audit@oozoofrog-plugin` | [Audit skills, AGENTS.md, and task instructions](audit/SKILL.md) for conflicting scope or unclear completion criteria. |
-| `choice-interview@oozoofrog-plugin` | [Conduct an adaptive user or stakeholder interview](choice-interview/SKILL.md) when an interview is requested. |
 | `korean-product-writing@oozoofrog-plugin` | [Write or edit Korean product copy and guidance](korean-product-writing/SKILL.md), preserving facts and conditions; excludes literary creation and legal contract texts. |
 | `interface-first-design@oozoofrog-plugin` | [Design or review product screens and interactions](interface-first-design/SKILL.md); see [scope](#interface-first-design). |
 | `winpilot@oozoofrog-plugin` | [WinPilot observes and controls Windows apps and games](winpilot/SKILL.md). The Windows x64 Plugin includes MCP configuration and installs a hash-pinned runtime on first connection. See [installation](docs/plugin-installation.md#winpilot). |
@@ -64,12 +57,6 @@ The skills-only Plugin uses Local AI Studio or selected on-device tools on Apple
 
 Local Whisper uses a separate `whisper-cli` workflow and can reuse verified weights. It does not imply native app integration. Timestamps, including experimental DTW points, are estimates and do not verify sung boundaries or authorize subtitle replacement. See the [Whisper workflow and limits](local-ai-studio/references/whisper.md).
 
-## Team coordination
-
-Team coordination is opt-in. It prefers direct work and reuse of an existing team; new sidebar chats require an explicit request and a concrete benefit. A separate Astra bootstrap is optional. Installing the Plugin does not create chats, install the global harness, or adopt existing project contracts. See [sidebar startup](team-coordination/references/sidebar-startup.md).
-
-Version 0.6.1 adds [adaptive collaboration](team-coordination/references/adaptive-collaboration.md) guidance based on observed outcomes; it does not automatically route models or establish adoption by an active team. For stalls, use [collaboration doctor](team-coordination/references/doctor.md). See the [team harness guide](tools/codex-team-harness/README.md) and [Korean update procedures](README.ko.md#팀-하네스-055) for setup, migration, and recovery.
-
 ## Astra Implementation Prompt
 
 Use when the user asks Astra Max to prepare an implementation prompt for review and a later user-selected implementation chat. Do not use for ordinary implementation requests. The full prompt is presented for review; the user chooses the implementation model and whether to start a new chat. Preparing a prompt alone does not authorize implementation or chat creation. See the [workflow](astra-implementation-prompt/references/workflow.md).
@@ -96,7 +83,6 @@ The skills-only Plugin uses an existing `openai_decide` MCP/Pi tool or `openai-d
 
 - [Installation and Plugin-specific requirements](docs/plugin-installation.md)
 - [Release procedure](docs/plugin-release.md) and [changelog](CHANGELOG.md)
-- [Team harness installation and recovery](tools/codex-team-harness/README.md)
 - [JEV Native source and provenance](docs/jev-native-source.md)
 - [Historical validation](docs/gptplease-transport-validation.md) for removed GPT Please functionality; it is not a current Plugin.
 

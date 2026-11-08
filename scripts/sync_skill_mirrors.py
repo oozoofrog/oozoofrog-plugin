@@ -13,7 +13,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-PACKAGES = ("local-ai-studio", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing", "interface-first-design", "winpilot", "refactor", "c4fy", "astra-implementation-prompt", "openai-decisions")
+PACKAGES = ("local-ai-studio", "jev-native", "korean-product-writing", "interface-first-design", "winpilot", "refactor", "c4fy", "astra-implementation-prompt", "openai-decisions")
 IGNORED_NAMES = {".DS_Store", "__pycache__"}
 IGNORED_SUFFIXES = {".pyc", ".pyo"}
 # Preserve the supplied Plugin-shaped sources, including manifest-relative setup paths.

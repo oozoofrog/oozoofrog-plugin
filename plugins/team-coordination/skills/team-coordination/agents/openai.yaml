@@ -1,4 +1,0 @@
-interface:
-  display_name: "Team Coordination"
-  short_description: "Direct work, team reuse and collaboration doctor"
-  default_prompt: "Use $team-coordination to complete my goal with minimal coordination overhead: work directly when sufficient, reuse existing owners and required review, and create chats only when I explicitly request them and their benefit is clear."
