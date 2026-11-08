@@ -40,6 +40,7 @@ Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed 
 | `interface-first-design@oozoofrog-plugin` | [Design or review product screens and interactions](interface-first-design/SKILL.md); see [scope](#interface-first-design). |
 | `winpilot@oozoofrog-plugin` | [WinPilot observes and controls Windows apps and games](winpilot/SKILL.md). The Windows x64 Plugin includes MCP configuration and installs a hash-pinned runtime on first connection. See [installation](docs/plugin-installation.md#winpilot). |
 | `c4fy@oozoofrog-plugin` | [Create source-backed C4 architecture maps](c4fy/SKILL.md) as standalone HTML; see [C4fy](#c4fy). |
+| `refactor@oozoofrog-plugin` | [Refactor code while preserving behavior](refactor/SKILL.md), or integrate SwiftLint into project builds; see [Refactor](#refactor). |
 | `astra-implementation-prompt@oozoofrog-plugin` | [Prepare an implementation prompt with Astra Max for review](astra-implementation-prompt/SKILL.md), before the user chooses whether and how to start an implementation chat. See [scope](#astra-implementation-prompt). |
 
 ## Examples
@@ -64,9 +65,9 @@ Local Whisper uses a separate `whisper-cli` workflow and can reuse verified weig
 
 ## Team coordination
 
-Team coordination is opt-in and starts only on an explicit request. Installing the Plugin does not create team chats, install the global harness, or adopt existing project contracts. The current unreleased source routes a requested sidebar team through a separate Astra project-analysis chat, then tailored leader and teammate chats. Task-scoped instructions, questions, reviews, and reports are covered by the user's team request within the [documented communication scope](team-coordination/references/sidebar-startup.md#task-scoped-communication-without-approval-prompts). Source guidance does not establish installed behavior or live startup.
+Team coordination is opt-in. It prefers direct work and reuse of an existing team; new sidebar chats require an explicit request and a concrete benefit. A separate Astra bootstrap is optional. Installing the Plugin does not create chats, install the global harness, or adopt existing project contracts. See [sidebar startup](team-coordination/references/sidebar-startup.md).
 
-See [sidebar startup](team-coordination/references/sidebar-startup.md), the [team harness and project adoption guide](tools/codex-team-harness/README.md), and the [Korean update procedures](README.ko.md#팀-하네스-055) for setup, migration, and recovery.
+Version 0.6.1 adds [adaptive collaboration](team-coordination/references/adaptive-collaboration.md) guidance based on observed outcomes; it does not automatically route models or establish adoption by an active team. For stalls, use [collaboration doctor](team-coordination/references/doctor.md). See the [team harness guide](tools/codex-team-harness/README.md) and [Korean update procedures](README.ko.md#팀-하네스-055) for setup, migration, and recovery.
 
 ## Astra Implementation Prompt
 
@@ -76,13 +77,13 @@ Use when the user asks Astra Max to prepare an implementation prompt for review 
 
 Use when designing, implementing, or reviewing product UI, especially when explanatory prose substitutes for clear structure, visible controls, or state feedback. Applies to product screens and interactions, not agent communication or technical documentation. See the [skill](interface-first-design/SKILL.md) and [validation scope](docs/validation/interface-first-design.md).
 
+## Refactor
+
+Use when a user requests behavior-preserving code refactoring, SRP cleanup, clearer responsibilities or dependencies, reducing code smells under repository lint rules, or integrating SwiftLint into project builds. Not for unrelated features, behavior fixes, or formatting alone. Swift work, including analysis-only requests, requires SwiftLint diagnostics using the repository's configuration; valid diagnostics can be reused when inputs, configuration, and tool version match. If diagnostics are unavailable, report the blocker and leave the Swift work incomplete. See [Swift guidance](refactor/references/swift.md), [build integration](refactor/references/swiftlint-build.md), and [validation](docs/validation/refactor.md).
+
 ## C4fy
 
 C4fy creates source-backed C1/C2/C3/C4 architecture maps with optional component-level code structure. Use it for hierarchical C4 explanations, not generic flowcharts or sequence diagrams. Node.js 18 or later generates the standalone HTML viewer. See the [model contract](c4fy/references/model.md) for evidence and scope.
-
-## External Mac automation project
-
-Mac desktop and iOS Simulator automation now live in the independent [Mac Pilot repository](https://github.com/oozoofrog/mac-pilot), with their own marketplace and releases.
 
 ## More documentation
 
@@ -93,3 +94,7 @@ Mac desktop and iOS Simulator automation now live in the independent [Mac Pilot 
 - [Historical validation](docs/gptplease-transport-validation.md) for removed GPT Please functionality; it is not a current Plugin.
 
 Plugin-specific references and validation records describe their own scope and limits. Historical records do not establish current availability or behavior.
+
+## External Mac automation project
+
+Mac desktop and iOS Simulator automation live in the independent [Mac Pilot repository](https://github.com/oozoofrog/mac-pilot), with their own marketplace and releases.

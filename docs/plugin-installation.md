@@ -8,9 +8,18 @@ WinPilot 0.5.1은 [스킬](../winpilot/SKILL.md)과 MCP 설정을 함께 제공�
 
 기존 `windows-pilot` 실행 파일명과 7개 MCP 도구명은 유지합니다. 기존 standalone 스킬·MCP 설정·개인 캡처·원본 폴더는 자동 삭제하지 않습니다. 동일 서버를 Plugin MCP와 수동 MCP 양쪽에 등록하지 마세요. 설치 상태와 현재 대화의 도구 노출은 별도로 확인하며 새 대화에서 `$winpilot`을 호출할 수 있습니다. [검증 범위](validation/winpilot.md)를 참고하세요.
 
+## Team Coordination
+
+`codex plugin marketplace upgrade oozoofrog-plugin` 후 `codex plugin add team-coordination@oozoofrog-plugin`으로 `0.6.1` Plugin을 설치하거나 갱신합니다. 설치 후 버전·활성화 상태·실제 캐시 경로를 확인합니다.
+
+`$team-coordination:team-coordination`은 현재 채팅의 직접 작업과 기존 담당자 재사용을 우선합니다. 새 채팅은 명시적인 생성 요청과 구체적인 이점이 있을 때만 만들며, 별도 Astra 분석 채팅은 선택 사항입니다. 스킬 호출을 해당 작업의 협업 위임으로 전달하고, 팀원의 승인·확인·선택 요청은 리더에게 모읍니다. 협업 도구의 `prompt` 정책은 별도이므로 조정 담당자가 [공식 도구별 설정](../team-coordination/references/team-decisions.md#official-tool-policy)을 확인·적용합니다. 사용자 전체에 적용되는 6개 도구만 변경하며 실제 작업 권한은 넓히지 않습니다. 설명 질문이나 설치만으로 채팅을 만들지 않습니다. [시작 절차](../team-coordination/references/sidebar-startup.md)를 참고하세요.
+
+Plugin 설치는 기존 `~/.codex/skills/team-coordination` standalone 런타임·설치 저널·프로필 오버레이와 활성 프로젝트 계약을 이전하지 않습니다. 기존 저널을 삭제하거나 설치 경로를 직접 덮어쓰지 않습니다. 새 채팅의 스킬 노출과 실제 실행 모델·등급은 설치 파일 검사와 구분합니다.
+
+설정이 이미 적용돼 있는데도 승인을 요청하거나 협업이 정체되면 `$team-coordination:team-coordination`에 `doctor`를 요청합니다. [협업 Doctor](../team-coordination/references/doctor.md)는 기존 팀과 공식 조회 근거를 진단한 뒤 조정 담당자가 가능한 복구를 이어가도록 합니다. 선택 명령은 Python 3.11 이상이 필요하며, 진단 스크립트가 사용자 설정·원장·승인 응답을 직접 쓰지는 않습니다.
+
 ## 기존 Plugin
 
-아래는 `swift-intelligence`, `local-ai-studio`의 설치 예시입니다. 전체 로컬 목록은 [Plugin 카탈로그](../README.md#choose-a-plugin)를 확인하고 필요한 Plugin만 선택합니다. 아래 명령은 해당 변경이 원격에 반영된 뒤 사용합니다.
 
 ```bash
 codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
@@ -29,10 +38,6 @@ codex plugin add local-ai-studio@oozoofrog-plugin
 `gptplease`는 2026-10-17에 제거했습니다. 과거 상담 패키지와 로그인 프로필은 사용자 데이터로 보존하며 삭제·이관하지 않습니다. [이전 검증 기록](gptplease-transport-validation.md)은 당시 상태를 설명합니다.
 
 Swift Intelligence는 macOS, Command Line Tools를 포함한 Xcode, Python 3가 필요합니다. Xcode에 포함된 `sourcekit-lsp`를 실행하며 외부 MCP 바이너리나 Python 패키지를 설치하지 않습니다. Swift Intelligence 설치 후 Codex를 다시 시작하고 새 작업을 열어 Skill과 MCP 도구를 로드하십시오. 자세한 내용은 [Swift Intelligence 설치 및 사용](../plugins/swift-intelligence/docs/installation-and-usage.md)을 참고하세요.
-
-## 별도 Mac 자동화 프로젝트
-
-Mac·iOS 시뮬레이터 자동화 패키지는 [Mac Pilot](https://github.com/oozoofrog/mac-pilot)에서 설치·개발·배포합니다. 이 저장소의 카탈로그에는 포함하지 않습니다. 기존 사용자 설정·Keychain·프로필·캡처는 유지하며 별도 저장소의 이전 안내를 따릅니다.
 
 ## Local AI Studio
 
@@ -62,3 +67,22 @@ codex plugin add interface-first-design@oozoofrog-plugin
 게시 전 checkout 검증에는 저장소 루트에서 `codex plugin marketplace add "$PWD"`를 사용하고 source가 그 checkout인지 확인합니다. Standalone 설치는 `interface-first-design/`을 skill-installer로 설치하며 기존 설치본을 임의로 덮어쓰거나 Plugin과 중복 설치하지 않습니다.
 
 새 작업에서 `$interface-first-design` 또는 `$interface-first-design:interface-first-design`으로 호출합니다. [스킬](../interface-first-design/SKILL.md)과 [가상 예시](../interface-first-design/references/examples.md)를 참고하세요. 패키지 검사 통과, 원격 카탈로그 반영, 설치 성공, 새 세션 노출, 실제 제품 UI 동작 검증은 각각 확인해야 합니다.
+
+## Refactor
+
+`refactor` 0.2.0은 동작 보존 리팩토링과 요청한 SwiftLint 빌드 통합을 수행하는 skills-only Plugin입니다. 통합 시 [빌드 통합 지침](../refactor/references/swiftlint-build.md)에 따라 프로젝트 구조에 맞춰 빌드 파일을 수정하고 실제 실행을 검증합니다. 별도 런타임·MCP·hooks를 설치하지 않습니다. Swift 작업은 분석 전용 요청에서도 SwiftLint 진단을 반드시 사용합니다. 도구가 없으면 요청 권한과 저장소·환경 제약에 따라 설치합니다. 진단을 확보하지 못하면 원인과 필요한 조치를 보고하고 작업을 미완료로 남깁니다.
+
+```sh
+# marketplace가 없는 경우 먼저 등록합니다.
+codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
+# 기존 marketplace는 snapshot을 갱신합니다.
+codex plugin marketplace upgrade oozoofrog-plugin
+codex plugin add refactor@oozoofrog-plugin
+codex plugin list --marketplace oozoofrog-plugin --json
+```
+
+새 대화에서 `$refactor` 또는 `$refactor:refactor`로 호출합니다. 기존 개인 `refactor` 스킬이 있다면 원본을 스킬 검색 경로 밖에 백업하고, Plugin 설치 경로와 내용 일치를 확인한 뒤 개인 사본을 제거합니다. 설치·활성화와 새 대화의 스킬 노출은 별도로 확인합니다. [리뷰와 검증 범위](validation/refactor.md)를 참고하세요.
+
+## 별도 Mac 자동화 프로젝트
+
+Mac·iOS 시뮬레이터 자동화는 [Mac Pilot](https://github.com/oozoofrog/mac-pilot)에서 설치·개발·배포합니다. 기존 Keychain·프로필·캡처와 사용자 설정은 유지합니다.

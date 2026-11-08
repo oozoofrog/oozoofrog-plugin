@@ -39,7 +39,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ["swift-intelligence", "local-ai-studio", "team-coordination", "korean-travel-guidebook", "obsidian-projects", "outcome-brief", "verify-work", "jev-native", "audit", "choice-interview", "korean-product-writing", "interface-first-design", "winpilot", "c4fy", "astra-implementation-prompt"],
+            ['swift-intelligence', 'local-ai-studio', 'team-coordination', 'korean-travel-guidebook', 'obsidian-projects', 'outcome-brief', 'verify-work', 'jev-native', 'audit', 'choice-interview', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'astra-implementation-prompt'],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -60,6 +60,44 @@ class PluginDistributionTests(unittest.TestCase):
                     self.assertEqual("https://github.com/oozoofrog/oozoofrog-plugin", manifest["repository"])
                 skill_root = plugin_root / manifest["skills"] / entry["name"]
                 self.assertTrue((skill_root / "SKILL.md").is_file())
+
+    def test_refactor_distribution(self) -> None:
+        from test_sync_skill_mirrors import load_module
+        from test_document_links import local_targets
+        source = REPO_ROOT / "refactor"
+        plugin = REPO_ROOT / "plugins/refactor"
+        mirror = plugin / "skills/refactor"
+        expected = {"SKILL.md", "agents/openai.yaml", "references/swift.md", "references/swiftlint-build.md"}
+        self.assertEqual(expected, set(tree_files(source)))
+        self.assertEqual(tree_files(source), tree_files(mirror))
+        self.assertEqual({".codex-plugin/plugin.json"} | {f"skills/refactor/{p}" for p in expected}, set(tree_files(plugin)))
+        self.assertIn("refactor", load_module().PACKAGES)
+        refactor_manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text())
+        self.assertEqual("refactor", refactor_manifest["name"])
+        self.assertEqual("0.2.0", refactor_manifest["version"])
+        self.assertEqual("./skills/", refactor_manifest["skills"])
+        for key in ("mcpServers", "apps", "hooks"):
+            self.assertNotIn(key, refactor_manifest)
+        description = (source / "SKILL.md").read_text().split("description: ", 1)[1].splitlines()[0]
+        self.assertEqual(description, refactor_manifest["description"])
+        self.assertEqual(description, refactor_manifest["interface"]["longDescription"])
+        self.assertIn(description, (REPO_ROOT / "README.md").read_text())
+        metadata = {}
+        for line in (source / "agents/openai.yaml").read_text().splitlines():
+            if line.startswith("  ") and ": " in line:
+                key, value = line.strip().split(": ", 1)
+                metadata[key] = json.loads(value)
+        for yaml_key, json_key in (("display_name", "displayName"), ("short_description", "shortDescription")):
+            self.assertEqual(metadata[yaml_key], refactor_manifest["interface"][json_key])
+        self.assertEqual([metadata["default_prompt"]], refactor_manifest["interface"]["defaultPrompt"])
+        self.assertIn("$refactor", metadata["default_prompt"])
+        self.assertLessEqual(len(metadata["default_prompt"]), 128)
+        for root in (source, plugin):
+            for path in root.rglob("*"):
+                self.assertFalse(path.is_symlink(), path)
+            for document in root.rglob("*.md"):
+                for target in local_targets(document.read_text()):
+                    self.assertTrue((document.parent / target).is_file(), (document, target))
 
     def test_c4fy_distribution(self) -> None:
         source = REPO_ROOT / "c4fy"
@@ -129,6 +167,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertFalse(any(part in {"bin", "obj", "artifacts", "evidence"} for name in files for part in Path(name).parts))
         self.assertNotIn("game-start-reference.png", runtime["files"])
 
+
     def test_mac_automation_packages_are_external(self) -> None:
         from test_sync_skill_mirrors import load_module
         module = load_module()
@@ -138,8 +177,9 @@ class PluginDistributionTests(unittest.TestCase):
             self.assertFalse((REPO_ROOT / "plugins" / name).exists())
         self.assertIn("https://github.com/oozoofrog/mac-pilot", (REPO_ROOT / "README.md").read_text())
 
+
     def test_retired_packages_are_not_distributed(self) -> None:
-        for name in ("macpilot", "gptplease", "gptpro", "gptwork", "astra-orchestrator", "jev-start", "jev-blender-use", "jev-computer-use",
+        for name in ("gptplease", "gptpro", "gptwork", "astra-orchestrator", "jev-start", "jev-blender-use", "jev-computer-use",
                      "astra-team-building", "figma-computer-use", "session-continuity",
                      "ponytail-beck-tdd", "unreal-agent"):
             self.assertFalse((REPO_ROOT / name / "SKILL.md").exists())
