@@ -13,13 +13,15 @@ Identify the actual project/worktree and requested outcome. Read applicable inst
 
 Build a short brief: outcome; scope; constraints; acceptance evidence; existing authorization; known facts; assumptions; unresolved decisions. Distinguish source facts from proposals. Use specialist skills for domain work without duplicating their procedures.
 
-## 2. Resolve only consequential decisions
+## 2. Ask one contextual alignment question
 
-Read [questions.md](references/questions.md) before asking. Default to **zero questions when clear**, otherwise at most **3 independent discretionary decisions across 2 rounds per request**, including later preference questions. Count decisions, not question marks; do not hide a questionnaire inside one question.
+Read [questions.md](references/questions.md) before asking. For a new multi-step project request, **ask one focused question after inspection** about the most consequential unsettled human priority, user workflow, scope tradeoff, or quality target. State what you found and recommend a concrete choice. Technical feasibility and existing code conventions do not establish the user's preferred outcome; a reversible design choice can still deserve human input.
 
-Ask only when the answer materially changes the outcome or cost of correction and cannot be obtained from project evidence. Recommend a concrete default. Reuse prior answers. Routine reversible choices use stated assumptions. Required authorization is separate, specific to the action, and never inferred from silence or an exhausted budget.
+Skip that initial question only when the relevant human decisions are already explicit in the current request or prior answers, the user explicitly delegates those choices or requests no questions, or unchanged work is resuming with those decisions settled. Record the concrete reason. Do not invent a choice just to meet a quota. Mere confidence that implementation can proceed is not a skip reason.
 
-Proceed as soon as the outcome, constraints, meaningful checks, and authorized scope are sufficient. A summary is a progress update, not another approval ceremony. If the user has requested execution, continue in this run rather than ending at a plan. Missing essential facts block only the affected work.
+Use at most **3 independent discretionary decisions across 2 rounds per request**, including later preferences and quality reviews. Count decisions, not question marks; keep a later round for a meaningful preview or new ambiguity where possible. After asking, wait for the user's answer before dependent implementation; never answer your own question and continue. Already-authorized independent investigation can continue. Required authorization is separate, action-specific, and never inferred from silence or budget exhaustion.
+
+Once the important human decision is answered or legitimately skipped and the outcome, constraints, checks, and authorized scope suffice, summarize the brief and execute. Do not add 'shall I proceed?' to already-authorized work. Missing essential facts block only affected work.
 
 ## 3. Create the project loop
 
@@ -39,7 +41,7 @@ On failure, classify implementation, specification, environment, dependency, or 
 
 ## 5. Accept human steering
 
-Use human input for direction, missing knowledge, representative quality review, or required execution permission. Present a concrete artifact, the decision, recommendation, consequence, and what is blocked. Aesthetic approval is not publication permission.
+At each stage boundary, check for unsettled human direction, missing knowledge, representative quality review, or required execution permission. Ask only for a new consequential judgment, within the remaining budget. For subjective product work, reserve a review of a representative artifact before expanding that direction when it is not already settled or delegated. Present the artifact, decision, recommendation, consequence, and what is blocked. Aesthetic approval is not publication permission.
 
 Apply feedback to the brief and plan; mark affected results/evidence stale and preserve unrelated work. Reuse permission only within its original scope. A materially changed action needs a fresh permission check. Status questions do not cancel the task. An explicit stop stops new work and requests cancellation where supported; report in-flight effects honestly.
 

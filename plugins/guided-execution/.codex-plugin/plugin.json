@@ -1,6 +1,6 @@
 {
   "name": "guided-execution",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Use when a user requests implementation or continuation of a multi-step project with minimal clarification, iterative verification, or human decision points, or explicitly invokes guided-execution. Exclude ordinary factual answers, tutoring, standalone reviews, and simple edits requiring no project coordination.",
   "author": {
     "name": "oozoofrog",
@@ -19,7 +19,7 @@
       "Write"
     ],
     "defaultPrompt": [
-      "$guided-execution 현재 프로젝트와 요구사항을 분석하고 꼭 필요한 질문만 정리한 뒤, 작업 루프 환경을 만들고 검증하면서 완료까지 진행해주세요."
+      "$guided-execution 프로젝트를 분석한 뒤 중요한 판단 한 가지를 먼저 질문하고, 제 답변을 반영해 작업 루프를 만들고 검증하며 진행해주세요."
     ]
   }
 }

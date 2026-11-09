@@ -16,6 +16,12 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## Guided Execution [0.1.1] — 2026-11-09
+
+- Ask one contextual alignment question after inspecting new multi-step work, recommend a direction, and wait for the answer before dependent implementation. Technical feasibility, existing conventions, and reversibility alone no longer justify skipping human input.
+- Limit zero-question exceptions to explicit settled human decisions, explicit delegation or a no-question request, and unchanged-scope continuation with settled decisions. Count the initial question within the existing request-wide cap of three independent decisions across two rounds; preserve earlier authorization without repeated permission-to-start questions.
+- Align invocation prompts, Plugin metadata, bilingual documentation, and the synchronized Skill mirror. Keep the record helper and its 26 tests unchanged; instruction-level behavior evaluation is distinct from record validation.
+
 ## Guided Execution [0.1.0] — 2026-11-09
 
 - Add `guided-execution` (협업 실행) as a standalone skill and matching skills-only Plugin, with marketplace registration, portable metadata, bilingual usage guidance, and the existing mirror synchronization workflow.

@@ -2,7 +2,7 @@
 
 ## Guided Execution
 
-`guided-execution@oozoofrog-plugin`은 프로젝트 분석, 최소 질문, 검증 루프를 연결하는 [협업 실행 스킬](../guided-execution/SKILL.md) 0.1.0입니다. Python 3로 실행하는 표준 라이브러리 보조 도구와 검사 코드를 포함하며, MCP 서버·별도 모델·인증 정보를 등록하지 않습니다.
+`guided-execution@oozoofrog-plugin`은 프로젝트 분석, 최소 질문, 검증 루프를 연결하는 [협업 실행 스킬](../guided-execution/SKILL.md) 0.1.1입니다. Python 3로 실행하는 표준 라이브러리 보조 도구와 검사 코드를 포함하며, MCP 서버·별도 모델·인증 정보를 등록하지 않습니다.
 
 처음 등록할 때는 다음 명령을 사용합니다.
 
@@ -19,9 +19,11 @@ codex plugin marketplace upgrade oozoofrog-plugin
 codex plugin add guided-execution@oozoofrog-plugin
 ```
 
-프로젝트를 연 뒤 `$guided-execution`으로 목표와 요구사항을 전달합니다. 스킬은 실제 프로젝트를 확인하고 필요한 판단만 질문한 뒤 `.agent-loop/<run-id>/`를 만들어 실행합니다. 단독 설치를 선택하면 저장소의 `guided-execution/` 전체를 사용하며 `references/`, `scripts/`, `agents/`, `assets/`의 상대 경로를 유지합니다. 기존 설치와 중복되는지 확인하고 사용자 설정을 임의로 교체하지 않습니다.
+프로젝트를 연 뒤 `$guided-execution`으로 목표와 요구사항을 전달합니다. 새로운 여러 단계의 작업에서는 실제 프로젝트를 확인한 뒤 중요한 미결정 판단 1개를 먼저 질문하고, 답변을 반영해 `.agent-loop/<run-id>/`를 만들어 실행합니다. 답변에 의존하는 구현은 기다리며, 이미 허용된 독립 조사·준비만 계속할 수 있습니다. 단독 설치를 선택하면 저장소의 `guided-execution/` 전체를 사용하며 `references/`, `scripts/`, `agents/`, `assets/`의 상대 경로를 유지합니다. 기존 설치와 중복되는지 확인하고 사용자 설정을 임의로 교체하지 않습니다.
 
-기본 질문 예산은 요청 전체에서 선택·선호 결정 3개와 2회이며, 명확하면 질문은 0개입니다. 필요한 실행 권한은 질문 예산으로 생략되지 않고, 기존에 받은 권한은 그 범위에서 재사용합니다. 작업 단위는 기본 총 3회 시도 후 구체적인 장애 요인을 남깁니다. 보조 도구가 확인하는 것은 기록의 무결성이며, 실제 명령 실행·현재 파일 검증·완료 기준의 적절성은 호스트 에이전트가 확인합니다. [작업 환경 규약](../guided-execution/references/workspace.md)과 [검증 범위](validation/guided-execution.md)를 참고하세요.
+초기 질문 1개는 요청 전체의 기본 한도인 독립적인 선택·선호 결정 최대 3개, 최대 2회에 포함됩니다. 관련 판단이 이미 명시적으로 정해졌거나, 사용자가 해당 선택을 명시적으로 위임하거나 질문을 원하지 않는다고 했거나, 결정이 정해진 범위를 그대로 재개하는 경우에만 질문을 생략하고 그 근거를 기록합니다. 기술적으로 구현 가능하거나 선택을 되돌릴 수 있다는 이유만으로 생략하지 않습니다. 필요한 실행 권한은 질문 예산으로 생략되지 않고, 기존에 받은 권한은 그 범위에서 재사용합니다. 이미 허용된 작업에는 별도의 시작 승인을 반복하지 않습니다.
+
+작업 단위는 기본 총 3회 시도 후 구체적인 장애 요인을 남깁니다. 보조 도구가 확인하는 것은 기록의 무결성이며, 실제 명령 실행·현재 파일 검증·완료 기준의 적절성은 호스트 에이전트가 확인합니다. [작업 환경 규약](../guided-execution/references/workspace.md)과 [검증 범위](validation/guided-execution.md)를 참고하세요.
 
 ## OpenAI Decisions
 

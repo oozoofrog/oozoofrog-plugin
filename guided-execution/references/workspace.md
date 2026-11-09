@@ -17,7 +17,7 @@ The helper outputs `verification_scope: record_integrity_only`. Valid evidence m
 
 ## Initialize
 
-Prepare a brief and JSON plan from the actual project. Use a stable, locally unique run ID: lowercase letters, digits, hyphens, or underscores; begin with a letter or digit; maximum 64 characters. The project directory must exist.
+Prepare a brief and JSON plan from the actual project after initial human alignment is answered or legitimately skipped under questions.md. Record the answer or concrete exception in the brief. Use a stable, locally unique run ID: lowercase letters, digits, hyphens, or underscores; begin with a letter or digit; maximum 64 characters. The project directory must exist.
 
 Run through the interpreter:
 
@@ -42,7 +42,7 @@ Existing identical input reuses the run without resetting it. Different brief/pl
 
 ## Plan example
 
-This example assumes the user requested a local JSON export, preserving the input and avoiding overwrite. Replace names and checks with observed project details. No human gate is needed when that scope is already clear and authorized.
+This example assumes the user already chose a local JSON copy of all notes, preservation of the input, and no overwrite, with no remaining material workflow decision. Those explicit choices permit skipping an initial question; technical clarity alone would not. Replace names and checks with observed project details, and record the user choices in the brief.
 
 ```json
 {

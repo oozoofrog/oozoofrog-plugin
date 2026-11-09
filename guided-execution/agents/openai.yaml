@@ -1,7 +1,7 @@
 interface:
   display_name: 협업 실행
   short_description: 프로젝트 분석과 최소 질문으로 요구를 정리하고 검증 루프를 실행합니다
-  default_prompt: $guided-execution 현재 프로젝트와 요구사항을 분석하고 꼭 필요한 질문만 정리한 뒤, 작업 루프 환경을 만들고 검증하면서 완료까지 진행해주세요.
+  default_prompt: $guided-execution 프로젝트를 분석한 뒤 중요한 판단 한 가지를 먼저 질문하고, 제 답변을 반영해 작업 루프를 만들고 검증하며 진행해주세요.
   icon_small: assets/icon.svg
   icon_large: assets/icon.svg
 policy:
