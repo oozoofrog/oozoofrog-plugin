@@ -31,7 +31,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ['swift-intelligence', 'local-ai-studio', 'jev-native', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'astra-implementation-prompt', 'openai-decisions'],
+            ['swift-intelligence', 'local-ai-studio', 'jev-native', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'astra-implementation-prompt', 'openai-decisions', 'guided-execution'],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -52,6 +52,33 @@ class PluginDistributionTests(unittest.TestCase):
                     self.assertEqual("https://github.com/oozoofrog/oozoofrog-plugin", manifest["repository"])
                 skill_root = plugin_root / manifest["skills"] / entry["name"]
                 self.assertTrue((skill_root / "SKILL.md").is_file())
+
+    def test_guided_execution_distribution(self) -> None:
+        from test_sync_skill_mirrors import load_module
+        source = REPO_ROOT / "guided-execution"
+        plugin = REPO_ROOT / "plugins/guided-execution"
+        mirror = plugin / "skills/guided-execution"
+        expected = {
+            "SKILL.md", "agents/openai.yaml", "assets/icon.svg",
+            "references/questions.md", "references/execution.md", "references/workspace.md",
+            "scripts/loop_workspace.py", "tests/test_loop_workspace.py",
+        }
+        self.assertEqual(expected, set(tree_files(source)))
+        self.assertEqual(tree_files(source), tree_files(mirror))
+        self.assertEqual(
+            {".codex-plugin/plugin.json"} | {f"skills/guided-execution/{path}" for path in expected},
+            set(tree_files(plugin)),
+        )
+        self.assertIn("guided-execution", load_module().PACKAGES)
+        manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
+        self.assertEqual("0.1.0", manifest["version"])
+        self.assertEqual("./skills/", manifest["skills"])
+        for key in ("mcpServers", "apps", "hooks"):
+            self.assertNotIn(key, manifest)
+        description = (source / "SKILL.md").read_text(encoding="utf-8").split("description: ", 1)[1].splitlines()[0]
+        self.assertEqual(description, manifest["description"])
+        self.assertEqual(description, manifest["interface"]["longDescription"])
+        self.assertIn(description, (REPO_ROOT / "README.md").read_text(encoding="utf-8"))
 
     def test_openai_decisions_distribution(self) -> None:
         from test_document_links import local_targets

@@ -16,6 +16,18 @@
 
 설치 후 호출 예: `$korean-product-writing로 이 화면의 제목·설명·버튼을 사실과 조건을 유지해 다듬어 주세요.` 실제 설치나 자동 호출을 시험했다는 뜻은 아닙니다.
 
+## 협업 실행
+
+[협업 실행](guided-execution/SKILL.md) (`guided-execution` 0.1.0)은 여러 단계의 프로젝트 구현·재개에서 프로젝트 분석, 최소 질문, 실제 검증과 사람의 판단을 연결하는 skills-only Plugin입니다. 일반 정보 답변, 학습 지도, 단독 리뷰, 프로젝트 조율이 필요 없는 작은 수정은 적용 대상에서 제외합니다.
+
+프로젝트 자료와 기존 결정을 먼저 확인하고, 정보가 충분하면 질문 없이 진행합니다. 선택·선호 질문의 기본 한도는 요청 전체에서 독립적인 결정 3개, 2회 이내이며 실행 중 질문도 합산합니다. 기존 답변과 권한을 유지하고 목표·제약·완료 기준·허용 범위가 정해지면 `.agent-loop/<run-id>/`를 만들어 구현·검증·수정을 이어갑니다. 피드백이 바꾸는 작업과 후속 결과를 다시 검증하고, 유효한 나머지 작업은 보존합니다.
+
+```text
+$guided-execution으로 이 프로젝트와 요구사항을 분석하고 꼭 필요한 질문만 한 뒤, 구현과 검증까지 진행해주세요.
+```
+
+Python 표준 라이브러리 보조 도구는 작업 기록을 생성·검사하고, 실제 작업과 권한 확인은 호스트 에이전트가 수행합니다. 별도 백그라운드 실행기는 포함하지 않습니다. [설치 안내](docs/plugin-installation.md#guided-execution), [작업 환경 규약](guided-execution/references/workspace.md), [검증 범위](docs/validation/guided-execution.md)를 확인하세요.
+
 ## JEV Native 고정 소스
 
 공개 commit으로 고정한 [네이티브 제어기 소스](tools/jev-native/README.md)와 [동반 스킬](jev-native/SKILL.md)을 포함합니다. 바이너리·기존 설치본은 교체하지 않습니다. [출처와 보류한 최신 변경](docs/jev-native-source.md)에서 소스·단위 검사와 실제 데스크톱 동작을 구분합니다.

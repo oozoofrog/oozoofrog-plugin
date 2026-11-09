@@ -36,6 +36,7 @@ Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed 
 | `refactor@oozoofrog-plugin` | [Refactor code while preserving behavior](refactor/SKILL.md), or integrate SwiftLint into project builds; see [Refactor](#refactor). |
 | `astra-implementation-prompt@oozoofrog-plugin` | [Prepare an implementation prompt with Astra Max for review](astra-implementation-prompt/SKILL.md), before the user chooses whether and how to start an implementation chat. See [scope](#astra-implementation-prompt). |
 | `openai-decisions@oozoofrog-plugin` | [Call the OpenAI Decisions API](openai-decisions/SKILL.md) for text, JSON, image classification, probabilities, and rubric scores; see [scope and prerequisites](#openai-decisions). |
+| `guided-execution@oozoofrog-plugin` | [Inspect a project, resolve essential human decisions, and execute verified work loops](guided-execution/SKILL.md), with a request-wide clarification budget and project-local evidence; see [scope](#guided-execution). |
 
 ## Examples
 
@@ -47,9 +48,18 @@ Use $local-ai-studio with my existing local Whisper model to transcribe this rec
 Use $interface-first-design to review this product screen's actions, states, and recovery paths.
 Use $c4fy to map this repository's architecture with source evidence, including code structure for the components that need it.
 Use $astra-implementation-prompt to prepare an implementation prompt with Astra Max for my review and choice of implementation model.
+Use $guided-execution to inspect this project, ask only essential questions, then implement and verify the requested feature.
 ```
 
 These are requests, not examples of verified results.
+
+## Guided Execution
+
+Use when a user requests implementation or continuation of a multi-step project with minimal clarification, iterative verification, or human decision points, or explicitly invokes guided-execution. Exclude ordinary factual answers, tutoring, standalone reviews, and simple edits requiring no project coordination.
+
+Inspect project evidence first. When the request is clear, ask no questions; otherwise default to at most three discretionary decisions across two rounds for the whole request, including later preferences. Reuse answers and existing authorization. Once the outcome, constraints, acceptance checks, and authorized scope are sufficient, create `.agent-loop/<run-id>/` and continue with implementation, real checks, bounded correction, and scoped human feedback.
+
+The skills-only Plugin includes a Python standard-library workspace helper and 26 helper tests. Its `init`, `validate-plan`, `check`, and `status` commands manage and validate records; the host agent runs the actual work, checks current artifacts, and applies permissions. The package does not provide a background scheduler. See [installation and usage](docs/plugin-installation.md#guided-execution), [workspace contract](guided-execution/references/workspace.md), and [validation scope](docs/validation/guided-execution.md).
 
 ## Local AI Studio
 

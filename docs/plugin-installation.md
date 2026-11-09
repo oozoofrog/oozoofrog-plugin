@@ -1,5 +1,28 @@
 # Plugin installation
 
+## Guided Execution
+
+`guided-execution@oozoofrog-plugin`은 프로젝트 분석, 최소 질문, 검증 루프를 연결하는 [협업 실행 스킬](../guided-execution/SKILL.md) 0.1.0입니다. Python 3로 실행하는 표준 라이브러리 보조 도구와 검사 코드를 포함하며, MCP 서버·별도 모델·인증 정보를 등록하지 않습니다.
+
+처음 등록할 때는 다음 명령을 사용합니다.
+
+```sh
+codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
+codex plugin add guided-execution@oozoofrog-plugin
+codex plugin list --json
+```
+
+이미 marketplace를 등록했다면 갱신 후 선택 설치합니다.
+
+```sh
+codex plugin marketplace upgrade oozoofrog-plugin
+codex plugin add guided-execution@oozoofrog-plugin
+```
+
+프로젝트를 연 뒤 `$guided-execution`으로 목표와 요구사항을 전달합니다. 스킬은 실제 프로젝트를 확인하고 필요한 판단만 질문한 뒤 `.agent-loop/<run-id>/`를 만들어 실행합니다. 단독 설치를 선택하면 저장소의 `guided-execution/` 전체를 사용하며 `references/`, `scripts/`, `agents/`, `assets/`의 상대 경로를 유지합니다. 기존 설치와 중복되는지 확인하고 사용자 설정을 임의로 교체하지 않습니다.
+
+기본 질문 예산은 요청 전체에서 선택·선호 결정 3개와 2회이며, 명확하면 질문은 0개입니다. 필요한 실행 권한은 질문 예산으로 생략되지 않고, 기존에 받은 권한은 그 범위에서 재사용합니다. 작업 단위는 기본 총 3회 시도 후 구체적인 장애 요인을 남깁니다. 보조 도구가 확인하는 것은 기록의 무결성이며, 실제 명령 실행·현재 파일 검증·완료 기준의 적절성은 호스트 에이전트가 확인합니다. [작업 환경 규약](../guided-execution/references/workspace.md)과 [검증 범위](validation/guided-execution.md)를 참고하세요.
+
 ## OpenAI Decisions
 
 `openai-decisions@oozoofrog-plugin`은 [스킬](../openai-decisions/SKILL.md)만 제공합니다. 기존 `openai_decide` MCP/Pi 도구나 `openai-decisions` CLI가 있으면 이를 사용하고, 없으면 [공식 CLI 직접 호출](../openai-decisions/references/cli.md)을 따릅니다. Plugin 설치는 MCP 서버·API 키·과금 계정을 자동 등록하지 않습니다. API 키는 기존 비밀 입력·자격증명 저장소로 전달하고 설정 파일이나 대화에 복사하지 않습니다.

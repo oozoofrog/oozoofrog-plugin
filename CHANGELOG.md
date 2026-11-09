@@ -16,6 +16,12 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## Guided Execution [0.1.0] — 2026-11-09
+
+- Add `guided-execution` (협업 실행) as a standalone skill and matching skills-only Plugin, with marketplace registration, portable metadata, bilingual usage guidance, and the existing mirror synchronization workflow.
+- Inspect projects before asking; default to zero questions when clear or at most three discretionary decisions across two rounds per request. Preserve earlier answers, authorization, question usage, and attempt history.
+- Create project-local loop workspaces with task dependencies, bounded correction, scoped human feedback, and current verification evidence. Include the standard-library record helper and its 26 tests; actual execution and permission checks remain the host agent's responsibility.
+
 ## OpenAI Decisions [0.1.0] — 2026-11-08
 
 - Add `openai-decisions` as standalone skill source and a matching skills-only Plugin, with marketplace registration, discovery metadata, portable CLI guidance, and preserved existing MCP/CLI credential configuration.
