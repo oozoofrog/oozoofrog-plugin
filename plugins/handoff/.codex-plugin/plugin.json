@@ -1,0 +1,25 @@
+{
+  "name": "handoff",
+  "version": "0.1.0",
+  "description": "지금 작업 상태를 프로젝트 안의 `_context/handoff/<브랜치>.md`에 인계 문서로 남겨, /clear나 새 세션에서 압축 없이 이어가게 한다. \"/handoff\", \"인계 문서 써줘\", \"세션 넘기기\", \"/clear 전에 정리\", \"여기까지 저장\", 문맥 사용량 경고 훅이 인계를 요청할 때, 큰 작업 단위를 끝냈을 때 사용한다. 작업이 끝나 인계가 필요 없어지면 status를 done으로 바꾼다. 코드 커밋이나 PR 설명 작성에는 쓰지 않는다.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "skills": "./skills/",
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
+  "interface": {
+    "displayName": "인계 문서",
+    "shortDescription": "프로젝트 안 인계 문서로 새 세션에서 작업 이어가기",
+    "longDescription": "지금 작업 상태를 프로젝트 안의 `_context/handoff/<브랜치>.md`에 인계 문서로 남겨, /clear나 새 세션에서 압축 없이 이어가게 한다. \"/handoff\", \"인계 문서 써줘\", \"세션 넘기기\", \"/clear 전에 정리\", \"여기까지 저장\", 문맥 사용량 경고 훅이 인계를 요청할 때, 큰 작업 단위를 끝냈을 때 사용한다. 작업이 끝나 인계가 필요 없어지면 status를 done으로 바꾼다. 코드 커밋이나 PR 설명 작성에는 쓰지 않는다.",
+    "developerName": "oozoofrog",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "$handoff 지금 작업 상태를 프로젝트 인계 문서로 남겨 주세요."
+    ]
+  }
+}

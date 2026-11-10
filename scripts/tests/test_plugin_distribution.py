@@ -31,7 +31,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ['swift-intelligence', 'local-ai-studio', 'jev-native', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'astra-implementation-prompt', 'openai-decisions', 'guided-execution'],
+            ['swift-intelligence', 'local-ai-studio', 'jev-native', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'astra-implementation-prompt', 'openai-decisions', 'guided-execution', 'handoff'],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -183,6 +183,49 @@ class PluginDistributionTests(unittest.TestCase):
             for document in root.rglob("*.md"):
                 for target in local_targets(document.read_text()):
                     self.assertTrue((document.parent / target).is_file(), (document, target))
+
+    def test_handoff_distribution(self) -> None:
+        from test_sync_skill_mirrors import load_module
+        source = REPO_ROOT / "handoff"
+        plugin = REPO_ROOT / "plugins/handoff"
+        expected = {"SKILL.md", "agents/openai.yaml", "scripts/ctx.py", "scripts/ctx_hook.py",
+                    "scripts/ctxlib.py", "tests/test_ctx.py"}
+        self.assertEqual(expected, set(tree_files(source)))
+        self.assertEqual(tree_files(source), tree_files(plugin / "skills/handoff"))
+        self.assertEqual({".codex-plugin/plugin.json", ".claude-plugin/plugin.json", "claude-hooks/hooks.json"}
+                         | {f"skills/handoff/{path}" for path in expected}, set(tree_files(plugin)))
+        self.assertIn("handoff", load_module().PACKAGES)
+        codex = json.loads((plugin / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
+        claude = json.loads((plugin / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+        # Hooks are Claude Code only: Codex discovers hooks/hooks.json, so they live in claude-hooks/.
+        for key in ("mcpServers", "apps", "hooks"):
+            self.assertNotIn(key, codex)
+        self.assertFalse((plugin / "hooks").exists())
+        self.assertEqual("./claude-hooks/hooks.json", claude["hooks"])
+        hooks = json.loads((plugin / "claude-hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
+        events = {"SessionStart": "session-start", "Stop": "stop", "PreCompact": "pre-compact", "PostCompact": "post-compact"}
+        self.assertEqual(set(events), set(hooks))
+        for event, arg in events.items():
+            (entry,) = hooks[event]
+            (hook,) = entry["hooks"]
+            self.assertEqual(
+                f'python3 -I -B "${{CLAUDE_PLUGIN_ROOT}}/skills/handoff/scripts/ctx_hook.py" {arg}', hook["command"])
+            self.assertLessEqual(hook["timeout"], 5)
+        self.assertTrue((plugin / "skills/handoff/scripts/ctx_hook.py").is_file())
+        description = (source / "SKILL.md").read_text(encoding="utf-8").split("description: ", 1)[1].splitlines()[0]
+        self.assertEqual(description, codex["description"])
+        self.assertEqual(description, codex["interface"]["longDescription"])
+        self.assertIn(description, (REPO_ROOT / "README.md").read_text(encoding="utf-8"))
+        metadata = {}
+        for line in (source / "agents/openai.yaml").read_text(encoding="utf-8").splitlines():
+            if line.startswith("  ") and ": " in line:
+                key, value = line.strip().split(": ", 1)
+                metadata[key] = json.loads(value)
+        for yaml_key, json_key in (("display_name", "displayName"), ("short_description", "shortDescription")):
+            self.assertEqual(metadata[yaml_key], codex["interface"][json_key])
+        self.assertEqual([metadata["default_prompt"]], codex["interface"]["defaultPrompt"])
+        self.assertIn("$handoff", metadata["default_prompt"])
+        self.assertLessEqual(len(metadata["default_prompt"]), 128)
 
     def test_c4fy_distribution(self) -> None:
         source = REPO_ROOT / "c4fy"

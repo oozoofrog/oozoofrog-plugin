@@ -41,6 +41,17 @@ codex plugin add guided-execution@oozoofrog-plugin
 
 작업 단위는 기본 총 3회 시도 후 구체적인 장애 요인을 남깁니다. `loop_control.py`는 명시적인 상태 전이를 기록하고 `render_report.py`는 실행 기록의 정적 HTML 보고서를 생성합니다. [환경 구성과 재사용](../guided-execution/references/environment.md)을 먼저 확인하세요. 보조 도구가 확인하는 것은 기록의 무결성이며, 실제 명령 실행·현재 파일 검증·완료 기준의 적절성은 호스트 에이전트가 확인합니다. [작업 환경 규약](../guided-execution/references/workspace.md)과 [검증 범위](validation/guided-execution.md)를 참고하세요.
 
+## Handoff
+
+`handoff@oozoofrog-plugin` 0.1.0은 작업 상태를 프로젝트 안의 `_context/handoff/<브랜치>.md`에 남기는 [인계 문서 스킬](../handoff/SKILL.md)과 Claude Code 훅 4개(SessionStart, Stop, PreCompact, PostCompact)를 함께 설치합니다. 훅은 `claude-hooks/hooks.json`에 있고 Claude 매니페스트만 이를 가리킵니다. Codex에서는 스킬만 사용할 수 있습니다. Python 3과 Git이 필요하며, macOS에서는 `xcode-select --install`로 함께 설치됩니다.
+
+```sh
+claude plugin marketplace add oozoofrog/oozoofrog-plugin
+claude plugin install handoff@oozoofrog-plugin
+```
+
+설치 후 Claude Code를 다시 시작해야 훅이 적용됩니다. 같은 스크립트를 `~/.claude/skills/handoff`와 `settings.json` 훅으로 직접 설치한 적이 있다면 둘 중 하나만 남깁니다. 둘 다 있으면 훅이 두 번 실행됩니다. 경고 기준과 정리 기간은 환경 변수(`HANDOFF_TOKENS`, `HANDOFF_STALE_DAYS`, `HANDOFF_STALE_COMMITS`, `HANDOFF_KEEP_COMPACT_DAYS`, `HANDOFF_KEEP_ARCHIVE_DAYS`)로 바꿉니다.
+
 ## OpenAI Decisions
 
 `openai-decisions@oozoofrog-plugin`은 [스킬](../openai-decisions/SKILL.md)만 제공합니다. 기존 `openai_decide` MCP/Pi 도구나 `openai-decisions` CLI가 있으면 이를 사용하고, 없으면 [공식 CLI 직접 호출](../openai-decisions/references/cli.md)을 따릅니다. Plugin 설치는 MCP 서버·API 키·과금 계정을 자동 등록하지 않습니다. API 키는 기존 비밀 입력·자격증명 저장소로 전달하고 설정 파일이나 대화에 복사하지 않습니다.

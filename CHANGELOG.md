@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add `handoff` 0.1.0: project-local handoff documents in `_context/handoff/<branch>.md` with Claude Code SessionStart, Stop, PreCompact and PostCompact hooks. Stale handoffs (age, commit distance, diverged history, pre-compaction) are reduced to a pointer; finished and orphaned handoffs are archived and old archives expire. Codex receives the skill only.
+
 - Add a Claude Code marketplace (`.claude-plugin/marketplace.json`) and per-Plugin Claude manifests for all 11 Plugins, using the same `<plugin>@oozoofrog-plugin` selectors. `swift-intelligence` and `winpilot` declare Claude-specific MCP settings rooted at `${CLAUDE_PLUGIN_ROOT}`; Codex manifests and `.mcp.json` files are unchanged.
 
 - Remove `team-coordination`, `audit`, `outcome-brief`, `verify-work`, `choice-interview`, `obsidian-projects`, and `korean-travel-guidebook` from standalone sources, Plugin mirrors, and the marketplace. Retire the bundled team harness, its CI and installation guidance. Preserve historical records and user data; installed copies require separate removal.

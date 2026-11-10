@@ -1,0 +1,4 @@
+interface:
+  display_name: "인계 문서"
+  short_description: "프로젝트 안 인계 문서로 새 세션에서 작업 이어가기"
+  default_prompt: "$handoff 지금 작업 상태를 프로젝트 인계 문서로 남겨 주세요."

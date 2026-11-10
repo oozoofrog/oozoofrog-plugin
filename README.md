@@ -49,6 +49,7 @@ Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed 
 | `astra-implementation-prompt@oozoofrog-plugin` | [Prepare an implementation prompt with Astra Max for review](astra-implementation-prompt/SKILL.md), before the user chooses whether and how to start an implementation chat. See [scope](#astra-implementation-prompt). |
 | `openai-decisions@oozoofrog-plugin` | [Call the OpenAI Decisions API](openai-decisions/SKILL.md) for text, JSON, image classification, probabilities, and rubric scores; see [scope and prerequisites](#openai-decisions). |
 | `guided-execution@oozoofrog-plugin` | [Inspect a project, align the key human decision, and execute verified work loops](guided-execution/SKILL.md), with a focused initial question, a request-wide clarification budget, and project-local evidence; see [scope](#guided-execution). |
+| `handoff@oozoofrog-plugin` | [Keep work state in a project-local handoff document](handoff/SKILL.md) so a new Claude Code session continues after `/clear` without relying on compaction; see [Handoff](#handoff). |
 
 ## Examples
 
@@ -76,6 +77,12 @@ Skip that initial question only when the relevant human decisions are already ex
 Reuse earlier answers and existing authorization. Once alignment is answered or legitimately skipped and the outcome, constraints, acceptance checks, and authorized scope suffice, create `.agent-loop/<run-id>/` and continue with implementation, real checks, bounded correction, and scoped human feedback. Do not add a separate permission-to-start question to already-authorized work. While awaiting an answer, only authorized independent investigation or preparation continues.
 
 The skills-only Plugin includes Python standard-library workspace, transition, and read-only HTML report tools. Existing `init`, `validate-plan`, `check`, and `status` commands remain supported. The host discovers actual tools/checks, reuses applicable project-scoped preferences and lessons, then records starts, evidence, decisions, and targeted revalidation. The host still runs the actual work, checks current artifacts, and applies permissions. The static report uses a minimal-text ontology graph with typed nodes, directed dependencies and history-backed rework paths, plus a separate vertical mobile layout. Expressive, reference-informed CSS motion and local relationship focus are labeled as presentation, with a motion-off switch and system reduced-motion fallback. It is not live control, and the package provides no background scheduler. See [environment setup and reuse](guided-execution/references/environment.md). See [installation and usage](docs/plugin-installation.md#guided-execution), [workspace contract](guided-execution/references/workspace.md), and [validation scope](docs/validation/guided-execution.md).
+
+## Handoff
+
+지금 작업 상태를 프로젝트 안의 `_context/handoff/<브랜치>.md`에 인계 문서로 남겨, /clear나 새 세션에서 압축 없이 이어가게 한다. "/handoff", "인계 문서 써줘", "세션 넘기기", "/clear 전에 정리", "여기까지 저장", 문맥 사용량 경고 훅이 인계를 요청할 때, 큰 작업 단위를 끝냈을 때 사용한다. 작업이 끝나 인계가 필요 없어지면 status를 done으로 바꾼다. 코드 커밋이나 PR 설명 작성에는 쓰지 않는다.
+
+The Plugin writes `_context/handoff/<branch>.md` inside the project (ignored by Git by default) and, in Claude Code, registers four hooks: SessionStart injects the handoff after `/clear` and a short pointer on startup or resume; Stop asks for a handoff once context passes 400,000 tokens; PreCompact and PostCompact keep compaction summaries in `_context/sessions/`. Stale context is not injected: a handoff older than 14 days, more than 30 commits behind, on diverged history, or written before a compaction is reduced to a pointer. Finished, detached, and deleted-branch handoffs move to `_context/sessions/`, and old summaries and archives expire. Python 3 and Git are required; there is no MCP server. In Codex only the skill is available. See [installation](docs/plugin-installation.md#handoff).
 
 ## Local AI Studio
 
