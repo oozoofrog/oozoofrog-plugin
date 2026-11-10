@@ -16,6 +16,14 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## Guided Execution [0.2.3] — 2026-11-10
+
+- Record effective project tools, host limits and scoped preference/lesson reuse. Add explicit state transitions and offline read-only HTML reports while retaining existing commands and schema 1.
+- Add real-project failure/repair, rejection, resume, invalidation and exhaustion scenarios. Validate archived evidence integrity and run the guided-execution suite in distribution CI.
+- Render a minimal-text ontology graph with typed task/agent/check/decision entities, provenance-aware directed edges, recorded rework paths and a separate mobile layout. Do not invent missing agents or execution history.
+- Add reference-informed styling, CSS-only directional beam/packet motion and local relationship focus. Preserve static facts with motion-off, reduced-motion and static SVG fallbacks; label effects as presentation rather than live events.
+- Synchronize the standalone skill, Plugin mirror, metadata and bilingual documentation. Local tests and static visual checks do not establish browser animation, assistive-technology behavior, user-device installation or fresh-session exposure; see the validation record for scope.
+
 ## Guided Execution [0.1.1] — 2026-11-09
 
 - Ask one contextual alignment question after inspecting new multi-step work, recommend a direction, and wait for the answer before dependent implementation. Technical feasibility, existing conventions, and reversibility alone no longer justify skipping human input.

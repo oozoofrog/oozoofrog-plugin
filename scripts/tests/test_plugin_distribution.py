@@ -62,6 +62,8 @@ class PluginDistributionTests(unittest.TestCase):
             "SKILL.md", "agents/openai.yaml", "assets/icon.svg",
             "references/questions.md", "references/execution.md", "references/workspace.md",
             "scripts/loop_workspace.py", "tests/test_loop_workspace.py",
+            "references/environment.md", "scripts/loop_control.py", "scripts/render_report.py",
+            "tests/test_loop_control.py", "tests/test_render_report.py", "tests/test_project_scenario.py",
         }
         self.assertEqual(expected, set(tree_files(source)))
         self.assertEqual(tree_files(source), tree_files(mirror))
@@ -71,7 +73,7 @@ class PluginDistributionTests(unittest.TestCase):
         )
         self.assertIn("guided-execution", load_module().PACKAGES)
         manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
-        self.assertEqual("0.1.1", manifest["version"])
+        self.assertEqual("0.2.3", manifest["version"])
         self.assertEqual("./skills/", manifest["skills"])
         for key in ("mcpServers", "apps", "hooks"):
             self.assertNotIn(key, manifest)
@@ -79,6 +81,13 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual(description, manifest["description"])
         self.assertEqual(description, manifest["interface"]["longDescription"])
         self.assertIn(description, (REPO_ROOT / "README.md").read_text(encoding="utf-8"))
+        metadata = {}
+        for line in (source / "agents/openai.yaml").read_text(encoding="utf-8").splitlines():
+            if line.startswith("  ") and ": " in line and not line.strip().startswith("allow_"):
+                key, value = line.strip().split(": ", 1)
+                metadata[key] = json.loads(value)
+        self.assertEqual(metadata["short_description"], manifest["interface"]["shortDescription"])
+        self.assertEqual([metadata["default_prompt"]], manifest["interface"]["defaultPrompt"])
 
     def test_openai_decisions_distribution(self) -> None:
         from test_document_links import local_targets

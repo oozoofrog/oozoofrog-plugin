@@ -162,7 +162,7 @@ def decision_satisfied(state):
     return state["status"] == "resolved" and state["outcome"] in {"answered", "approved"}
 
 
-def load_workspace(location):
+def load_workspace(location, *, state_override=None):
     workspace = Path(os.path.abspath(location))
     require(workspace.parent.name == ".agent-loop" and ID.fullmatch(workspace.name),
             "workspace must be .agent-loop/<safe-run-id>")
@@ -172,7 +172,7 @@ def load_workspace(location):
              ("plan.json", "state.json", "brief.md", "decisions.jsonl", "lessons.md")}
     evidence = workspace / "evidence"
     require(not evidence.is_symlink() and evidence.is_dir(), "evidence must be a nonsymlink directory")
-    state = mapping(decode(files["state.json"]), "state")
+    state = mapping(decode(files["state.json"]) if state_override is None else state_override, "state")
     root = state.get("project_root")
     require(nonempty(root) and Path(root).is_dir() and str(Path(root).resolve()) == root
             and workspace.resolve().parent.parent == Path(root) and state.get("run_id") == workspace.name,

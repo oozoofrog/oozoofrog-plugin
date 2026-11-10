@@ -1,6 +1,6 @@
 {
   "name": "guided-execution",
-  "version": "0.1.1",
+  "version": "0.2.3",
   "description": "Use when a user requests implementation or continuation of a multi-step project with minimal clarification, iterative verification, or human decision points, or explicitly invokes guided-execution. Exclude ordinary factual answers, tutoring, standalone reviews, and simple edits requiring no project coordination.",
   "author": {
     "name": "oozoofrog",
@@ -10,7 +10,7 @@
   "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
   "interface": {
     "displayName": "협업 실행",
-    "shortDescription": "프로젝트 분석과 최소 질문으로 요구를 정리하고 검증 루프를 실행합니다",
+    "shortDescription": "프로젝트 도구·선호를 반영하고 검증 기록과 상태 보고서로 실행을 이어갑니다",
     "longDescription": "Use when a user requests implementation or continuation of a multi-step project with minimal clarification, iterative verification, or human decision points, or explicitly invokes guided-execution. Exclude ordinary factual answers, tutoring, standalone reviews, and simple edits requiring no project coordination.",
     "developerName": "oozoofrog",
     "category": "Productivity",
@@ -19,7 +19,7 @@
       "Write"
     ],
     "defaultPrompt": [
-      "$guided-execution 프로젝트를 분석한 뒤 중요한 판단 한 가지를 먼저 질문하고, 제 답변을 반영해 작업 루프를 만들고 검증하며 진행해주세요."
+      "$guided-execution 프로젝트와 도구·기존 선호를 확인하고, 미결정된 중요한 판단은 질문한 뒤 제 답변을 기다려주세요. 실제 검사와 상태 기록을 남기며 진행해주세요."
     ]
   }
 }

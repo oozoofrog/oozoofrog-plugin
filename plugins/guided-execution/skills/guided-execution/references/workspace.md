@@ -8,6 +8,8 @@
 - [State and evidence](#state-and-evidence)
 - [Changes and resume](#changes-and-resume)
 - [Check and status](#check-and-status)
+- [Explicit transitions](#explicit-transitions)
+- [Read-only report](#read-only-report)
 
 ## Capabilities
 
@@ -85,7 +87,7 @@ Optional decisions have `id`, `kind` (`direction`, `information`, `review`, or `
 
 ## State and evidence
 
-The helper initializes `state.json`. The coordinating agent updates it using atomic replacement and preserves history in decisions.jsonl. Tasks have `status`, `attempts`, `verified_revision`, and `evidence`. Status is one of pending/running/passed/failed/blocked/stale/cancelled. Running, failed, and passed tasks require at least one recorded attempt. Attempts cannot exceed the task limit.
+The helper initializes `state.json`. Prefer `loop_control.py` for supported transitions; it atomically replaces state.json and stores transition snapshots in its optional `history` array. The coordinating agent preserves actual decision/replan context in decisions.jsonl. Older schema-1 workspaces remain readable. Tasks have `status`, `attempts`, `verified_revision`, and `evidence`. Status is one of pending/running/passed/failed/blocked/stale/cancelled. Running, failed, and passed tasks require at least one recorded attempt. Attempts cannot exceed the task limit.
 
 Question usage is `question_usage.questions` and `question_usage.rounds`. Record actual usage before yielding to the user, including relevant earlier questions in the same request. Init starts these counters at zero because it cannot observe earlier conversation; the coordinator must transfer existing usage immediately, not reset the budget at bootstrap/resume.
 
@@ -126,3 +128,43 @@ python3 <skill-dir>/scripts/loop_workspace.py status --workspace <project>/.agen
 All produce JSON; errors are nonzero. Check/status are read-only. Serialization warnings report potential overlapping reads/writes; the controller also considers shared services, approvals, and resource quotas.
 
 Status reports ready work, unmet dependencies/decisions, explicitly blocked work, exhausted attempts, running/passed/stale/cancelled work. Categories may overlap. Put a concrete block_reason on host-blocked task state so the handoff explains the missing resource or decision. Structural `complete: true` requires every task passed; the coordinator additionally verifies the overall user outcome and current evidence. A valid but blocked/exhausted run is not complete.
+
+## Explicit transitions
+
+`loop_control.py` is a standard-library companion, not a command executor. Every operation requires `--workspace`. Run each subcommand with `--help` for flags. Existing `loop_workspace.py` commands and schema 1 remain supported.
+
+| Command | Preconditions and recorded effect |
+| --- | --- |
+| `start --task ID --revision HASH` | Requires ready dependencies/decisions and remaining attempts; increments attempts, sets running, archives prior state and clears current check records. |
+| `set-revision --task ID --revision HASH --reason TEXT` | After production, records the measured post-edit snapshot for a running attempt with no recorded checks; does not consume another attempt. |
+| `record-check --task ID --check CHECK --path evidence/NEW.log --result passed\|failed\|not_run --revision HASH` | Requires a running attempt and a new existing nonempty log under evidence/. Computes its hash, rejects reused log paths and repeated current check IDs; never runs a command. |
+| `finish --task ID --result passed\|failed --revision HASH --reason TEXT` | Requires the running revision. A pass requires exactly one current passed record per check; a failed attempt retains observations for repair. |
+| `resolve-decision --decision ID --answer TEXT --source SOURCE --outcome answered\|approved\|rejected\|revision_requested [--revision VERSION]` | Records actual input for a pending decision; matches decision kind and pinned artifact version. Rejection does not open the gate. |
+| `invalidate --task ID --reason TEXT` | Marks the task and its descendants stale, preserving unrelated work, attempts, and logs. |
+| `block` / `cancel --task ID --reason TEXT` | Records the task's block/cancellation and invalidates descendants. Does not stop external tools or workers. |
+
+The revision passed to `start` identifies the starting snapshot. After implementation changes it, use `set-revision` with the measured post-edit fingerprint before running checks. Retargeting is rejected once evidence exists; finish the attempt and use an allowed next attempt instead. Capture the same snapshot before/after checks. Never pass an obsolete pre-edit fingerprint as the tested version.
+
+Independent ready tasks may be started together only when their declared file scopes do not conflict. Shared services, undeclared mutable state and resource limits still need host coordination; file-scope checks do not establish full independence.
+
+The coordinating host checks actual authorization before calling these commands. A source string is traceability, not authentication; a recorded approval cannot create permission. Capture the user's real question/answer, version, scope and actual question usage before yielding. This helper does not send questions or update question counters.
+
+A `.control.lock` prevents cooperating writers from racing. If it remains after interruption, inspect whether its writer or external work is still running before removing it; do not auto-steal it. Manual writers must not edit concurrently. A successful state write and its history event are one atomic replacement; history is not a tamper-proof audit log.
+
+For materially changed decisions, plans/checks, blocked-task reopening, cancelled work, or legacy running tasks without `running_revision`, stop affected work and reconcile the plan/state with real evidence before continuing. Preserve prior snapshots, attempts, question usage, and logs. The control helper never silently resets or grants a changed decision.
+
+## Read-only report
+
+```sh
+python3 <skill-dir>/scripts/render_report.py \
+  --workspace <project>/.agent-loop/<run-id> \
+  --output <new-path-outside-run>/report.html
+```
+
+Stop the coordinating writer while generating a snapshot. The output directory must already exist. The report is self-contained HTML centered on a typed ontology graph: tasks, available agent records, verification checks and decision gates have distinct shapes. Directed edges show dependencies, planned relationships, recorded results and history-backed retries. Desktop and mobile use separate horizontal/vertical layouts; detailed states, history and evidence metadata are collapsed below the graph. It does not include raw evidence log contents or execute plan commands; it has no network dependencies, approval controls, or live refresh. Existing files, symlinks and output inside the source run are rejected.
+
+Typed surfaces, directional beam/packet decoration and local node-neighborhood focus help explain the graph. Motion is presentation only, not live execution or historical playback. Node states and graph facts do not change during animation. The visual-only motion switch and system `prefers-reduced-motion` preference stop effects without hiding records or base relationships. No animation timing establishes actual chronology, duration, permission or observed worker activity.
+
+Optional agent metadata is presentation context, not a new permission or execution guarantee. Define `plan.agents` as an array of `{"id": "maker", "label": "제작"}`. A task's `agent_id` is a planned assignment. A task state's `agent_id` plus a nonempty `agent_source` is a recorded assignment whose source the host must verify. Only explicitly defined matching IDs become agent nodes; absent or malformed metadata must not manufacture workers. The visual legend distinguishes planned relationships from recorded results. Retry/rework arrows require retained failed-attempt history, not merely `max_attempts`.
+
+The report leaves workspace bytes unchanged. It labels `record_integrity_only` prominently and avoids showing absolute project paths. Free-text fields can still contain sensitive information: inspect the output and recipients before sharing. A green record is not proof that its source code remains current or that its checks were adequate.
