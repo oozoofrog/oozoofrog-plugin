@@ -10,6 +10,7 @@
 - [Check and status](#check-and-status)
 - [Explicit transitions](#explicit-transitions)
 - [Read-only report](#read-only-report)
+- [Live board](#live-board)
 
 ## Capabilities
 
@@ -168,3 +169,21 @@ Typed surfaces, directional beam/packet decoration and local node-neighborhood f
 Optional agent metadata is presentation context, not a new permission or execution guarantee. Define `plan.agents` as an array of `{"id": "maker", "label": "제작"}`. A task's `agent_id` is a planned assignment. A task state's `agent_id` plus a nonempty `agent_source` is a recorded assignment whose source the host must verify. Only explicitly defined matching IDs become agent nodes; absent or malformed metadata must not manufacture workers. The visual legend distinguishes planned relationships from recorded results. Retry/rework arrows require retained failed-attempt history, not merely `max_attempts`.
 
 The report leaves workspace bytes unchanged. It labels `record_integrity_only` prominently and avoids showing absolute project paths. Free-text fields can still contain sensitive information: inspect the output and recipients before sharing. A green record is not proof that its source code remains current or that its checks were adequate.
+
+## Live board
+
+The Claude Code Plugin adds a read-only mod (`claude-mod/`, Claude manifest only). It polls the newest `.agent-loop/<run>/plan.json` and `state.json` under the session's project root every 2 seconds:
+
+- Side pane `guided-board` (`/guided-board`): list view (task → checks, attempts, readiness, pending decisions, block reasons) and relation view (prerequisites, decision gates, checks, recorded retries). It opens by itself once per incomplete run when the terminal is wide enough.
+- One line above the prompt while work remains.
+- A mismatched plan/state read keeps the last good board and shows a read-mismatch line until the next poll succeeds.
+
+The pane's web dashboard button runs:
+
+```sh
+python3 <skill-dir>/scripts/serve_dashboard.py --workspace <project>/.agent-loop/<run-id>
+```
+
+It binds `127.0.0.1` on a free port, prints one JSON line with the tokenized URL, and requires the token plus a loopback `Host` on every request. It re-reads and validates the run on each request (`/api/records`, `/report`) and never writes the run or runs plan commands. The page leads with what needs the person (pending decisions with their questions, blocked tasks with reasons, failed or exhausted work, running and ready tasks), then a progress bar and a motion pipeline of typed nodes (stage, task, check, decision gate). Selecting a task by click, Enter or Space, or from the attention list or full task list, opens a detail panel (checks with descriptions, gates with questions, prerequisites, dependents), highlights its neighbors and sets a `#task=<id>` link; closing it or Escape hides the panel and returns focus to the card. The page carries no instructional sentences: a waiting AI layer is one status line, and overflow in the attention list opens the full task list. Every status carries a glyph (✓ ✗ ▶ ⏸ ↺ ○ ?) besides its color. Colors come only from records, and motion is decoration with a motion-off switch and reduced-motion fallback. Edges carry static arrows; dots flow only along the selected task's edges (one dot on prerequisites, two on dependents, matching solid and dashed lines). When records change, only changed cards animate: a moved card slides from its previous place (240ms), then a status change recolors its bar with a brief outline. A newly needed decision or block gets one 400ms emphasis and a '새' badge until it is opened. Motion never runs on a loop for unselected edges and stops entirely with motion off or reduced motion. The server exits when its launching process goes away; `--no-parent-watch` keeps it running for manual use.
+
+While the dashboard runs and AI summary is on, the mod sends Haiku the run's task records and a digest of the last 30 session messages (message text clipped, tool names and targets; no tool output) at most every 20 seconds after new activity, then posts the reply to `/api/session`. The server keeps only headline, activity sentence, stage labels/kinds/notes, stage order and references to existing task IDs. Unknown IDs and any status field are dropped. The page labels this layer "AI 요약 · 기록 아님" with its time and token count. Turn it off in the pane. A reload or session end stops the server; reopen it from the pane. A remote surface cannot open the loopback link.

@@ -99,19 +99,33 @@ class PluginDistributionTests(unittest.TestCase):
             "scripts/loop_workspace.py", "tests/test_loop_workspace.py",
             "references/environment.md", "scripts/loop_control.py", "scripts/render_report.py",
             "tests/test_loop_control.py", "tests/test_render_report.py", "tests/test_project_scenario.py",
+            "scripts/serve_dashboard.py", "tests/test_serve_dashboard.py",
+        }
+        claude_mod = {
+            "claude-mod/hooks.json", "claude-mod/register.tsx", "claude-mod/board.test.tsx",
+            "claude-mod/types/index.d.ts",
         }
         self.assertEqual(expected, set(tree_files(source)))
         self.assertEqual(tree_files(source), tree_files(mirror))
         self.assertEqual(
-            {".codex-plugin/plugin.json", ".claude-plugin/plugin.json"} | {f"skills/guided-execution/{path}" for path in expected},
+            {".codex-plugin/plugin.json", ".claude-plugin/plugin.json"} | claude_mod
+            | {f"skills/guided-execution/{path}" for path in expected},
             set(tree_files(plugin)),
         )
         self.assertIn("guided-execution", load_module().PACKAGES)
         manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
-        self.assertEqual("0.2.3", manifest["version"])
+        self.assertEqual("0.3.0", manifest["version"])
         self.assertEqual("./skills/", manifest["skills"])
         for key in ("mcpServers", "apps", "hooks"):
             self.assertNotIn(key, manifest)
+        # Codex discovers hooks/hooks.json; the Claude mod lives elsewhere and only the Claude manifest names it.
+        self.assertFalse((plugin / "hooks").exists())
+        claude = json.loads((plugin / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+        self.assertEqual("0.3.0", claude["version"])
+        self.assertEqual("./claude-mod/hooks.json", claude["hooks"])
+        self.assertEqual("./claude-mod/types/index.d.ts", claude["types"])
+        self.assertEqual({"modules": ["./register.tsx"]},
+                         json.loads((plugin / "claude-mod/hooks.json").read_text(encoding="utf-8")))
         description = (source / "SKILL.md").read_text(encoding="utf-8").split("description: ", 1)[1].splitlines()[0]
         self.assertEqual(description, manifest["description"])
         self.assertEqual(description, manifest["interface"]["longDescription"])

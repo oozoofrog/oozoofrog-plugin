@@ -36,3 +36,7 @@
 - [W3C: Pause, Stop, Hide](https://www.w3.org/WAI/WCAG20/Understanding/pause-stop-hide.html)
 - 적용: 명시적인 모션 끄기, 시스템 prefers-reduced-motion 우선, 정지해도 보이는 노드·상태·기본 경로, 명확한 초점 표시를 유지합니다.
 - 이 지침과 정적 검사는 전체 WCAG 준수 인증이나 실제 보조기술 검증을 대신하지 않습니다.
+
+## 모션 파이프라인 후속 자료
+
+실시간 대시보드의 모션 개선을 위한 연구·디자인 체계·제품 사례·구현 기법은 [온톨로지 파이프라인 모션 참고 자료](guided-execution-motion-references.md)에 정리했습니다.

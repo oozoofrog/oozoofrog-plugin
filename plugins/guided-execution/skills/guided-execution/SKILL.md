@@ -55,4 +55,6 @@ Verify overall acceptance, relevant integration, workspace identity, and current
 
 When a visual summary helps, use `render_report.py` for an offline, read-only ontology graph pipeline outside the run directory. Keep labels short and details collapsed; distinguish planned relations from recorded evidence and omit agent assignments not present in the records. Motion is explicitly presentational, with a motion-off control and reduced-motion fallback; it must not imply real events or change state values. Review it before sharing; it is recorded status, not live control or proof of product success.
 
+In Claude Code, the Plugin's mod shows the current run beside the chat and can start `serve_dashboard.py`, a token-protected loopback live view; see [live board](references/workspace.md#live-board). Its Haiku summary only groups and labels tasks; statuses always come from the records.
+
 Record reusable lessons only with evidence, project/version scope, and a revision/removal condition; apply valid lessons during the next related run as described in environment.md. Do not promote a one-off preference into global instructions or silently rewrite this skill.

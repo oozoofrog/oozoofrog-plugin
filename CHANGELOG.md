@@ -20,6 +20,14 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## Guided Execution [0.3.0] — 2026-11-11
+
+- Add a read-only Claude Code mod to the Claude manifest (`claude-mod/`): a `guided-board` side pane with list (task → checks, attempts, readiness, pending decisions, block reasons) and relation views, a one-line progress band above the prompt, and `/guided-board`. It polls `.agent-loop/<run>/` and keeps the last good board on a mismatched read. The Codex manifest is unchanged.
+- Add `serve_dashboard.py`: a token- and Host-checked `127.0.0.1` live dashboard that re-validates the run on every request, never writes it, and exits with its launching process. It draws a motion pipeline (stage, task, check, decision gate) whose colors come only from records, with motion-off and reduced-motion fallbacks.
+- Lead the dashboard with what needs the person: pending decisions with their questions, blocked reasons, failed or exhausted work, running and ready tasks. Select a task by click, Enter/Space or those lists to see its checks, gates, prerequisites and dependents with neighbors highlighted and a `#task=` link; Escape clears. Add a progress bar, two-line card titles, glyphs beside every status color, fit-to-width layout and a stacked narrow layout. Replace sentences that explained the page and the pane with structure and state: the detail panel exists only while a task is selected and returns focus on close, a waiting AI layer is one status line, and list overflow is a `+n개 더` button.
+- Rework dashboard motion from the collected references: static arrows on every edge and flowing dots only on the selected task's edges (one dot for prerequisites, two for dependents, matched by solid and dashed lines); staged 240ms transitions for changed cards only (move, then status with a brief outline); one 400ms emphasis plus a '새' badge for newly needed decisions or blocks. Reduced motion and the motion switch keep every static cue.
+- While the dashboard runs, the mod can ask Haiku to group and label tasks from the records and a clipped session digest (no tool output). The server keeps labels, order and known task references only, and the page marks the layer as an AI summary, not a record. It can be switched off in the pane.
+
 ## Guided Execution [0.2.3] — 2026-11-10
 
 - Record effective project tools, host limits and scoped preference/lesson reuse. Add explicit state transitions and offline read-only HTML reports while retaining existing commands and schema 1.
