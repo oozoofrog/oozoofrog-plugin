@@ -13,6 +13,31 @@ export type BoardTask = {
   blockReason?: string
   checks: BoardCheck[]
   isRetried: boolean
+  reads: string[]
+  writes: string[]
+  startedAt?: number
+  lastRecord?: string
+}
+
+export type ActivityPhase = 'running' | 'ok' | 'error'
+
+/** One observed tool call: session activity, never a record. */
+export type ActivityEvent = {
+  id: string
+  task: string
+  tool: string
+  target: string
+  phase: ActivityPhase
+  startedAt: number
+  endedAt?: number
+  agent?: string
+  via: string
+}
+
+export type Activity = {
+  events: ActivityEvent[]
+  counts: Record<string, { calls: number; errors: number }>
+  now: number
 }
 
 export type BoardDecision = {
@@ -62,6 +87,7 @@ declare module 'claude-code' {
       ai: Shaped<AiState>
       pinnedRun: Shaped<string>
       autoOpenedRun: Shaped<string>
+      activity: Shaped<Activity>
     }
   }
 }

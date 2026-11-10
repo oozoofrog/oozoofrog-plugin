@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { parseSummary, relationRows, summaryLine, toBoard } from './register'
+import { SESSION, attribute, liveRows, parseSummary, relationRows, summaryLine, targetOf, toBoard } from './register'
 
 const PLAN = {
   schema_version: 1,
@@ -168,5 +168,70 @@ test('the dashboard press starts the server, opens it, and sends a Haiku summary
   await ui.press({ key: 'ai-toggle' })
   await clock.advance(30_000)
   expect(posted.length).toBe(1)
+  await ui.unmount()
+})
+
+const RUNNING = {
+  ...STATE,
+  tasks: {
+    export: { status: 'passed', attempts: 2, evidence: [{ check_id: 'behavior', result: 'passed' }] },
+    usage: { status: 'running', attempts: 1, evidence: [], running_revision: 'r1' },
+  },
+  decisions: { format: { status: 'resolved', outcome: 'answered', answer: 'json' } },
+  history: [...STATE.history, { action: 'start', task: 'usage', timestamp: '1970-01-01T00:16:00Z',
+    previous_tasks: { usage: { status: 'pending', attempts: 0 } } }],
+}
+const PLAN_SCOPES = {
+  ...PLAN,
+  tasks: PLAN.tasks.map(t => ({ ...t, reads: ['src'], writes: [t.id === 'export' ? 'src/export.py' : 'README.md'] })),
+}
+
+test('tool calls go to the named, the only running, or the one in-scope task; else the session', async () => {
+  const one = toBoard('notes', '/p/.agent-loop/notes', JSON.stringify(PLAN_SCOPES), JSON.stringify(RUNNING), 0)
+  const none = new Map<string, string>()
+  expect(attribute('Read', { file_path: '/p/x' }, one, '/p', none)).toEqual({ task: 'usage', via: 'running' })
+  expect(attribute('Bash', { command: 'python3 s/loop_control.py finish --workspace .agent-loop/notes --task export' }, one, '/p', none))
+    .toEqual({ task: 'export', via: 'command' })
+  expect(attribute('Bash', { command: 'python3 loop_control.py start --workspace .agent-loop/other --task export' }, one, '/p', none).task)
+    .toBe('usage')
+  const both = { ...one, tasks: one.tasks.map(t => ({ ...t, status: 'running' })) }
+  expect(attribute('Edit', { file_path: '/p/src/export.py' }, both, '/p', none)).toEqual({ task: 'export', via: 'scope' })
+  expect(attribute('Edit', { file_path: '/p/README.md' }, both, '/p', none)).toEqual({ task: 'usage', via: 'scope' })
+  expect(attribute('Read', { file_path: '/p/src/other.py' }, both, '/p', none)).toEqual({ task: SESSION, via: 'ambiguous' })
+  expect(attribute('Read', { file_path: '/p/src/other.py' }, both, '/p', new Map([['ag1', 'export']]), 'ag1'))
+    .toEqual({ task: 'export', via: 'agent' })
+  const idle = { ...one, tasks: one.tasks.map(t => ({ ...t, status: 'pending' })) }
+  expect(attribute('Grep', { pattern: 'x' }, idle, '/p', none)).toEqual({ task: SESSION, via: 'idle' })
+  expect(targetOf('Read', { file_path: '/p/src/a.ts' }, '/p')).toBe('src/a.ts')
+  expect(targetOf('Bash', { command: 'rm -rf x', description: '정리' }, '/p')).toBe('정리')
+})
+
+test('records give a running node its start time and last transition', async () => {
+  const b = toBoard('notes', '/x', JSON.stringify(PLAN_SCOPES), JSON.stringify(RUNNING), 0)
+  const usage = b.tasks[1]!
+  expect(usage.startedAt).toBe(960_000)
+  expect(usage.lastRecord).toBe('시작')
+  expect(usage.writes).toEqual(['README.md'])
+  const rows = liveRows(usage, { now: 1_000_000, counts: { usage: { calls: 2, errors: 1 } }, events: [
+    { id: 'a', task: 'usage', tool: 'Read', target: 'README.md', phase: 'ok', startedAt: 990_000, endedAt: 990_300, via: 'running' },
+    { id: 'b', task: 'usage', tool: 'Bash', target: '테스트', phase: 'error', startedAt: 991_000, endedAt: 993_000, via: 'running' },
+    { id: 'c', task: 'usage', tool: 'Grep', target: 'TODO', phase: 'running', startedAt: 998_000, via: 'running' },
+  ] }).map(r => r.text)
+  expect(rows).toEqual(['◌ Grep TODO · 2.0s', '✗ Bash 테스트 · 2.0s', '● Read README.md · 0.3s', '경과 00:40 · 도구 2 · 오류 1 · 기록: 시작'])
+})
+
+test('an observed tool call runs unchanged and shows on its task in the pane and band', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000_000 })
+  engine(on, RUNNING)
+  const ran: unknown[] = []
+  on('tool.call', (_, e) => { ran.push(e); return { result: { ok: true } } as never })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  const result = await $.tool.call({ tool: 'Read', file_path: '/p/README.md' } as never)
+  expect(ran.length).toBe(1)
+  expect('result' in result).toBe(true)
+  await clock.advance(2_000)
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await ui.find({ type: 'Text', text: /● Read README.md/ })).toBeTruthy()
+  expect(await ui.find({ type: 'Text', text: /경과 00:42 · 도구 1/ })).toBeTruthy()
   await ui.unmount()
 })

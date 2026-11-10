@@ -1,7 +1,9 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { AiState, Board, BoardCheck, BoardDecision, BoardTask, CheckResult, ServerState, View } from './types'
+import type {
+  Activity, ActivityEvent, AiState, Board, BoardCheck, BoardDecision, BoardTask, CheckResult, ServerState, View,
+} from './types'
 
 // Read-only view of guided-execution records (.agent-loop/<run>/plan.json + state.json).
 // loop_control.py stays the only writer; nothing here edits loop files.
@@ -21,6 +23,13 @@ const ai = atom({ plugin: 'guided-execution', key: 'ai' } as const, { isEnabled:
 })
 const pinnedRun = atom({ plugin: 'guided-execution', key: 'pinnedRun' } as const, '', { shape: 'pinned-1' })
 const autoOpenedRun = atom({ plugin: 'guided-execution', key: 'autoOpenedRun' } as const, '', { shape: 'opened-1' })
+const activity = atom({ plugin: 'guided-execution', key: 'activity' } as const,
+  { events: [], counts: {}, now: 0 } as Activity, { shape: 'activity-1' })
+
+/** Tool calls that belong to no running task land on this node. */
+export const SESSION = '__session'
+const MAX_EVENTS = 120
+const PANE_EVENTS = 40
 
 const GLYPH: Record<string, string> = {
   passed: '✓', running: '▶', failed: '✗', blocked: '⏸', stale: '↺', cancelled: '⊘', pending: '○',
@@ -61,10 +70,14 @@ export function toBoard(runId: string, workspace: string, planText: string, stat
     throw new Error('plan.json과 state.json의 작업 목록이 다릅니다')
   }
   const retried = new Set<string>()
+  const startedAt = new Map<string, number>()
+  const lastRecord = new Map<string, string>()
   for (const event of arr(state.history).map(obj)) {
-    if (event.action !== 'start') continue
+    const at = Date.parse(String(event.timestamp ?? ''))
     for (const [name, prev] of Object.entries(obj(event.previous_tasks))) {
-      if (obj(prev).status === 'failed') retried.add(name)
+      if (event.action === 'start' && obj(prev).status === 'failed') retried.add(name)
+      if (event.action === 'start' && name === event.task && !Number.isNaN(at)) startedAt.set(name, at)
+      lastRecord.set(name, recordLabel(event, name))
     }
   }
   const decisions: BoardDecision[] = arr(plan.decisions).map(obj).map(d => {
@@ -90,6 +103,9 @@ export function toBoard(runId: string, workspace: string, planText: string, stat
       dependsOn: strs(t.depends_on), decisionIds: strs(t.decision_ids),
       ...(typeof s.block_reason === 'string' && s.block_reason ? { blockReason: s.block_reason } : {}),
       checks, isRetried: retried.has(String(t.id)),
+      reads: strs(t.reads), writes: strs(t.writes),
+      ...(status === 'running' && startedAt.has(String(t.id)) ? { startedAt: startedAt.get(String(t.id)) } : {}),
+      ...(lastRecord.has(String(t.id)) ? { lastRecord: lastRecord.get(String(t.id)) } : {}),
     }
   })
   const byId = new Map(tasks.map(t => [t.id, t]))
@@ -104,14 +120,80 @@ export function toBoard(runId: string, workspace: string, planText: string, stat
   }
 }
 
+const ACTION: Record<string, string> = {
+  start: '시작', 'set-revision': '리비전 갱신', 'record-check': '검증 기록', finish: '종료',
+  invalidate: '무효화', block: '차단', cancel: '취소',
+}
+
+function recordLabel(event: Json, name: string): string {
+  const action = String(event.action ?? '')
+  if (event.task !== name) return `${clip(String(event.task ?? ''), 24)}에서 무효화`
+  const record = obj(event.record)
+  if (action === 'record-check') return `검증 ${clip(String(record.check_id ?? ''), 24)} ${label(String(record.result ?? ''))}`
+  return ACTION[action] ?? action
+}
+
+const elapsed = (ms: number) => {
+  const total = Math.max(0, Math.floor(ms / 1000))
+  const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), sec = total % 60
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return h ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`
+}
+
+const inScope = (path: string, scope: string) => scope === '.' || path === scope || path.startsWith(scope + '/')
+
+/** Short, project-relative description of what a tool call works on. */
+export function targetOf(tool: string, input: Record<string, unknown>, root: string): string {
+  const pick = input.file_path ?? input.notebook_path ?? input.path ?? input.pattern ?? input.url ??
+    input.description ?? input.command ?? input.prompt ?? Object.values(input).find(v => typeof v === 'string') ?? ''
+  const text = String(pick)
+  const relative = root && text.startsWith(root + '/') ? text.slice(root.length + 1) : text
+  return clip(tool === 'Bash' && typeof input.description === 'string' ? input.description : relative, 120)
+}
+
+/**
+ * Which task a tool call belongs to. An explicit `loop_control.py … --task id`, then a subagent
+ * already tied to a task, then the only running task, then a file inside exactly one running
+ * task's write (then read) scope; everything else is session activity.
+ */
+export function attribute(
+  tool: string, input: Record<string, unknown>, b: Board | null, root: string,
+  agentTasks: ReadonlyMap<string, string>, agentId?: string,
+): { task: string; via: string } {
+  if (!b) return { task: SESSION, via: 'none' }
+  const ids = new Set(b.tasks.map(t => t.id))
+  const command = typeof input.command === 'string' ? input.command : ''
+  const named = /loop_control\.py\b[^\n]*--task[ =]([a-z0-9][a-z0-9_-]{0,63})/.exec(command)?.[1]
+  if (named && ids.has(named) && (!command.includes('.agent-loop/') || command.includes(`.agent-loop/${b.runId}`))) {
+    return { task: named, via: 'command' }
+  }
+  if (agentId && agentTasks.has(agentId) && ids.has(agentTasks.get(agentId)!)) {
+    return { task: agentTasks.get(agentId)!, via: 'agent' }
+  }
+  const running = b.tasks.filter(t => t.status === 'running')
+  if (running.length === 1) return { task: running[0]!.id, via: 'running' }
+  if (running.length > 1) {
+    const raw = String(input.file_path ?? input.notebook_path ?? input.path ?? '')
+    const path = root && raw.startsWith(root + '/') ? raw.slice(root.length + 1) : raw
+    if (path) {
+      for (const key of ['writes', 'reads'] as const) {
+        const hits = running.filter(t => t[key].some(scope => inScope(path, scope)))
+        if (hits.length === 1) return { task: hits[0]!.id, via: 'scope' }
+      }
+    }
+  }
+  return { task: SESSION, via: running.length ? 'ambiguous' : 'idle' }
+}
+
 /** One line for the band: progress, what runs, what waits on the person. */
-export function summaryLine(b: Board): string {
+export function summaryLine(b: Board, events?: readonly ActivityEvent[]): string {
   const passed = b.tasks.filter(t => t.status === 'passed').length
   const running = b.tasks.filter(t => t.status === 'running').map(t => t.title)
   const waiting = b.decisions.filter(d => d.status === 'pending').length
   const blocked = b.tasks.filter(t => t.status === 'blocked').length
   const parts = [`${b.runId}`, `통과 ${passed}/${b.tasks.length}`]
-  if (running.length) parts.push(`진행: ${clip(running.join(', '), 40)}`)
+  const now = events?.findLast(e => e.phase === 'running' && e.task !== SESSION)
+  if (running.length) parts.push(`진행: ${clip(running.join(', '), 40)}${now ? ` (${now.tool} ${clip(now.target, 24)})` : ''}`)
   else if (b.ready.length) parts.push(`다음: ${clip(b.tasks.find(t => t.id === b.ready[0])?.title, 32)}`)
   if (waiting) parts.push(`결정 대기 ${waiting}`)
   if (blocked) parts.push(`차단 ${blocked}`)
@@ -120,12 +202,14 @@ export function summaryLine(b: Board): string {
 }
 
 /** Relation view rows: prerequisites, decision gates, checks and recorded retries per task. */
-export function relationRows(b: Board): { text: string; color?: string; dim?: boolean }[] {
+export function relationRows(b: Board, act?: Activity): { text: string; color?: string; dim?: boolean }[] {
   const rows: { text: string; color?: string; dim?: boolean }[] = []
   const byDecision = new Map(b.decisions.map(d => [d.id, d]))
   for (const t of b.tasks) {
     const from = t.dependsOn.length ? `${t.dependsOn.join(' + ')} ──▶ ` : ''
-    rows.push({ text: `${from}${t.id}  [${label(t.status)}]`, color: tone(t.status) })
+    const calls = act?.counts[t.id]?.calls
+    const busy = act?.events.findLast(e => e.task === t.id && e.phase === 'running')
+    rows.push({ text: `${from}${t.id}  [${label(t.status)}]${calls ? ` · 도구 ${calls}` : ''}${busy ? ` · ◌ ${busy.tool}` : ''}`, color: tone(t.status) })
     for (const d of t.decisionIds) {
       const dec = byDecision.get(d)
       const state = dec?.status === 'resolved' ? label(dec.outcome ?? 'resolved') : '대기'
@@ -136,6 +220,31 @@ export function relationRows(b: Board): { text: string; color?: string; dim?: bo
     }
     if (t.isRetried) rows.push({ text: `   ↺ ${t.id} 실패 후 재시작 기록`, color: 'warning' })
   }
+  return rows
+}
+
+type Row = { text: string; color?: string; dim?: boolean }
+
+const seconds = (ms: number) => (ms < 10000 ? `${(ms / 1000).toFixed(1)}s` : elapsed(ms))
+
+/** A node's live lines: calls in flight, the latest finished calls, then totals and the last record. */
+export function liveRows(t: BoardTask | { id: string; status: string; startedAt?: number; lastRecord?: string },
+  act: Activity, max = 3): Row[] {
+  const mine = act.events.filter(e => e.task === t.id)
+  const rows: Row[] = mine.filter(e => e.phase === 'running').slice(-2).reverse().map(e => ({
+    text: `◌ ${e.tool} ${e.target} · ${seconds(act.now - e.startedAt)}${e.agent ? ' · 서브에이전트' : ''}`, color: 'suggestion',
+  }))
+  for (const e of mine.filter(x => x.phase !== 'running').slice(-max).reverse()) {
+    rows.push({ text: `${e.phase === 'error' ? '✗' : '●'} ${e.tool} ${e.target} · ${seconds((e.endedAt ?? e.startedAt) - e.startedAt)}`,
+      color: e.phase === 'error' ? 'error' : undefined, dim: e.phase !== 'error' })
+  }
+  const c = act.counts[t.id]
+  const facts = [
+    t.status === 'running' && t.startedAt ? `경과 ${elapsed(act.now - t.startedAt)}` : '',
+    c ? `도구 ${c.calls}${c.errors ? ` · 오류 ${c.errors}` : ''}` : '',
+    t.lastRecord ? `기록: ${t.lastRecord}` : '',
+  ].filter(Boolean)
+  if (facts.length) rows.push({ text: facts.join(' · '), dim: true })
   return rows
 }
 
@@ -172,6 +281,9 @@ export function parseSummary(text: string): Json | undefined {
 }
 
 // Module variables restart on every reload; durable values live in atoms.
+const agentTasks = new Map<string, string>()
+let posting = false
+let postAgain = false
 let lastKey = ''
 let live: { url: string; token: string; port: number; runId: string; stop: () => void } | undefined
 let isDirty = true
@@ -279,6 +391,7 @@ async function startServer($: EngineInterface) {
         live = { url, token: String(info.token), port: Number(info.port), runId, stop: () => void child.return(undefined as never).catch(() => undefined) }
         isDirty = true
         await update($, server, () => ({ phase: 'on', url, runId }))
+        void flushActivity($)
         // The Link in the pane stays usable when no opener is found.
         await openUrl($, url).catch(() => false)
       }
@@ -295,6 +408,45 @@ async function stopServer($: EngineInterface) {
   live?.stop()
   live = undefined
   await update($, server, () => ({ phase: 'off' }))
+}
+
+async function track($: EngineInterface, change: (events: ActivityEvent[]) => ActivityEvent[], counted?: ActivityEvent) {
+  const now = await $.clock.now()
+  await update($, activity, prev => {
+    const counts = { ...prev.counts }
+    if (counted) {
+      const c = counts[counted.task] ?? { calls: 0, errors: 0 }
+      counts[counted.task] = counted.phase === 'running' ? { ...c, calls: c.calls + 1 }
+        : counted.phase === 'error' ? { ...c, errors: c.errors + 1 } : c
+    }
+    return { events: change(prev.events).slice(-MAX_EVENTS), counts, now }
+  })
+  isDirty = true
+  void flushActivity($)
+}
+
+/** Send the latest activity to the running dashboard; one request at a time, coalescing bursts. */
+async function flushActivity($: EngineInterface) {
+  if (posting) { postAgain = true; return }
+  posting = true
+  try {
+    do {
+      postAgain = false
+      const target = live
+      if (!target) return
+      const { events } = await read($, activity)
+      if (!events.length) return
+      const body = JSON.stringify({ events: events.slice(-MAX_EVENTS).map(e => ({
+        id: e.id, task: e.task, tool: e.tool, target: e.target, phase: e.phase,
+        started_at: e.startedAt, ended_at: e.endedAt, agent: e.agent, via: e.via,
+      })) })
+      await $.http.fetch(`http://127.0.0.1:${target.port}/api/activity`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Board-Token': target.token }, body,
+      }).catch(() => undefined)
+    } while (postAgain)
+  } finally {
+    posting = false
+  }
 }
 
 async function summarize($: EngineInterface, force = false) {
@@ -344,7 +496,14 @@ export const register: Register = on => {
     await $.command.register({ name: 'guided-board', description: 'guided-execution 할 일 패널 열기' })
     await refresh($)
     $.clock.every(POLL_MS, () => {
-      void refresh($).then(() => summarize($))
+      void refresh($).then(async () => {
+        const b = await read($, board)
+        if (b?.tasks.some(t => t.status === 'running')) {
+          const now = await $.clock.now()
+          await update($, activity, prev => ({ ...prev, now }))
+        }
+        return summarize($)
+      })
     })
     return started
   })
@@ -354,6 +513,52 @@ export const register: Register = on => {
     await $.ui.open({ id: PANE, title: 'Guided 할 일' })
     const b = await read($, board)
     return { text: b ? summaryLine(b) : 'guided-execution 실행 기록 없음' }
+  })
+
+  // Observe only: every call runs unchanged; its metadata (tool, target, outcome) joins a node.
+  on('tool.call', async ($, e, next) => {
+    let event: ActivityEvent | undefined
+    try {
+      const b = await read($, board)
+      if (b && b.tasks.length && !b.isComplete) {
+        const root = await $.session.root()
+        const input = e as unknown as Record<string, unknown>
+        const owner = attribute(e.tool, input, b, root, agentTasks, e.agentId)
+        const startedAt = await $.clock.now()
+        event = {
+          id: e.tool_use_id ?? `${e.tool}-${startedAt}-${Math.random().toString(36).slice(2, 6)}`,
+          task: owner.task, via: owner.via, tool: e.tool, target: targetOf(e.tool, input, root),
+          phase: 'running', startedAt, ...(e.agentId ? { agent: e.agentId } : {}),
+        }
+        const added = event
+        await track($, events => [...events, added], added)
+      }
+    } catch { event = undefined }
+    const result = await next(e)
+    if (event) {
+      const id = event.id
+      const failed = 'deny' in result && result.deny !== undefined || ('isError' in result && result.isError === true)
+      const done = await $.clock.now().catch(() => Date.now())
+      const ended: ActivityEvent = { ...event, phase: failed ? 'error' : 'ok', endedAt: done }
+      await track($, events => events.map(x => (x.id === id ? ended : x)), failed ? ended : undefined).catch(() => undefined)
+    }
+    return result
+  })
+
+  // A subagent started while one task runs (or whose prompt names one running task) works for that task.
+  on('agent.spawn', async ($, e, next) => {
+    const result = await next(e)
+    try {
+      const agentId = 'agentId' in result ? result.agentId : undefined
+      const b = await read($, board)
+      if (agentId && b) {
+        const running = b.tasks.filter(t => t.status === 'running')
+        const named = running.filter(t => new RegExp(`(^|[^a-z0-9_-])${t.id}([^a-z0-9_-]|$)`).test(e.prompt))
+        const owner = running.length === 1 ? running[0] : named.length === 1 ? named[0] : undefined
+        if (owner) agentTasks.set(agentId, owner.id)
+      }
+    } catch { /* attribution is best effort */ }
+    return result
   })
 
   on('turn.complete', async ($, e, next) => {
@@ -368,7 +573,7 @@ export const register: Register = on => {
     return (
       <Box>
         <Text color="claude">▸ </Text>
-        <Text wrap="truncate-end">{summaryLine(b)} </Text>
+        <Text wrap="truncate-end">{summaryLine(b, (await read($, activity)).events)} </Text>
         <Button key="open-board" plain dimColor label="할 일 보기" onPress={() => void $.ui.open({ id: PANE, title: 'Guided 할 일' })} />
       </Box>
     )
@@ -380,6 +585,7 @@ export const register: Register = on => {
     const mode = await read($, view)
     const srv = await read($, server)
     const summary = await read($, ai)
+    const act = await read($, activity)
     if (!b) {
       return (
         <Box flexDirection="column">
@@ -431,12 +637,23 @@ export const register: Register = on => {
                   <Text key={`d-${t.id}-${d}`} color="warning" wrap="truncate-end">{'   '}⏸ 결정 대기: {d}</Text>
                 ))}
                 {t.blockReason ? <Text color="warning" wrap="truncate-end">{'   '}차단 사유: {t.blockReason}</Text> : null}
+                {liveRows(t, act, t.status === 'running' ? 3 : 1).map((row, i) => (
+                  <Text key={`l-${t.id}-${i}`} color={row.color} dimColor={row.dim} wrap="truncate-end">{'   '}{row.text}</Text>
+                ))}
               </Box>
             ))
-            : relationRows(b).map((row, i) => (
+            : relationRows(b, act).map((row, i) => (
               <Text key={`r-${i}`} color={row.color} dimColor={row.dim} wrap="truncate-end">{row.text}</Text>
             ))}
         </Box>
+        {act.events.some(e => e.task === SESSION) ? (
+          <Box flexDirection="column" marginTop={1}>
+            <Text dimColor>세션 · 작업 밖 활동</Text>
+            {liveRows({ id: SESSION, status: 'session' }, act, 2).map((row, i) => (
+              <Text key={`s-${i}`} color={row.color} dimColor={row.dim} wrap="truncate-end">{'   '}{row.text}</Text>
+            ))}
+          </Box>
+        ) : null}
         {b.otherRuns.length ? (
           <Box flexDirection="row" flexWrap="wrap" columnGap={1} marginTop={1}>
             <Text dimColor>다른 실행:</Text>

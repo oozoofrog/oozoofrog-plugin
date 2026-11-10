@@ -5,6 +5,8 @@ Binds 127.0.0.1 only and requires the per-process token printed on startup.
 Loop records are re-read on every request and never written. An optional AI
 summary (labels and grouping only) is accepted from the launching host and
 kept in memory; record statuses always come from the loop files.
+Tool-call activity (metadata only) is accepted the same way, kept in memory,
+and shown as session activity, never as a record.
 Exits when its launching parent process goes away (POSIX re-parenting).
 """
 import argparse
@@ -30,6 +32,10 @@ MAX_BODY = 64 * 1024
 MAX_STAGES = 12
 MAX_STAGE_EDGES = 24
 MAX_REFS = 40
+MAX_TIMELINE = 24
+MAX_ACTIVITY = 120
+ACTIVITY_PHASES = {'running', 'ok', 'error'}
+SESSION_NODE = '__session'
 STAGE_KINDS = {'plan', 'build', 'verify', 'decide', 'deliver', 'other'}
 
 
@@ -44,31 +50,63 @@ def clip(value, limit):
     return value[:limit] if value else None
 
 
+def timelines(state):
+    """Recorded transitions per task, oldest first. A finish's result is the status that the
+    next event touching the task saw before it, or the current status for the latest one."""
+    history = [event for event in state.get('history', []) if isinstance(event, dict)]
+    lines = {}
+    for index, event in enumerate(history):
+        origin = event.get('task')
+        for name in event.get('previous_tasks') or {}:
+            entry = dict(at=clip(event.get('timestamp'), 40), action=clip(event.get('action'), 30))
+            if name != origin:
+                entry.update(action='invalidated', by=origin)
+            elif event.get('action') == 'record-check' and isinstance(event.get('record'), dict):
+                entry.update(check=clip(event['record'].get('check_id'), 60),
+                             result=clip(event['record'].get('result'), 20))
+            elif event.get('action') == 'finish':
+                later = next((e['previous_tasks'][name] for e in history[index + 1:]
+                              if name in (e.get('previous_tasks') or {})), state['tasks'].get(name, {}))
+                entry['result'] = clip(later.get('status'), 20) if isinstance(later, dict) else None
+            if event.get('reason') and name == origin:
+                entry['reason'] = clip(event['reason'], 200)
+            lines.setdefault(name, []).append(entry)
+    return lines
+
+
 def snapshot(workspace):
     """One consistent read of the run: load_workspace rejects a mismatched plan/state pair."""
     validated, files, plan, state, warnings = load_workspace(workspace)
     validate_extra(validated, plan, state)
     summary = status(plan, state, warnings)
     graph = build_graph(plan, state)
+    lines = timelines(state)
     tasks = []
     for task in plan['tasks']:
         item = state['tasks'][task['id']]
-        results = {}
+        results, paths = {}, {}
         for record in item['evidence']:
             results.setdefault(record['check_id'], []).append(record['result'])
+            paths[record['check_id']] = record['path']
+        timeline = lines.get(task['id'], [])
+        starts = [entry['at'] for entry in timeline if entry['action'] == 'start']
         tasks.append(dict(
             id=task['id'], title=task['title'], status=item['status'],
             attempts=item['attempts'], max_attempts=task['max_attempts'],
             depends_on=task['depends_on'], decision_ids=task['decision_ids'],
+            reads=task['reads'], writes=task['writes'],
+            revision=item.get('running_revision') or item.get('verified_revision'),
+            started_at=starts[-1] if starts else None, timeline=timeline[-MAX_TIMELINE:],
             block_reason=item.get('block_reason') if isinstance(item.get('block_reason'), str) else None,
-            checks=[dict(id=check['id'], description=check.get('description', ''),
+            checks=[dict(id=check['id'], description=check.get('description', ''), evidence=paths.get(check['id']),
                          result=('stale' if item['status'] == 'stale' else
                                  'mixed' if len(results.get(check['id'], [])) > 1 else
                                  results[check['id']][0] if check['id'] in results else 'unrecorded'))
                     for check in task['checks']]))
     decisions = [dict(id=decision['id'], kind=decision['kind'], question=decision.get('question', ''),
                       status=state['decisions'][decision['id']]['status'],
-                      outcome=state['decisions'][decision['id']].get('outcome'))
+                      outcome=state['decisions'][decision['id']].get('outcome'),
+                      answer=clip(state['decisions'][decision['id']].get('answer'), 200))
                  for decision in plan.get('decisions', [])]
     fingerprint = hashlib.sha256(files['plan.json'] + b'\0' + files['state.json']).hexdigest()[:16]
     return dict(ok=True, run_id=state['run_id'], goal=plan.get('goal', ''), fingerprint=fingerprint,
@@ -109,11 +147,37 @@ def validate_summary(raw, task_ids):
                 received_at=now(), basis='ai_summary_not_a_record')
 
 
+def stamp(value):
+    return value if type(value) in (int, float) and 0 <= value < 1e14 else None
+
+
+def validate_activity(raw, task_ids):
+    """Keep bounded tool-call metadata attributed to known tasks or the session node."""
+    if not isinstance(raw, dict) or not isinstance(raw.get('events'), list):
+        raise ValueError('activity needs an events array')
+    events, seen = [], set()
+    for event in raw['events'][-MAX_ACTIVITY:]:
+        if not isinstance(event, dict):
+            continue
+        identifier, tool = clip(event.get('id'), 48), clip(event.get('tool'), 40)
+        task = event.get('task') if event.get('task') in task_ids else SESSION_NODE
+        started = stamp(event.get('started_at'))
+        if not identifier or not tool or identifier in seen or started is None \
+                or event.get('phase') not in ACTIVITY_PHASES:
+            continue
+        seen.add(identifier)
+        events.append(dict(id=identifier, task=task, tool=tool, target=clip(event.get('target'), 120),
+                           phase=event['phase'], started_at=started, ended_at=stamp(event.get('ended_at')),
+                           agent=clip(event.get('agent'), 48), via=clip(event.get('via'), 20)))
+    return dict(events=events, received_at=now(), basis='session_activity_not_a_record')
+
+
 class Board:
     def __init__(self, workspace):
         self.workspace = workspace
         self.token = secrets.token_urlsafe(24)
         self.summary = None
+        self.activity = None
         self.last_good = None
         self.lock = threading.Lock()
 
@@ -129,11 +193,21 @@ class Board:
             self.last_good = current
         return current
 
-    def accept_summary(self, raw):
+    def task_source(self):
         current = self.records()
         source = current if current.get('ok') else current.get('last_good')
         if not source:
             raise ValueError('no readable records to attach the summary to')
+        return source
+
+    def accept_activity(self, raw):
+        accepted = validate_activity(raw, {task['id'] for task in self.task_source()['tasks']})
+        with self.lock:
+            self.activity = accepted
+        return accepted
+
+    def accept_summary(self, raw):
+        source = self.task_source()
         accepted = validate_summary(raw, {task['id'] for task in source['tasks']})
         accepted['records_fingerprint'] = source['fingerprint']
         with self.lock:
@@ -188,7 +262,7 @@ def make_handler(board, port_holder):
                 return self.send_json(200, board.records())
             if path == '/api/session':
                 with board.lock:
-                    return self.send_json(200, dict(summary=board.summary))
+                    return self.send_json(200, dict(summary=board.summary, activity=board.activity))
             if path == '/report':
                 try:
                     validated, files, plan, state, warnings = load_workspace(board.workspace)
@@ -202,7 +276,8 @@ def make_handler(board, port_holder):
         def do_POST(self):
             if not self.allowed() or 'X-Board-Token' not in self.headers:
                 return self.send(403, 'forbidden', 'text/plain; charset=utf-8')
-            if urlsplit(self.path).path != '/api/session':
+            path = urlsplit(self.path).path
+            if path not in {'/api/session', '/api/activity'}:
                 return self.send(404, 'not found', 'text/plain; charset=utf-8')
             try:
                 length = int(self.headers.get('Content-Length', '0'))
@@ -211,7 +286,10 @@ def make_handler(board, port_holder):
             if not 0 < length <= MAX_BODY:
                 return self.send_json(413, dict(ok=False, error='body size'))
             try:
-                accepted = board.accept_summary(json.loads(self.rfile.read(length)))
+                raw = json.loads(self.rfile.read(length))
+                if path == '/api/activity':
+                    return self.send_json(200, dict(ok=True, events=len(board.accept_activity(raw)['events'])))
+                accepted = board.accept_summary(raw)
             except (ValueError, TypeError) as error:
                 return self.send_json(422, dict(ok=False, error=str(error)[:200]))
             return self.send_json(200, dict(ok=True, stages=len(accepted['stages'])))
@@ -282,157 +360,213 @@ PAGE = r'''<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Guided Board</title>
 <style>
-:root{--bg:#f5f6f8;--panel:#ffffff;--ink:#17202b;--sub:#5b6878;--line:#d8dee6;--edge:#9aa9bb;
---ok:#14825c;--bad:#c23a4d;--warn:#9a6300;--run:#2360c4;--muted:#76828f;--ai:#7448cc;--focus:#2360c4}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f141b;--panel:#18202a;--ink:#e8eef6;--sub:#9fadbd;--line:#2c3744;--edge:#5a6b80;
---ok:#4fd6a0;--bad:#ff8a9a;--warn:#f2c46b;--run:#8cc2ff;--muted:#8d99a8;--ai:#b99cff;--focus:#8cc2ff}}
-:root[data-theme="dark"]{--bg:#0f141b;--panel:#18202a;--ink:#e8eef6;--sub:#9fadbd;--line:#2c3744;--edge:#5a6b80;
---ok:#4fd6a0;--bad:#ff8a9a;--warn:#f2c46b;--run:#8cc2ff;--muted:#8d99a8;--ai:#b99cff;--focus:#8cc2ff}
+:root{--bg:#090c11;--grid:#18202b;--panel:#0f141b;--panel2:#141b24;--line:#243040;--line2:#33425a;--ink:#e6edf3;--sub:#8d9aab;--dim:#5d6a7c;
+--ok:#2be4a0;--bad:#ff3d7f;--warn:#ffc53d;--run:#22d3ee;--muted:#6b7787;--ai:#b388ff;--focus:#22d3ee;
+--mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;color-scheme:dark}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif}
+html,body{background:var(--bg)}
+body{margin:0;color:var(--ink);font:13px/1.45 system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif}
 h1,h2,h3,h4,p{margin:0}
+button,input{font:inherit;color:inherit}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.wrap{max-width:1440px;margin:0 auto;padding:0 16px 28px}
-.top{max-width:1440px;margin:0 auto;padding:18px 16px 12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 20px;align-items:start}
-h1{font-size:20px;letter-spacing:-.2px}
-#goal{margin-top:3px;color:var(--sub);max-width:80ch}
-.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end}
-.progress{grid-column:1/-1}
-.bar{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--line)}
-.bar span{display:block;height:100%}
-#counts{margin-top:6px;font-size:12px;color:var(--sub)}
-.pill{border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px;color:var(--sub);background:var(--panel)}
-.pill.live{color:var(--ok);border-color:currentColor}.pill.down{color:var(--bad);border-color:currentColor}.pill.warn{color:var(--warn);border-color:currentColor}
-button,.btn{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:5px 10px;cursor:pointer;text-decoration:none}
-button:hover,.btn:hover{border-color:var(--sub)}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-section h2,aside h2{font-size:13px;color:var(--sub);font-weight:700;letter-spacing:.2px;margin-bottom:8px}
-.attention{margin:4px 0 14px}
-#attention{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
-.att{width:100%;text-align:left;display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-size:13px}
-.att .g{grid-row:1/3;font-weight:700;font-size:15px;line-height:1.2}
-.att .k{font-size:11px;font-weight:700;letter-spacing:.3px}
-.att{position:relative}
-.att .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.more{font-size:12px;align-self:center;justify-self:start}
-.k-decide{border-left:4px solid var(--warn)}.k-decide .g,.k-decide .k{color:var(--warn)}
-.k-blocked{border-left:4px solid var(--warn)}.k-blocked .g,.k-blocked .k{color:var(--warn)}
-.k-failed{border-left:4px solid var(--bad)}.k-failed .g,.k-failed .k{color:var(--bad)}
-.k-running{border-left:4px solid var(--run)}.k-running .g,.k-running .k{color:var(--run)}
-.k-ready .g,.k-ready .k{color:var(--sub)}
-.k-done{border-left:4px solid var(--ok)}.k-done .g,.k-done .k{color:var(--ok)}
-.ai{border:1px dashed var(--ai);border-radius:12px;padding:10px 14px;margin:0 0 14px;background:color-mix(in srgb,var(--ai) 6%,var(--panel))}
-.ai-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px;color:var(--sub)}
-.ai-head h2{color:var(--ai);font-size:13px;margin:0}
-.ai.waiting{padding:8px 14px}
-#ai-headline{margin-top:4px;font-size:15px}
-#ai-activity{margin-top:2px;color:var(--sub);font-size:12px}
-.board{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}
-@media (min-width:1000px){.board.open{grid-template-columns:minmax(0,1fr) 340px}.detail{position:sticky;top:12px;margin-top:27px}}
-.canvas{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow-x:auto}
+.mono{font-family:var(--mono)}
+/* frame: corner brackets */
+.frame{position:relative;background:var(--panel);border:1px solid var(--line)}
+.frame::before,.frame::after{content:"";position:absolute;width:10px;height:10px;border-color:var(--run);border-style:solid;opacity:.7;pointer-events:none}
+.frame::before{top:-1px;left:-1px;border-width:1px 0 0 1px}
+.frame::after{bottom:-1px;right:-1px;border-width:0 1px 1px 0}
+/* header */
+.top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 18px;align-items:center;padding:12px 16px 10px;border-bottom:1px solid var(--line);
+background:linear-gradient(180deg,#0d131b,var(--bg))}
+.id{display:flex;gap:10px;align-items:baseline;min-width:0}
+.tag{font:700 10px/1 var(--mono);letter-spacing:.12em;color:var(--run);border:1px solid currentColor;padding:3px 6px;text-transform:uppercase;white-space:nowrap}
+h1{font:600 17px/1.2 var(--mono);letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#goal{color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.pill{font:600 11px/1 var(--mono);letter-spacing:.04em;border:1px solid var(--line2);padding:5px 8px;color:var(--sub);white-space:nowrap}
+.pill.live{color:var(--ok);border-color:currentColor}.pill.down{color:var(--bad);border-color:currentColor}.pill.warn{color:var(--warn);border-color:currentColor}
+.pill.live::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
+.btn{font:600 11px/1 var(--mono);letter-spacing:.04em;background:var(--panel2);border:1px solid var(--line2);padding:6px 9px;cursor:pointer;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:var(--run);color:var(--run)}
+.progress{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}
+.bar{display:flex;height:4px;background:var(--line);overflow:hidden}
+.bar span{display:block;height:100%}
+#counts{font:11px/1 var(--mono);color:var(--sub);white-space:nowrap}
+/* shell */
+.shell{display:grid;grid-template-columns:270px minmax(0,1fr);gap:0;min-height:calc(100vh - 92px)}
+.shell.open{grid-template-columns:270px minmax(0,1fr) 360px}
+.rail{border-right:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.rail h2,.detail h4,.lanes h2,.stage h2{font:700 10px/1 var(--mono);letter-spacing:.14em;color:var(--sub);text-transform:uppercase;margin-bottom:8px}
+#attention{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.att{width:100%;text-align:left;display:grid;grid-template-columns:18px minmax(0,1fr);gap:1px 8px;padding:7px 9px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--muted);cursor:pointer;position:relative}
+.att .g{grid-row:1/3;font:700 13px/1.3 var(--mono)}
+.att .k{font:700 10px/1.3 var(--mono);letter-spacing:.08em}
+.att .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.att .new{position:absolute;top:6px;right:7px;font:700 9px/1 var(--mono);padding:2px 4px;border:1px solid currentColor}
+.att.fresh .t{padding-right:24px}
+.k-decide,.k-blocked{border-left-color:var(--warn);color:var(--warn)}.k-failed{border-left-color:var(--bad);color:var(--bad)}
+.k-running{border-left-color:var(--run);color:var(--run)}.k-ready{color:var(--sub)}.k-done{border-left-color:var(--ok);color:var(--ok)}
+.more{font:11px var(--mono)}
+.types{display:grid;gap:4px}
+.type{display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:8px;padding:5px 8px;background:transparent;border:1px solid transparent;cursor:pointer;text-align:left}
+.type:hover{border-color:var(--line2)}
+.type[aria-pressed="true"]{border-color:var(--run);background:color-mix(in srgb,var(--run) 8%,transparent)}
+.type .n{font:600 11px var(--mono);color:var(--sub)}
+.type svg{display:block}
+#search{width:100%;background:var(--panel);border:1px solid var(--line2);padding:7px 9px;font:12px var(--mono)}
+#search::placeholder{color:var(--dim)}
+details.all summary{cursor:pointer;font:700 10px/1 var(--mono);letter-spacing:.14em;color:var(--sub);text-transform:uppercase}
+#list{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:2px}
+#list button{width:100%;text-align:left;background:none;border:1px solid transparent;padding:4px 6px;cursor:pointer;font-size:12px}
+#list button[aria-pressed="true"]{border-color:var(--run)}
+/* stage */
+.stage{min-width:0;display:flex;flex-direction:column}
+.ai{display:flex;gap:10px;align-items:baseline;padding:8px 14px;border-bottom:1px dashed color-mix(in srgb,var(--ai) 50%,transparent);font-size:12px;min-width:0}
+.ai .tag{color:var(--ai)}
+#ai-headline{color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+#ai-meta{font:11px var(--mono);color:var(--sub);white-space:nowrap}
+.canvas{flex:1;overflow:auto;background-color:var(--bg);
+background-image:radial-gradient(circle,var(--grid) 1px,transparent 1.2px);background-size:22px 22px;min-height:360px;position:relative}
+.canvas::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 1px,transparent 1px 3px)}
 svg{display:block}
-.detail{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
-.detail h3{font-size:16px;line-height:1.35}
-.detail h4{font-size:12px;color:var(--sub);margin:14px 0 6px;font-weight:700}
-.detail ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
-.detail .meta{margin-top:4px;color:var(--sub);font-size:12px}
-.detail .row{display:grid;grid-template-columns:auto minmax(0,1fr);gap:0 8px;font-size:13px}
-.detail .row small{grid-column:2;color:var(--sub);font-size:12px}
-.detail .link{width:100%;text-align:left;font-size:13px}
-.detail .note{margin-top:10px;padding:8px 10px;border-radius:8px;border:1px solid var(--warn);color:var(--warn);font-size:13px}
-.detail-head{display:flex;justify-content:space-between;gap:8px;align-items:center}
-.muted{color:var(--sub)}
-details.all{margin-top:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 14px}
-details.all summary{cursor:pointer;font-weight:600}
-#list{margin:8px 0 4px;padding:0;list-style:none;display:grid;gap:4px}
-#list button{width:100%;text-align:left;border-color:transparent;font-size:13px}
-#list button[aria-pressed="true"]{border-color:var(--focus);border-style:dashed}
-.s-passed,.s-approved,.s-answered{color:var(--ok)}.s-failed,.s-rejected,.s-mixed{color:var(--bad)}
+.empty{padding:28px 18px;color:var(--sub);font-family:var(--mono)}
+/* graph */
+.node{cursor:pointer;outline:none}
+.node .core{fill:var(--panel2);stroke:var(--line2);stroke-width:1.5}
+.node .glyph{font:700 15px var(--mono);text-anchor:middle;dominant-baseline:central}
+.node .halo{fill:none;stroke:var(--focus);stroke-width:1.5;opacity:0}
+.node.selected .halo{opacity:1}
+.node:focus-visible .core{stroke:var(--focus);stroke-width:2.5}
+.node:hover .core{stroke:var(--sub)}
+.node .track{fill:none;stroke:var(--line);stroke-width:3}
+.node .seg{fill:none;stroke-width:3}
+.node .spin{fill:none;stroke:var(--run);stroke-width:1.2;stroke-dasharray:4 7;opacity:.9;transform-box:fill-box;transform-origin:center}
+.node.st-running .core{stroke:var(--run);filter:url(#glow)}
+.node .title{fill:var(--ink);font-size:12px;font-weight:600;text-anchor:middle}
+.node .meta{fill:var(--sub);font:10.5px var(--mono);text-anchor:middle}
+.node .live{fill:var(--run);font:10.5px var(--mono);text-anchor:middle}
+.node .live.idle{fill:var(--dim)}
+.node .badge rect{fill:var(--bg);stroke:var(--run);stroke-width:1}
+.node .badge text{fill:var(--run);font:700 9.5px var(--mono);text-anchor:middle;dominant-baseline:central}
+.node .badge.err rect{stroke:var(--bad)}.node .badge.err text{fill:var(--bad)}
+.hub .core{fill:color-mix(in srgb,var(--run) 10%,var(--panel2));stroke:var(--run);stroke-width:1.5}
+.hub .glyph{fill:var(--run);font-size:11px;letter-spacing:.08em}
+.gate polygon{fill:var(--panel2);stroke:var(--warn);stroke-width:1.5}
+.gate.ok polygon{stroke:var(--ok)}
+.gate text{font:700 11px var(--mono);text-anchor:middle;dominant-baseline:central;fill:var(--warn)}
+.gate.ok text{fill:var(--ok)}
+.gate .label{fill:var(--sub);font:10px var(--mono)}
+.colhead text{fill:var(--dim);font:700 10px var(--mono);letter-spacing:.12em}
+.colhead.ai text{fill:var(--ai)}
+.colhead line{stroke:var(--line);stroke-dasharray:2 4}
+.colhead.ai line{stroke:color-mix(in srgb,var(--ai) 60%,transparent)}
+.link{fill:none;stroke:var(--line2);stroke-width:1.3;transition:opacity .2s,stroke .2s}
+.link.dep{marker-end:url(#arrow)}
+.link.gate-link{stroke:var(--warn);stroke-dasharray:2 4;opacity:.55}
+.link.act{stroke:var(--run);stroke-dasharray:1 6;stroke-linecap:round;opacity:.55}
+.link.stage{stroke:var(--ai);stroke-dasharray:6 5;opacity:.5}
+.link.hot{stroke:var(--focus);stroke-width:2;opacity:1;marker-end:url(#arrow-hot)}
+.link.hot.out{stroke-dasharray:7 4}
+.motion .link.hot{animation:march 1.2s linear infinite}
+.motion .link.act{animation:march 2.4s linear infinite}
+.motion .node.st-running .spin{animation:spin 6s linear infinite}
+.linklabel{fill:var(--focus);font:10px var(--mono);text-anchor:middle;opacity:0}
+.has-sel .linklabel.hot{opacity:1}
+.has-sel .node:not(.selected):not(.near),.dimmed{opacity:.28}
+.has-sel .link.dep:not(.hot),.has-sel .link.gate-link{opacity:.15}
+.packet{fill:var(--run);filter:url(#glow)}
+.packet.err{fill:var(--bad)}
+.ping{fill:none;stroke:var(--run);stroke-width:2}
+.ping.err{stroke:var(--bad)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes march{to{stroke-dashoffset:-22}}
+@media (prefers-reduced-motion:reduce){.motion .link.hot,.motion .link.act,.motion .node.st-running .spin{animation:none}}
+/* lanes */
+.lanes{border-top:1px solid var(--line);padding:10px 14px 12px}
+.lanes-head{display:flex;justify-content:space-between;align-items:baseline}
+.lanes-head span{font:10px var(--mono);color:var(--dim)}
+#lanes{display:grid;gap:3px}
+.lane{display:grid;grid-template-columns:160px minmax(0,1fr);gap:8px;align-items:center;cursor:pointer;background:none;border:0;padding:0;text-align:left}
+.lane .name{font:11px var(--mono);color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lane .track{position:relative;height:12px;background:color-mix(in srgb,var(--line) 45%,transparent)}
+.lane .ev{position:absolute;top:2px;height:8px;min-width:3px;background:var(--ok);opacity:.8}
+.lane .ev.error{background:var(--bad);opacity:1}
+.lane .ev.running{background:var(--run);opacity:1;box-shadow:0 0 6px var(--run)}
+.lane.sel .name{color:var(--run)}
+/* detail */
+.detail{border-left:1px solid var(--line);padding:12px 14px;min-width:0;overflow:auto;max-height:calc(100vh - 92px);position:sticky;top:0}
+.detail-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.detail h3{font-size:15px;line-height:1.35;margin:6px 0 2px}
+.detail .sub{font:11px var(--mono);color:var(--sub)}
+.detail h4{margin:16px 0 6px}
+.props{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;font-size:12px}
+.props dt{font:11px var(--mono);color:var(--dim)}
+.props dd{margin:0;overflow-wrap:anywhere}
+.detail ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.row{display:grid;grid-template-columns:auto minmax(0,1fr);gap:0 8px;font-size:12px}
+.row small{grid-column:2;color:var(--sub);font:10.5px var(--mono);overflow-wrap:anywhere}
+.row .when{font:10.5px var(--mono);color:var(--dim)}
+.detail .link-btn{width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);padding:5px 8px;cursor:pointer;font-size:12px}
+.detail .link-btn:hover{border-color:var(--run)}
+.answer{margin-top:8px;padding:7px 9px;border-left:2px solid var(--ok);font-size:13px}
+details.story{margin-top:16px}
+details.story summary{cursor:pointer;font:700 10px/1 var(--mono);letter-spacing:.14em;color:var(--sub);text-transform:uppercase}
+details.story ul{margin-top:8px}
+.note{margin-top:10px;padding:7px 9px;border:1px solid var(--warn);color:var(--warn);font-size:12px}
+.s-passed,.s-approved,.s-answered,.s-ok{color:var(--ok)}.s-failed,.s-rejected,.s-mixed,.s-error{color:var(--bad)}
 .s-blocked,.s-stale,.s-revision_requested,.s-pending-decision{color:var(--warn)}.s-running{color:var(--run)}
 .s-pending,.s-cancelled,.s-unrecorded,.s-not_run{color:var(--muted)}
-/* SVG */
-.card{cursor:pointer;outline:none}
-.card:hover rect.body{stroke:var(--sub)}
-.card rect.body{fill:var(--panel);stroke:var(--line);stroke-width:1.2}
-.card.st-running rect.body{stroke:var(--run);stroke-width:2}
-.card .ring{fill:none;stroke:var(--focus);stroke-width:2;stroke-dasharray:6 4;opacity:0}
-.card.selected .ring{opacity:1}
-.card:focus-visible rect.body{stroke:var(--focus);stroke-width:2.5}
-.card text{fill:var(--ink);font-size:13px;font-weight:600}
-.card text.sub{font-size:11px;font-weight:600}
-.card text.dim{fill:var(--sub);font-weight:500}
-.chip text{font-size:10px;font-weight:700;fill:var(--bg)}
-.gate polygon{stroke:var(--warn);stroke-width:1.4;fill:var(--panel)}
-.gate text{font-size:10px;font-weight:800;fill:var(--warn)}
-.gate.ok polygon{stroke:var(--ok)}.gate.ok text{fill:var(--ok)}
-.col-head rect{fill:var(--panel);stroke:var(--line)}
-.col-head.ai rect{stroke:var(--ai);stroke-dasharray:5 4;fill:color-mix(in srgb,var(--ai) 7%,var(--panel))}
-.col-head text{fill:var(--sub);font-size:12px;font-weight:700}
-.col-head.ai text{fill:var(--ai)}
-.col-head text.note{font-weight:500;font-size:11px}
-.edge{fill:none;stroke:var(--edge);stroke-width:1.5;transition:opacity .2s}
-.edge.stage{stroke:var(--ai);stroke-dasharray:6 5;opacity:.75}
-.edge.dep{marker-end:url(#arrow)}
-.edge.hot{stroke:var(--focus);stroke-width:2.5;marker-end:url(#arrow-hot)}
-.edge.hot.out{stroke-dasharray:8 4}
-.flow{fill:none;stroke:var(--focus);stroke-width:3;stroke-linecap:round;opacity:0}
-.flow.in{stroke-dasharray:3 997}
-.flow.out{stroke-dasharray:3 9 3 985}
-.motion .flow.hot{opacity:.9;animation:packet 3.2s linear infinite;animation-delay:var(--d,0s)}
-.card .changed{fill:none;stroke:var(--focus);stroke-width:2.5;opacity:0;pointer-events:none}
-.att.fresh{box-shadow:inset 0 0 0 1px currentColor}
-.att .new{position:absolute;top:7px;right:9px;font-size:10px;font-weight:800;padding:0 6px;border-radius:99px;border:1px solid currentColor}
-.att.fresh .t{padding-right:28px}
-.swatch{vertical-align:middle;margin-left:6px}
-.motion .enter{animation:enter .6s cubic-bezier(.16,1,.3,1) both;animation-delay:var(--e,0s)}
-.has-sel .card:not(.selected):not(.near){opacity:.38}
-.has-sel .edge.dep:not(.hot){opacity:.2}
-@keyframes packet{from{stroke-dashoffset:1000}to{stroke-dashoffset:0}}
-@keyframes enter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){.motion .flow.hot,.motion .enter{animation:none}.motion .flow.hot{opacity:0}}
-.empty{padding:28px 18px;color:var(--sub)}
-@media (max-width:640px){.top{grid-template-columns:minmax(0,1fr)}.tools{justify-content:flex-start}}
+.muted{color:var(--sub)}
+@media (max-width:999px){
+  .shell,.shell.open{grid-template-columns:minmax(0,1fr)}
+  .rail{border-right:0;border-bottom:1px solid var(--line)}
+  .detail{border-left:0;border-top:1px solid var(--line);max-height:none;position:static}
+  .top{grid-template-columns:minmax(0,1fr)}.tools{justify-content:flex-start}
+}
 </style>
 </head>
 <body>
 <header class="top">
-  <div>
-    <h1 id="run">기록 읽는 중</h1>
-    <p id="goal"></p>
-  </div>
+  <div class="id"><span class="tag">run</span><h1 id="run">—</h1><p id="goal"></p></div>
   <div class="tools">
     <span id="conn" class="pill" role="status">연결 중</span>
-    <button id="motion" type="button" aria-pressed="true">움직임 끄기</button>
+    <button id="motion" class="btn" type="button" aria-pressed="true">움직임 끄기</button>
     <a id="report" class="btn" target="_blank" rel="noopener">기록 스냅샷</a>
   </div>
-  <div class="progress">
-    <div class="bar" id="bar" aria-hidden="true"></div>
-    <p id="counts"></p>
-  </div>
+  <div class="progress"><div class="bar" id="bar" aria-hidden="true"></div><p id="counts"></p></div>
 </header>
-<main class="wrap">
-  <section class="attention" aria-labelledby="att-title">
-    <h2 id="att-title">지금 필요한 것</h2>
-    <ul id="attention"><li class="muted">기록을 불러오는 중입니다.</li></ul>
-  </section>
-  <section class="ai waiting" id="ai" aria-labelledby="ai-title">
-    <div class="ai-head"><h2 id="ai-title">AI 요약</h2><span class="pill">Haiku · 기록 아님</span><span id="ai-meta">대기 중</span></div>
-    <p id="ai-headline" hidden></p>
-    <p id="ai-activity" hidden></p>
-  </section>
-  <div class="board" id="board">
-    <section aria-labelledby="pipe-title">
-      <h2 id="pipe-title">작업 파이프라인</h2>
-      <div class="canvas" id="canvas"><p class="empty">기록을 불러오는 중입니다.</p></div>
+<div class="shell" id="shell">
+  <aside class="rail" aria-label="탐색">
+    <section aria-labelledby="att-title">
+      <h2 id="att-title">지금 필요한 것</h2>
+      <ul id="attention"><li class="muted">기록을 불러오는 중입니다.</li></ul>
     </section>
-    <aside class="detail" id="detail" aria-labelledby="detail-title" hidden>
-      <div class="detail-head"><h2 id="detail-title">작업 상세</h2><button id="clear" type="button" aria-label="작업 상세 닫기">✕ 닫기</button></div>
-      <div id="detail-body"></div>
-    </aside>
-  </div>
-  <p id="announce" class="sr" aria-live="polite"></p>
-  <details class="all" id="all"><summary>전체 작업 목록</summary><ul id="list"></ul></details>
-</main>
+    <section aria-labelledby="types-title">
+      <h2 id="types-title">객체 · 상태</h2>
+      <div class="types" id="types"></div>
+    </section>
+    <section>
+      <label class="sr" for="search">작업 찾기</label>
+      <input id="search" type="search" placeholder="작업 찾기" autocomplete="off">
+    </section>
+    <details class="all" id="all"><summary>전체 작업</summary><ul id="list"></ul></details>
+  </aside>
+  <main class="stage">
+    <section class="ai" id="ai" aria-label="AI 요약"><span class="tag">AI 요약 · 참고용</span><p id="ai-headline">대기 중</p><span id="ai-meta"></span></section>
+    <h2 class="sr" id="pipe-title">작업 그래프</h2>
+    <div class="canvas" id="canvas"><p class="empty">기록을 불러오는 중입니다.</p></div>
+    <section class="lanes" aria-labelledby="lanes-title">
+      <div class="lanes-head"><h2 id="lanes-title">최근 10분 활동</h2><span id="lanes-axis">← 10분 전 · 지금 →</span></div>
+      <div id="lanes"></div>
+    </section>
+  </main>
+  <aside class="detail frame" id="detail" aria-labelledby="detail-title" hidden>
+    <div class="detail-head"><h2 id="detail-title" class="tag">객체</h2><button id="clear" class="btn" type="button" aria-label="상세 닫기">✕ 닫기</button></div>
+    <div id="detail-body"></div>
+  </aside>
+</div>
+<p id="announce" class="sr" aria-live="polite"></p>
 <script nonce="__NONCE__">
 (() => {
 'use strict';
@@ -440,23 +574,23 @@ const token = new URLSearchParams(location.search).get('t') || '';
 const headers = {'X-Board-Token': token};
 const $ = id => document.getElementById(id);
 const NS = 'http://www.w3.org/2000/svg';
+const HUB = '__session';
 const STATUS = {passed:['✓','통과'],running:['▶','진행'],failed:['✗','실패'],blocked:['⏸','차단'],stale:['↺','재검증'],
   cancelled:['⊘','취소'],pending:['○','대기']};
 const RESULT = {passed:['✓','통과'],failed:['✗','실패'],not_run:['–','미실행'],unrecorded:['○','미기록'],stale:['↺','재검증'],mixed:['!','상충']};
 const OUTCOME = {answered:'답변됨',approved:'승인',rejected:'반려',revision_requested:'수정 요청'};
-const COLOR = {passed:'--ok',failed:'--bad',mixed:'--bad',blocked:'--warn',stale:'--warn',running:'--run'};
+const COLOR = {passed:'--ok',failed:'--bad',mixed:'--bad',blocked:'--warn',stale:'--warn',running:'--run',ok:'--ok',error:'--bad'};
 const color = s => `var(${COLOR[s] || '--muted'})`;
 const st = s => STATUS[s] || ['○', s];
 const rs = r => RESULT[r] || ['○', r];
-let records = null, summary = null, drawnKey = '', firstDraw = true, failures = 0;
-// Motion tokens (Carbon productive / expressive standard curves).
-const PRODUCTIVE = 'cubic-bezier(0.2, 0, 0.38, 0.9)', EXPRESSIVE = 'cubic-bezier(0.4, 0.14, 0.3, 1)';
-let lastLayout = new Map();            // task id -> {x, y, status} from the previous drawing
-let seenAttention = null, freshAttention = new Set();
+const WINDOW = 10 * 60 * 1000;
+let records = null, summary = null, activity = null, drawnKey = '', firstLoad = true, failures = 0;
+let filter = '', query = '';
+let seenEvents = null, seenAttention = null, freshAttention = new Set();
+let lastStatus = new Map();
 const motionOn = () => document.body.classList.contains('motion') && !matchMedia('(prefers-reduced-motion: reduce)').matches;
-const cssColor = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-const statusColorValue = s => cssColor(COLOR[s] || '--muted');
-let selected = decodeURIComponent((location.hash.match(/^#task=(.+)$/) || [])[1] || '');
+let selected = '';
+try { selected = decodeURIComponent((location.hash.match(/^#task=(.+)$/) || [])[1] || ''); } catch (_) { selected = ''; }
 let motion = !matchMedia('(prefers-reduced-motion: reduce)').matches;
 try { if (localStorage.getItem('guided-board-motion') === 'off') motion = false; } catch (_) {}
 $('report').href = '/report?t=' + encodeURIComponent(token);
@@ -474,7 +608,7 @@ setMotion(motion);
 
 function el(name, attrs, parent, text) {
   const node = document.createElementNS(NS, name);
-  for (const [k, v] of Object.entries(attrs || {})) node.setAttribute(k, v);
+  for (const [k, v] of Object.entries(attrs || {})) if (v !== undefined && v !== null) node.setAttribute(k, v);
   if (text !== undefined) node.textContent = text;
   if (parent) parent.appendChild(node);
   return node;
@@ -490,7 +624,7 @@ function h(tag, props, ...kids) {
 }
 function cut(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
 function wrap(text, width, lines) {
-  measure.font = '600 13px system-ui, -apple-system, sans-serif';
+  measure.font = '600 12px system-ui, -apple-system, sans-serif';
   const out = []; let line = '';
   for (const ch of Array.from(String(text || ''))) {
     if (measure.measureText(line + ch).width > width) {
@@ -502,42 +636,65 @@ function wrap(text, width, lines) {
   if (out.join('').length < String(text || '').length) out[out.length - 1] = out[out.length - 1].replace(/.$/, '…');
   return out.length ? out : [''];
 }
+const clock = ms => { const t = Math.max(0, Math.floor(ms / 1000)), hh = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60;
+  const p = n => String(n).padStart(2, '0'); return hh ? `${hh}:${p(m)}:${p(s)}` : `${p(m)}:${p(s)}`; };
+const hhmm = iso => { const d = new Date(iso); return isNaN(d) ? String(iso || '') : d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'}); };
+const events = () => (activity && activity.events) || [];
+const eventsOf = id => events().filter(e => e.task === id);
+const runningCall = id => eventsOf(id).filter(e => e.phase === 'running').pop();
+const lastCall = id => eventsOf(id).filter(e => e.phase !== 'running').pop();
+const callCount = id => eventsOf(id).length;
+const errorCount = id => eventsOf(id).filter(e => e.phase === 'error').length;
+const recentlyActive = id => eventsOf(id).some(e => e.phase === 'running' || Date.now() - (e.ended_at || e.started_at) < 60000);
 
-let lastCard = '';
+/* ---------- selection ---------- */
 function select(id, opts) {
   const previous = selected;
-  selected = records && records.tasks.some(t => t.id === id) ? id : '';
-  if (selected) lastCard = selected;
-  history.replaceState(null, '', location.pathname + location.search + (selected ? '#task=' + encodeURIComponent(selected) : ''));
+  const known = id === HUB || (records && records.tasks.some(t => t.id === id)) || (records && records.decisions.some(d => 'd:' + d.id === id));
+  selected = known ? id : '';
+  history.replaceState(null, '', location.pathname + location.search + (selected && selected !== HUB && !selected.startsWith('d:') ? '#task=' + encodeURIComponent(selected) : ''));
   applySelection();
   renderDetail();
   const t = selected && records.tasks.find(x => x.id === selected);
-  $('announce').textContent = t ? `선택: ${t.title}, ${st(t.status)[1]}` : (previous ? '선택 해제' : '');
+  $('announce').textContent = t ? `선택: ${t.title}, ${st(t.status)[1]}` : selected === HUB ? '선택: 세션' : (previous ? '선택 해제' : '');
   if (!selected && previous && opts && opts.returnFocus) {
-    const card = document.querySelector(`.card[data-id="${CSS.escape(previous)}"]`);
-    if (card) card.focus();
+    const node = document.querySelector(`.node[data-id="${CSS.escape(previous)}"]`);
+    if (node) node.focus();
   }
-  if (opts && opts.reveal && selected && matchMedia('(max-width: 999px)').matches) $('detail-body').scrollIntoView({block: 'nearest'});
+  if (opts && opts.reveal && selected && matchMedia('(max-width: 999px)').matches) $('detail').scrollIntoView({block: 'nearest'});
 }
 $('clear').addEventListener('click', () => select('', {returnFocus: true}));
 addEventListener('keydown', e => { if (e.key === 'Escape' && selected) select('', {returnFocus: true}); });
 
 function neighbors(id) {
+  const set = new Set();
+  if (!records) return set;
+  if (id.startsWith('d:')) { records.tasks.forEach(t => { if (t.decision_ids.includes(id.slice(2))) set.add(t.id); }); return set; }
+  if (id === HUB) { records.tasks.forEach(t => { if (t.status === 'running' || recentlyActive(t.id)) set.add(t.id); }); return set; }
   const t = records.tasks.find(x => x.id === id);
-  const set = new Set(t ? t.depends_on : []);
+  (t ? t.depends_on : []).forEach(d => set.add(d));
+  (t ? t.decision_ids : []).forEach(d => set.add('d:' + d));
+  if (t && (t.status === 'running' || recentlyActive(t.id))) set.add(HUB);
   records.tasks.forEach(x => { if (x.depends_on.includes(id)) set.add(x.id); });
   return set;
+}
+function matches(t) {
+  if (filter && (filter === 'decision' ? !t.decision_ids.length : t.status !== filter)) return false;
+  if (query && !(t.title + ' ' + t.id).toLowerCase().includes(query)) return false;
+  return true;
 }
 function applySelection() {
   const svg = document.querySelector('#canvas svg');
   const near = selected ? neighbors(selected) : new Set();
   if (svg) {
     svg.classList.toggle('has-sel', !!selected);
-    svg.querySelectorAll('.card').forEach(c => {
-      const id = c.dataset.id;
-      c.classList.toggle('selected', id === selected);
-      c.classList.toggle('near', near.has(id));
-      c.setAttribute('aria-pressed', String(id === selected));
+    svg.querySelectorAll('.node').forEach(n => {
+      const id = n.dataset.id;
+      n.classList.toggle('selected', id === selected);
+      n.classList.toggle('near', near.has(id));
+      n.setAttribute('aria-pressed', String(id === selected));
+      const t = records.tasks.find(x => x.id === id);
+      n.classList.toggle('dimmed', !selected && !!t && (!!filter || !!query) && !matches(t));
     });
     svg.querySelectorAll('[data-from]').forEach(p => {
       const into = !!selected && p.dataset.to === selected, out = !!selected && p.dataset.from === selected;
@@ -547,10 +704,12 @@ function applySelection() {
     });
   }
   document.querySelectorAll('#list button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.task === selected)));
+  document.querySelectorAll('.lane').forEach(l => l.classList.toggle('sel', l.dataset.task === selected));
   $('detail').hidden = !selected;
-  $('board').classList.toggle('open', !!selected);
+  $('shell').classList.toggle('open', !!selected);
 }
 
+/* ---------- graph ---------- */
 function columns(rec, sum) {
   const tasks = new Map(rec.tasks.map(t => [t.id, t]));
   if (sum && sum.stages && sum.stages.length) {
@@ -558,8 +717,8 @@ function columns(rec, sum) {
     const cols = sum.stages.map(s => {
       const items = s.refs.filter(r => tasks.has(r) && !used.has(r));
       items.forEach(r => used.add(r));
-      return {id: s.id, label: s.label, note: s.note, ai: true, items};
-    });
+      return {id: s.id, label: s.label, ai: true, items};
+    }).filter(c => c.items.length);
     const rest = rec.tasks.filter(t => !used.has(t.id)).map(t => t.id);
     if (rest.length) cols.push({id: '__rest', label: '미분류', ai: false, items: rest});
     return cols;
@@ -574,133 +733,267 @@ function columns(rec, sum) {
   };
   rec.tasks.forEach(t => depth(t.id));
   const cols = [];
-  rec.tasks.forEach(t => { (cols[level[t.id]] ||= {id: 'L' + level[t.id], label: '단계 ' + (level[t.id] + 1), ai: false, items: []}).items.push(t.id); });
-  return cols.filter(Boolean).map(c => ({...c, note: `작업 ${c.items.length}개`}));
+  rec.tasks.forEach(t => { (cols[level[t.id]] ||= {id: 'L' + level[t.id], label: (level[t.id] + 1) + '단계', ai: false, items: []}).items.push(t.id); });
+  return cols.filter(Boolean);
 }
-
+const R = 22;
+function arc(cx, cy, r, a0, a1) {
+  const p = a => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+  const [x0, y0] = p(a0), [x1, y1] = p(a1);
+  return `M${x0.toFixed(2)},${y0.toFixed(2)} A${r},${r} 0 ${a1 - a0 > Math.PI ? 1 : 0} 1 ${x1.toFixed(2)},${y1.toFixed(2)}`;
+}
+function liveText(t) {
+  const now = runningCall(t.id);
+  const say = e => { const d = doing(e); return cut(d.verb + (d.what ? ' ' + d.what : ''), 24); };
+  if (now) return {text: `◌ ${say(now)}`, idle: false};
+  const last = lastCall(t.id);
+  return {text: last ? `● ${say(last)}` : '', idle: true};
+}
+function metaText(t) {
+  const parts = [`${st(t.status)[0]} ${st(t.status)[1]}`];
+  if (t.status === 'running' && t.started_at) parts.push(clock(Date.now() - Date.parse(t.started_at)));
+  if (t.attempts > 1) parts.push(`${t.attempts}번째 시도`);
+  return parts.join(' · ');
+}
+let geometry = {pos: new Map(), hub: null, paths: new Map()};
+function structureKey() {
+  const box = $('canvas');
+  const active = records.tasks.filter(t => t.status === 'running' || recentlyActive(t.id)).map(t => t.id).join(',');
+  return [records.fingerprint, summary ? summary.received_at : '', Math.round(box.clientWidth / 40), active].join('|');
+}
 function draw() {
   const box = $('canvas');
   if (!records) return;
-  const vertical = box.clientWidth < 640;
-  const key = records.fingerprint + '|' + (summary ? summary.received_at : '') + '|' + Math.round(box.clientWidth / 24);
-  if (key === drawnKey) return;
+  const key = structureKey();
+  if (key === drawnKey) return liveUpdate();
   drawnKey = key;
-  const focused = document.activeElement && document.activeElement.closest ? document.activeElement.closest('.card') : null;
+  const focused = document.activeElement && document.activeElement.closest ? document.activeElement.closest('.node') : null;
   const focusedId = focused ? focused.dataset.id : '';
   const tasks = new Map(records.tasks.map(t => [t.id, t]));
   const decisions = new Map(records.decisions.map(d => [d.id, d]));
   const cols = columns(records, summary);
-  const W = 240, colGap = vertical ? 0 : 84, headH = 50, rowGap = 16, pad = 22;
-  const titles = new Map(records.tasks.map(t => [t.id, wrap(t.title, W - 30 - t.decision_ids.length * 22, 2)]));
-  const cardH = t => 38 + titles.get(t.id).length * 17 + (t.checks.length ? 28 : 0);
-  const pos = new Map(), heads = new Map();
-  let x = pad, y = pad, maxH = 0;
-  cols.forEach(col => {
-    if (vertical) x = pad;
-    heads.set(col.id, {x, y, w: W, h: headH - 10});
-    let cy = y + headH;
-    col.items.forEach(id => { const hgt = cardH(tasks.get(id)); pos.set(id, {x, y: cy, w: W, h: hgt}); cy += hgt + rowGap; });
-    if (vertical) y = cy + 22; else { x += W + colGap; maxH = Math.max(maxH, cy); }
-  });
-  const width = vertical ? W + pad * 2 : x - colGap + pad;
-  const height = vertical ? y : maxH + pad;
-  // Fit wide pipelines into view down to 80% before falling back to horizontal scroll.
-  const scale = Math.min(1, Math.max(0.8, (box.clientWidth - 2) / width));
+  const narrow = box.clientWidth < 640;
+  const colW = narrow ? 170 : 210, rowH = 132, pad = 30, laneH = 104, X0 = pad + 110;
+  const pos = new Map();
+  cols.forEach((col, ci) => col.items.forEach((id, ri) => pos.set(id, {x: X0 + ci * colW, y: laneH + 40 + R + ri * rowH, col: ci})));
+  const width = Math.max(X0 + (cols.length - 1) * colW + 120, 420);
+  const height = laneH + 40 + Math.max(...cols.map(c => c.items.length), 1) * rowH + 10;
   box.textContent = '';
+  const scale = Math.min(1.3, Math.max(0.6, (box.clientWidth - 2) / width));
   const svg = el('svg', {width: Math.round(width * scale), height: Math.round(height * scale), viewBox: `0 0 ${width} ${height}`, role: 'group',
-    'aria-label': `작업 ${records.tasks.length}개, 단계 ${cols.length}개 파이프라인`}, box);
+    'aria-label': `작업 ${records.tasks.length}개, 결정 ${records.decisions.length}개 그래프`}, box);
   const defs = el('defs', {}, svg);
-  [['arrow', 'var(--edge)'], ['arrow-hot', 'var(--focus)']].forEach(([mid, fill]) => {
+  const glow = el('filter', {id: 'glow', x: '-50%', y: '-50%', width: '200%', height: '200%'}, defs);
+  el('feGaussianBlur', {stdDeviation: 2.4, result: 'b'}, glow);
+  const merge = el('feMerge', {}, glow); el('feMergeNode', {in: 'b'}, merge); el('feMergeNode', {in: 'SourceGraphic'}, merge);
+  [['arrow', 'var(--line2)'], ['arrow-hot', 'var(--focus)']].forEach(([mid, fill]) => {
     const m = el('marker', {id: mid, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto', markerUnits: 'userSpaceOnUse'}, defs);
     el('path', {d: 'M0,0 L10,5 L0,10 z', style: `fill:${fill}`}, m);
   });
-  const edges = el('g', {}, svg), flows = el('g', {}, svg), nodes = el('g', {}, svg);
-  let flowIndex = 0;
-  const link = (a, b, cls, from, to) => {
-    const stacked = vertical || Math.abs(a.x - b.x) < 1;
-    const d = stacked
-      ? `M${a.x + a.w / 2},${a.y + a.h} C${a.x + a.w / 2},${a.y + a.h + 30} ${b.x + b.w / 2},${b.y - 30} ${b.x + b.w / 2},${b.y}`
-      : `M${a.x + a.w},${a.y + a.h / 2} C${a.x + a.w + 40},${a.y + a.h / 2} ${b.x - 40},${b.y + b.h / 2} ${b.x},${b.y + b.h / 2}`;
-    const data = from ? {'data-from': from, 'data-to': to} : {};
-    el('path', {d, class: 'edge ' + cls, ...data}, edges);
-    if (from) el('path', {d, class: 'flow ' + cls, pathLength: 1000, style: `--d:${(flowIndex++ * 0.4) % 3.2}s`, ...data}, flows);
-  };
-  if (summary && summary.stages && !vertical) {
-    const stageEdges = summary.edges && summary.edges.length ? summary.edges
-      : summary.stages.slice(1).map((s, i) => ({from: summary.stages[i].id, to: s.id}));
-    stageEdges.forEach(e => { if (heads.has(e.from) && heads.has(e.to)) link(heads.get(e.from), heads.get(e.to), 'stage'); });
-  }
-  records.tasks.forEach(t => t.depends_on.forEach(dep => { if (pos.has(dep) && pos.has(t.id)) link(pos.get(dep), pos.get(t.id), 'dep', dep, t.id); }));
+  const gLinks = el('g', {}, svg), gLabels = el('g', {}, svg), gNodes = el('g', {}, svg), gFx = el('g', {class: 'fx'}, svg);
+  // column heads
   cols.forEach((col, ci) => {
-    const hd = heads.get(col.id);
-    const g = el('g', {class: 'col-head' + (col.ai ? ' ai' : '') + (firstDraw ? ' enter' : ''), style: `--e:${ci * 0.08}s`}, nodes);
-    el('rect', {x: hd.x, y: hd.y, width: hd.w, height: hd.h, rx: 9}, g);
-    el('text', {x: hd.x + 10, y: hd.y + 16}, g, cut((col.ai ? 'AI · ' : '') + col.label, 30));
-    if (col.note) el('text', {x: hd.x + 10, y: hd.y + 31, class: 'note'}, g, cut(col.note, 38));
+    const x = X0 + ci * colW;
+    const g = el('g', {class: 'colhead' + (col.ai ? ' ai' : '')}, gNodes);
+    el('text', {x: x, y: laneH + 6, 'text-anchor': 'middle'}, g, cut((col.ai ? 'AI · ' : '') + col.label, 22).toUpperCase());
+    el('line', {x1: x - colW / 2 + 14, x2: x + colW / 2 - 14, y1: laneH + 14, y2: laneH + 14}, g);
   });
-  let n = 0;
-  const changes = [];
+  const paths = new Map();
+  const curve = (a, b, ra, rb) => {
+    if (Math.abs(a.x - b.x) < 1) return `M${a.x},${a.y + ra} C${a.x + 40},${(a.y + b.y) / 2} ${b.x + 40},${(a.y + b.y) / 2} ${b.x},${b.y - rb}`;
+    return `M${a.x + ra},${a.y} C${a.x + ra + 60},${a.y} ${b.x - rb - 60},${b.y} ${b.x - rb},${b.y}`;
+  };
+  const label = (d, text, from, to) => {
+    const p = el('path', {d, class: 'sr'}, gLabels); // invisible measuring path
+    const len = p.getTotalLength ? p.getTotalLength() : 0; const m = len ? p.getPointAtLength(len / 2) : {x: 0, y: 0};
+    p.remove();
+    el('text', {x: m.x, y: m.y - 5, class: 'linklabel', 'data-from': from, 'data-to': to}, gLabels, text);
+  };
+  // dependency links
+  records.tasks.forEach(t => t.depends_on.forEach(dep => {
+    if (!pos.has(dep) || !pos.has(t.id)) return;
+    const d = curve(pos.get(dep), pos.get(t.id), R + 6, R + 8);
+    el('path', {d, class: 'link dep', 'data-from': dep, 'data-to': t.id}, gLinks);
+    label(d, '선행', dep, t.id);
+  }));
+  // AI stage links between column heads
+  if (summary && summary.stages && !narrow) {
+    const heads = new Map(cols.map((c, i) => [c.id, X0 + i * colW]));
+    (summary.edges && summary.edges.length ? summary.edges : summary.stages.slice(1).map((s, i) => ({from: summary.stages[i].id, to: s.id})))
+      .forEach(e => { if (heads.has(e.from) && heads.has(e.to)) el('path', {d: `M${heads.get(e.from) + 50},${laneH + 2} L${heads.get(e.to) - 50},${laneH + 2}`, class: 'link stage'}, gLinks); });
+  }
+  // control lane: session hub and decision gates
+  const hub = {x: pad + 18, y: 46};
+  const gatePos = new Map();
+  const perCol = new Map();
+  records.decisions.forEach(dec => {
+    const gated = records.tasks.filter(t => t.decision_ids.includes(dec.id)).map(t => pos.get(t.id)).filter(Boolean);
+    const col = gated.length ? Math.min(...gated.map(p => p.col)) : 0;
+    const k = perCol.get(col) || 0; perCol.set(col, k + 1);
+    gatePos.set(dec.id, {x: X0 + col * colW - 30 + k * 46, y: 46});
+  });
+  records.tasks.forEach(t => t.decision_ids.forEach(d => {
+    const a = gatePos.get(d), b = pos.get(t.id);
+    if (!a || !b) return;
+    const path = `M${a.x},${a.y + 12} C${a.x},${a.y + 50} ${b.x},${b.y - R - 50} ${b.x},${b.y - R - 6}`;
+    el('path', {d: path, class: 'link gate-link', 'data-from': 'd:' + d, 'data-to': t.id}, gLinks);
+  }));
+  records.tasks.forEach(t => {
+    if (!(t.status === 'running' || recentlyActive(t.id)) || !pos.has(t.id)) return;
+    const b = pos.get(t.id);
+    const d = `M${hub.x + 18},${hub.y} C${hub.x + 120},${hub.y} ${b.x},${b.y - R - 70} ${b.x},${b.y - R - 6}`;
+    paths.set(t.id, el('path', {d, class: 'link act', 'data-from': HUB, 'data-to': t.id}, gLinks));
+  });
+  // hub node
+  const hg = el('g', {class: 'node hub', 'data-id': HUB, tabindex: 0, role: 'button', 'aria-label': '세션 활동'}, gNodes);
+  el('circle', {class: 'halo', cx: hub.x, cy: hub.y, r: 26}, hg);
+  const oct = Array.from({length: 8}, (_, i) => { const a = Math.PI / 8 + i * Math.PI / 4; return `${(hub.x + 19 * Math.cos(a)).toFixed(1)},${(hub.y + 19 * Math.sin(a)).toFixed(1)}`; }).join(' ');
+  el('polygon', {class: 'core', points: oct}, hg);
+  el('text', {class: 'glyph', x: hub.x, y: hub.y}, hg, 'AI');
+  el('text', {class: 'meta', x: hub.x, y: hub.y + 34, 'data-live': 'hub'}, hg, '');
+  // decision gates
+  records.decisions.forEach(dec => {
+    const p = gatePos.get(dec.id);
+    const ok = dec.status === 'resolved' && ['answered', 'approved'].includes(dec.outcome);
+    const g = el('g', {class: 'node gate' + (ok ? ' ok' : ''), 'data-id': 'd:' + dec.id, tabindex: 0, role: 'button',
+      'aria-label': `결정 ${dec.id}, ${ok ? '해결' : dec.status === 'resolved' ? (OUTCOME[dec.outcome] || dec.outcome) : '대기'}`}, gNodes);
+    el('circle', {class: 'halo', cx: p.x, cy: p.y, r: 18}, g);
+    el('polygon', {points: `${p.x},${p.y - 12} ${p.x + 12},${p.y} ${p.x},${p.y + 12} ${p.x - 12},${p.y}`}, g);
+    el('text', {x: p.x, y: p.y}, g, ok ? '✓' : dec.status === 'resolved' ? '!' : '?');
+    el('text', {class: 'label', x: p.x, y: p.y + 26, 'text-anchor': 'middle'}, g, cut(dec.id, 14));
+  });
+  // task nodes
+  const changed = [];
   pos.forEach((p, id) => {
     const t = tasks.get(id);
-    const [glyph, word] = st(t.status);
-    const g = el('g', {class: `card st-${t.status}` + (firstDraw ? ' enter' : ''), 'data-id': id, tabindex: 0, role: 'button',
-      'aria-label': `${t.title}, ${word}, 시도 ${t.attempts}/${t.max_attempts}`, style: `--e:${0.12 + n++ * 0.05}s`}, nodes);
-    el('rect', {class: 'ring', x: p.x - 5, y: p.y - 5, width: p.w + 10, height: p.h + 10, rx: 14}, g);
-    el('rect', {class: 'body', x: p.x, y: p.y, width: p.w, height: p.h, rx: 11}, g);
-    const statusBar = el('rect', {x: p.x, y: p.y + 8, width: 4, height: p.h - 16, rx: 2, fill: color(t.status)}, g);
-    const changedRing = el('rect', {class: 'changed', x: p.x - 2, y: p.y - 2, width: p.w + 4, height: p.h + 4, rx: 12}, g);
-    changes.push({id, g, statusBar, changedRing, p, status: t.status});
-    const lines = titles.get(id);
-    lines.forEach((line, i) => el('text', {x: p.x + 14, y: p.y + 21 + i * 17}, g, line));
-    const sy = p.y + 21 + lines.length * 17 + 2;
-    const sub = el('text', {x: p.x + 14, y: sy, class: 'sub'}, g);
-    el('tspan', {fill: color(t.status)}, sub, `${glyph} ${word}`);
-    el('tspan', {class: 'dim', fill: 'var(--sub)'}, sub, ` · 시도 ${t.attempts}/${t.max_attempts}` + (t.block_reason ? ' · ' + cut(t.block_reason, 12) : ''));
-    t.decision_ids.forEach((d, i) => {
-      const dec = decisions.get(d);
-      const ok = dec && dec.status === 'resolved' && ['answered', 'approved'].includes(dec.outcome);
-      const gx = p.x + p.w - 18 - i * 22, gy = p.y + 17;
-      const gate = el('g', {class: 'gate' + (ok ? ' ok' : '')}, g);
-      el('polygon', {points: `${gx},${gy - 9} ${gx + 9},${gy} ${gx},${gy + 9} ${gx - 9},${gy}`}, gate);
-      el('text', {x: gx, y: gy + 3.5, 'text-anchor': 'middle'}, gate, ok ? '✓' : '?');
-    });
+    const g = el('g', {class: `node task st-${t.status}`, 'data-id': id, tabindex: 0, role: 'button',
+      'aria-label': `${t.title}, ${st(t.status)[1]}, 시도 ${t.attempts}/${t.max_attempts}`}, gNodes);
+    el('circle', {class: 'halo', cx: p.x, cy: p.y, r: R + 14}, g);
+    if (t.status === 'running') el('circle', {class: 'spin', cx: p.x, cy: p.y, r: R + 10}, g);
+    el('circle', {class: 'track', cx: p.x, cy: p.y, r: R + 5}, g);
+    const n = t.checks.length, gap = n > 1 ? 0.18 : 0;
     t.checks.forEach((c, i) => {
-      const cx = p.x + 14 + i * 70, cy = sy + 8;
-      if (i > 2) { if (i === 3) el('text', {x: cx + 2, y: cy + 15, class: 'sub dim', fill: 'var(--sub)'}, g, `+${t.checks.length - 3}`); return; }
-      const [cg] = rs(c.result);
-      const chip = el('g', {class: 'chip'}, g);
-      el('polygon', {points: `${cx + 6},${cy} ${cx + 58},${cy} ${cx + 64},${cy + 10} ${cx + 58},${cy + 20} ${cx + 6},${cy + 20} ${cx},${cy + 10}`, fill: color(c.result)}, chip);
-      el('text', {x: cx + 32, y: cy + 14, 'text-anchor': 'middle'}, chip, `${cg} ${cut(c.id, 7)}`);
+      if (c.result === 'unrecorded') return;
+      const a0 = -Math.PI / 2 + i * 2 * Math.PI / n + gap / 2, a1 = -Math.PI / 2 + (i + 1) * 2 * Math.PI / n - gap / 2;
+      const seg = el('path', {class: 'seg', d: arc(p.x, p.y, R + 5, a0, Math.min(a1, a0 + 2 * Math.PI - 0.01)), style: `stroke:${color(c.result)}`}, g);
+      el('title', {}, seg, `${c.id}: ${rs(c.result)[1]}`);
     });
+    el('circle', {class: 'core', cx: p.x, cy: p.y, r: R, style: t.status === 'running' ? '' : `stroke:${color(t.status)}`}, g);
+    el('text', {class: 'glyph', x: p.x, y: p.y, style: `fill:${color(t.status)}`}, g, st(t.status)[0]);
+    const badge = el('g', {class: 'badge', 'data-badge': id}, g);
+    el('rect', {x: p.x + R - 6, y: p.y - R - 8, width: 26, height: 14, rx: 2}, badge);
+    el('text', {x: p.x + R + 7, y: p.y - R - 1}, badge, '');
+    const lines = wrap(t.title, colW - 30, 2);
+    lines.forEach((line, i) => el('text', {class: 'title', x: p.x, y: p.y + R + 22 + i * 15}, g, line));
+    const y2 = p.y + R + 22 + lines.length * 15;
+    el('text', {class: 'meta', x: p.x, y: y2, 'data-meta': id}, g, metaText(t));
+    el('text', {class: 'live', x: p.x, y: y2 + 14, 'data-live': id}, g, '');
     g.addEventListener('click', () => select(selected === id ? '' : id, {reveal: true}));
-    g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(selected === id ? '' : id, {reveal: true}); } });
+    if (lastStatus.has(id) && lastStatus.get(id) !== t.status) changed.push(id);
   });
-  // Staged change transitions (move first, then status), only for cards whose record changed.
-  if (!firstDraw && motionOn()) {
-    changes.forEach(c => {
-      const before = lastLayout.get(c.id);
-      if (!before) { c.g.animate([{opacity: 0}, {opacity: 1}], {duration: 240, easing: PRODUCTIVE}); return; }
-      const dx = before.x - c.p.x, dy = before.y - c.p.y, moved = Math.abs(dx) + Math.abs(dy) > 0.5;
-      if (moved) c.g.animate([{transform: `translate(${dx}px, ${dy}px)`}, {transform: 'translate(0, 0)'}], {duration: 240, easing: PRODUCTIVE});
-      if (before.status !== c.status) {
-        const delay = moved ? 240 : 0;
-        c.statusBar.animate([{fill: statusColorValue(before.status)}, {fill: statusColorValue(c.status)}], {duration: 240, delay, easing: PRODUCTIVE, fill: 'backwards'});
-        c.changedRing.animate([{opacity: 0}, {opacity: 1, offset: 0.3}, {opacity: 0}], {duration: 600, delay, easing: PRODUCTIVE});
-      }
-    });
-  }
-  lastLayout = new Map(changes.map(c => [c.id, {x: c.p.x, y: c.p.y, status: c.status}]));
-  firstDraw = false;
+  svg.querySelectorAll('.gate, .hub').forEach(g => {
+    const id = g.dataset.id;
+    g.addEventListener('click', () => select(selected === id ? '' : id, {reveal: true}));
+  });
+  svg.querySelectorAll('.node').forEach(g => g.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const id = g.dataset.id; select(selected === id ? '' : id, {reveal: true}); }
+  }));
+  geometry = {pos, hub, paths, fx: gFx};
+  if (!firstLoad && motionOn()) changed.forEach(id => ping(id, records.tasks.find(t => t.id === id).status === 'failed'));
+  lastStatus = new Map(records.tasks.map(t => [t.id, t.status]));
   applySelection();
-  if (focusedId) { const again = svg.querySelector(`.card[data-id="${CSS.escape(focusedId)}"]`); if (again) again.focus(); }
+  liveUpdate();
+  if (focusedId) { const again = svg.querySelector(`.node[data-id="${CSS.escape(focusedId)}"]`); if (again) again.focus(); }
 }
 
+/* per-second updates without rebuilding the graph */
+function liveUpdate() {
+  if (!records) return;
+  records.tasks.forEach(t => {
+    const meta = document.querySelector(`[data-meta="${CSS.escape(t.id)}"]`);
+    if (meta) meta.textContent = metaText(t);
+    const live = document.querySelector(`[data-live="${CSS.escape(t.id)}"]`);
+    if (live) { const l = liveText(t); live.textContent = l.text; live.classList.toggle('idle', l.idle); }
+    const badge = document.querySelector(`[data-badge="${CSS.escape(t.id)}"]`);
+    if (badge) {
+      const n = callCount(t.id), errs = errorCount(t.id);
+      badge.style.display = n ? '' : 'none';
+      badge.classList.toggle('err', errs > 0);
+      const label = (n > 99 ? '99+' : String(n)) + (errs ? ` ✗${errs}` : '');
+      badge.querySelector('text').textContent = label;
+      const w = 12 + label.length * 6.2;
+      badge.querySelector('rect').setAttribute('width', w.toFixed(1));
+      badge.querySelector('text').setAttribute('x', (Number(badge.querySelector('rect').getAttribute('x')) + w / 2).toFixed(1));
+    }
+  });
+  const hubText = document.querySelector('[data-live="hub"]');
+  if (hubText) { const now = runningCall(HUB); hubText.textContent = now ? `◌ ${doing(now).verb}` : '세션'; }
+  // new tool calls travel from the session to their node
+  const ids = new Set(events().map(e => e.id + ':' + e.phase));
+  if (seenEvents && motionOn()) events().forEach(e => {
+    if (seenEvents.has(e.id + ':' + e.phase)) return;
+    if (e.phase === 'running' && !seenEvents.has(e.id + ':running')) packet(e.task, false);
+    if (e.phase === 'error') ping(e.task, true);
+  });
+  seenEvents = ids;
+  renderLanes();
+  if (selected) refreshDetailLive();
+}
+function packet(task, err) {
+  const path = geometry.paths.get(task);
+  if (!path || !geometry.fx) { ping(task, err); return; }
+  const len = path.getTotalLength();
+  const dot = el('circle', {class: 'packet' + (err ? ' err' : ''), r: 3.5}, geometry.fx);
+  const t0 = performance.now(), D = 700;
+  const step = now => {
+    const k = Math.min(1, (now - t0) / D), pt = path.getPointAtLength(len * (1 - Math.pow(1 - k, 3)));
+    dot.setAttribute('cx', pt.x); dot.setAttribute('cy', pt.y);
+    if (k < 1) requestAnimationFrame(step); else { dot.remove(); ping(task, err); }
+  };
+  requestAnimationFrame(step);
+}
+function ping(task, err) {
+  const p = task === HUB ? geometry.hub : geometry.pos.get(task);
+  if (!p || !geometry.fx) return;
+  const ring = el('circle', {class: 'ping' + (err ? ' err' : ''), cx: p.x, cy: p.y, r: R,
+    style: 'transform-box:fill-box;transform-origin:center'}, geometry.fx);
+  ring.animate([{transform: 'scale(1)', opacity: 0.9}, {transform: 'scale(2)', opacity: 0}],
+    {duration: 650, easing: 'cubic-bezier(0.2, 0, 0.38, 0.9)'}).onfinish = () => ring.remove();
+}
+
+/* ---------- activity lanes ---------- */
+function renderLanes() {
+  const box = $('lanes');
+  const now = Date.now();
+  const focusedLane = document.activeElement && document.activeElement.classList.contains('lane') ? document.activeElement.dataset.task : '';
+  const recent = events().filter(e => e.phase === 'running' || now - (e.ended_at || e.started_at) < WINDOW);
+  const order = [...(records ? records.tasks.map(t => t.id) : []), HUB].filter(id => recent.some(e => e.task === id));
+  box.textContent = '';
+  if (!order.length) { box.append(h('p', {class: 'muted mono'}, activity ? '최근 10분 활동 없음' : 'Mod 연결 대기')); return; }
+  order.forEach(id => {
+    const t = records && records.tasks.find(x => x.id === id);
+    const track = h('span', {class: 'track'});
+    recent.filter(e => e.task === id).forEach(e => {
+      const end = e.phase === 'running' ? now : (e.ended_at || e.started_at);
+      const left = Math.max(0, (e.started_at - (now - WINDOW)) / WINDOW * 100);
+      const width = Math.max(0.3, (end - Math.max(e.started_at, now - WINDOW)) / WINDOW * 100);
+      track.append(h('span', {class: 'ev ' + e.phase, style: `left:${left.toFixed(2)}%;width:${width.toFixed(2)}%`,
+        title: `${doing(e).verb} ${doing(e).what} · ${e.phase === 'running' ? '진행 중' : e.phase === 'error' ? '실패' : '완료'}`}));
+    });
+    box.append(h('button', {type: 'button', class: 'lane' + (id === selected ? ' sel' : ''), 'data-task': id,
+      'aria-label': `${t ? t.title : '세션'} 활동 ${recent.filter(e => e.task === id).length}건`, on: () => select(selected === id ? '' : id, {reveal: true})},
+      h('span', {class: 'name'}, t ? t.title : '세션'), track));
+  });
+  if (focusedLane) { const again = box.querySelector(`.lane[data-task="${CSS.escape(focusedLane)}"]`); if (again) again.focus(); }
+}
+
+/* ---------- rail ---------- */
 function attentionItems(r) {
   const s = r.status, out = [];
   const byId = new Map(r.tasks.map(t => [t.id, t]));
   r.decisions.filter(d => d.status === 'pending').forEach(d => {
     const gated = r.tasks.filter(t => t.decision_ids.includes(d.id));
-    out.push({k: 'decide', g: '?', label: '결정 필요', text: d.question ? `${d.id} — ${d.question}` : d.id, task: gated[0] && gated[0].id});
+    out.push({k: 'decide', g: '?', label: '결정 필요', text: d.question || d.id, task: gated[0] ? gated[0].id : 'd:' + d.id});
   });
   r.tasks.filter(t => t.status === 'blocked').forEach(t => out.push({k: 'blocked', g: '⏸', label: '차단', text: t.block_reason ? `${t.title} — ${t.block_reason}` : t.title, task: t.id}));
   (s.exhausted || []).forEach(id => byId.has(id) && out.push({k: 'failed', g: '✗', label: '시도 소진', text: `${byId.get(id).title} (${byId.get(id).attempts}/${byId.get(id).max_attempts})`, task: id}));
@@ -709,19 +1002,25 @@ function attentionItems(r) {
   (s.ready || []).forEach(id => byId.has(id) && out.push({k: 'ready', g: '→', label: '다음 준비됨', text: byId.get(id).title, task: id}));
   return out;
 }
-
-function renderMeta() {
-  const r = records;
+function typeIcon(kind, fill) {
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('width', '18'); svg.setAttribute('height', '18'); svg.setAttribute('aria-hidden', 'true');
+  if (kind === 'decision') el('polygon', {points: '9,2 16,9 9,16 2,9', style: `fill:none;stroke:${fill};stroke-width:1.6`}, svg);
+  else el('circle', {cx: 9, cy: 9, r: 6.5, style: `fill:none;stroke:${fill};stroke-width:1.8`}, svg);
+  return svg;
+}
+function renderRail() {
+  const r = records, total = r.tasks.length;
   $('run').textContent = r.run_id;
   $('goal').textContent = r.goal;
-  const total = r.tasks.length;
   const groups = ['passed', 'running', 'failed', 'blocked', 'stale', 'cancelled', 'pending'];
   const counts = Object.fromEntries(groups.map(g => [g, r.tasks.filter(t => (groups.includes(t.status) ? t.status : 'pending') === g).length]));
   const bar = $('bar'); bar.textContent = '';
   groups.forEach(g => { if (counts[g]) bar.append(h('span', {style: `width:${counts[g] / total * 100}%;background:${color(g)}`})); });
   const waiting = r.decisions.filter(d => d.status === 'pending').length;
-  $('counts').textContent = [`통과 ${counts.passed}/${total}`, ...groups.slice(1).filter(g => counts[g]).map(g => `${st(g)[0]} ${st(g)[1]} ${counts[g]}`),
-    waiting ? `? 결정 대기 ${waiting}` : ''].filter(Boolean).join(' · ');
+  $('counts').textContent = [`통과 ${counts.passed}/${total}`, ...groups.slice(1).filter(g => counts[g]).map(g => `${st(g)[0]} ${counts[g]}`),
+    waiting ? `? ${waiting}` : ''].filter(Boolean).join('  ');
+  // what needs the person
   const items = attentionItems(r);
   const keyOf = it => `${it.k}|${it.task || ''}|${it.text}`;
   const arrived = [];
@@ -737,79 +1036,152 @@ function renderMeta() {
     list.append(h('li', {}, h('div', {class: 'att ' + (done ? 'k-done' : 'k-ready')}, h('span', {class: 'g'}, done ? '✓' : '·'),
       h('span', {class: 'k'}, done ? '완료' : '대기'), h('span', {class: 't'}, done ? '모든 작업 통과' : '시작 가능한 작업 없음'))));
   }
-  items.slice(0, 8).forEach(it => {
+  items.slice(0, 6).forEach(it => {
     const key = keyOf(it), fresh = freshAttention.has(key);
-    const node = h(it.task ? 'button' : 'div', {class: 'att k-' + it.k + (fresh ? ' fresh' : ''), type: it.task ? 'button' : undefined, title: it.text},
+    const node = h('button', {class: 'att k-' + it.k + (fresh ? ' fresh' : ''), type: 'button', title: it.text},
       h('span', {class: 'g', 'aria-hidden': 'true'}, it.g), h('span', {class: 'k'}, it.label), h('span', {class: 't'}, it.text),
       fresh ? h('span', {class: 'new'}, '새') : null);
-    if (it.task) node.addEventListener('click', () => {
+    node.addEventListener('click', () => {
       freshAttention.delete(key); node.classList.remove('fresh'); const badge = node.querySelector('.new'); if (badge) badge.remove();
       select(it.task, {reveal: true});
     });
     list.append(h('li', {}, node));
     if (arrived.includes(it) && motionOn()) node.animate(
-      [{transform: 'translateY(-6px)', boxShadow: '0 0 0 4px currentColor'}, {transform: 'none', boxShadow: '0 0 0 0 transparent'}],
-      {duration: 400, easing: EXPRESSIVE});
+      [{transform: 'translateX(-6px)', boxShadow: '0 0 0 3px currentColor'}, {transform: 'none', boxShadow: '0 0 0 0 transparent'}],
+      {duration: 400, easing: 'cubic-bezier(0.4, 0.14, 0.3, 1)'});
   });
-  if (items.length > 8) list.append(h('li', {class: 'more'}, h('button', {type: 'button', on: () => { $('all').open = true; $('all').scrollIntoView({block: 'nearest'}); }}, `+${items.length - 8}개 더`)));
+  if (items.length > 6) list.append(h('li', {class: 'more'}, h('button', {type: 'button', class: 'btn', on: () => { $('all').open = true; $('all').scrollIntoView({block: 'nearest'}); }}, `+${items.length - 6}개 더`)));
+  // object types and status filters
+  const types = $('types'); types.textContent = '';
+  const chip = (key, icon, name, n) => types.append(h('button', {type: 'button', class: 'type', 'aria-pressed': String(filter === key),
+    on: () => { filter = filter === key ? '' : key; renderRail(); applySelection(); }}, icon, h('span', {}, name), h('span', {class: 'n'}, String(n))));
+  chip('', typeIcon('task', 'var(--ink)'), '작업', total);
+  groups.filter(g => counts[g]).forEach(g => chip(g, typeIcon('task', color(g)), `${st(g)[0]} ${st(g)[1]}`, counts[g]));
+  if (r.decisions.length) chip('decision', typeIcon('decision', 'var(--warn)'), '결정 게이트', r.decisions.length);
   const all = $('list'); all.textContent = '';
   r.tasks.forEach(t => all.append(h('li', {}, h('button', {type: 'button', 'data-task': t.id, 'aria-pressed': String(t.id === selected),
     on: () => select(selected === t.id ? '' : t.id, {reveal: true})},
-    h('span', {class: 's-' + t.status}, `${st(t.status)[0]} ${st(t.status)[1]}`), ` ${t.title} · 시도 ${t.attempts}/${t.max_attempts}`))));
-  if (selected && !r.tasks.some(t => t.id === selected)) select('');
+    h('span', {class: 's-' + t.status}, `${st(t.status)[0]} `), `${t.title}`))));
+  if (selected && selected !== HUB && !selected.startsWith('d:') && !r.tasks.some(t => t.id === selected)) select('');
 }
+$('search').addEventListener('input', e => { query = e.target.value.trim().toLowerCase(); applySelection(); });
 
-function swatch(dashed) {
-  const svg = document.createElementNS(NS, 'svg');
-  svg.setAttribute('width', '30'); svg.setAttribute('height', '8'); svg.setAttribute('class', 'swatch'); svg.setAttribute('aria-hidden', 'true');
-  const line = el('line', {x1: 1, y1: 4, x2: 23, y2: 4, stroke: 'var(--focus)', 'stroke-width': 2.5, ...(dashed ? {'stroke-dasharray': '8 4'} : {})}, svg);
-  el('path', {d: 'M22,0 L30,4 L22,8 z', style: 'fill:var(--focus)'}, svg);
-  return svg;
+/* ---------- detail (object view) ---------- */
+const KIND = {direction: '방향 결정', information: '정보 요청', review: '검토', authorization: '실행 허락'};
+const base = p => String(p || '').split('/').filter(Boolean).pop() || '';
+function doing(e) {
+  const t = e.target || '';
+  const [verb, what] = ({Read: ['파일 읽기', base(t)], Edit: ['파일 수정', base(t)], MultiEdit: ['파일 수정', base(t)], Write: ['파일 작성', base(t)],
+    NotebookEdit: ['노트북 수정', base(t)], Grep: ['코드 찾기', t], Glob: ['파일 찾기', t], Bash: ['명령 실행', t],
+    WebFetch: ['웹 페이지 확인', t], WebSearch: ['웹 검색', t], Agent: ['보조 작업 맡김', t], Task: ['보조 작업 맡김', t],
+    TodoWrite: ['할 일 정리', ''], AskUserQuestion: ['사용자에게 질문', '']})[e.tool] || [e.tool.startsWith('mcp__') ? '외부 도구 사용' : e.tool, t];
+  return {verb, what: cut(what, 48), helper: !!e.agent};
 }
-
+function ago(ms) {
+  const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  return s < 10 ? '방금' : s < 60 ? `${s}초 전` : s < 3600 ? `${Math.floor(s / 60)}분 전` : `${Math.floor(s / 3600)}시간 전`;
+}
+function span(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return s < 60 ? `${s}초` : s < 3600 ? `${Math.floor(s / 60)}분` : `${Math.floor(s / 3600)}시간 ${Math.floor(s % 3600 / 60)}분`;
+}
+function callRow(e) {
+  const d = doing(e), err = e.phase === 'error';
+  const when = e.phase === 'running' ? `${span(Date.now() - e.started_at)}째` : ago(e.ended_at || e.started_at);
+  return h('li', {class: 'row'}, h('span', {class: 's-' + e.phase}, e.phase === 'running' ? '◌' : err ? '✗' : '●'),
+    h('span', {}, `${d.verb}${d.what ? ' · ' + d.what : ''}${err ? ' (실패)' : ''}${d.helper ? ' · 보조' : ''}`, h('span', {class: 'when'}, ' ' + when)));
+}
+function activitySection(id) {
+  const mine = eventsOf(id).slice().reverse();
+  const now = mine.filter(e => e.phase === 'running'), done = mine.filter(e => e.phase !== 'running').slice(0, 5);
+  return h('div', {id: 'calls'}, now.length ? [h('h4', {}, '지금 하는 일'), h('ul', {}, now.slice(0, 2).map(callRow))] : null,
+    h('h4', {}, '최근 한 일'), done.length ? h('ul', {}, done.map(callRow)) : h('p', {class: 'muted'}, activity ? '아직 없음' : '연결 대기'));
+}
+function refreshDetailLive() {
+  const calls = $('calls');
+  if (calls) calls.replaceWith(activitySection(selected));
+  const t = records && records.tasks.find(x => x.id === selected);
+  const line = $('elapsed');
+  if (t && line && t.started_at) line.textContent = `시작한 지 ${span(Date.now() - Date.parse(t.started_at))}`;
+}
+function story(t) {
+  const checks = new Map(t.checks.map(c => [c.id, c.description || c.id]));
+  const titles = new Map(records.tasks.map(x => [x.id, x.title]));
+  let n = 0;
+  return t.timeline.map(e => {
+    const reason = e.reason ? `: ${e.reason}` : '';
+    if (e.action === 'start') return `${++n}차 시도 시작`;
+    if (e.action === 'record-check') return `‘${checks.get(e.check) || e.check}’ ${e.result === 'passed' ? '통과' : e.result === 'failed' ? '실패' : '실행 안 함'}`;
+    if (e.action === 'finish') return (e.result === 'passed' ? '완료' : e.result === 'failed' ? '실패' : '종료') + reason;
+    if (e.action === 'invalidated') return `앞 작업 ‘${titles.get(e.by) || e.by}’이 바뀌어 다시 확인 필요`;
+    if (e.action === 'invalidate') return '다시 확인 필요' + reason;
+    if (e.action === 'block') return '멈춤' + reason;
+    if (e.action === 'cancel') return '취소' + reason;
+    return '';
+  }).map((text, i) => [t.timeline[i], text]).filter(([, text]) => text);
+}
 function renderDetail() {
   const body = $('detail-body');
-  const t = records && records.tasks.find(x => x.id === selected);
   body.textContent = '';
-  if (!t) return;
-  const [glyph, word] = st(t.status);
+  if (!selected || !records) return;
   const byId = new Map(records.tasks.map(x => [x.id, x]));
-  const decisions = new Map(records.decisions.map(d => [d.id, d]));
-  const taskLink = id => { const x = byId.get(id); return h('li', {}, h('button', {type: 'button', class: 'link', on: () => select(id)},
+  const taskLink = id => { const x = byId.get(id); return h('li', {}, h('button', {type: 'button', class: 'link-btn', on: () => select(id)},
     h('span', {class: 's-' + (x ? x.status : 'pending')}, x ? st(x.status)[0] : '·'), ` ${x ? x.title : id}`)); };
+  if (selected === HUB) {
+    $('detail-title').textContent = '세션';
+    body.append(h('h3', {}, '작업에 묶이지 않은 활동'), activitySection(HUB));
+    return;
+  }
+  if (selected.startsWith('d:')) {
+    const d = records.decisions.find(x => x.id === selected.slice(2));
+    if (!d) return;
+    $('detail-title').textContent = '결정';
+    const open = d.status !== 'resolved';
+    body.append(h('h3', {}, d.question || d.id),
+      h('p', {class: 'sub'}, h('span', {class: open ? 's-pending-decision' : 's-' + d.outcome}, open ? '? 답을 기다리는 중' : `✓ ${OUTCOME[d.outcome] || d.outcome}`), ` · ${KIND[d.kind] || d.kind}`),
+      d.answer ? h('p', {class: 'answer'}, d.answer) : null,
+      h('h4', {}, '이 결정을 기다리는 작업'), h('ul', {}, records.tasks.filter(t => t.decision_ids.includes(d.id)).map(t => taskLink(t.id))));
+    return;
+  }
+  const t = byId.get(selected);
+  if (!t) return;
+  $('detail-title').textContent = '작업';
   const dependents = records.tasks.filter(x => x.depends_on.includes(t.id)).map(x => x.id);
   const ready = (records.status.ready || []).includes(t.id);
+  const decisions = new Map(records.decisions.map(d => [d.id, d]));
+  const waiting = t.decision_ids.map(id => decisions.get(id)).filter(d => d && !(d.status === 'resolved' && ['answered', 'approved'].includes(d.outcome)));
+  const passed = t.checks.filter(c => c.result === 'passed').length;
+  const lines = story(t);
   body.append(...[
     h('h3', {}, t.title),
-    h('p', {class: 'meta'}, h('span', {class: 's-' + t.status}, `${glyph} ${word}`), ` · 시도 ${t.attempts}/${t.max_attempts} · ${t.id}` + (ready ? ' · 다음 준비됨' : '')),
-    t.block_reason ? h('p', {class: 'note'}, `⏸ 차단 사유: ${t.block_reason}`) : null,
-    h('h4', {}, `검증 ${t.checks.length}`),
-    h('ul', {}, t.checks.map(c => h('li', {class: 'row'}, h('span', {class: 's-' + c.result}, `${rs(c.result)[0]} ${rs(c.result)[1]}`),
-      h('b', {}, c.id), c.description ? h('small', {}, c.description) : null))),
-    t.decision_ids.length ? [h('h4', {}, '결정'), h('ul', {}, t.decision_ids.map(id => {
-      const d = decisions.get(id); const open = !d || d.status !== 'resolved';
-      return h('li', {class: 'row'}, h('span', {class: open ? 's-pending-decision' : 's-' + (d.outcome || 'answered')}, open ? '? 대기' : `✓ ${OUTCOME[d.outcome] || d.outcome}`),
-        h('b', {}, id), d && d.question ? h('small', {}, d.question) : null);
-    }))] : null,
-    h('h4', {}, '선행 작업', swatch(false)), t.depends_on.length ? h('ul', {}, t.depends_on.map(taskLink)) : h('p', {class: 'muted'}, '없음'),
-    h('h4', {}, '이어지는 작업', swatch(true)), dependents.length ? h('ul', {}, dependents.map(taskLink)) : h('p', {class: 'muted'}, '없음'),
+    h('p', {class: 'sub'}, h('span', {class: 's-' + t.status}, `${st(t.status)[0]} ${st(t.status)[1]}`),
+      t.attempts > 1 ? ` · ${t.attempts}번째 시도` : '', ready ? ' · 시작할 수 있음' : ''),
+    t.status === 'running' && t.started_at ? h('p', {class: 'sub', id: 'elapsed'}, `시작한 지 ${span(Date.now() - Date.parse(t.started_at))}`) : null,
+    t.block_reason ? h('p', {class: 'note'}, `멈춘 이유: ${t.block_reason}`) : null,
+    waiting.length ? h('p', {class: 'note'}, `답이 필요해요: ${waiting.map(d => d.question || d.id).join(' / ')}`) : null,
+    activitySection(t.id),
+    h('h4', {}, `확인 결과 ${passed}/${t.checks.length}`),
+    h('ul', {}, t.checks.map(c => h('li', {class: 'row'}, h('span', {class: 's-' + c.result}, rs(c.result)[0]),
+      h('span', {}, `${c.description || c.id} `, h('span', {class: 'when'}, rs(c.result)[1]))))),
+    t.depends_on.length ? [h('h4', {}, '먼저 끝나야 하는 작업'), h('ul', {}, t.depends_on.map(taskLink))] : null,
+    dependents.length ? [h('h4', {}, '다음 작업'), h('ul', {}, dependents.map(taskLink))] : null,
+    lines.length ? h('details', {class: 'story'}, h('summary', {}, `지나온 과정 ${lines.length}`),
+      h('ul', {}, lines.slice().reverse().map(([e, text]) => h('li', {class: 'row'}, h('span', {class: 'when'}, hhmm(e.at)), h('span', {}, text))))) : null,
   ].flat().filter(Boolean));
 }
 
+/* ---------- AI summary ---------- */
 function renderSummary() {
-  $('ai').classList.toggle('waiting', !summary);
-  $('ai-headline').hidden = !summary || !summary.headline;
-  $('ai-activity').hidden = !summary || !summary.activity;
-  if (!summary) { $('ai-meta').textContent = '대기 중'; return; }
-  $('ai-headline').textContent = summary.headline || '';
-  $('ai-activity').textContent = summary.activity || '';
+  if (!summary) { $('ai-headline').textContent = '대기 중'; $('ai-meta').textContent = ''; return; }
+  $('ai-headline').textContent = summary.headline || summary.activity || '';
   const when = new Date(summary.generated_at);
   const parts = [summary.model, isNaN(when) ? summary.generated_at : when.toLocaleTimeString()];
   if (typeof summary.usage_tokens === 'number') parts.push('토큰 ' + summary.usage_tokens.toLocaleString());
-  if (records && summary.records_fingerprint !== records.fingerprint) parts.push('요약 이후 기록이 바뀜');
+  if (records && summary.records_fingerprint !== records.fingerprint) parts.push('요약 이후 기록 바뀜');
   $('ai-meta').textContent = parts.join(' · ');
 }
 
+/* ---------- polling ---------- */
 function setConn(kind, text) { const c = $('conn'); c.className = 'pill ' + kind; c.textContent = text; }
 async function fetchJSON(path) {
   const res = await fetch(path, {headers, cache: 'no-store'});
@@ -821,22 +1193,23 @@ async function tick() {
   try {
     const [rec, ses] = await Promise.all([fetchJSON('/api/records'), fetchJSON('/api/session')]);
     failures = 0;
-    if (rec.ok) { records = rec; setConn('live', '실시간 · ' + new Date(rec.read_at).toLocaleTimeString()); }
-    else if (rec.last_good) { records = rec.last_good; setConn('warn', '기록 읽기 불일치 · 다시 읽는 중'); }
-    else setConn('warn', '기록을 읽을 수 없음: ' + rec.error);
+    if (rec.ok) { records = rec; setConn('live', 'LIVE ' + new Date(rec.read_at).toLocaleTimeString()); }
+    else if (rec.last_good) { records = rec.last_good; setConn('warn', '기록 불일치 · 재시도'); }
+    else setConn('warn', '기록 읽기 실패: ' + rec.error);
     summary = ses.summary || null;
+    activity = ses.activity || null;
     if (records) {
-      const metaKey = records.fingerprint;
-      if (metaKey !== lastMeta) { lastMeta = metaKey; renderMeta(); renderDetail(); }
+      if (records.fingerprint !== lastMeta) { lastMeta = records.fingerprint; renderRail(); renderDetail(); }
       renderSummary(); draw();
+      firstLoad = false;
     }
   } catch (_) {
     if (++failures >= 2) setConn('down', '연결 끊김 · 패널에서 다시 열기');
   }
 }
-new ResizeObserver(() => draw()).observe($('canvas'));
+new ResizeObserver(() => { drawnKey = ''; draw(); }).observe($('canvas'));
 tick();
-setInterval(tick, 2000);
+setInterval(tick, 1000);
 })();
 </script>
 </body>

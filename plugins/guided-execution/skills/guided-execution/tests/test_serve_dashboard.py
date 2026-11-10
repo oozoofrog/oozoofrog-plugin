@@ -86,29 +86,34 @@ class DashboardTests(unittest.TestCase):
         self.assertNotRegex(html, r'(src|href)="https?:')
         self.assertIn('prefers-reduced-motion', html)
         self.assertIn('aria-pressed', html)
-        self.assertIn('기록 아님', html)
+        self.assertIn('AI 요약 · 참고용', html)
         # Visible paths: what needs the person, selectable cards with a detail region, noncolor glyphs.
         self.assertIn('지금 필요한 것', html)
         self.assertIn('id="announce" class="sr" aria-live="polite"', html)
-        self.assertIn('id="detail" aria-labelledby="detail-title" hidden', html)
+        self.assertIn('class="detail frame" id="detail" aria-labelledby="detail-title" hidden', html)
         # Structure carries the meaning: no sentences explaining the interface itself.
-        for sentence in ('Tab으로 이동해', '흐르는 점은 장식', '세션에 새 활동이 생기면', '전체 작업 목록에서 확인하세요', '선행 작업을 확인하세요'):
+        for sentence in ('Tab으로 이동해', '흐르는 점은 장식', '세션에 새 활동이 생기면', '전체 작업 목록에서 확인하세요',
+                         '선행 작업을 확인하세요', '노드를 누르면'):
             self.assertNotIn(sentence, html)
         self.assertIn("role: 'button'", html)
         self.assertIn("e.key === 'Enter' || e.key === ' '", html)
         self.assertIn("e.key === 'Escape'", html)
-        # Motion: dots flow only on the selected task's edges, with distinct in/out patterns and static arrows.
-        self.assertIn('.motion .flow.hot{', html)
-        self.assertNotRegex(html, r'\.motion \.flow\{')
-        self.assertIn('.flow.in{stroke-dasharray:3 997}', html)
-        self.assertIn('.flow.out{stroke-dasharray:3 9 3 985}', html)
-        self.assertIn('url(#arrow-hot)', html)
-        self.assertIn("if (!firstDraw && motionOn())", html)
+        # Ontology graph: session hub, decision gates, task nodes with check arcs, typed link labels.
+        for token in ("const HUB = '__session'", "class: 'node gate'", "class: 'seg'", "'선행'", 'url(#arrow-hot)'):
+            self.assertIn(token, html)
+        # The task panel speaks plainly: what happens now, what was done, check results; no tool jargon.
+        for phrase in ('지금 하는 일', '최근 한 일', '확인 결과', '지나온 과정', '파일 수정', '시작한 지'):
+            self.assertIn(phrase, html)
+        for jargon in ('리비전', "'쓰기'", "'읽기'", ' · via', '기록 타임라인'):
+            self.assertNotIn(jargon, html)
+        # Live activity moves only with motion on.
+        self.assertIn("if (seenEvents && motionOn())", html)
+        self.assertIn("if (!firstLoad && motionOn())", html)
+        self.assertIn('.motion .node.st-running .spin{animation:spin', html)
+        self.assertRegex(html, r'@media \(prefers-reduced-motion:reduce\)\{[^}]*\.spin\{animation:none\}')
         self.assertIn("freshAttention", html)
-        for glyph in ('✓', '✗', '▶', '⏸', '↺', '?'):
+        for glyph in ('✓', '✗', '▶', '⏸', '↺', '?', '◌'):
             self.assertIn(glyph, html)
-        # Stage edges share the `stage` class; no blanket rule may hide them.
-        self.assertNotRegex(html, r'(?m)^\.stage\{display:none\}')
 
     def test_records_reflect_state_and_never_write(self):
         status, _, body = self.request('GET', '/api/records')
@@ -124,6 +129,30 @@ class DashboardTests(unittest.TestCase):
             self.assertEqual(405, self.request(method, '/api/records')[0])
         self.assertEqual(self.before, self.digest())
         self.assertFalse((self.project / 'SHOULD_NOT_RUN').exists())
+
+    def control(self, *args):
+        result = subprocess.run([sys.executable, str(SCRIPTS / 'loop_control.py'), args[0],
+                                 '--workspace', str(self.workspace), *args[1:]], capture_output=True, text=True)
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_records_carry_task_timeline_scopes_and_evidence(self):
+        self.control('start', '--task', 'build', '--revision', 'r1')
+        (self.workspace / 'evidence' / 'build-1.log').write_text('ok', encoding='utf-8')
+        self.control('record-check', '--task', 'build', '--revision', 'r1', '--check', 'unit',
+                     '--path', 'evidence/build-1.log', '--result', 'failed')
+        self.control('finish', '--task', 'build', '--revision', 'r1', '--result', 'failed', '--reason', 'unit 실패')
+        self.control('start', '--task', 'build', '--revision', 'r2')
+        data = json.loads(self.request('GET', '/api/records')[2])
+        build = data['tasks'][0]
+        self.assertEqual(['start', 'record-check', 'finish', 'start'], [e['action'] for e in build['timeline']])
+        self.assertEqual(('unit', 'failed'), (build['timeline'][1]['check'], build['timeline'][1]['result']))
+        self.assertEqual(('failed', 'unit 실패'), (build['timeline'][2]['result'], build['timeline'][2]['reason']))
+        self.assertEqual(build['timeline'][3]['at'], build['started_at'])
+        self.assertEqual(('r2', ['a.txt'], ['build.txt']), (build['revision'], build['reads'], build['writes']))
+        self.assertIsNone(build['checks'][0]['evidence'])  # a new attempt starts without current records
+        self.control('invalidate', '--task', 'build', '--reason', '입력 변경')
+        ship = json.loads(self.request('GET', '/api/records')[2])['tasks'][1]
+        self.assertEqual([('invalidated', 'build')], [(e['action'], e['by']) for e in ship['timeline']])
 
     def test_mismatched_pair_keeps_last_good_and_reports_error(self):
         good = json.loads(self.request('GET', '/api/records')[2])
@@ -151,6 +180,26 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual([{'from': 's1', 'to': 's2'}], stored['edges'])
         self.assertEqual('ai_summary_not_a_record', stored['basis'])
         self.assertEqual(360, stored['usage_tokens'])
+        self.assertEqual(self.before, self.digest())
+
+    def test_activity_keeps_bounded_metadata_on_known_tasks(self):
+        events = [{'id': 'a1', 'task': 'build', 'tool': 'Bash', 'target': 'x' * 500, 'phase': 'ok',
+                   'started_at': 1000, 'ended_at': 1300, 'status': 'passed'},
+                  {'id': 'a2', 'task': 'nope', 'tool': 'Read', 'phase': 'running', 'started_at': 1400},
+                  {'id': 'a1', 'task': 'build', 'tool': 'dup', 'phase': 'ok', 'started_at': 1},
+                  {'id': 'a3', 'task': 'build', 'tool': 'Grep', 'phase': 'done', 'started_at': 1},
+                  {'id': 'a4', 'task': 'build', 'tool': 'Grep', 'phase': 'ok', 'started_at': 'soon'}]
+        status, _, body = self.request('POST', '/api/activity', {'events': events})
+        self.assertEqual(200, status, body)
+        stored = json.loads(self.request('GET', '/api/session')[2])['activity']
+        self.assertEqual(['a1', 'a2'], [e['id'] for e in stored['events']])
+        self.assertEqual(120, len(stored['events'][0]['target']))
+        self.assertNotIn('status', stored['events'][0])
+        self.assertEqual('__session', stored['events'][1]['task'])
+        self.assertEqual('session_activity_not_a_record', stored['basis'])
+        self.assertEqual(403, self.request('POST', '/api/activity?t=' + self.board.token,
+                                           {'events': []}, token=False)[0])
+        self.assertEqual(422, self.request('POST', '/api/activity', {'events': 'no'})[0])
         self.assertEqual(self.before, self.digest())
 
     def test_summary_requires_header_token_and_valid_size(self):

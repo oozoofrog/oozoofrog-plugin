@@ -22,6 +22,10 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## Guided Execution [0.4.0] — 2026-11-11
+
+- Show live per-task activity. The Claude mod observes tool calls (pass-through) and attributes each to an explicitly named, subagent-linked, only-running or in-scope task, else the session; the pane and the prompt band show calls in flight, recent calls, elapsed time and counts. `serve_dashboard.py` accepts that activity in memory (`/api/activity`) and adds per-task timelines, start time, scopes and evidence paths to `/api/records`. The web dashboard is redrawn as a dark ontology graph (session hub, decision gates, check-ring task nodes, typed links, live node states, activity lanes) with a plain-language task panel. Activity never changes a record.
+
 ## Guided Execution [0.3.0] — 2026-11-11
 
 - Add a read-only Claude Code mod to the Claude manifest (`claude-mod/`): a `guided-board` side pane with list (task → checks, attempts, readiness, pending decisions, block reasons) and relation views, a one-line progress band above the prompt, and `/guided-board`. It polls `.agent-loop/<run>/` and keeps the last good board on a mismatched read. The Codex manifest is unchanged.
