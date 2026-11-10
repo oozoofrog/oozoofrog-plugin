@@ -8,7 +8,7 @@
 - Mod: 세 번째 보기 '요구사항 할 일'(요구사항별 묶음, 진행 수, 제외 수, 요구사항 미지정 묶음, 빈 상태), 띠의 `할 일 n/m`, `/clear` 뒤 기록을 다시 읽는 것을 Mod 테스트 16개(모의 엔진)로 확인했습니다.
 - 웹: '세션 작업'과 '요구사항 할 일' 탭을 점검용 기록으로 헤드리스 Chrome에서 1440px·600px·빈 상태로 캡처해 확인했습니다. 이 기능을 만든 실제 실행 기록으로 사용자 Chrome에서도 두 탭과, 작업 칩을 누르면 세션 작업 탭에서 그 작업이 선택되는 것을 확인했습니다.
 - 배포 뒤 실제 세션(설치본 0.6.0, `/reload-plugins`)에서 `/guided-board` 요약이 `할 일 13/14`를 표시했고, 패널의 '요구사항 할 일' 보기와 프롬프트 위 띠는 사용자가 화면에서 확인했습니다. 창 캡처는 남기지 않았습니다.
-- Claude 할 일 목록(TaskCreate/TaskUpdate) 반영은 확인하지 못했습니다.
+- Claude 할 일 목록 반영: 임시 프로젝트의 실행 기록(요구사항 2개)으로 `claude -p`(설치본 0.6.0 스킬 문서)를 돌렸습니다. 프롬프트에는 반영 방법을 적지 않았습니다. 할 일 3개를 `todo-add`할 때마다 TaskCreate가 호출되었고, 각 항목은 subject가 할 일 제목, description이 요구사항과 작업 제목, metadata가 `{run, todo}`였습니다. `todo-set` in_progress·completed는 TaskUpdate의 같은 상태로, dropped는 deleted로 반영되었습니다. 마지막 TaskList 결과(#1 completed, #2 pending)가 `state.json`과 일치했습니다. 대화형 세션의 할 일 목록 표시와 TodoWrite만 있는 호스트는 확인하지 않았습니다.
 
 ## 0.5.0 (2026-11-11, macOS / Python 3.15.2 / Claude Code 2.1.322)
 
