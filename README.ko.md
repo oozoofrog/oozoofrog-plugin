@@ -69,6 +69,10 @@ Standalone `local-ai-studio/`와 byte-identical skills-only Plugin `0.3.0`을 �
 
 [인계 문서](handoff/SKILL.md) (`handoff` 0.1.0)는 작업 상태를 프로젝트 안의 `_context/handoff/<브랜치>.md`에 남겨, Claude Code에서 `/clear`나 새 세션 뒤에도 압축에 기대지 않고 이어가게 합니다. `_context/`는 기본으로 Git에 올라가지 않습니다. Claude Code에서는 훅 4개가 함께 등록됩니다: `/clear` 뒤 인계 문서 전체를, 새로 시작하거나 재개할 때는 목표와 다음 할 일만 넣고, 문맥이 40만 토큰을 넘으면 인계 문서를 쓰게 하고, 압축 요약을 `_context/sessions/`에 보관합니다. 14일 넘게 갱신되지 않았거나 커밋이 30개 넘게 지났거나 기록이 갈라졌거나 압축 전에 쓴 문서는 넣지 않고 위치만 알립니다. 끝난 문서와 사라진 브랜치의 문서는 보관 폴더로 옮기고, 오래된 보관본은 지웁니다. Python 3과 Git이 필요하며 MCP 서버는 없습니다. Codex에서는 스킬만 쓸 수 있습니다. [설치](docs/plugin-installation.md#handoff)를 확인하세요.
 
+## 모델 선택
+
+[모델 선택](model-advisor/SKILL.md) (`model-advisor` 0.1.0)은 작업에 맞는 Claude 모델(Haiku 5.5, Sonnet 5.5, Opus 5.5, Fable 5.2)과 effort를 추천합니다. 넘겨 달라고 하면 이 대화 없이도 시작할 수 있는 지시문을 써서, 그 모델·effort로 서브에이전트를 부르거나 `claude --bg`로 백그라운드 Claude Code 세션을 띄웁니다. 띄운 뒤 `claude logs`에서 실제 모델을 확인하고 `claude attach <id>`로 여는 방법을 알려 줍니다. 현재 세션의 모델은 바꾸지 못하므로 `/compact`, `/model`, `/effort` 순서를 안내합니다. 백그라운드 세션은 `claude` CLI와 신뢰 승인을 마친 프로젝트 폴더가 필요합니다. 모델별 기준과 가격은 2026-11-09 claude.dev 글을 따릅니다. Codex에서는 스킬만 쓸 수 있습니다. [설치](docs/plugin-installation.md#model-advisor)를 확인하세요.
+
 ## 설치
 
 필요한 Plugin만 선택해 설치합니다. 아래 명령은 해당 변경이 원격 marketplace에 반영된 뒤 사용할 수 있습니다.

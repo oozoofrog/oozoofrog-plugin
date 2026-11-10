@@ -52,6 +52,17 @@ claude plugin install handoff@oozoofrog-plugin
 
 설치 후 Claude Code를 다시 시작해야 훅이 적용됩니다. 같은 스크립트를 `~/.claude/skills/handoff`와 `settings.json` 훅으로 직접 설치한 적이 있다면 둘 중 하나만 남깁니다. 둘 다 있으면 훅이 두 번 실행됩니다. 경고 기준과 정리 기간은 환경 변수(`HANDOFF_TOKENS`, `HANDOFF_STALE_DAYS`, `HANDOFF_STALE_COMMITS`, `HANDOFF_KEEP_COMPACT_DAYS`, `HANDOFF_KEEP_ARCHIVE_DAYS`)로 바꿉니다.
 
+## Model Advisor
+
+`model-advisor@oozoofrog-plugin` 0.1.0은 [모델 선택 스킬](../model-advisor/SKILL.md)만 설치합니다. 훅과 MCP 서버는 없습니다. 백그라운드 세션으로 넘기려면 `claude` CLI가 필요하고, 넘길 프로젝트 폴더에서 `claude`를 한 번 실행해 신뢰를 승인해 두어야 합니다.
+
+```sh
+claude plugin marketplace add oozoofrog/oozoofrog-plugin
+claude plugin install model-advisor@oozoofrog-plugin
+```
+
+같은 스킬을 `~/.claude/skills/model-advisor`에 직접 둔 적이 있다면 둘 중 하나만 남깁니다. 둘 다 있으면 같은 요청에 두 스킬이 함께 후보로 뜹니다.
+
 ## OpenAI Decisions
 
 `openai-decisions@oozoofrog-plugin`은 [스킬](../openai-decisions/SKILL.md)만 제공합니다. 기존 `openai_decide` MCP/Pi 도구나 `openai-decisions` CLI가 있으면 이를 사용하고, 없으면 [공식 CLI 직접 호출](../openai-decisions/references/cli.md)을 따릅니다. Plugin 설치는 MCP 서버·API 키·과금 계정을 자동 등록하지 않습니다. API 키는 기존 비밀 입력·자격증명 저장소로 전달하고 설정 파일이나 대화에 복사하지 않습니다.

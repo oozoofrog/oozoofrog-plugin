@@ -1,0 +1,10 @@
+{
+  "name": "model-advisor",
+  "version": "0.1.0",
+  "description": "작업 설명을 받아 어떤 Claude 모델(Haiku 5.5, Sonnet 5.5, Opus 5.5, Fable 5.2)과 effort가 어울리는지 판단해 추천하고, 원하면 그 모델·effort로 띄운 서브에이전트나 백그라운드 Claude Code 세션에 지시를 넘긴다. \"이 작업은 어떤 모델이 좋을까\", \"Opus로 충분해?\", \"Fable이 필요한가\", \"effort 올릴까?\", \"Sonnet 세션으로 넘겨줘\", \"추천 모델로 돌려줘\", \"이건 Haiku한테 맡겨\", 큰 작업을 시작하기 전 모델·effort 선택 상담, 작업 중 결과가 부족해 모델이나 effort를 올릴지 판단할 때, 서브에이전트에 쓸 모델을 고를 때 사용한다. API 파라미터·마이그레이션 질문은 다루지 않는다. 현재 세션의 모델은 바꾸지 못하므로 그 경우 `/model`·`/effort`를 안내한다.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin"
+}

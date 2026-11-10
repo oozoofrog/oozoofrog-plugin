@@ -1,0 +1,4 @@
+interface:
+  display_name: "모델 선택"
+  short_description: "작업에 맞는 Claude 모델·effort 추천과 그 모델 세션으로 넘기기"
+  default_prompt: "$model-advisor 이 작업에 맞는 Claude 모델과 effort를 추천해 주세요."

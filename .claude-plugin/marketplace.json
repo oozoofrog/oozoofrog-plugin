@@ -79,6 +79,12 @@
       "source": "./plugins/handoff",
       "description": "지금 작업 상태를 프로젝트 안의 `_context/handoff/<브랜치>.md`에 인계 문서로 남겨, /clear나 새 세션에서 압축 없이 이어가게 한다. \"/handoff\", \"인계 문서 써줘\", \"세션 넘기기\", \"/clear 전에 정리\", \"여기까지 저장\", 문맥 사용량 경고 훅이 인계를 요청할 때, 큰 작업 단위를 끝냈을 때 사용한다. 작업이 끝나 인계가 필요 없어지면 status를 done으로 바꾼다. 코드 커밋이나 PR 설명 작성에는 쓰지 않는다.",
       "category": "productivity"
+    },
+    {
+      "name": "model-advisor",
+      "source": "./plugins/model-advisor",
+      "description": "작업 설명을 받아 어떤 Claude 모델(Haiku 5.5, Sonnet 5.5, Opus 5.5, Fable 5.2)과 effort가 어울리는지 판단해 추천하고, 원하면 그 모델·effort로 띄운 서브에이전트나 백그라운드 Claude Code 세션에 지시를 넘긴다. \"이 작업은 어떤 모델이 좋을까\", \"Opus로 충분해?\", \"Fable이 필요한가\", \"effort 올릴까?\", \"Sonnet 세션으로 넘겨줘\", \"추천 모델로 돌려줘\", \"이건 Haiku한테 맡겨\", 큰 작업을 시작하기 전 모델·effort 선택 상담, 작업 중 결과가 부족해 모델이나 effort를 올릴지 판단할 때, 서브에이전트에 쓸 모델을 고를 때 사용한다. API 파라미터·마이그레이션 질문은 다루지 않는다. 현재 세션의 모델은 바꾸지 못하므로 그 경우 `/model`·`/effort`를 안내한다.",
+      "category": "productivity"
     }
   ]
 }

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add `model-advisor` 0.1.0: recommend a Claude model and effort for a task, and on request hand it to a subagent (`model`, `effort`) or a background Claude Code session (`claude --bg --model --effort`) with a self-contained brief, then confirm the running model from `claude logs`. Prices are written without dollar signs so skill arguments are not substituted into them. Codex receives the skill only.
+
 - Add `handoff` 0.1.0: project-local handoff documents in `_context/handoff/<branch>.md` with Claude Code SessionStart, Stop, PreCompact and PostCompact hooks. Stale handoffs (age, commit distance, diverged history, pre-compaction) are reduced to a pointer; finished and orphaned handoffs are archived and old archives expire. Codex receives the skill only.
 
 - Add a Claude Code marketplace (`.claude-plugin/marketplace.json`) and per-Plugin Claude manifests for all 11 Plugins, using the same `<plugin>@oozoofrog-plugin` selectors. `swift-intelligence` and `winpilot` declare Claude-specific MCP settings rooted at `${CLAUDE_PLUGIN_ROOT}`; Codex manifests and `.mcp.json` files are unchanged.
