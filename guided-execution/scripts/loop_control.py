@@ -72,7 +72,31 @@ def transition(workspace, plan, state, args):
     event = {'action': args.command, 'timestamp': datetime.now(timezone.utc).isoformat(),
              'previous_tasks': {}, 'previous_decisions': {}}
     tasks = {task['id']: task for task in plan['tasks']}
-    if args.command == 'resolve-decision':
+    if args.command in {'todo-add', 'todo-set'}:
+        todos = state.setdefault('todos', [])
+        found = [todo for todo in todos if todo['id'] == args.todo]
+        if args.command == 'todo-add':
+            require(not found, 'todo already exists')
+            require(workspace_api.nonempty(args.todo) and nonempty(args.title), 'todo id and title are required')
+            require(args.task in tasks, 'unknown task')
+            todo = {'id': args.todo, 'title': args.title, 'task_id': args.task,
+                    'requirement_id': args.requirement, 'status': 'pending'}
+            todos.append(todo)
+        else:
+            require(found, 'unknown todo')
+            todo = found[0]
+            task_status = state['tasks'][todo['task_id']]['status']
+            # Progress belongs to work under way; a todo never marks its task verified.
+            require(args.status in {'pending', 'dropped'} or task_status in {'running', 'passed'},
+                    'start the todo\'s task before progressing it')
+            require(args.status != 'dropped' or nonempty(args.reason), 'dropping a todo needs a reason')
+            event['previous_todo'] = copy.deepcopy(todo)
+            todo['status'] = args.status
+            todo.pop('reason', None)
+            if args.reason:
+                todo['reason'] = args.reason
+        event['todo'] = copy.deepcopy(todo)
+    elif args.command == 'resolve-decision':
         require(args.decision in state['decisions'], 'unknown decision')
         item = state['decisions'][args.decision]
         require(item['status'] == 'pending', 'resolved decision requires coordinator reconciliation')
@@ -198,11 +222,13 @@ def parser():
     record = commands.add_parser('record-check', help='register one existing nonempty actual log, never write or execute it')
     finish = commands.add_parser('finish', help='finish running task; pass requires every current check passed at this revision')
     decision = commands.add_parser('resolve-decision', help='record actual answer and source; never infer or grant permission')
+    todo_add = commands.add_parser('todo-add', help='add a requirement todo under a plan task; status starts pending')
+    todo_set = commands.add_parser('todo-set', help='move a todo to pending, in_progress, completed or dropped; never passes its task')
     mutation = [commands.add_parser(name, help=description) for name, description in [
         ('invalidate', 'mark task and descendants stale without resetting attempts or deleting evidence'),
         ('block', 'block task and invalidate descendants; record why'),
         ('cancel', 'cancel task and invalidate descendants; does not stop external processes')]]
-    for command in [start, revision, record, finish, decision, *mutation]:
+    for command in [start, revision, record, finish, decision, todo_add, todo_set, *mutation]:
         command.add_argument('--workspace', required=True, help='existing .agent-loop/<run-id>')
     for command in [start, revision, record, finish, *mutation]:
         command.add_argument('--task', required=True, help='exact plan task ID')
@@ -214,6 +240,13 @@ def parser():
     record.add_argument('--path', required=True, help='new unused existing log path relative to workspace, strictly under evidence/')
     record.add_argument('--result', required=True, choices=['passed', 'failed', 'not_run'])
     finish.add_argument('--result', required=True, choices=['passed', 'failed'])
+    for command in [todo_add, todo_set]:
+        command.add_argument('--todo', required=True, help='todo ID, unique in the run')
+    todo_add.add_argument('--title', required=True, help='one concrete, checkable step')
+    todo_add.add_argument('--task', required=True, help='plan task this todo belongs to')
+    todo_add.add_argument('--requirement', help='plan requirement ID this todo serves')
+    todo_set.add_argument('--status', required=True, choices=['pending', 'in_progress', 'completed', 'dropped'])
+    todo_set.add_argument('--reason', help='required for dropped; optional note otherwise')
     decision.add_argument('--decision', required=True, help='exact pending decision ID')
     decision.add_argument('--answer', required=True, help='actual explicit answer, not a placeholder')
     decision.add_argument('--source', required=True, help='actual message ID, permalink, or other traceable source')

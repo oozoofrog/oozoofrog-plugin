@@ -22,6 +22,12 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## Guided Execution [0.6.0] — 2026-11-11
+
+- Add requirement todos: `plan.requirements` records what the user asked for, and `loop_control.py todo-add` / `todo-set` record small todos per task in `state.json` (pending, in progress, completed, dropped with a reason) without changing the plan digest or any task check. The skill mirrors todos into Claude Code's task list (TaskCreate/TaskUpdate). The web dashboard has separate `세션 작업` and `요구사항 할 일` tabs; the terminal pane adds a third view and the band shows todo progress. Older runs stay valid and show an empty todo view.
+
+- Fix `/guided-board` reporting no runs after `/clear`: the board is read again when session state was emptied, even though the run records are unchanged.
+
 ## Guided Execution [0.5.0] — 2026-11-11
 
 - Quick-view files the session touched (current text, 200KB, secret-looking and binary files refused, only observed paths), explain used commands in Korean on hover or focus with Haiku on demand (waiting state, cache, off with AI off), and show Claude's AskUserQuestion on the dashboard where it can be answered; the first answer, dashboard or terminal, wins. Same-column prerequisite links now run along the left side.

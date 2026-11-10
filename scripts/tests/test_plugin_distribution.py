@@ -114,14 +114,14 @@ class PluginDistributionTests(unittest.TestCase):
         )
         self.assertIn("guided-execution", load_module().PACKAGES)
         manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
-        self.assertEqual("0.5.0", manifest["version"])
+        self.assertEqual("0.6.0", manifest["version"])
         self.assertEqual("./skills/", manifest["skills"])
         for key in ("mcpServers", "apps", "hooks"):
             self.assertNotIn(key, manifest)
         # Codex discovers hooks/hooks.json; the Claude mod lives elsewhere and only the Claude manifest names it.
         self.assertFalse((plugin / "hooks").exists())
         claude = json.loads((plugin / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
-        self.assertEqual("0.5.0", claude["version"])
+        self.assertEqual("0.6.0", claude["version"])
         self.assertEqual("./claude-mod/hooks.json", claude["hooks"])
         self.assertEqual("./claude-mod/types/index.d.ts", claude["types"])
         self.assertEqual({"modules": ["./register.tsx"]},

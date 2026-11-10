@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { SESSION, attribute, liveRows, parseExplanations, parseSummary, relationRows, summaryLine, targetOf, toBoard } from './register'
+import { SESSION, attribute, liveRows, parseExplanations, parseSummary, relationRows, summaryLine, targetOf, toBoard, todoRows } from './register'
 
 const PLAN = {
   schema_version: 1,
@@ -42,7 +42,7 @@ const BAND = {
   },
 } as const
 
-function engine(on: Parameters<Parameters<typeof test>[1]>[1], state: object = STATE) {
+function engine(on: Parameters<Parameters<typeof test>[1]>[1], state: object = STATE, plan: object = PLAN) {
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('session.root', () => ({ value: '/p' }))
   on('command.register', () => ({ value: { command: 'guided-board' } }))
@@ -51,7 +51,7 @@ function engine(on: Parameters<Parameters<typeof test>[1]>[1], state: object = S
   on('fs.list', () => ({ value: [{ name: 'notes', kind: 'dir', size: 0, mtimeMs: 0, isLink: false }] }))
   on('fs.stat', () => ({ value: { kind: 'file', size: 10, mtimeMs: 5, isLink: false } }))
   on('fs.read', (_, e) => ({
-    value: e.path.endsWith('plan.json') ? JSON.stringify(PLAN) : JSON.stringify(state),
+    value: e.path.endsWith('plan.json') ? JSON.stringify(plan) : JSON.stringify(state),
   }))
 }
 
@@ -94,6 +94,42 @@ test('the pane lists tasks and switches to relations, on every surface', async (
   }
 })
 
+test('the todo view groups requirement todos apart from session work, and says when there are none', async ($, on) => {
+  mock.clock(on, { now: 1_000_000 })
+  const plan = { ...PLAN, requirements: [{ id: 'json', text: 'JSON 파일 하나로 내보낸다' }, { id: 'docs', text: '사용법을 적는다' }] }
+  const state = {
+    ...STATE,
+    todos: [
+      { id: 'read', title: '노트 읽기', status: 'completed', task_id: 'export', requirement_id: 'json' },
+      { id: 'write', title: '파일 쓰기', status: 'in_progress', task_id: 'export', requirement_id: 'json' },
+      { id: 'tmp', title: '임시 파일 정리', status: 'dropped', task_id: 'export', reason: '임시 파일 없음' },
+    ],
+  }
+  engine(on, state, plan)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'view-todos' })
+  expect(await ui.find({ type: 'Text', text: /^할 일 완료 1\/2$/ })).toBeTruthy()
+  expect(await ui.find({ type: 'Text', text: /■ JSON 파일 하나로 내보낸다 {2}1\/2/ })).toBeTruthy()
+  expect(await ui.find({ type: 'Text', text: /▶ 파일 쓰기 {2}· 진행 · 내보내기 구현/ })).toBeTruthy()
+  expect(await ui.find({ type: 'Text', text: /■ 사용법을 적는다 {2}세부 할 일 없음/ })).toBeTruthy()
+  expect(await ui.find({ type: 'Text', text: /⊘ 임시 파일 정리 .*임시 파일 없음/ })).toBeTruthy()
+  expect(await ui.find({ type: 'Text', text: /roundtrip|behavior/ })).toBeFalsy()
+  await ui.unmount()
+  expect(summaryLine(toBoard('notes', '/w', JSON.stringify(plan), JSON.stringify(state), 0))).toContain('할 일 1/2')
+  expect(todoRows(toBoard('notes', '/w', JSON.stringify(PLAN), JSON.stringify(STATE), 0))).toEqual([])
+})
+
+test('a run without todos shows the empty todo view', async ($, on) => {
+  mock.clock(on, { now: 1_000_000 })
+  engine(on)
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'view-todos' })
+  expect(await ui.find({ type: 'Text', text: /요구사항·할 일 기록이 없습니다/ })).toBeTruthy()
+  await ui.unmount()
+})
+
 test('the band shows one line while work remains and steps aside when done', async ($, on) => {
   mock.clock(on, { now: 1_000_000 })
   engine(on)
@@ -101,6 +137,25 @@ test('the band shows one line while work remains and steps aside when done', asy
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
   expect((await ui.find({ type: 'Text', text: /통과 1\/2/ }))?.text).toBe('notes · 통과 1/2 · 결정 대기 1 ')
   await ui.unmount()
+})
+
+test('after /clear empties session state, the unchanged records are read again', async ($, on) => {
+  mock.clock(on, { now: 1_000_000 })
+  engine(on)
+  // /clear: the board reads empty until the mod writes it again; no session.start follows.
+  let isCleared = false
+  on('state.get', async (_, e, next) => {
+    const got = await next(e)
+    return isCleared && e.key === 'board' && 'value' in got ? { value: { ...got.value, value: null } } : got
+  })
+  on('state.set', (_, e, next) => {
+    if (e.key === 'board') isCleared = false
+    return next(e)
+  })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  isCleared = true
+  const ran = await $.command.run({ command: 'guided-board', args: '' } as never)
+  expect(JSON.stringify(ran)).toContain('notes · 통과 1/2')
 })
 
 test('no records: the pane says so and offers no dashboard', async ($, on) => {

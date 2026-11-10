@@ -158,6 +158,19 @@ class DashboardTests(unittest.TestCase):
         ship = json.loads(self.request('GET', '/api/records')[2])['tasks'][1]
         self.assertEqual([('invalidated', 'build')], [(e['action'], e['by']) for e in ship['timeline']])
 
+    def test_records_carry_requirement_todos_and_old_runs_have_none(self):
+        data = json.loads(self.request('GET', '/api/records')[2])
+        self.assertEqual(([], []), (data['requirements'], data['todos']))
+        self.control('todo-add', '--todo', 'parse', '--title', '입력 <b>파싱</b>', '--task', 'build')
+        self.control('start', '--task', 'build', '--revision', 'r1')
+        self.control('todo-set', '--todo', 'parse', '--status', 'in_progress')
+        todo = json.loads(self.request('GET', '/api/records')[2])['todos'][0]
+        self.assertEqual(('parse', '입력 <b>파싱</b>', 'in_progress', 'build', None),
+                         (todo['id'], todo['title'], todo['status'], todo['task_id'], todo['requirement_id']))
+        page = self.request('GET', '/')[2].decode()
+        self.assertIn('id="tab-todos"', page)
+        self.assertIn("'#view=todos'", page)
+
     def test_mismatched_pair_keeps_last_good_and_reports_error(self):
         good = json.loads(self.request('GET', '/api/records')[2])
         plan = self.workspace / 'plan.json'

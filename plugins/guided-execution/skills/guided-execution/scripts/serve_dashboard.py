@@ -116,9 +116,14 @@ def snapshot(workspace):
                       outcome=state['decisions'][decision['id']].get('outcome'),
                       answer=clip(state['decisions'][decision['id']].get('answer'), 200))
                  for decision in plan.get('decisions', [])]
+    requirements = [dict(id=item['id'], text=clip(item['text'], 400)) for item in plan.get('requirements', [])]
+    todos = [dict(id=todo['id'], title=clip(todo['title'], 200), status=todo['status'], task_id=todo['task_id'],
+                  requirement_id=todo.get('requirement_id'), reason=clip(todo.get('reason'), 200))
+             for todo in state.get('todos', [])]
     fingerprint = hashlib.sha256(files['plan.json'] + b'\0' + files['state.json']).hexdigest()[:16]
     return dict(ok=True, run_id=state['run_id'], goal=plan.get('goal', ''), fingerprint=fingerprint,
                 read_at=now(), status=summary, tasks=tasks, decisions=decisions,
+                requirements=requirements, todos=todos,
                 graph=dict(nodes=len(graph['nodes']), edges=len(graph['edges'])),
                 verification_scope=SCOPE)
 
@@ -522,6 +527,7 @@ PAGE = r'''<!doctype html>
 --ok:#2be4a0;--bad:#ff3d7f;--warn:#ffc53d;--run:#22d3ee;--muted:#6b7787;--ai:#b388ff;--focus:#22d3ee;
 --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;color-scheme:dark}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{background:var(--bg)}
 body{margin:0;color:var(--ink);font:13px/1.45 system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif}
 h1,h2,h3,h4,p{margin:0}
@@ -713,7 +719,30 @@ box-shadow:0 0 0 1px rgba(0,0,0,.4),0 0 18px color-mix(in srgb,var(--run) 25%,tr
 .s-blocked,.s-stale,.s-revision_requested,.s-pending-decision{color:var(--warn)}.s-running{color:var(--run)}
 .s-pending,.s-cancelled,.s-unrecorded,.s-not_run{color:var(--muted)}
 .muted{color:var(--sub)}
+.views{display:flex;gap:0;border:1px solid var(--line2)}
+.views button{font:600 11px/1 var(--mono);letter-spacing:.04em;background:var(--panel);border:0;border-right:1px solid var(--line2);padding:6px 10px;cursor:pointer;color:var(--sub)}
+.views button:last-child{border-right:0}
+.views button[aria-selected="true"]{background:var(--panel2);color:var(--run);box-shadow:inset 0 -2px 0 var(--run)}
+.todos{padding:18px 20px 28px;max-width:980px;display:grid;gap:16px;align-content:start}
+.todos-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
+.todos-head .bar{height:6px}
+.todos-head p{font:11px/1 var(--mono);color:var(--sub);white-space:nowrap}
+.req{padding:12px 14px;display:grid;gap:8px}
+.req-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:baseline}
+.req-head h3{font:600 14px/1.4 system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif}
+.req-head span{font:11px/1 var(--mono);color:var(--sub);white-space:nowrap}
+.req ul{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.todo{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:2px 8px;align-items:center;padding:5px 6px;border-top:1px solid var(--line)}
+.todo:first-child{border-top:0}
+.todo .g{font:700 12px/1 var(--mono);text-align:center}
+.todo.st-completed .t{color:var(--sub)}
+.todo.st-dropped .t{color:var(--dim);text-decoration:line-through}
+.todo .why{grid-column:2/-1;font-size:12px;color:var(--sub)}
+.chip{font:11px/1.2 var(--mono);background:transparent;border:1px solid var(--line2);padding:3px 7px;cursor:pointer;color:var(--sub);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip:hover{border-color:var(--run);color:var(--run)}
+.s-in_progress{color:var(--run)}.s-completed{color:var(--ok)}.s-dropped{color:var(--dim)}
 @media (max-width:999px){
+  .todo{grid-template-columns:18px minmax(0,1fr)}.todo .chip{grid-column:2;justify-self:start}
   .shell,.shell.open{grid-template-columns:minmax(0,1fr)}
   .rail{border-right:0;border-bottom:1px solid var(--line)}
   .detail{border-left:0;border-top:1px solid var(--line);max-height:none;position:static}
@@ -725,13 +754,17 @@ box-shadow:0 0 0 1px rgba(0,0,0,.4),0 0 18px color-mix(in srgb,var(--run) 25%,tr
 <header class="top">
   <div class="id"><span class="tag">run</span><h1 id="run">—</h1><p id="goal"></p></div>
   <div class="tools">
+    <div class="views" role="tablist" aria-label="보기">
+      <button id="tab-session" role="tab" type="button" aria-selected="true" aria-controls="shell">세션 작업</button>
+      <button id="tab-todos" role="tab" type="button" aria-selected="false" aria-controls="todos">요구사항 할 일</button>
+    </div>
     <span id="conn" class="pill" role="status">연결 중</span>
     <button id="motion" class="btn" type="button" aria-pressed="true">움직임 끄기</button>
     <a id="report" class="btn" target="_blank" rel="noopener">기록 스냅샷</a>
   </div>
   <div class="progress"><div class="bar" id="bar" aria-hidden="true"></div><p id="counts"></p></div>
 </header>
-<div class="shell" id="shell">
+<div class="shell" id="shell" role="tabpanel" aria-labelledby="tab-session">
   <aside class="rail" aria-label="탐색">
     <section class="ask frame" id="ask" aria-labelledby="ask-title" hidden>
       <h2 id="ask-title">Claude 질문</h2>
@@ -765,6 +798,7 @@ box-shadow:0 0 0 1px rgba(0,0,0,.4),0 0 18px color-mix(in srgb,var(--run) 25%,tr
     <div id="detail-body"></div>
   </aside>
 </div>
+<main class="todos" id="todos" role="tabpanel" aria-labelledby="tab-todos" hidden><p class="empty">기록을 불러오는 중입니다.</p></main>
 <p id="announce" class="sr" aria-live="polite"></p>
 <div id="tip" class="tip" role="tooltip" hidden></div>
 <div id="qv" class="qv" hidden>
@@ -1550,6 +1584,79 @@ async function fetchJSON(path) {
   return res.json();
 }
 let lastMeta = '';
+const TODO = {pending:['○','대기'],in_progress:['▶','진행'],completed:['✓','완료'],dropped:['⊘','제외']};
+const td = s => TODO[s] || ['○', s];
+let view = location.hash === '#view=todos' ? 'todos' : 'session';
+function todoCounts(list) {
+  const live = list.filter(t => t.status !== 'dropped');
+  return {done: live.filter(t => t.status === 'completed').length, total: live.length};
+}
+function setView(next, opts) {
+  view = next;
+  $('shell').hidden = next !== 'session';
+  $('todos').hidden = next !== 'todos';
+  $('tab-session').setAttribute('aria-selected', String(next === 'session'));
+  $('tab-todos').setAttribute('aria-selected', String(next === 'todos'));
+  if (next === 'todos') history.replaceState(null, '', location.pathname + location.search + '#view=todos');
+  else if (location.hash === '#view=todos') history.replaceState(null, '', location.pathname + location.search);
+  if (next === 'session') { drawnKey = ''; if (records) draw(); }
+  else renderTodos();
+  if (opts && opts.focus) $(next === 'todos' ? 'tab-todos' : 'tab-session').focus();
+}
+function renderTodoTab() {
+  const list = (records && records.todos) || [];
+  const c = todoCounts(list);
+  $('tab-todos').textContent = list.length ? `요구사항 할 일 ${c.done}/${c.total}` : '요구사항 할 일';
+}
+function todoRow(todo) {
+  const [g, word] = td(todo.status);
+  const task = records.tasks.find(t => t.id === todo.task_id);
+  const chip = task && h('button', {class: 'chip', type: 'button', title: task.title,
+    'aria-label': `작업 ${task.title}, ${st(task.status)[1]} — 세션 작업에서 보기`,
+    on: () => { setView('session'); select(task.id, {reveal: true}); }}, `${st(task.status)[0]} ${cut(task.title, 28)}`);
+  return h('li', {class: 'todo st-' + todo.status},
+    h('span', {class: 'g s-' + todo.status, 'aria-hidden': 'true'}, g),
+    h('span', {class: 't'}, todo.title, h('span', {class: 'sr'}, `, ${word}`)),
+    chip, todo.reason ? h('span', {class: 'why'}, todo.reason) : null);
+}
+function renderTodos() {
+  renderTodoTab();
+  const box = $('todos');
+  if (!records || view !== 'todos') return;
+  const reqs = records.requirements || [], list = records.todos || [];
+  if (!reqs.length && !list.length) {
+    box.replaceChildren(h('div', {class: 'empty'}, h('p', null, '이 실행에는 요구사항·할 일 기록이 없습니다.'),
+      h('p', {class: 'muted'}, 'loop_control.py todo-add로 할 일을 추가하면 여기에 나타납니다.')));
+    return;
+  }
+  const c = todoCounts(list);
+  const running = list.filter(t => t.status === 'in_progress').length;
+  const segs = c.total ? ['completed', 'in_progress'].map(s => {
+    const n = list.filter(t => t.status === s).length;
+    return n ? h('span', {style: `width:${100 * n / c.total}%;background:var(${s === 'completed' ? '--ok' : '--run'})`}) : null;
+  }) : [];
+  const known = new Set(reqs.map(r => r.id));
+  const groups = reqs.map(r => ({title: r.text, items: list.filter(t => t.requirement_id === r.id)}));
+  const loose = list.filter(t => !known.has(t.requirement_id));
+  if (loose.length) groups.push({title: '요구사항 미지정', items: loose, loose: true});
+  box.replaceChildren(
+    h('div', {class: 'todos-head'}, h('div', {class: 'bar', 'aria-hidden': 'true'}, segs),
+      h('p', null, `완료 ${c.done}/${c.total}` + (running ? ` · 진행 ${running}` : ''))),
+    ...groups.map(g => {
+      const gc = todoCounts(g.items);
+      return h('section', {class: 'req frame'},
+        h('div', {class: 'req-head'}, h('h3', g.loose ? {class: 'muted'} : null, g.title),
+          h('span', null, !g.items.length ? '세부 할 일 없음' : gc.total ? `${gc.done}/${gc.total}` : `제외 ${g.items.length}`)),
+        g.items.length ? h('ul', null, g.items.map(todoRow)) : null);
+    }));
+}
+$('tab-session').addEventListener('click', () => setView('session'));
+$('tab-todos').addEventListener('click', () => setView('todos'));
+for (const id of ['tab-session', 'tab-todos']) $(id).addEventListener('keydown', e => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  e.preventDefault();
+  setView(view === 'session' ? 'todos' : 'session', {focus: true});
+});
 async function tick() {
   try {
     const [rec, ses] = await Promise.all([fetchJSON('/api/records'), fetchJSON('/api/session')]);
@@ -1562,15 +1669,16 @@ async function tick() {
     questions = ses.questions || [];
     renderAsk();
     if (records) {
-      if (records.fingerprint !== lastMeta) { lastMeta = records.fingerprint; renderRail(); renderDetail(); }
-      renderSummary(); draw();
+      if (records.fingerprint !== lastMeta) { lastMeta = records.fingerprint; renderRail(); renderDetail(); renderTodos(); }
+      if (view === 'session') { renderSummary(); draw(); }
       firstLoad = false;
     }
   } catch (_) {
     if (++failures >= 2) setConn('down', '연결 끊김 · 패널에서 다시 열기');
   }
 }
-new ResizeObserver(() => { drawnKey = ''; draw(); }).observe($('canvas'));
+new ResizeObserver(() => { drawnKey = ''; if (records) draw(); }).observe($('canvas'));
+setView(view);
 tick();
 setInterval(tick, 1000);
 })();

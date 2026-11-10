@@ -18,6 +18,7 @@ import tempfile
 
 ID = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}\Z")
 STATUSES = {"pending", "running", "passed", "failed", "blocked", "stale", "cancelled"}
+TODO_STATUSES = {"pending", "in_progress", "completed", "dropped"}
 SCOPE = "record_integrity_only"
 
 
@@ -91,6 +92,8 @@ def validate_plan(plan):
     tasks = records(plan.get("tasks"), "task", task_ids=True)
     require(tasks, "plan tasks must not be empty")
     decisions = records(plan.get("decisions", []), "decision")
+    for requirement in records(plan.get("requirements", []), "requirement").values():
+        require(nonempty(requirement.get("text")), "requirement text must be nonempty")
     for decision in decisions.values():
         require(decision.get("kind") in {"direction", "information", "review", "authorization"}
                 and nonempty(decision.get("question")), "invalid decision kind or question")
@@ -158,6 +161,18 @@ def validate_evidence(workspace, task, record, checks):
         require(record["artifact_version"] == task["verified_revision"], "evidence artifact_version mismatch")
 
 
+def validate_todos(plan, state):
+    """Optional requirement todos live in state; each names a plan task and, if given, a requirement."""
+    tasks = {task["id"] for task in plan["tasks"]}
+    requirements = {item["id"] for item in plan.get("requirements", [])}
+    for todo in records(state.get("todos", []), "todo").values():
+        require(nonempty(todo.get("title")) and todo.get("status") in TODO_STATUSES, "invalid todo title or status")
+        require(todo.get("task_id") in tasks, "todo names an unknown task")
+        require(todo.get("requirement_id") is None or todo["requirement_id"] in requirements,
+                "todo names an unknown requirement")
+        require(todo["status"] != "dropped" or nonempty(todo.get("reason")), "dropped todo needs a reason")
+
+
 def decision_satisfied(state):
     return state["status"] == "resolved" and state["outcome"] in {"answered", "approved"}
 
@@ -219,6 +234,7 @@ def load_workspace(location, *, state_override=None):
             require(len(entries) == len(checks) and
                     checks == {e["check_id"] for e in entries if e["result"] == "passed"},
                     "passed task needs exactly one current passed record per required check")
+    validate_todos(plan, state)
     for name, task in task_states.items():
         if task["status"] == "passed":
             require(all(task_states[dep]["status"] == "passed" for dep in tasks[name]["depends_on"]),

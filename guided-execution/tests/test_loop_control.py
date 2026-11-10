@@ -56,6 +56,44 @@ class ControlTests(unittest.TestCase):
         self.evidence(task=task, path=path)
         self.finish(task)
 
+    def test_requirement_todos_progress_only_with_their_task_and_never_pass_it(self):
+        self.plan['requirements'] = [{'id': 'export', 'text': 'Export notes as JSON'}]
+        self.save_plan()
+        self.init()
+        self.control('todo-add', '--todo', 'write', '--title', 'Write the exporter', '--task', 'build',
+                     '--requirement', 'export')
+        self.control('todo-add', '--todo', 'docs', '--title', 'Document it', '--task', 'build')
+        self.control('todo-add', '--todo', 'write', '--title', 'Again', '--task', 'build', ok=False)
+        self.control('todo-add', '--todo', 'x', '--title', 'Unknown task', '--task', 'nope', ok=False)
+        self.control('todo-add', '--todo', 'y', '--title', 'Unknown need', '--task', 'build',
+                     '--requirement', 'nope', ok=False)
+        self.control('todo-set', '--todo', 'write', '--status', 'in_progress', ok=False)
+        self.start()
+        self.control('todo-set', '--todo', 'write', '--status', 'completed')
+        self.control('todo-set', '--todo', 'docs', '--status', 'dropped', ok=False)
+        self.control('todo-set', '--todo', 'docs', '--status', 'dropped', '--reason', 'README already covers it')
+        state = self.state()
+        self.assertEqual([(t['id'], t['status'], t['requirement_id']) for t in state['todos']],
+                         [('write', 'completed', 'export'), ('docs', 'dropped', None)])
+        self.assertEqual(state['tasks']['build']['status'], 'running')
+        self.assertEqual(state['history'][-1]['previous_todo']['status'], 'pending')
+        self.cli('check', '--workspace', self.workspace)
+
+    def test_runs_without_requirements_or_todos_stay_valid(self):
+        for bad in ([{'id': 'r'}], [{'id': 'r', 'text': 'A'}, {'id': 'r', 'text': 'B'}]):
+            self.plan['requirements'] = bad
+            self.save_plan()
+            self.cli('validate-plan', '--plan', self.plan_file, ok=False)
+        del self.plan['requirements']
+        self.save_plan()
+        self.init()
+        self.assertNotIn('todos', self.state())
+        self.cli('check', '--workspace', self.workspace)
+        state = self.state()
+        state['todos'] = [{'id': 'a', 'title': 'A', 'task_id': 'build', 'requirement_id': None, 'status': 'done'}]
+        self.save_state(state)
+        self.cli('check', '--workspace', self.workspace, ok=False)
+
     def test_start_records_attempt_and_history_without_running_plan_command(self):
         self.init()
         self.start()

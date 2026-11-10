@@ -84,11 +84,15 @@ This example assumes the user already chose a local JSON copy of all notes, pres
 
 Every task needs an ID, title, dependencies, reads/writes, and nonempty checks. Paths are literal project-relative file/directory scopes, not globs; no parent traversal, absolute paths, `.git` writes, or `.agent-loop` writes. The controller maintains the workspace outside task product scopes. Task IDs use the run-ID character rules. Decision IDs and check IDs are nonempty strings; decision IDs are unique globally and check IDs are unique per task. Dependencies must exist and be acyclic. Commands are descriptions for the host to inspect/run, never automatically executed by the helper.
 
+Optional `requirements` is an array of `{"id": "export", "text": "Export every note to one JSON file"}`: what the user asked for, in their words. IDs are unique nonempty strings; text is nonempty. Runs without it remain valid.
+
 Optional decisions have `id`, `kind` (`direction`, `information`, `review`, or `authorization`), `question`, and optionally `artifact_version`. A task names the applicable decision IDs. Put a decision only on work that actually depends on it; independent tasks remain eligible.
 
 ## State and evidence
 
 The helper initializes `state.json`. Prefer `loop_control.py` for supported transitions; it atomically replaces state.json and stores transition snapshots in its optional `history` array. The coordinating agent preserves actual decision/replan context in decisions.jsonl. Older schema-1 workspaces remain readable. Tasks have `status`, `attempts`, `verified_revision`, and `evidence`. Status is one of pending/running/passed/failed/blocked/stale/cancelled. Running, failed, and passed tasks require at least one recorded attempt. Attempts cannot exceed the task limit.
+
+Optional `todos` is an ordered array of `{id, title, task_id, requirement_id, status, reason?}` added and changed only through `loop_control.py todo-add` / `todo-set`, so adding one leaves the plan digest unchanged. `task_id` names a plan task; `requirement_id` names a plan requirement or is null. Status is pending/in_progress/completed/dropped; a dropped todo keeps its reason. A todo's status never satisfies a task check.
 
 Question usage is `question_usage.questions` and `question_usage.rounds`. Record actual usage before yielding to the user, including relevant earlier questions in the same request. Init starts these counters at zero because it cannot observe earlier conversation; the coordinator must transfer existing usage immediately, not reset the budget at bootstrap/resume.
 
@@ -141,6 +145,8 @@ Status reports ready work, unmet dependencies/decisions, explicitly blocked work
 | `record-check --task ID --check CHECK --path evidence/NEW.log --result passed\|failed\|not_run --revision HASH` | Requires a running attempt and a new existing nonempty log under evidence/. Computes its hash, rejects reused log paths and repeated current check IDs; never runs a command. |
 | `finish --task ID --result passed\|failed --revision HASH --reason TEXT` | Requires the running revision. A pass requires exactly one current passed record per check; a failed attempt retains observations for repair. |
 | `resolve-decision --decision ID --answer TEXT --source SOURCE --outcome answered\|approved\|rejected\|revision_requested [--revision VERSION]` | Records actual input for a pending decision; matches decision kind and pinned artifact version. Rejection does not open the gate. |
+| `todo-add --todo ID --task ID [--requirement ID] --title TEXT` | Appends a pending todo under an existing task and, if given, an existing requirement. Rejects duplicate IDs. |
+| `todo-set --todo ID --status pending\|in_progress\|completed\|dropped [--reason TEXT]` | in_progress/completed require the todo's task to be running or passed; dropped requires a reason. Records the previous todo in history. Never changes a task or check. |
 | `invalidate --task ID --reason TEXT` | Marks the task and its descendants stale, preserving unrelated work, attempts, and logs. |
 | `block` / `cancel --task ID --reason TEXT` | Records the task's block/cancellation and invalidates descendants. Does not stop external tools or workers. |
 
@@ -175,7 +181,8 @@ The report leaves workspace bytes unchanged. It labels `record_integrity_only` p
 The Claude Code Plugin adds a read-only mod (`claude-mod/`, Claude manifest only). It polls the newest `.agent-loop/<run>/plan.json` and `state.json` under the session's project root every 2 seconds:
 
 - Side pane `guided-board` (`/guided-board`): list view (task → checks, attempts, readiness, pending decisions, block reasons, then live lines: calls in flight, the latest calls, elapsed time, call and error counts, the last recorded transition) and relation view (prerequisites, decision gates, checks, recorded retries, call counts). It opens by itself once per incomplete run when the terminal is wide enough.
-- One line above the prompt while work remains, with the tool call in flight.
+- Third view `요구사항 할 일` (key 3): each requirement with its todos, their status, task and drop reason, then todos with no requirement; a run without todos says so.
+- One line above the prompt while work remains, with the tool call in flight and todo progress.
 - A mismatched plan/state read keeps the last good board and shows a read-mismatch line until the next poll succeeds.
 
 ### Session activity
@@ -192,7 +199,9 @@ python3 <skill-dir>/scripts/serve_dashboard.py --workspace <project>/.agent-loop
 
 It binds `127.0.0.1` on a free port, prints one JSON line with the tokenized URL, and requires the token plus a loopback `Host` on every request. It re-reads and validates the run on each request (`/api/records`, `/report`) and never writes the run or runs plan commands. `/api/records` adds per-task start time, scopes, revision, evidence paths and a recorded transition timeline. The mod posts activity to `/api/activity` (header token only); the server keeps at most 120 calls in memory, drops unknown fields, and maps unknown task IDs to the session node.
 
-The page is a dark ontology graph polled every second: a session hub, decision gates (diamonds) and task nodes (circles whose ring segments are check results), with typed links (prerequisite, gate, activity) whose labels appear on selection. A running node spins, counts up its elapsed time, shows the call in flight and a call/error badge; a new call travels from the session hub to its node and a failed call pulses. The left rail leads with what needs the person, then object/status filters, search and the full task list; a 10-minute activity lane per task sits under the graph. Selecting a node (click, Enter or Space, the lists or the lanes) opens a plain-language panel: what is happening now, the latest calls as verbs (파일 수정, 명령 실행, 코드 찾기), check results by description, waiting decisions by question, tasks before and after, and a collapsed history of attempts. Revisions, scopes and evidence paths stay in `/api/records` and the static report. Every status carries a glyph besides its color; colors come only from records. Motion is decoration with a motion-off switch and reduced-motion fallback. The server exits when its launching process goes away; `--no-parent-watch` keeps it running for manual use.
+The page has two tabs. `세션 작업` is the session work view below. `요구사항 할 일` (`#view=todos`) lists each requirement with its todos (status glyph, title, drop reason) and a chip for the owning task that opens it in the session view; overall and per-requirement progress count completed over non-dropped todos. `/api/records` carries `requirements` and `todos`.
+
+The session work view is a dark ontology graph polled every second: a session hub, decision gates (diamonds) and task nodes (circles whose ring segments are check results), with typed links (prerequisite, gate, activity) whose labels appear on selection. A running node spins, counts up its elapsed time, shows the call in flight and a call/error badge; a new call travels from the session hub to its node and a failed call pulses. The left rail leads with what needs the person, then object/status filters, search and the full task list; a 10-minute activity lane per task sits under the graph. Selecting a node (click, Enter or Space, the lists or the lanes) opens a plain-language panel: what is happening now, the latest calls as verbs (파일 수정, 명령 실행, 코드 찾기), check results by description, waiting decisions by question, tasks before and after, and a collapsed history of attempts. Revisions, scopes and evidence paths stay in `/api/records` and the static report. Every status carries a glyph besides its color; colors come only from records. Motion is decoration with a motion-off switch and reduced-motion fallback. The server exits when its launching process goes away; `--no-parent-watch` keeps it running for manual use.
 
 ### Quick view, command explanations and Claude questions
 

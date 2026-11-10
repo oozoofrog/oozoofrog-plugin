@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type {
-  Activity, ActivityEvent, AiState, Board, BoardCheck, BoardDecision, BoardTask, CheckResult, ServerState, View,
+  Activity, ActivityEvent, AiState, Board, BoardCheck, BoardDecision, BoardTask, BoardTodo, CheckResult, ServerState, View,
 } from './types'
 
 // Read-only view of guided-execution records (.agent-loop/<run>/plan.json + state.json).
@@ -114,10 +114,53 @@ export function toBoard(runId: string, workspace: string, planText: string, stat
     ['pending', 'failed', 'stale'].includes(t.status) && t.attempts < t.maxAttempts &&
     t.dependsOn.every(d => byId.get(d)?.status === 'passed') &&
     t.decisionIds.every(d => satisfied(byDecision.get(d)))).map(t => t.id)
+  const requirements = arr(plan.requirements).map(obj).map(r => ({ id: String(r.id), text: String(r.text ?? r.id) }))
+  const todos: BoardTodo[] = arr(state.todos).map(obj).map(t => ({
+    id: String(t.id), title: String(t.title ?? t.id), status: String(t.status ?? 'pending'), taskId: String(t.task_id ?? ''),
+    ...(typeof t.requirement_id === 'string' ? { requirementId: t.requirement_id } : {}),
+    ...(typeof t.reason === 'string' && t.reason ? { reason: t.reason } : {}),
+  }))
   return {
     runId, workspace, goal: String(plan.goal ?? ''), tasks, decisions, ready,
     isComplete: tasks.length > 0 && tasks.every(t => t.status === 'passed'), readAt, otherRuns: [],
+    requirements, todos,
   }
+}
+
+const TODO_GLYPH: Record<string, string> = { pending: '○', in_progress: '▶', completed: '✓', dropped: '⊘' }
+const TODO_LABEL: Record<string, string> = { pending: '대기', in_progress: '진행', completed: '완료', dropped: '제외' }
+const TODO_TONE: Record<string, string> = { in_progress: 'claude', completed: 'success' }
+
+/** Done and countable todos; dropped ones leave the count. */
+export function todoProgress(todos: readonly BoardTodo[]): { done: number; total: number } {
+  const live = todos.filter(t => t.status !== 'dropped')
+  return { done: live.filter(t => t.status === 'completed').length, total: live.length }
+}
+
+/** Todo view rows: each requirement with its todos and their tasks, then todos with no requirement. */
+export function todoRows(b: Board): Row[] {
+  const requirements = b.requirements ?? [], todos = b.todos ?? []
+  if (!requirements.length && !todos.length) return []
+  const rows: Row[] = []
+  const all = todoProgress(todos)
+  rows.push({ text: `할 일 완료 ${all.done}/${all.total}`, color: all.total && all.done === all.total ? 'success' : undefined })
+  const titles = new Map(b.tasks.map(t => [t.id, t]))
+  const known = new Set(requirements.map(r => r.id))
+  const groups = requirements.map(r => ({ title: r.text, items: todos.filter(t => t.requirementId === r.id) }))
+  const loose = todos.filter(t => !t.requirementId || !known.has(t.requirementId))
+  if (loose.length) groups.push({ title: '요구사항 미지정', items: loose })
+  for (const g of groups) {
+    const p = todoProgress(g.items)
+    rows.push({ text: `■ ${g.title}  ${!g.items.length ? '세부 할 일 없음' : p.total ? `${p.done}/${p.total}` : `제외 ${g.items.length}`}` })
+    for (const t of g.items) {
+      const task = titles.get(t.taskId)
+      rows.push({
+        text: `   ${TODO_GLYPH[t.status] ?? '○'} ${t.title}  · ${TODO_LABEL[t.status] ?? t.status}${task ? ` · ${clip(task.title, 24)}` : ''}${t.reason ? ` · ${clip(t.reason, 40)}` : ''}`,
+        color: TODO_TONE[t.status], dim: t.status === 'dropped' || t.status === 'completed',
+      })
+    }
+  }
+  return rows
 }
 
 const ACTION: Record<string, string> = {
@@ -195,6 +238,8 @@ export function summaryLine(b: Board, events?: readonly ActivityEvent[]): string
   const now = events?.findLast(e => e.phase === 'running' && e.task !== SESSION)
   if (running.length) parts.push(`진행: ${clip(running.join(', '), 40)}${now ? ` (${now.tool} ${clip(now.target, 24)})` : ''}`)
   else if (b.ready.length) parts.push(`다음: ${clip(b.tasks.find(t => t.id === b.ready[0])?.title, 32)}`)
+  const todo = todoProgress(b.todos ?? [])
+  if (todo.total) parts.push(`할 일 ${todo.done}/${todo.total}`)
   if (waiting) parts.push(`결정 대기 ${waiting}`)
   if (blocked) parts.push(`차단 ${blocked}`)
   if (b.error) parts.push('기록 읽기 불일치')
@@ -340,7 +385,8 @@ async function refresh($: EngineInterface) {
   const pinned = await read($, pinnedRun)
   const chosen = runs.find(r => r.name === pinned) ?? runs[0]!
   const key = `${chosen.name}:${chosen.mtime}:${chosen.planMtime}:${runs.map(r => r.name).join(',')}`
-  if (key === lastKey) return
+  // `/clear` starts a new session state without `session.start`, so an empty board means re-read.
+  if (key === lastKey && (await read($, board))) return
   const workspace = `${base}/${chosen.name}`
   const now = await $.clock.now()
   const others = runs.map(r => r.name).filter(n => n !== chosen.name)
@@ -699,6 +745,9 @@ export const register: Register = on => {
     const passed = b.tasks.filter(t => t.status === 'passed').length
     const byDecision = new Map(b.decisions.map(d => [d.id, d]))
     const isMine = srv.runId === b.runId
+    const todoCount = todoProgress(b.todos ?? [])
+    const todoTab = todoCount.total ? `요구사항 할 일 ${todoCount.done}/${todoCount.total}` : '요구사항 할 일'
+    const todoLines = mode === 'todos' ? todoRows(b) : []
     return (
       <Box flexDirection="column">
         <Text bold wrap="truncate-end">{b.runId} · 통과 {passed}/{b.tasks.length}</Text>
@@ -707,6 +756,7 @@ export const register: Register = on => {
         <Box flexDirection="row" flexWrap="wrap" columnGap={1} marginTop={1}>
           <Button key="view-list" hotkey="1" variant={mode === 'list' ? 'primary' : 'secondary'} label="목록" onPress={() => update($, view, () => 'list')} />
           <Button key="view-graph" hotkey="2" variant={mode === 'graph' ? 'primary' : 'secondary'} label="관계" onPress={() => update($, view, () => 'graph')} />
+          <Button key="view-todos" hotkey="3" variant={mode === 'todos' ? 'primary' : 'secondary'} label={todoTab} onPress={() => update($, view, () => 'todos')} />
           {srv.phase === 'on' && isMine
             ? <Button key="web-stop" hotkey="w" label="웹 대시보드 닫기" onPress={() => stopServer($)} />
             : <Button key="web-open" hotkey="w" variant="secondary" label={srv.phase === 'starting' ? '웹 대시보드 여는 중…' : '웹 대시보드 열기'} onPress={() => startServer($)} />}
@@ -725,7 +775,13 @@ export const register: Register = on => {
         ) : null}
         {srv.phase === 'error' && isMine ? <Text color="error">대시보드를 열지 못했습니다: {srv.error}</Text> : null}
         <Box flexDirection="column" marginTop={1}>
-          {mode === 'list'
+          {mode === 'todos'
+            ? (todoLines.length
+              ? todoLines.map((row, i) => (
+                <Text key={`td-${i}`} color={row.color} dimColor={row.dim} wrap="truncate-end">{row.text}</Text>
+              ))
+              : <Text dimColor>이 실행에는 요구사항·할 일 기록이 없습니다. loop_control.py todo-add로 추가하면 여기에 나타납니다.</Text>)
+            : mode === 'list'
             ? b.tasks.map(t => (
               <Box key={`t-${t.id}`} flexDirection="column">
                 <Text color={tone(t.status)} wrap="truncate-end">
@@ -749,7 +805,7 @@ export const register: Register = on => {
               <Text key={`r-${i}`} color={row.color} dimColor={row.dim} wrap="truncate-end">{row.text}</Text>
             ))}
         </Box>
-        {act.events.some(e => e.task === SESSION) ? (
+        {mode !== 'todos' && act.events.some(e => e.task === SESSION) ? (
           <Box flexDirection="column" marginTop={1}>
             <Text dimColor>세션 · 작업 밖 활동</Text>
             {liveRows({ id: SESSION, status: 'session' }, act, 2).map((row, i) => (

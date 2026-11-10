@@ -31,6 +31,8 @@ Read [execution.md](references/execution.md) and [workspace.md](references/works
 
 `python3 <skill-dir>/scripts/loop_workspace.py init --project <actual-project> --run-id <stable-id> --plan <plan.json> --brief <brief.md>`
 
+Split the request into its requirements (`plan.requirements`), then break each into small, checkable todos under the task that does them (`loop_control.py todo-add`). Move each todo as work happens (`todo-set`); a completed todo never replaces the task's checks. In Claude Code, mirror the same todos into the task list with TaskCreate and update them with TaskUpdate whenever you record `todo-set`; the run's records stay the source. See [requirement todos](references/execution.md#requirement-todos).
+
 Use the authorized project's `.agent-loop/<run-id>/`. Keep different projects, worktrees, versions, and requests separate. Preserve an existing matching run. Do not overwrite another run, change global instructions, install infrastructure, or publish to bootstrap a loop.
 
 ## 4. Execute and verify

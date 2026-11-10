@@ -52,6 +52,18 @@ export type BoardDecision = {
   outcome?: string
 }
 
+export type BoardRequirement = { id: string; text: string }
+
+/** A requirement todo from state.json; progress is recorded, never inferred. */
+export type BoardTodo = {
+  id: string
+  title: string
+  status: string
+  taskId: string
+  requirementId?: string
+  reason?: string
+}
+
 export type Board = {
   runId: string
   workspace: string
@@ -63,9 +75,12 @@ export type Board = {
   readAt: number
   otherRuns: string[]
   error?: string
+  /** Absent on boards stored before todos existed. */
+  requirements?: BoardRequirement[]
+  todos?: BoardTodo[]
 }
 
-export type View = 'list' | 'graph'
+export type View = 'list' | 'graph' | 'todos'
 
 export type ServerState = {
   phase: 'off' | 'starting' | 'on' | 'error'

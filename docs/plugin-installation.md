@@ -16,7 +16,7 @@ MCP를 포함한 `swift-intelligence`와 `winpilot`은 Claude 매니페스트에
 
 ## Guided Execution
 
-`guided-execution@oozoofrog-plugin`은 프로젝트 분석, 최소 질문, 검증 루프를 연결하는 [협업 실행 스킬](../guided-execution/SKILL.md) 0.5.0입니다. Python 3로 실행하는 표준 라이브러리 보조 도구와 검사 코드를 포함하며, MCP 서버·별도 모델·인증 정보를 등록하지 않습니다. Claude Code용 매니페스트는 읽기 전용 Mod(`claude-mod/`)를 함께 불러옵니다. Codex 매니페스트는 Mod를 포함하지 않습니다.
+`guided-execution@oozoofrog-plugin`은 프로젝트 분석, 최소 질문, 검증 루프를 연결하는 [협업 실행 스킬](../guided-execution/SKILL.md) 0.6.0입니다. Python 3로 실행하는 표준 라이브러리 보조 도구와 검사 코드를 포함하며, MCP 서버·별도 모델·인증 정보를 등록하지 않습니다. Claude Code용 매니페스트는 읽기 전용 Mod(`claude-mod/`)를 함께 불러옵니다. Codex 매니페스트는 Mod를 포함하지 않습니다.
 
 처음 등록할 때는 다음 명령을 사용합니다.
 
@@ -37,9 +37,9 @@ codex plugin add guided-execution@oozoofrog-plugin
 
 초기 질문 1개는 요청 전체의 기본 한도인 독립적인 선택·선호 결정 최대 3개, 최대 2회에 포함됩니다. 관련 판단이 이미 명시적으로 정해졌거나, 사용자가 해당 선택을 명시적으로 위임하거나 질문을 원하지 않는다고 했거나, 결정이 정해진 범위를 그대로 재개하는 경우에만 질문을 생략하고 그 근거를 기록합니다. 기술적으로 구현 가능하거나 선택을 되돌릴 수 있다는 이유만으로 생략하지 않습니다. 필요한 실행 권한은 질문 예산으로 생략되지 않고, 기존에 받은 권한은 그 범위에서 재사용합니다. 이미 허용된 작업에는 별도의 시작 승인을 반복하지 않습니다.
 
-저장소에 게시된 0.5.0 파일과 사용자 기기의 설치·활성화·새 대화 노출은 별도로 확인해야 합니다. 위 설치 명령은 실제 게시된 버전을 가져오므로 설치 후 버전과 경로를 확인하세요.
+저장소에 게시된 0.6.0 파일과 사용자 기기의 설치·활성화·새 대화 노출은 별도로 확인해야 합니다. 위 설치 명령은 실제 게시된 버전을 가져오므로 설치 후 버전과 경로를 확인하세요.
 
-작업 단위는 기본 총 3회 시도 후 구체적인 장애 요인을 남깁니다. `loop_control.py`는 명시적인 상태 전이를 기록하고 `render_report.py`는 실행 기록의 정적 HTML 보고서를 생성합니다. `serve_dashboard.py`는 한 실행을 `127.0.0.1`에서 토큰으로 보호해 온톨로지 그래프로 실시간 표시하며, Claude Code Mod의 패널 버튼이 실행합니다. Mod는 진행 중인 작업에서 일어나는 도구 호출을 관찰해 해당 작업 노드에 보여 줍니다. 이 활동은 기록을 바꾸지 않습니다. [환경 구성과 재사용](../guided-execution/references/environment.md)을 먼저 확인하세요. 보조 도구가 확인하는 것은 기록의 무결성이며, 실제 명령 실행·현재 파일 검증·완료 기준의 적절성은 호스트 에이전트가 확인합니다. [작업 환경 규약](../guided-execution/references/workspace.md)과 [검증 범위](validation/guided-execution.md)를 참고하세요.
+작업 단위는 기본 총 3회 시도 후 구체적인 장애 요인을 남깁니다. `loop_control.py`는 명시적인 상태 전이를 기록하고 `render_report.py`는 실행 기록의 정적 HTML 보고서를 생성합니다. `serve_dashboard.py`는 한 실행을 `127.0.0.1`에서 토큰으로 보호해 온톨로지 그래프로 실시간 표시하며, Claude Code Mod의 패널 버튼이 실행합니다. Mod는 진행 중인 작업에서 일어나는 도구 호출을 관찰해 해당 작업 노드에 보여 줍니다. 이 활동은 기록을 바꾸지 않습니다. 요청은 요구사항과 작업별 세부 할 일로 나뉘어 기록되고(`todo-add`, `todo-set`), Claude Code에서는 세션 할 일 목록에도 반영됩니다. 패널과 대시보드는 세션 작업과 요구사항 할 일을 서로 다른 보기로 보여 줍니다. [환경 구성과 재사용](../guided-execution/references/environment.md)을 먼저 확인하세요. 보조 도구가 확인하는 것은 기록의 무결성이며, 실제 명령 실행·현재 파일 검증·완료 기준의 적절성은 호스트 에이전트가 확인합니다. [작업 환경 규약](../guided-execution/references/workspace.md)과 [검증 범위](validation/guided-execution.md)를 참고하세요.
 
 ## Handoff
 
