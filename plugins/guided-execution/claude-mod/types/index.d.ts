@@ -32,6 +32,10 @@ export type ActivityEvent = {
   endedAt?: number
   agent?: string
   via: string
+  /** Absolute file path for file tools: the dashboard can quick-view only these. */
+  path?: string
+  /** The full Bash command, for on-demand explanations. */
+  command?: string
 }
 
 export type Activity = {

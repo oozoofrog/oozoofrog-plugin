@@ -11,6 +11,8 @@ Exits when its launching parent process goes away (POSIX re-parenting).
 """
 import argparse
 import os
+from pathlib import Path
+import re
 from datetime import datetime, timezone
 import hashlib
 import hmac
@@ -28,7 +30,13 @@ from loop_workspace import SCOPE, load_workspace, status
 from loop_control import validate_extra
 from render_report import build_graph, render
 
-MAX_BODY = 64 * 1024
+MAX_BODY = 256 * 1024
+MAX_FILE = 200 * 1024
+MAX_PENDING = 20
+MAX_EXPLAINED = 300
+MAX_QUESTIONS = 10
+SECRET = re.compile(r'(^|/)(\.ssh|\.gnupg|\.aws|\.kube)(/|$)|(^|/)(\.env[^/]*|\.netrc|\.npmrc|\.pypirc|\.git-credentials|'
+                    r'credentials(\.json)?|id_(rsa|dsa|ecdsa|ed25519))$|\.(pem|key|p12|pfx|jks|keystore)$', re.IGNORECASE)
 MAX_STAGES = 12
 MAX_STAGE_EDGES = 24
 MAX_REFS = 40
@@ -166,10 +174,54 @@ def validate_activity(raw, task_ids):
                 or event.get('phase') not in ACTIVITY_PHASES:
             continue
         seen.add(identifier)
+        path = event.get('path') if isinstance(event.get('path'), str) and event['path'].startswith('/') \
+            and len(event['path']) <= 1000 and '\x00' not in event['path'] else None
         events.append(dict(id=identifier, task=task, tool=tool, target=clip(event.get('target'), 120),
                            phase=event['phase'], started_at=started, ended_at=stamp(event.get('ended_at')),
-                           agent=clip(event.get('agent'), 48), via=clip(event.get('via'), 20)))
+                           agent=clip(event.get('agent'), 48), via=clip(event.get('via'), 20), path=path,
+                           command=event['command'][:600] if isinstance(event.get('command'), str) and event['command'].strip() else None))
     return dict(events=events, received_at=now(), basis='session_activity_not_a_record')
+
+
+def read_quick(path):
+    """Current text of one file the session touched: regular, non-secret, text, bounded."""
+    if SECRET.search(path):
+        raise PermissionError('secret-looking file')
+    target = Path(path)
+    if target.is_symlink() or not target.is_file():
+        raise FileNotFoundError('not a regular file')
+    info = target.stat()
+    with target.open('rb') as stream:
+        data = stream.read(MAX_FILE + 1)
+    if b'\x00' in data[:8192]:
+        raise ValueError('binary file')
+    return dict(path=path, size=info.st_size, modified=datetime.fromtimestamp(info.st_mtime, timezone.utc).isoformat(timespec='seconds'),
+                truncated=len(data) > MAX_FILE, text=data[:MAX_FILE].decode('utf-8', errors='replace'))
+
+
+def validate_questions(raw):
+    questions = []
+    for item in (raw if isinstance(raw, list) else [])[:4]:
+        if not isinstance(item, dict) or not clip(item.get('question'), 300):
+            continue
+        options = [dict(label=clip(o.get('label'), 80), description=clip(o.get('description'), 200))
+                   for o in (item.get('options') or [])[:4] if isinstance(o, dict) and clip(o.get('label'), 80)]
+        questions.append(dict(question=clip(item['question'], 300), header=clip(item.get('header'), 30),
+                              options=options, multi=item.get('multiSelect') is True))
+    if not questions:
+        raise ValueError('question needs at least one question text')
+    return questions
+
+
+def validate_answers(raw, questions):
+    if not isinstance(raw, dict):
+        raise ValueError('answers must be an object')
+    texts = {q['question'] for q in questions}
+    answers = {key: value.strip()[:500] for key, value in raw.items()
+               if key in texts and isinstance(value, str) and value.strip()}
+    if set(answers) != texts:
+        raise ValueError('every question needs a nonempty answer')
+    return answers
 
 
 class Board:
@@ -178,6 +230,9 @@ class Board:
         self.token = secrets.token_urlsafe(24)
         self.summary = None
         self.activity = None
+        self.pending = {}       # explanation key -> command
+        self.explained = {}     # explanation key -> {state, text}
+        self.questions = []     # newest last
         self.last_good = None
         self.lock = threading.Lock()
 
@@ -205,6 +260,76 @@ class Board:
         with self.lock:
             self.activity = accepted
         return accepted
+
+    def touched(self, path):
+        with self.lock:
+            events = (self.activity or {}).get('events', [])
+            return any(event.get('path') == path for event in events)
+
+    def explain(self, raw):
+        command = raw.get('command') if isinstance(raw, dict) else None
+        with self.lock:
+            known = any(event.get('command') == command for event in (self.activity or {}).get('events', []))
+            if not isinstance(command, str) or not known:
+                raise ValueError('only observed commands can be explained')
+            key = hashlib.sha256(command.encode()).hexdigest()[:16]
+            if key in self.explained:
+                return dict(key=key, **self.explained[key])
+            self.pending[key] = command
+            while len(self.pending) > MAX_PENDING:
+                self.pending.pop(next(iter(self.pending)))
+            return dict(key=key, state='pending')
+
+    def explained_answer(self, raw):
+        items = raw.get('items') if isinstance(raw, dict) else None
+        if not isinstance(items, list):
+            raise ValueError('items must be an array')
+        stored = 0
+        with self.lock:
+            for item in items:
+                key = item.get('key') if isinstance(item, dict) else None
+                if key not in self.pending:
+                    continue
+                text = clip(item.get('text'), 400)
+                self.explained[key] = dict(state='ready', text=text) if text else dict(state='failed', text=clip(item.get('error'), 160))
+                del self.pending[key]
+                stored += 1
+            while len(self.explained) > MAX_EXPLAINED:
+                self.explained.pop(next(iter(self.explained)))
+        return stored
+
+    def question(self, identifier):
+        return next((q for q in self.questions if q['id'] == identifier), None)
+
+    def ask(self, raw):
+        identifier = clip(raw.get('id'), 64) if isinstance(raw, dict) else None
+        if not identifier:
+            raise ValueError('question needs an id')
+        entry = dict(id=identifier, questions=validate_questions(raw.get('questions')), asked_at=now(),
+                     status='open', answers=None, via=None)
+        with self.lock:
+            self.questions = [q for q in self.questions if q['id'] != identifier][-(MAX_QUESTIONS - 1):] + [entry]
+        return entry
+
+    def answer(self, raw):
+        with self.lock:
+            entry = self.question(raw.get('id') if isinstance(raw, dict) else None)
+            if not entry:
+                raise LookupError('unknown question')
+            if entry['status'] != 'open':
+                raise LookupError('question is no longer open')
+            entry.update(answers=validate_answers(raw.get('answers'), entry['questions']), status='answered', via='dashboard')
+            return entry
+
+    def resolve(self, raw):
+        with self.lock:
+            entry = self.question(raw.get('id') if isinstance(raw, dict) else None)
+            if not entry:
+                raise LookupError('unknown question')
+            answers = raw.get('answers') if isinstance(raw.get('answers'), dict) else {}
+            entry.update(status='resolved' if answers else 'closed', via=clip(raw.get('via'), 20) or entry['via'],
+                         answers={clip(k, 300): clip(v, 500) for k, v in answers.items() if clip(k, 300) and clip(v, 500)} or None)
+            return entry
 
     def accept_summary(self, raw):
         source = self.task_source()
@@ -262,7 +387,26 @@ def make_handler(board, port_holder):
                 return self.send_json(200, board.records())
             if path == '/api/session':
                 with board.lock:
-                    return self.send_json(200, dict(summary=board.summary, activity=board.activity))
+                    return self.send_json(200, dict(summary=board.summary, activity=board.activity,
+                                                    questions=board.questions))
+            query = parse_qs(urlsplit(self.path).query)
+            if path == '/api/file':
+                target = (query.get('path') or [''])[0]
+                if not board.touched(target):
+                    return self.send_json(403, dict(ok=False, error='only files this session touched'))
+                try:
+                    return self.send_json(200, dict(ok=True, **read_quick(target)))
+                except PermissionError:
+                    return self.send_json(403, dict(ok=False, error='secret-looking file'))
+                except (OSError, ValueError) as error:
+                    return self.send_json(422, dict(ok=False, error=str(error)[:200]))
+            if path == '/api/explain/pending':
+                with board.lock:
+                    return self.send_json(200, dict(items=[dict(key=k, command=c) for k, c in board.pending.items()]))
+            if path == '/api/question':
+                with board.lock:
+                    entry = board.question((query.get('id') or [''])[0])
+                    return self.send_json(200 if entry else 404, dict(question=entry))
             if path == '/report':
                 try:
                     validated, files, plan, state, warnings = load_workspace(board.workspace)
@@ -277,7 +421,9 @@ def make_handler(board, port_holder):
             if not self.allowed() or 'X-Board-Token' not in self.headers:
                 return self.send(403, 'forbidden', 'text/plain; charset=utf-8')
             path = urlsplit(self.path).path
-            if path not in {'/api/session', '/api/activity'}:
+            routes = {'/api/session', '/api/activity', '/api/explain', '/api/explain/answer',
+                      '/api/question', '/api/question/answer', '/api/question/resolve'}
+            if path not in routes:
                 return self.send(404, 'not found', 'text/plain; charset=utf-8')
             try:
                 length = int(self.headers.get('Content-Length', '0'))
@@ -289,7 +435,19 @@ def make_handler(board, port_holder):
                 raw = json.loads(self.rfile.read(length))
                 if path == '/api/activity':
                     return self.send_json(200, dict(ok=True, events=len(board.accept_activity(raw)['events'])))
+                if path == '/api/explain':
+                    return self.send_json(200, dict(ok=True, **board.explain(raw)))
+                if path == '/api/explain/answer':
+                    return self.send_json(200, dict(ok=True, stored=board.explained_answer(raw)))
+                if path == '/api/question':
+                    return self.send_json(200, dict(ok=True, question=board.ask(raw)))
+                if path == '/api/question/answer':
+                    return self.send_json(200, dict(ok=True, question=board.answer(raw)))
+                if path == '/api/question/resolve':
+                    return self.send_json(200, dict(ok=True, question=board.resolve(raw)))
                 accepted = board.accept_summary(raw)
+            except LookupError as error:
+                return self.send_json(409, dict(ok=False, error=str(error)[:200]))
             except (ValueError, TypeError) as error:
                 return self.send_json(422, dict(ok=False, error=str(error)[:200]))
             return self.send_json(200, dict(ok=True, stages=len(accepted['stages'])))
@@ -481,7 +639,7 @@ svg{display:block}
 .ping.err{stroke:var(--bad)}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes march{to{stroke-dashoffset:-22}}
-@media (prefers-reduced-motion:reduce){.motion .link.hot,.motion .link.act,.motion .node.st-running .spin{animation:none}}
+@media (prefers-reduced-motion:reduce){.motion .link.hot,.motion .link.act,.motion .node.st-running .spin,.motion .dots{animation:none}}
 /* lanes */
 .lanes{border-top:1px solid var(--line);padding:10px 14px 12px}
 .lanes-head{display:flex;justify-content:space-between;align-items:baseline}
@@ -514,6 +672,43 @@ details.story{margin-top:16px}
 details.story summary{cursor:pointer;font:700 10px/1 var(--mono);letter-spacing:.14em;color:var(--sub);text-transform:uppercase}
 details.story ul{margin-top:8px}
 .note{margin-top:10px;padding:7px 9px;border:1px solid var(--warn);color:var(--warn);font-size:12px}
+.ask{padding:10px 12px;border-color:var(--warn)}
+.ask h2{color:var(--warn)}
+.ask-form{display:grid;gap:10px}
+.ask fieldset{border:0;margin:0;padding:0;display:grid;gap:5px}
+.ask legend{display:flex;gap:8px;align-items:baseline;margin-bottom:6px;padding:0}
+.ask legend .tag{color:var(--warn)}
+.qtext{font-size:13px;font-weight:600}
+.opt{display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px;align-items:start;padding:6px 8px;border:1px solid var(--line);cursor:pointer}
+.opt:hover{border-color:var(--warn)}
+.opt:has(input:checked){border-color:var(--warn);background:color-mix(in srgb,var(--warn) 9%,transparent)}
+.opt input[type=radio],.opt input[type=checkbox]{margin:2px 0 0;accent-color:var(--warn)}
+.opt small{display:block;color:var(--sub);font-size:11px}
+.opt.other{grid-template-columns:minmax(0,1fr)}
+.opt.other input{width:100%;background:var(--panel);border:1px solid var(--line2);padding:6px 8px;font-size:12px}
+.ask-actions{display:flex;gap:10px;align-items:center}
+.btn.primary{border-color:var(--warn);color:var(--warn)}
+.btn:disabled{opacity:.5;cursor:default}
+.ask-status{font:11px var(--mono);color:var(--sub)}
+.ask-done{font-size:12px;color:var(--sub)}
+.ask-done b{color:var(--ok);font-weight:600}
+.cmd{border-bottom:1px dotted var(--sub);cursor:help}
+.cmd:hover,.cmd:focus-visible{color:var(--run);border-bottom-color:var(--run)}
+.peek{margin-left:6px;font:600 10px/1 var(--mono);padding:3px 6px}
+.tip{position:absolute;z-index:20;width:330px;max-width:calc(100vw - 16px);padding:9px 11px;background:var(--panel2);border:1px solid var(--run);
+box-shadow:0 0 0 1px rgba(0,0,0,.4),0 0 18px color-mix(in srgb,var(--run) 25%,transparent);font-size:12px;pointer-events:none}
+.tip code{display:block;font:11px var(--mono);color:var(--sub);margin-bottom:6px;overflow-wrap:anywhere}
+.tip .wait{color:var(--run)}
+.dots{display:inline-block;width:8px;height:8px;margin-right:6px;border:1.5px solid var(--run);border-right-color:transparent;border-radius:50%;vertical-align:-1px}
+.motion .dots{animation:spin .8s linear infinite}
+.qv{position:fixed;inset:0;z-index:30;background:rgba(5,8,12,.72);display:grid;place-items:center;padding:16px}
+.qv[hidden]{display:none}
+.qv-panel{width:min(980px,100%);height:min(82vh,900px);display:flex;flex-direction:column;padding:12px 14px}
+.qv-head{display:flex;justify-content:space-between;gap:12px;align-items:start;margin-bottom:8px}
+.qv-head h2{font-size:14px;color:var(--run);overflow-wrap:anywhere}
+.qv-body{flex:1;margin:0;overflow:auto;background:var(--bg);border:1px solid var(--line);padding:8px 0;font:12px/1.5 var(--mono);counter-reset:ln;white-space:pre;tab-size:4}
+.qv-body .ln{display:block;padding-right:12px}
+.qv-body .ln::before{counter-increment:ln;content:counter(ln);display:inline-block;width:4.2em;padding-right:12px;text-align:right;color:var(--dim);user-select:none}
 .s-passed,.s-approved,.s-answered,.s-ok{color:var(--ok)}.s-failed,.s-rejected,.s-mixed,.s-error{color:var(--bad)}
 .s-blocked,.s-stale,.s-revision_requested,.s-pending-decision{color:var(--warn)}.s-running{color:var(--run)}
 .s-pending,.s-cancelled,.s-unrecorded,.s-not_run{color:var(--muted)}
@@ -538,6 +733,10 @@ details.story ul{margin-top:8px}
 </header>
 <div class="shell" id="shell">
   <aside class="rail" aria-label="탐색">
+    <section class="ask frame" id="ask" aria-labelledby="ask-title" hidden>
+      <h2 id="ask-title">Claude 질문</h2>
+      <div id="ask-body"></div>
+    </section>
     <section aria-labelledby="att-title">
       <h2 id="att-title">지금 필요한 것</h2>
       <ul id="attention"><li class="muted">기록을 불러오는 중입니다.</li></ul>
@@ -567,6 +766,14 @@ details.story ul{margin-top:8px}
   </aside>
 </div>
 <p id="announce" class="sr" aria-live="polite"></p>
+<div id="tip" class="tip" role="tooltip" hidden></div>
+<div id="qv" class="qv" hidden>
+  <div class="qv-panel frame" role="dialog" aria-modal="true" aria-labelledby="qv-title">
+    <div class="qv-head"><div><h2 id="qv-title" class="mono"></h2><p id="qv-meta" class="sub"></p></div>
+      <button id="qv-close" class="btn" type="button" aria-label="퀵뷰 닫기">✕ 닫기</button></div>
+    <pre id="qv-body" class="qv-body" tabindex="0"></pre>
+  </div>
+</div>
 <script nonce="__NONCE__">
 (() => {
 'use strict';
@@ -664,7 +871,11 @@ function select(id, opts) {
   if (opts && opts.reveal && selected && matchMedia('(max-width: 999px)').matches) $('detail').scrollIntoView({block: 'nearest'});
 }
 $('clear').addEventListener('click', () => select('', {returnFocus: true}));
-addEventListener('keydown', e => { if (e.key === 'Escape' && selected) select('', {returnFocus: true}); });
+addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!$('qv').hidden) { closeQuick(); return; }
+  if (selected) select('', {returnFocus: true});
+});
 
 function neighbors(id) {
   const set = new Set();
@@ -800,7 +1011,7 @@ function draw() {
   });
   const paths = new Map();
   const curve = (a, b, ra, rb) => {
-    if (Math.abs(a.x - b.x) < 1) return `M${a.x},${a.y + ra} C${a.x + 40},${(a.y + b.y) / 2} ${b.x + 40},${(a.y + b.y) / 2} ${b.x},${b.y - rb}`;
+    if (Math.abs(a.x - b.x) < 1) return `M${a.x - ra},${a.y} C${a.x - ra - 70},${a.y} ${b.x - rb - 70},${b.y} ${b.x - rb},${b.y}`;
     return `M${a.x + ra},${a.y} C${a.x + ra + 60},${a.y} ${b.x - rb - 60},${b.y} ${b.x - rb},${b.y}`;
   };
   const label = (d, text, from, to) => {
@@ -1085,21 +1296,38 @@ function span(ms) {
   const s = Math.max(0, Math.round(ms / 1000));
   return s < 60 ? `${s}초` : s < 3600 ? `${Math.floor(s / 60)}분` : `${Math.floor(s / 3600)}시간 ${Math.floor(s % 3600 / 60)}분`;
 }
+const whenText = e => e.phase === 'running' ? `${span(Date.now() - e.started_at)}째` : ago(e.ended_at || e.started_at);
 function callRow(e) {
   const d = doing(e), err = e.phase === 'error';
-  const when = e.phase === 'running' ? `${span(Date.now() - e.started_at)}째` : ago(e.ended_at || e.started_at);
+  const label = `${d.verb}${d.what ? ' · ' + d.what : ''}${err ? ' (실패)' : ''}${d.helper ? ' · 보조' : ''}`;
+  const text = e.command ? h('span', {class: 'cmd', tabindex: '0'}, label) : h('span', {}, label);
+  if (e.command) {
+    text.addEventListener('mouseenter', () => showTip(text, e.command));
+    text.addEventListener('focus', () => showTip(text, e.command));
+    text.addEventListener('mouseleave', () => hideTip(text));
+    text.addEventListener('blur', () => hideTip(text));
+  }
+  const peek = e.path ? h('button', {type: 'button', class: 'btn peek', 'aria-label': `${base(e.path)} 내용 보기`}, '보기') : null;
+  if (peek) peek.addEventListener('click', () => openQuick(e.path, peek));
   return h('li', {class: 'row'}, h('span', {class: 's-' + e.phase}, e.phase === 'running' ? '◌' : err ? '✗' : '●'),
-    h('span', {}, `${d.verb}${d.what ? ' · ' + d.what : ''}${err ? ' (실패)' : ''}${d.helper ? ' · 보조' : ''}`, h('span', {class: 'when'}, ' ' + when)));
+    h('span', {}, text, peek, h('span', {class: 'when', 'data-when': e.id}, ' ' + whenText(e))));
 }
+const callsKey = id => eventsOf(id).map(e => e.id + e.phase).join('|');
 function activitySection(id) {
   const mine = eventsOf(id).slice().reverse();
   const now = mine.filter(e => e.phase === 'running'), done = mine.filter(e => e.phase !== 'running').slice(0, 5);
-  return h('div', {id: 'calls'}, now.length ? [h('h4', {}, '지금 하는 일'), h('ul', {}, now.slice(0, 2).map(callRow))] : null,
+  return h('div', {id: 'calls', 'data-key': callsKey(id)}, now.length ? [h('h4', {}, '지금 하는 일'), h('ul', {}, now.slice(0, 2).map(callRow))] : null,
     h('h4', {}, '최근 한 일'), done.length ? h('ul', {}, done.map(callRow)) : h('p', {class: 'muted'}, activity ? '아직 없음' : '연결 대기'));
 }
 function refreshDetailLive() {
   const calls = $('calls');
-  if (calls) calls.replaceWith(activitySection(selected));
+  if (calls && calls.dataset.key === callsKey(selected)) {
+    const byId = new Map(events().map(e => [e.id, e]));
+    calls.querySelectorAll('[data-when]').forEach(w => { const e = byId.get(w.dataset.when); if (e) w.textContent = ' ' + whenText(e); });
+  } else if (calls) {
+    if (tipFor && calls.contains(tipFor)) hideTip(tipFor);
+    calls.replaceWith(activitySection(selected));
+  }
   const t = records && records.tasks.find(x => x.id === selected);
   const line = $('elapsed');
   if (t && line && t.started_at) line.textContent = `시작한 지 ${span(Date.now() - Date.parse(t.started_at))}`;
@@ -1170,6 +1398,139 @@ function renderDetail() {
   ].flat().filter(Boolean));
 }
 
+/* ---------- command explanations ---------- */
+const explained = new Map();
+let tipFor = null, tipTimer = 0;
+function showTip(anchor, command) {
+  tipFor = anchor;
+  clearTimeout(tipTimer);
+  const tip = $('tip');
+  const paint = state => {
+    tip.textContent = '';
+    tip.append(h('code', {}, cut(command, 200)),
+      state.state === 'ready' ? h('p', {}, state.text)
+        : state.state === 'failed' ? h('p', {class: 'muted'}, state.text || '설명을 만들지 못했어요')
+        : h('p', {class: 'wait'}, h('span', {class: 'dots', 'aria-hidden': 'true'}), '설명 만드는 중…'));
+    const r = anchor.getBoundingClientRect();
+    tip.style.left = Math.max(8, Math.min(innerWidth - 346, r.left + scrollX)) + 'px';
+    tip.style.top = (r.bottom + scrollY + 6) + 'px';
+  };
+  tip.hidden = false;
+  anchor.setAttribute('aria-describedby', 'tip');
+  const ask = async tries => {
+    if (tipFor !== anchor) return;
+    let state = explained.get(command);
+    if (!state) {
+      try {
+        const res = await fetch('/api/explain', {method: 'POST', headers: {...headers, 'Content-Type': 'application/json'}, body: JSON.stringify({command})});
+        state = res.ok ? await res.json() : {state: 'failed', text: '설명할 수 없는 명령이에요'};
+      } catch (_) { state = {state: 'failed', text: '대시보드 연결이 끊겼어요'}; }
+      if (state.state !== 'pending') explained.set(command, state);
+    }
+    if (tipFor !== anchor) return;
+    if (state.state === 'pending' && tries >= 40) state = {state: 'failed', text: '설명이 오지 않아요 · 패널에서 Haiku 요약이 켜져 있는지 확인하세요'};
+    paint(state);
+    if (state.state === 'pending') tipTimer = setTimeout(() => ask(tries + 1), 1000);
+  };
+  paint(explained.get(command) || {state: 'pending'});
+  ask(0);
+}
+function hideTip(anchor) {
+  if (tipFor !== anchor) return;
+  tipFor = null;
+  clearTimeout(tipTimer);
+  $('tip').hidden = true;
+  anchor.removeAttribute('aria-describedby');
+}
+
+/* ---------- quick view ---------- */
+let quickReturn = null;
+const sizeText = n => n < 1024 ? `${n}B` : n < 1048576 ? `${(n / 1024).toFixed(1)}KB` : `${(n / 1048576).toFixed(1)}MB`;
+const QUICK_ERROR = {'secret-looking file': '비밀 정보가 있을 수 있는 파일이라 열지 않아요', 'only files this session touched': '이 세션에서 접근한 파일만 열 수 있어요',
+  'binary file': '텍스트 파일이 아니에요', 'not a regular file': '파일이 없거나 링크예요'};
+async function openQuick(path, from) {
+  quickReturn = from;
+  $('qv').hidden = false;
+  $('qv-title').textContent = base(path);
+  $('qv-meta').textContent = '불러오는 중…';
+  $('qv-body').textContent = '';
+  $('qv-close').focus();
+  try {
+    const res = await fetch('/api/file?path=' + encodeURIComponent(path), {headers, cache: 'no-store'});
+    const data = await res.json();
+    if (!res.ok) { $('qv-meta').textContent = `${path} · ${QUICK_ERROR[data.error] || '열 수 없어요'}`; return; }
+    $('qv-meta').textContent = `${path} · ${sizeText(data.size)} · 지금 내용, ${hhmm(data.modified)} 수정${data.truncated ? ' · 앞 200KB' : ''}`;
+    const body = $('qv-body');
+    const frag = document.createDocumentFragment();
+    data.text.split('\n').forEach(line => frag.append(h('span', {class: 'ln'}, line || ' ')));
+    body.append(frag);
+  } catch (_) { $('qv-meta').textContent = `${path} · 대시보드 연결이 끊겼어요`; }
+}
+function closeQuick() {
+  $('qv').hidden = true;
+  if (quickReturn && quickReturn.isConnected) quickReturn.focus();
+}
+$('qv-close').addEventListener('click', closeQuick);
+$('qv').addEventListener('click', e => { if (e.target === $('qv')) closeQuick(); });
+
+/* ---------- Claude questions ---------- */
+let questions = [], questionKey = '';
+function answerText(q) { return Object.values(q.answers || {}).join(' / '); }
+function askForm(q) {
+  const waiting = q.status === 'answered';
+  const form = h('form', {class: 'ask-form', 'data-q': q.id});
+  q.questions.forEach((item, qi) => {
+    const name = `${q.id}:${qi}`;
+    const set = h('fieldset', {}, h('legend', {}, item.header ? h('span', {class: 'tag'}, item.header) : null, h('span', {class: 'qtext'}, item.question)));
+    item.options.forEach(o => set.append(h('label', {class: 'opt'},
+      h('input', {type: item.multi ? 'checkbox' : 'radio', name, value: o.label, disabled: waiting}),
+      h('span', {}, h('b', {}, o.label), o.description ? h('small', {}, o.description) : null))));
+    set.append(h('label', {class: 'opt other'}, h('span', {class: 'sr'}, '직접 입력'),
+      h('input', {type: 'text', name: name + ':other', placeholder: '직접 입력', autocomplete: 'off', disabled: waiting})));
+    form.append(set);
+  });
+  const status = h('p', {class: 'ask-status', role: 'status'}, waiting ? '보냄 · Claude에 전달 중…' : '');
+  const send = h('button', {type: 'submit', class: 'btn primary', disabled: waiting}, '보내기');
+  form.append(h('div', {class: 'ask-actions'}, send, status));
+  form.addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const answers = {};
+    q.questions.forEach((item, qi) => {
+      const name = `${q.id}:${qi}`;
+      const other = form.querySelector(`[name="${CSS.escape(name + ':other')}"]`).value.trim();
+      const picked = [...form.querySelectorAll(`[name="${CSS.escape(name)}"]:checked`)].map(i => i.value);
+      if (other || picked.length) answers[item.question] = other || picked.join(', ');
+    });
+    if (Object.keys(answers).length !== q.questions.length) { status.textContent = '모든 질문에 답해 주세요'; return; }
+    status.textContent = '보내는 중…';
+    try {
+      const res = await fetch('/api/question/answer', {method: 'POST', headers: {...headers, 'Content-Type': 'application/json'}, body: JSON.stringify({id: q.id, answers})});
+      status.textContent = res.ok ? '보냄 · Claude에 전달 중…' : res.status === 409 ? '이미 답한 질문이에요' : '보내지 못했어요';
+      if (res.ok) form.querySelectorAll('input,button').forEach(x => { x.disabled = true; });
+    } catch (_) { status.textContent = '보내지 못했어요'; }
+  });
+  return form;
+}
+function renderAsk() {
+  const key = JSON.stringify(questions.map(q => [q.id, q.status]));
+  if (key === questionKey) return;
+  const known = questionKey;
+  questionKey = key;
+  const open = questions.filter(q => q.status === 'open' || q.status === 'answered');
+  const last = questions.filter(q => q.status === 'resolved' || q.status === 'closed').slice(-1);
+  const body = $('ask-body');
+  body.textContent = '';
+  open.forEach(q => body.append(askForm(q)));
+  last.forEach(q => body.append(h('p', {class: 'ask-done'}, q.status === 'closed' ? '질문이 닫혔어요' :
+    [`${q.via === 'dashboard' ? '대시보드' : '터미널'}에서 답함: `, h('b', {}, cut(answerText(q), 80))])));
+  $('ask').hidden = !open.length && !last.length;
+  const fresh = open.filter(q => !known.includes(JSON.stringify(q.id)));
+  if (fresh.length && known) {
+    $('announce').textContent = 'Claude 질문: ' + fresh[0].questions.map(x => x.question).join(' / ');
+    if (motionOn()) $('ask').animate([{boxShadow: '0 0 0 3px var(--warn)'}, {boxShadow: '0 0 0 0 transparent'}], {duration: 600, easing: 'cubic-bezier(0.4, 0.14, 0.3, 1)'});
+  }
+}
+
 /* ---------- AI summary ---------- */
 function renderSummary() {
   if (!summary) { $('ai-headline').textContent = '대기 중'; $('ai-meta').textContent = ''; return; }
@@ -1198,6 +1559,8 @@ async function tick() {
     else setConn('warn', '기록 읽기 실패: ' + rec.error);
     summary = ses.summary || null;
     activity = ses.activity || null;
+    questions = ses.questions || [];
+    renderAsk();
     if (records) {
       if (records.fingerprint !== lastMeta) { lastMeta = records.fingerprint; renderRail(); renderDetail(); }
       renderSummary(); draw();

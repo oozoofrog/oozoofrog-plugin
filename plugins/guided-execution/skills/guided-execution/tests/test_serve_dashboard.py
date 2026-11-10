@@ -97,7 +97,7 @@ class DashboardTests(unittest.TestCase):
             self.assertNotIn(sentence, html)
         self.assertIn("role: 'button'", html)
         self.assertIn("e.key === 'Enter' || e.key === ' '", html)
-        self.assertIn("e.key === 'Escape'", html)
+        self.assertIn("if (e.key !== 'Escape') return;", html)
         # Ontology graph: session hub, decision gates, task nodes with check arcs, typed link labels.
         for token in ("const HUB = '__session'", "class: 'node gate'", "class: 'seg'", "'선행'", 'url(#arrow-hot)'):
             self.assertIn(token, html)
@@ -106,11 +106,15 @@ class DashboardTests(unittest.TestCase):
             self.assertIn(phrase, html)
         for jargon in ('리비전', "'쓰기'", "'읽기'", ' · via', '기록 타임라인'):
             self.assertNotIn(jargon, html)
+        # Claude questions, quick view and command explanations are reachable without a pointer.
+        for token in ('id="ask"', 'Claude 질문', 'role="dialog" aria-modal="true"', 'role="tooltip"', "addEventListener('focus', () => showTip",
+                      '설명 만드는 중…', "if (!$('qv').hidden) { closeQuick(); return; }", '/api/question/answer', '/api/file?path='):
+            self.assertIn(token, html)
         # Live activity moves only with motion on.
         self.assertIn("if (seenEvents && motionOn())", html)
         self.assertIn("if (!firstLoad && motionOn())", html)
         self.assertIn('.motion .node.st-running .spin{animation:spin', html)
-        self.assertRegex(html, r'@media \(prefers-reduced-motion:reduce\)\{[^}]*\.spin\{animation:none\}')
+        self.assertRegex(html, r'@media \(prefers-reduced-motion:reduce\)\{[^}]*\.spin,[^{]*\.dots\{animation:none\}')
         self.assertIn("freshAttention", html)
         for glyph in ('✓', '✗', '▶', '⏸', '↺', '?', '◌'):
             self.assertIn(glyph, html)
@@ -200,6 +204,65 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(403, self.request('POST', '/api/activity?t=' + self.board.token,
                                            {'events': []}, token=False)[0])
         self.assertEqual(422, self.request('POST', '/api/activity', {'events': 'no'})[0])
+        self.assertEqual(self.before, self.digest())
+
+    def post_activity(self, *events):
+        base = {'task': 'build', 'phase': 'ok', 'started_at': 1000}
+        status, _, body = self.request('POST', '/api/activity', {'events': [{**base, **e} for e in events]})
+        self.assertEqual(200, status, body)
+
+    def test_quick_view_opens_only_touched_non_secret_text_files(self):
+        readable = self.root / 'notes.md'
+        readable.write_text('# 메모\n내용', encoding='utf-8')
+        secret = self.root / '.env.local'
+        secret.write_text('TOKEN=x', encoding='utf-8')
+        binary = self.root / 'blob.bin'
+        binary.write_bytes(b'\x00\x01')
+        link = self.root / 'link.md'
+        link.symlink_to(readable)
+        untouched = self.root / 'other.md'
+        untouched.write_text('x', encoding='utf-8')
+        self.post_activity(*[{'id': f'f{i}', 'tool': 'Read', 'path': str(p)}
+                             for i, p in enumerate([readable, secret, binary, link])])
+        from urllib.parse import quote
+        get = lambda p: self.request('GET', '/api/file?path=' + quote(str(p)))
+        status, _, body = get(readable)
+        self.assertEqual(200, status, body)
+        self.assertEqual('# 메모\n내용', json.loads(body)['text'])
+        self.assertEqual(403, get(secret)[0])
+        self.assertEqual(422, get(binary)[0])
+        self.assertEqual(422, get(link)[0])
+        self.assertEqual(403, get(untouched)[0])
+        self.assertEqual(403, get('/etc/hosts')[0])
+
+    def test_explanations_only_for_observed_commands_and_flow_through_pending(self):
+        self.post_activity({'id': 'c1', 'tool': 'Bash', 'command': 'git status --short'})
+        self.assertEqual(422, self.request('POST', '/api/explain', {'command': 'rm -rf /'})[0])
+        first = json.loads(self.request('POST', '/api/explain', {'command': 'git status --short'})[2])
+        self.assertEqual('pending', first['state'])
+        pending = json.loads(self.request('GET', '/api/explain/pending')[2])['items']
+        self.assertEqual([{'key': first['key'], 'command': 'git status --short'}], pending)
+        self.request('POST', '/api/explain/answer', {'items': [{'key': first['key'], 'text': '바뀐 파일 목록을 짧게 보여 줍니다.'},
+                                                               {'key': 'unknown', 'text': 'x'}]})
+        ready = json.loads(self.request('POST', '/api/explain', {'command': 'git status --short'})[2])
+        self.assertEqual(('ready', '바뀐 파일 목록을 짧게 보여 줍니다.'), (ready['state'], ready['text']))
+        self.assertEqual([], json.loads(self.request('GET', '/api/explain/pending')[2])['items'])
+
+    def test_question_is_shown_answered_once_and_resolved(self):
+        ask = {'id': 'tu1', 'questions': [{'question': '형식은?', 'header': '형식', 'multiSelect': False,
+                                           'options': [{'label': 'JSON', 'description': '구조화'}, {'label': 'MD'}]}]}
+        self.assertEqual(200, self.request('POST', '/api/question', ask)[0])
+        shown = json.loads(self.request('GET', '/api/session')[2])['questions']
+        self.assertEqual(('open', '형식은?', ['JSON', 'MD']),
+                         (shown[0]['status'], shown[0]['questions'][0]['question'], [o['label'] for o in shown[0]['questions'][0]['options']]))
+        self.assertEqual(422, self.request('POST', '/api/question/answer', {'id': 'tu1', 'answers': {'다른 질문': 'x'}})[0])
+        self.assertEqual(200, self.request('POST', '/api/question/answer', {'id': 'tu1', 'answers': {'형식은?': 'JSON'}})[0])
+        self.assertEqual(409, self.request('POST', '/api/question/answer', {'id': 'tu1', 'answers': {'형식은?': 'MD'}})[0])
+        polled = json.loads(self.request('GET', '/api/question?id=tu1')[2])['question']
+        self.assertEqual(('answered', {'형식은?': 'JSON'}, 'dashboard'), (polled['status'], polled['answers'], polled['via']))
+        self.request('POST', '/api/question/resolve', {'id': 'tu1', 'answers': {'형식은?': 'JSON'}, 'via': 'dashboard'})
+        self.assertEqual('resolved', json.loads(self.request('GET', '/api/session')[2])['questions'][0]['status'])
+        self.assertEqual(409, self.request('POST', '/api/question/answer', {'id': 'nope', 'answers': {}})[0])
         self.assertEqual(self.before, self.digest())
 
     def test_summary_requires_header_token_and_valid_size(self):

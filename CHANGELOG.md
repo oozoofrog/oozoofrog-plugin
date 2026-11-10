@@ -22,6 +22,10 @@
 - Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
 - Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
+## Guided Execution [0.5.0] — 2026-11-11
+
+- Quick-view files the session touched (current text, 200KB, secret-looking and binary files refused, only observed paths), explain used commands in Korean on hover or focus with Haiku on demand (waiting state, cache, off with AI off), and show Claude's AskUserQuestion on the dashboard where it can be answered; the first answer, dashboard or terminal, wins. Same-column prerequisite links now run along the left side.
+
 ## Guided Execution [0.4.0] — 2026-11-11
 
 - Show live per-task activity. The Claude mod observes tool calls (pass-through) and attributes each to an explicitly named, subagent-linked, only-running or in-scope task, else the session; the pane and the prompt band show calls in flight, recent calls, elapsed time and counts. `serve_dashboard.py` accepts that activity in memory (`/api/activity`) and adds per-task timelines, start time, scopes and evidence paths to `/api/records`. The web dashboard is redrawn as a dark ontology graph (session hub, decision gates, check-ring task nodes, typed links, live node states, activity lanes) with a plain-language task panel. Activity never changes a record.

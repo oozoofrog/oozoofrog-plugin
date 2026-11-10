@@ -248,6 +248,25 @@ export function liveRows(t: BoardTask | { id: string; status: string; startedAt?
   return rows
 }
 
+const FILE_TOOLS = new Set(['Read', 'Edit', 'MultiEdit', 'Write', 'NotebookEdit'])
+
+const EXPLAIN_SYSTEM = `너는 셸 명령을 개발자가 아닌 사람도 이해하도록 한국어로 설명한다.
+입력은 [{"key":"…","command":"…"}] JSON 배열이다. 명령마다 무엇을 하는지 1~2문장(120자 이내)으로 쓴다.
+파일을 지우거나 덮어쓰거나, 외부로 보내거나, 설치하는 동작이면 그 사실을 먼저 말한다. 명령에 보이는 것만 설명하고 추측하지 않는다.
+JSON 배열 [{"key":"…","text":"…"}]만 출력한다. 다른 글이나 코드 블록 표시는 쓰지 않는다.`
+
+export function parseExplanations(text: string): { key: string; text: string }[] {
+  const start = text.indexOf('['), end = text.lastIndexOf(']')
+  if (start < 0 || end <= start) return []
+  try {
+    return arr(JSON.parse(text.slice(start, end + 1))).map(obj)
+      .filter(x => typeof x.key === 'string' && typeof x.text === 'string' && x.text.trim())
+      .map(x => ({ key: String(x.key), text: String(x.text).trim() }))
+  } catch {
+    return []
+  }
+}
+
 const SUMMARY_SYSTEM = `너는 소프트웨어 작업 현황을 파이프라인 단계로 묶는 정리 도구다.
 입력의 records(실행 기록)와 activity(최근 세션 활동)만 근거로 삼는다.
 JSON 객체 하나만 출력한다. 다른 글이나 코드 블록 표시는 쓰지 않는다.
@@ -283,6 +302,7 @@ export function parseSummary(text: string): Json | undefined {
 // Module variables restart on every reload; durable values live in atoms.
 const agentTasks = new Map<string, string>()
 let posting = false
+let isExplaining = false
 let postAgain = false
 let lastKey = ''
 let live: { url: string; token: string; port: number; runId: string; stop: () => void } | undefined
@@ -438,7 +458,7 @@ async function flushActivity($: EngineInterface) {
       if (!events.length) return
       const body = JSON.stringify({ events: events.slice(-MAX_EVENTS).map(e => ({
         id: e.id, task: e.task, tool: e.tool, target: e.target, phase: e.phase,
-        started_at: e.startedAt, ended_at: e.endedAt, agent: e.agent, via: e.via,
+        started_at: e.startedAt, ended_at: e.endedAt, agent: e.agent, via: e.via, path: e.path, command: e.command,
       })) })
       await $.http.fetch(`http://127.0.0.1:${target.port}/api/activity`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Board-Token': target.token }, body,
@@ -447,6 +467,83 @@ async function flushActivity($: EngineInterface) {
   } finally {
     posting = false
   }
+}
+
+type Live = NonNullable<typeof live>
+const boardHeaders = (target: Live) => ({ 'Content-Type': 'application/json', 'X-Board-Token': target.token })
+const boardPost = ($: EngineInterface, target: Live, path: string, body: unknown) =>
+  $.http.fetch(`http://127.0.0.1:${target.port}${path}`, { method: 'POST', headers: boardHeaders(target), body: JSON.stringify(body) })
+    .catch(() => undefined)
+const boardGet = async ($: EngineInterface, target: Live, path: string): Promise<Json | undefined> => {
+  const res = await $.http.fetch(`http://127.0.0.1:${target.port}${path}`, { headers: boardHeaders(target) }).catch(() => undefined)
+  if (!res?.ok) return undefined
+  try { return obj(JSON.parse(res.text)) } catch { return undefined }
+}
+
+/** Explain commands the dashboard asked about: Haiku in one batch, or a refusal while AI is off. */
+async function explainPending($: EngineInterface) {
+  const target = live
+  if (!target || isExplaining) return
+  const pending = await boardGet($, target, '/api/explain/pending')
+  const items = arr(pending?.items).map(obj).filter(i => typeof i.key === 'string' && typeof i.command === 'string').slice(0, 6)
+  if (!items.length) return
+  isExplaining = true
+  try {
+    const settings = await read($, ai)
+    let answers: { key: string; text?: string; error?: string }[]
+    if (!settings.isEnabled) {
+      answers = items.map(i => ({ key: String(i.key), error: 'AI 설명이 꺼져 있습니다' }))
+    } else {
+      const reply = await $.model.complete({
+        model: 'haiku', effort: 'low', maxTokens: 900, system: EXPLAIN_SYSTEM,
+        prompt: JSON.stringify(items.map(i => ({ key: i.key, command: clip(i.command, 600) }))),
+      })
+      const parsed = reply.isAnswered ? parseExplanations(reply.text) : []
+      answers = items.map(i => {
+        const hit = parsed.find(x => x.key === i.key)
+        return hit ? { key: String(i.key), text: hit.text } : { key: String(i.key), error: '설명을 만들지 못했습니다' }
+      })
+    }
+    await boardPost($, target, '/api/explain/answer', { items: answers })
+  } catch {
+    await boardPost($, target, '/api/explain/answer', { items: items.map(i => ({ key: String(i.key), error: '설명을 만들지 못했습니다' })) })
+  } finally {
+    isExplaining = false
+  }
+}
+
+/**
+ * Show Claude's question on the dashboard too. The terminal dialog runs as usual; an answer sent
+ * from the dashboard first answers the call in its place (the pending dialog is withdrawn).
+ * Either way the dashboard learns how it ended.
+ */
+async function relayQuestion($: EngineInterface, e: { tool_use_id?: string; questions?: unknown }, run: () => Promise<unknown>) {
+  const target = live
+  if (!target) return run()
+  const id = e.tool_use_id ?? `q-${await $.clock.now()}`
+  await boardPost($, target, '/api/question', { id, questions: e.questions })
+  let settled = false
+  const core = run().then(r => { settled = true; return r })
+  const fromBoard = (async () => {
+    while (!settled) {
+      await $.clock.sleep(700)
+      if (settled) return undefined
+      const q = obj((await boardGet($, target, `/api/question?id=${encodeURIComponent(id)}`))?.question)
+      if (q.status === 'answered' && q.answers && typeof q.answers === 'object') return q.answers as Record<string, string>
+    }
+    return undefined
+  })()
+  const winner = await Promise.race([
+    core.then(r => ({ from: 'terminal' as const, r })),
+    fromBoard.then(a => (a ? { from: 'dashboard' as const, a } : new Promise<never>(() => {}))),
+  ])
+  if (winner.from === 'dashboard') {
+    void boardPost($, target, '/api/question/resolve', { id, answers: winner.a, via: 'dashboard' })
+    return { result: { questions: e.questions, answers: winner.a } }
+  }
+  const result = obj(obj(winner.r).result)
+  void boardPost($, target, '/api/question/resolve', { id, answers: obj(result.answers), via: 'terminal' })
+  return winner.r
 }
 
 async function summarize($: EngineInterface, force = false) {
@@ -502,6 +599,7 @@ export const register: Register = on => {
           const now = await $.clock.now()
           await update($, activity, prev => ({ ...prev, now }))
         }
+        await explainPending($)
         return summarize($)
       })
     })
@@ -529,12 +627,17 @@ export const register: Register = on => {
           id: e.tool_use_id ?? `${e.tool}-${startedAt}-${Math.random().toString(36).slice(2, 6)}`,
           task: owner.task, via: owner.via, tool: e.tool, target: targetOf(e.tool, input, root),
           phase: 'running', startedAt, ...(e.agentId ? { agent: e.agentId } : {}),
+          ...(FILE_TOOLS.has(e.tool) && typeof (input.file_path ?? input.notebook_path) === 'string'
+            ? { path: String(input.file_path ?? input.notebook_path) } : {}),
+          ...(e.tool === 'Bash' && typeof input.command === 'string' ? { command: input.command.slice(0, 600) } : {}),
         }
         const added = event
         await track($, events => [...events, added], added)
       }
     } catch { event = undefined }
-    const result = await next(e)
+    const result = (e.tool === 'AskUserQuestion'
+      ? await relayQuestion($, e as unknown as { tool_use_id?: string; questions?: unknown }, () => next(e))
+      : await next(e)) as Awaited<ReturnType<typeof next>>
     if (event) {
       const id = event.id
       const failed = 'deny' in result && result.deny !== undefined || ('isError' in result && result.isError === true)

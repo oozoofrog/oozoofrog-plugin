@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { SESSION, attribute, liveRows, parseSummary, relationRows, summaryLine, targetOf, toBoard } from './register'
+import { SESSION, attribute, liveRows, parseExplanations, parseSummary, relationRows, summaryLine, targetOf, toBoard } from './register'
 
 const PLAN = {
   schema_version: 1,
@@ -145,7 +145,7 @@ test('the dashboard press starts the server, opens it, and sends a Haiku summary
       usage: { input_tokens: 300, output_tokens: 60, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 } } }
   })
   on('http.fetch', (_, e) => {
-    posted.push({ url: e.url, headers: { ...(e.init?.headers ?? {}) }, body: typeof e.init?.body === 'string' ? e.init.body : '' })
+    if (e.url.endsWith('/api/session')) posted.push({ url: e.url, headers: { ...(e.init?.headers ?? {}) }, body: typeof e.init?.body === 'string' ? e.init.body : '' })
     return { value: { status: 200, ok: true, headers: {}, text: '{"ok":true}' } }
   })
   await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
@@ -233,5 +233,89 @@ test('an observed tool call runs unchanged and shows on its task in the pane and
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   expect(await ui.find({ type: 'Text', text: /● Read README.md/ })).toBeTruthy()
   expect(await ui.find({ type: 'Text', text: /경과 00:42 · 도구 1/ })).toBeTruthy()
+  await ui.unmount()
+})
+
+function liveServer(on: Parameters<Parameters<typeof test>[1]>[1], clock: { sleep: (ms: number) => Promise<void> }) {
+  mock.env(on, {})
+  on('process.spawn', async function* () {
+    yield { stream: 'stdout', text: '{"url":"http://127.0.0.1:4567/?t=tok","port":4567,"token":"tok"}\n' }
+    await clock.sleep(600_000)
+    return { code: 0, signal: null }
+  })
+  on('process.run', () => ({ value: { exitCode: 0, stdout: '', stderr: '' } }))
+}
+
+test('explanation replies are read only as keyed texts', async () => {
+  expect(parseExplanations('```json\n[{"key":"a","text":"목록 보기"},{"key":"b"}]\n```')).toEqual([{ key: 'a', text: '목록 보기' }])
+  expect(parseExplanations('none')).toEqual([])
+})
+
+test('a question answered on the dashboard answers the call and withdraws the terminal dialog', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000_000 })
+  engine(on, RUNNING)
+  liveServer(on, clock)
+  const posts: { url: string; body: Record<string, unknown> }[] = []
+  let polls = 0
+  on('http.fetch', (_, e) => {
+    if (e.init?.method === 'POST') {
+      posts.push({ url: e.url, body: JSON.parse(typeof e.init.body === 'string' ? e.init.body : '{}') })
+      return { value: { status: 200, ok: true, headers: {}, text: '{"ok":true}' } }
+    }
+    if (e.url.includes('/api/question?id=')) {
+      polls += 1
+      const question = polls < 2 ? { status: 'open' } : { status: 'answered', answers: { '형식은?': 'JSON' } }
+      return { value: { status: 200, ok: true, headers: {}, text: JSON.stringify({ question }) } }
+    }
+    return { value: { status: 200, ok: true, headers: {}, text: '{"items":[]}' } }
+  })
+  let dialogOpen = false
+  on('tool.call', async () => { dialogOpen = true; await clock.sleep(3_600_000); return { result: { answers: { '형식은?': 'MD' } } } as never })
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'web-open' })
+  await clock.settle()
+  const questions = [{ question: '형식은?', header: '형식', multiSelect: false, options: [{ label: 'JSON', description: '' }, { label: 'MD', description: '' }] }]
+  const pending = $.tool.call({ tool: 'AskUserQuestion', tool_use_id: 'tu1', questions } as never)
+  await clock.advance(2_000)
+  const result = await pending as { result?: { answers?: Record<string, string> } }
+  expect(dialogOpen).toBe(true)
+  expect(result.result?.answers).toEqual({ '형식은?': 'JSON' })
+  const asked = posts.find(p => p.url.endsWith('/api/question'))
+  expect((asked?.body.questions as { question: string }[])[0]?.question).toBe('형식은?')
+  const resolved = posts.find(p => p.url.endsWith('/api/question/resolve'))
+  expect(resolved?.body.via).toBe('dashboard')
+  await ui.unmount()
+})
+
+test('commands the dashboard asks about are explained by Haiku in one batch', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000_000 })
+  engine(on, RUNNING)
+  liveServer(on, clock)
+  const answered: unknown[] = []
+  let served = false
+  on('http.fetch', (_, e) => {
+    if (e.url.endsWith('/api/explain/pending')) {
+      const items = served ? [] : [{ key: 'k1', command: 'git status --short' }]
+      served = true
+      return { value: { status: 200, ok: true, headers: {}, text: JSON.stringify({ items }) } }
+    }
+    if (e.url.endsWith('/api/explain/answer')) answered.push(JSON.parse(typeof e.init?.body === 'string' ? e.init.body : '{}'))
+    return { value: { status: 200, ok: true, headers: {}, text: '{"ok":true}' } }
+  })
+  let prompt = ''
+  on('model.complete', (_, e) => {
+    prompt = typeof e.prompt === 'string' ? e.prompt : ''
+    const text = e.system?.includes('셸 명령') ? '[{"key":"k1","text":"바뀐 파일을 짧게 보여 줍니다."}]' : '{"stages":[{"id":"s","label":"x"}]}'
+    return { value: { isAnswered: true, text, usage: { input_tokens: 1, output_tokens: 1, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 } } }
+  })
+  on('session.messages', () => ({ value: [] }))
+  await $.session.start({ cwd: '/p', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'web-open' })
+  await clock.settle()
+  await clock.advance(2_000)
+  expect(prompt.includes('git status --short') || answered.length > 0).toBe(true)
+  expect(answered[0]).toEqual({ items: [{ key: 'k1', text: '바뀐 파일을 짧게 보여 줍니다.' }] })
   await ui.unmount()
 })
