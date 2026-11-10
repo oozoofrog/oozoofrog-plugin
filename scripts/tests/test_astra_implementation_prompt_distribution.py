@@ -21,7 +21,7 @@ class AstraImplementationPromptDistributionTests(unittest.TestCase):
         self.assertEqual(expected, set(tree_files(source)))
         self.assertEqual(tree_files(source), tree_files(mirror))
         self.assertEqual(
-            {".codex-plugin/plugin.json"}
+            {".codex-plugin/plugin.json", ".claude-plugin/plugin.json"}
             | {f"skills/{NAME}/{path}" for path in expected},
             set(tree_files(plugin)),
         )

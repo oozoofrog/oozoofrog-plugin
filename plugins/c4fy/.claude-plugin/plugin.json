@@ -1,0 +1,10 @@
+{
+  "name": "c4fy",
+  "version": "0.3.0",
+  "description": "Create source-backed C4 context, container, component, and code diagrams as standalone HTML with a soft rounded UI, animated C1/C2/C3/C4 drill-down, source details, automatic domain/type/role classification, and SVG/JSON export. Use for C4 architecture maps and hierarchical system explanations, including optional component-level code structure; not for generic flowcharts or sequence diagrams.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin"
+}

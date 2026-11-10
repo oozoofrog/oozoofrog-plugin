@@ -1,0 +1,10 @@
+{
+  "name": "jev-native",
+  "version": "0.6.3+source.e88caaa",
+  "description": "Operate native macOS apps and windows with a Swift controller, JEV action selection, a separate virtual cursor, and a hideable target-window preview. Use for requested desktop app workflows; Codex delegates original text and image interpretation when needed.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin"
+}

@@ -1,5 +1,19 @@
 # Plugin installation
 
+## Claude Code
+
+저장소 루트의 `.claude-plugin/marketplace.json`은 Codex marketplace(`.agents/plugins/marketplace.json`)와 같은 Plugin 목록을 Claude Code에 제공합니다. 각 Plugin의 `.claude-plugin/plugin.json`은 Codex 매니페스트와 이름·버전·설명을 공유하고, `skills/` 디렉터리를 그대로 사용합니다.
+
+```sh
+claude plugin marketplace add oozoofrog/oozoofrog-plugin
+claude plugin install <plugin>@oozoofrog-plugin
+claude plugin marketplace update oozoofrog-plugin
+```
+
+푸시하지 않은 checkout은 저장소 루트에서 `claude plugin marketplace add "$PWD"`로 등록합니다. 설치 후 Claude Code를 다시 시작해야 스킬과 MCP 서버가 로드됩니다.
+
+MCP를 포함한 `swift-intelligence`와 `winpilot`은 Claude 매니페스트에 `${CLAUDE_PLUGIN_ROOT}` 기준의 MCP 설정을 따로 둡니다. Codex용 `.mcp.json`의 상대 경로는 Claude Code에서 Plugin 위치로 해석되지 않기 때문입니다. 두 설정의 실행 명령과 인자는 함께 갱신합니다. Codex 전용 `interface` 메타데이터와 `agents/openai.yaml`은 Claude Code에서 사용하지 않으며, `$<skill>` 대신 `/<plugin>:<skill>` 또는 설명 기반 자동 로드를 사용합니다.
+
 ## Guided Execution
 
 `guided-execution@oozoofrog-plugin`은 프로젝트 분석, 최소 질문, 검증 루프를 연결하는 [협업 실행 스킬](../guided-execution/SKILL.md) 0.2.3입니다. Python 3로 실행하는 표준 라이브러리 보조 도구와 검사 코드를 포함하며, MCP 서버·별도 모델·인증 정보를 등록하지 않습니다.

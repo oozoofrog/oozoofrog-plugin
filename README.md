@@ -1,6 +1,6 @@
 # oozoofrog-plugin
 
-Codex Plugins for code navigation, desktop automation, product design, writing, and other focused workflows. Choose the Plugins that fit your work and install them individually.
+Codex and Claude Code Plugins for code navigation, desktop automation, product design, writing, and other focused workflows. Choose the Plugins that fit your work and install them individually.
 
 English | [한국어](README.ko.md)
 
@@ -15,6 +15,18 @@ codex plugin list --json
 ```
 
 For another Plugin, replace `swift-intelligence` with its name: the selector is `<plugin>@oozoofrog-plugin`, where `<plugin>` is the name you choose. To refresh an already registered Git marketplace before installing, run `codex plugin marketplace upgrade oozoofrog-plugin`.
+
+### Claude Code
+
+The same Plugins are available from the Claude Code marketplace in this repository, using the same `<plugin>@oozoofrog-plugin` selectors.
+
+```sh
+claude plugin marketplace add oozoofrog/oozoofrog-plugin
+claude plugin install swift-intelligence@oozoofrog-plugin
+claude plugin list
+```
+
+To refresh an already registered marketplace, run `claude plugin marketplace update oozoofrog-plugin`. In Claude Code, skills load by their descriptions or as `/<plugin>:<skill>`; the `$<skill>` examples below are Codex syntax. See [Claude Code](docs/plugin-installation.md#claude-code) for MCP differences.
 
 These commands fetch the published remote marketplace, not unpublished changes in this checkout. The catalog below describes the **local checkout**, so a listed Plugin or change may not yet be published remotely. For local checkout registration, platform requirements, existing installations, and standalone options, see [Plugin installation](docs/plugin-installation.md).
 

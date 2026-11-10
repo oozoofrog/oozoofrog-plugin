@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a Claude Code marketplace (`.claude-plugin/marketplace.json`) and per-Plugin Claude manifests for all 11 Plugins, using the same `<plugin>@oozoofrog-plugin` selectors. `swift-intelligence` and `winpilot` declare Claude-specific MCP settings rooted at `${CLAUDE_PLUGIN_ROOT}`; Codex manifests and `.mcp.json` files are unchanged.
+
 - Remove `team-coordination`, `audit`, `outcome-brief`, `verify-work`, `choice-interview`, `obsidian-projects`, and `korean-travel-guidebook` from standalone sources, Plugin mirrors, and the marketplace. Retire the bundled team harness, its CI and installation guidance. Preserve historical records and user data; installed copies require separate removal.
 
 - Move Mac desktop and iOS Simulator automation into the independent [Mac Pilot repository](https://github.com/oozoofrog/mac-pilot), removing their source packages, duplicate mirrors and catalog entries here while preserving user data at the new project.

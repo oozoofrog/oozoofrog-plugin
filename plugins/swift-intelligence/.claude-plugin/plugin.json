@@ -1,0 +1,18 @@
+{
+  "name": "swift-intelligence",
+  "version": "0.1.0+codex.20260904035318",
+  "description": "Global SourceKit-backed semantic navigation for Swift code in Codex",
+  "author": {
+    "name": "oozoofrog"
+  },
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
+  "mcpServers": {
+    "swift-intelligence": {
+      "command": "python3",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/scripts/swift_intelligence_mcp.py"
+      ],
+      "cwd": "${CLAUDE_PLUGIN_ROOT}"
+    }
+  }
+}

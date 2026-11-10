@@ -1,0 +1,10 @@
+{
+  "name": "local-ai-studio",
+  "version": "0.3.0",
+  "description": "Use Local AI Studio for requested local model work, including separate Whisper transcription and timestamp estimates; prepare only needed prerequisites and verify saved results.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin"
+}

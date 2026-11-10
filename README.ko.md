@@ -75,6 +75,16 @@ codex plugin add swift-intelligence@oozoofrog-plugin
 codex plugin add local-ai-studio@oozoofrog-plugin
 ```
 
+Claude Code에서는 같은 저장소의 Claude marketplace를 등록하고 같은 `<plugin>@oozoofrog-plugin` 선택자로 설치합니다.
+
+```bash
+claude plugin marketplace add oozoofrog/oozoofrog-plugin
+claude plugin install swift-intelligence@oozoofrog-plugin
+claude plugin marketplace update oozoofrog-plugin
+```
+
+Claude Code에서는 스킬이 설명에 따라 로드되거나 `/<plugin>:<skill>`로 호출됩니다. `$<skill>` 호출은 Codex 문법입니다.
+
 다른 Plugin의 요구 사항과 standalone 설치는 [Plugin 설치 안내](docs/plugin-installation.md)를 참고하세요.
 
 ## 검증

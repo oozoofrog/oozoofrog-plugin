@@ -1,0 +1,10 @@
+{
+  "name": "korean-product-writing",
+  "version": "0.1.0",
+  "description": "Use when writing or editing Korean website copy, UI labels and buttons, product guidance, or explanatory reports, especially when wording feels translated, repetitive, abstract, or centered on the creator. 한국어 제품 문구와 안내 글에 사용한다. 문학 창작과 법률 계약 원문은 제외한다.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin"
+}

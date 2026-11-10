@@ -1,0 +1,78 @@
+{
+  "name": "oozoofrog-plugin",
+  "owner": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "metadata": {
+    "description": "Plugins for code navigation, desktop automation, product design, writing, and other focused workflows."
+  },
+  "plugins": [
+    {
+      "name": "swift-intelligence",
+      "source": "./plugins/swift-intelligence",
+      "description": "Global SourceKit-backed semantic navigation for Swift code in Codex",
+      "category": "productivity"
+    },
+    {
+      "name": "local-ai-studio",
+      "source": "./plugins/local-ai-studio",
+      "description": "Use Local AI Studio for requested local model work, including separate Whisper transcription and timestamp estimates; prepare only needed prerequisites and verify saved results.",
+      "category": "productivity"
+    },
+    {
+      "name": "jev-native",
+      "source": "./plugins/jev-native",
+      "description": "Operate native macOS apps and windows with a Swift controller, JEV action selection, a separate virtual cursor, and a hideable target-window preview. Use for requested desktop app workflows; Codex delegates original text and image interpretation when needed.",
+      "category": "productivity"
+    },
+    {
+      "name": "korean-product-writing",
+      "source": "./plugins/korean-product-writing",
+      "description": "Use when writing or editing Korean website copy, UI labels and buttons, product guidance, or explanatory reports, especially when wording feels translated, repetitive, abstract, or centered on the creator. 한국어 제품 문구와 안내 글에 사용한다. 문학 창작과 법률 계약 원문은 제외한다.",
+      "category": "productivity"
+    },
+    {
+      "name": "interface-first-design",
+      "source": "./plugins/interface-first-design",
+      "description": "Use when designing, implementing, or reviewing product UI, especially when explanatory prose substitutes for clear structure, visible controls, or state feedback. Applies to product screens and interactions, not agent communication or technical documentation.",
+      "category": "productivity"
+    },
+    {
+      "name": "winpilot",
+      "source": "./plugins/winpilot",
+      "description": "Windows 앱·게임을 WGC·UIA로 관찰하고 화면 안내가 있는 마우스·키보드로 조작한다. WinPilot 또는 windows-pilot 요청, 창 제어와 UIA가 없는 앱 조작에 사용한다. 사용자 입력·중지 버튼으로 전경 작업을 취소한다.",
+      "category": "productivity"
+    },
+    {
+      "name": "c4fy",
+      "source": "./plugins/c4fy",
+      "description": "Create source-backed C4 context, container, component, and code diagrams as standalone HTML with a soft rounded UI, animated C1/C2/C3/C4 drill-down, source details, automatic domain/type/role classification, and SVG/JSON export. Use for C4 architecture maps and hierarchical system explanations, including optional component-level code structure; not for generic flowcharts or sequence diagrams.",
+      "category": "productivity"
+    },
+    {
+      "name": "refactor",
+      "source": "./plugins/refactor",
+      "description": "Use when a user requests behavior-preserving code refactoring, SRP cleanup, clearer responsibilities or dependencies, reducing code smells under repository lint rules, or integrating SwiftLint into project builds. Not for unrelated features, behavior fixes, or formatting alone.",
+      "category": "productivity"
+    },
+    {
+      "name": "astra-implementation-prompt",
+      "source": "./plugins/astra-implementation-prompt",
+      "description": "Use when the user asks Astra Max to prepare an implementation prompt for review and a later user-selected implementation chat. Do not use for ordinary implementation requests.",
+      "category": "productivity"
+    },
+    {
+      "name": "openai-decisions",
+      "source": "./plugins/openai-decisions",
+      "description": "Call the OpenAI Decisions API directly to classify text, JSON, or images, estimate predicate probabilities, or score against an ordered rubric. Use for explicit Decisions API requests or bounded semantic judgments that benefit from measured probabilities; not for general chat or free-form extraction.",
+      "category": "productivity"
+    },
+    {
+      "name": "guided-execution",
+      "source": "./plugins/guided-execution",
+      "description": "Use when a user requests implementation or continuation of a multi-step project with minimal clarification, iterative verification, or human decision points, or explicitly invokes guided-execution. Exclude ordinary factual answers, tutoring, standalone reviews, and simple edits requiring no project coordination.",
+      "category": "productivity"
+    }
+  ]
+}

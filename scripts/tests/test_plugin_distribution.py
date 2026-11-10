@@ -53,6 +53,41 @@ class PluginDistributionTests(unittest.TestCase):
                 skill_root = plugin_root / manifest["skills"] / entry["name"]
                 self.assertTrue((skill_root / "SKILL.md").is_file())
 
+    def test_claude_marketplace_mirrors_codex_marketplace(self) -> None:
+        codex = json.loads((REPO_ROOT / ".agents/plugins/marketplace.json").read_text(encoding="utf-8"))
+        claude = json.loads((REPO_ROOT / ".claude-plugin/marketplace.json").read_text(encoding="utf-8"))
+        self.assertEqual(codex["name"], claude["name"])
+        self.assertEqual("oozoofrog", claude["owner"]["name"])
+        self.assertEqual([p["name"] for p in codex["plugins"]], [p["name"] for p in claude["plugins"]])
+        for entry in claude["plugins"]:
+            with self.subTest(plugin=entry["name"]):
+                self.assertEqual(f"./plugins/{entry['name']}", entry["source"])
+                plugin_root = REPO_ROOT / entry["source"]
+                codex_manifest = json.loads((plugin_root / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
+                manifest = json.loads((plugin_root / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+                for key in ("name", "version", "description"):
+                    self.assertEqual(codex_manifest[key], manifest[key])
+                self.assertEqual(codex_manifest["description"], entry["description"])
+                self.assertEqual("https://github.com/oozoofrog/oozoofrog-plugin", manifest["repository"])
+                self.assertNotIn("interface", manifest)
+                self.assertNotIn("skills", manifest)
+                self.assertTrue((plugin_root / "skills" / entry["name"] / "SKILL.md").is_file())
+                codex_mcp_path = plugin_root / ".mcp.json"
+                if not codex_mcp_path.is_file():
+                    self.assertNotIn("mcpServers", manifest)
+                    continue
+                codex_servers = json.loads(codex_mcp_path.read_text(encoding="utf-8"))["mcpServers"]
+                self.assertEqual(set(codex_servers), set(manifest["mcpServers"]))
+                for name, server in manifest["mcpServers"].items():
+                    codex_server = codex_servers[name]
+                    self.assertEqual(codex_server["command"], server["command"])
+                    self.assertEqual("${CLAUDE_PLUGIN_ROOT}", server["cwd"])
+                    expected_args = [
+                        "${CLAUDE_PLUGIN_ROOT}/" + arg[2:] if arg.startswith("./") else arg
+                        for arg in codex_server["args"]
+                    ]
+                    self.assertEqual(expected_args, server["args"])
+
     def test_guided_execution_distribution(self) -> None:
         from test_sync_skill_mirrors import load_module
         source = REPO_ROOT / "guided-execution"
@@ -68,7 +103,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual(expected, set(tree_files(source)))
         self.assertEqual(tree_files(source), tree_files(mirror))
         self.assertEqual(
-            {".codex-plugin/plugin.json"} | {f"skills/guided-execution/{path}" for path in expected},
+            {".codex-plugin/plugin.json", ".claude-plugin/plugin.json"} | {f"skills/guided-execution/{path}" for path in expected},
             set(tree_files(plugin)),
         )
         self.assertIn("guided-execution", load_module().PACKAGES)
@@ -120,7 +155,7 @@ class PluginDistributionTests(unittest.TestCase):
         expected = {"SKILL.md", "agents/openai.yaml", "references/swift.md", "references/swiftlint-build.md"}
         self.assertEqual(expected, set(tree_files(source)))
         self.assertEqual(tree_files(source), tree_files(mirror))
-        self.assertEqual({".codex-plugin/plugin.json"} | {f"skills/refactor/{p}" for p in expected}, set(tree_files(plugin)))
+        self.assertEqual({".codex-plugin/plugin.json", ".claude-plugin/plugin.json"} | {f"skills/refactor/{p}" for p in expected}, set(tree_files(plugin)))
         self.assertIn("refactor", load_module().PACKAGES)
         refactor_manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text())
         self.assertEqual("refactor", refactor_manifest["name"])
@@ -246,7 +281,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual(tree_files(source), tree_files(mirror))
         # Exact allowlist excludes weights, generated media, credentials and binaries.
         self.assertEqual(
-            {".codex-plugin/plugin.json"}
+            {".codex-plugin/plugin.json", ".claude-plugin/plugin.json"}
             | {f"skills/{source.name}/{relative}" for relative in skill_files},
             set(tree_files(plugin)),
         )
