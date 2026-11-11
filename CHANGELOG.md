@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Make `plugins/<plugin>/skills/<skill>/` the only source of every skill. Remove the 12 top-level standalone copies and `scripts/sync_skill_mirrors.py`; distribution tests, CI and documentation links now read the Plugin copy and fail if a top-level copy returns. Standalone installation uses the same Plugin skill folder.
+
+- `handoff`: the Stop hook no longer asks for a handoff in unattended T3 Code delegated threads, where no one can `/clear` and the request only adds a costly turn on a large context.
+
 - Add `model-advisor` 0.1.0: recommend a Claude model and effort for a task, and on request hand it to a subagent (`model`, `effort`) or a background Claude Code session (`claude --bg --model --effort`) with a self-contained brief, then confirm the running model from `claude logs`. Prices are written without dollar signs so skill arguments are not substituted into them. Codex receives the skill only.
 
 - Add `handoff` 0.1.0: project-local handoff documents in `_context/handoff/<branch>.md` with Claude Code SessionStart, Stop, PreCompact and PostCompact hooks. Stale handoffs (age, commit distance, diverged history, pre-compaction) are reduced to a pointer; finished and orphaned handoffs are archived and old archives expire. Codex receives the skill only.

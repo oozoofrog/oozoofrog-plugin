@@ -49,6 +49,11 @@ def step() -> int:
     return _int_env("HANDOFF_TOKENS_STEP", DEFAULT_STEP)
 
 
+def unattended() -> bool:
+    """No one can act on a handoff request here: T3 Code delegated child threads run unattended."""
+    return os.environ.get("T3CODE_THREAD_ID", "").startswith("thread:delegated-task:")
+
+
 def stale_days() -> int:
     return _int_env("HANDOFF_STALE_DAYS", 14)
 
@@ -358,7 +363,7 @@ def _sweep_state(sdir: Path) -> None:
 
 
 def stop(inp: dict) -> dict | None:
-    if inp.get("stop_hook_active"):
+    if inp.get("stop_hook_active") or unattended():
         return None
     root = find_root(inp.get("cwd") or os.getcwd())
     if not root:

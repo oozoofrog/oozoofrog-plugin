@@ -6,7 +6,7 @@ This is an evaluation of agent design decisions and package distribution. No pro
 
 The skill maps goals, objects, states, visible controls and recovery into a usable interface. A blacklist or blanket deletion would erase functional text without improving interaction. The selected workflow instead makes the relevant structure/control/feedback visible, then removes redundant explanatory burden. It preserves source meaning, unknown values, user content, visible and accessible labels, errors, consent and safety text. Product UI is the scope; agent reports and technical documentation retain their own explanatory needs.
 
-The source is [interface-first-design](../../interface-first-design/SKILL.md), with [synthetic examples](../../interface-first-design/references/examples.md). The three-file standalone package and Plugin mirror contain instructions, UI metadata and examples only. No runtime, hooks, credentials or personal project data are included.
+The source is [interface-first-design](../../plugins/interface-first-design/skills/interface-first-design/SKILL.md), with [synthetic examples](../../plugins/interface-first-design/skills/interface-first-design/references/examples.md). The three-file standalone package and Plugin mirror contain instructions, UI metadata and examples only. No runtime, hooks, credentials or personal project data are included.
 
 ## Behavioral method and results
 

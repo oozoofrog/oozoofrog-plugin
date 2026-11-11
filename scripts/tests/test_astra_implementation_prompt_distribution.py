@@ -6,26 +6,22 @@ from pathlib import Path
 
 from test_document_links import local_targets
 from test_plugin_distribution import tree_files
-from test_sync_skill_mirrors import load_module
 
 ROOT = Path(__file__).resolve().parents[2]
 NAME = "astra-implementation-prompt"
 
 
 class AstraImplementationPromptDistributionTests(unittest.TestCase):
-    def test_package_is_portable_and_mirror_is_complete(self):
-        source = ROOT / NAME
+    def test_package_is_portable_and_complete(self):
         plugin = ROOT / "plugins" / NAME
-        mirror = plugin / "skills" / NAME
+        source = plugin / "skills" / NAME
         expected = {"SKILL.md", "agents/openai.yaml", "references/workflow.md"}
         self.assertEqual(expected, set(tree_files(source)))
-        self.assertEqual(tree_files(source), tree_files(mirror))
         self.assertEqual(
             {".codex-plugin/plugin.json", ".claude-plugin/plugin.json"}
             | {f"skills/{NAME}/{path}" for path in expected},
             set(tree_files(plugin)),
         )
-        self.assertIn(NAME, load_module().PACKAGES)
         for root in (source, plugin):
             for path in root.rglob("*"):
                 self.assertFalse(path.is_symlink(), path)
@@ -34,7 +30,7 @@ class AstraImplementationPromptDistributionTests(unittest.TestCase):
                     self.assertTrue((document.parent / target).is_file(), (document, target))
 
     def test_discovery_metadata_and_documentation_agree(self):
-        source = ROOT / NAME
+        source = ROOT / "plugins" / NAME / "skills" / NAME
         self.assertTrue((source / "SKILL.md").is_file())
         description = (source / "SKILL.md").read_text().split("description: ", 1)[1].splitlines()[0]
         metadata = {}

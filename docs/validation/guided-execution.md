@@ -34,7 +34,7 @@
 로컬 작업 트리 검증 기록입니다. 게시·CI·사용자 기기 설치·새 대화 노출은 별도로 확인합니다.
 
 - [Claude Code Mod](../../plugins/guided-execution/claude-mod/register.tsx): `.agent-loop/<run>/`을 2초마다 읽어 옆 패널(목록·관계)과 프롬프트 위 한 줄로 표시합니다. 루프 파일을 쓰지 않습니다. Claude 매니페스트의 `hooks`만 이 경로를 가리키며, Codex가 자동으로 찾는 `hooks/hooks.json`은 두지 않습니다.
-- [실시간 대시보드 서버](../../guided-execution/scripts/serve_dashboard.py): `127.0.0.1`, 토큰·Host 확인, 요청마다 재검증, 쓰기 메서드 거부, 부모 프로세스 종료 시 종료. Haiku 요약은 라벨·순서·기존 작업 참조만 저장합니다.
+- [실시간 대시보드 서버](../../plugins/guided-execution/skills/guided-execution/scripts/serve_dashboard.py): `127.0.0.1`, 토큰·Host 확인, 요청마다 재검증, 쓰기 메서드 거부, 부모 프로세스 종료 시 종료. Haiku 요약은 라벨·순서·기존 작업 참조만 저장합니다.
 
 ```sh
 TMPDIR=/Volumes/eyedisk/build/guided-board-tmp python3 -I -S -B -m unittest discover -s guided-execution/tests
@@ -60,9 +60,9 @@ git diff --check
 
 2026-11-10 Linux / Python 3.12.14에서 upstream main `a4aea7d65019d7537d01f95255b6442be1b3424d`의 전체 파일을 Git blob과 tree SHA로 확인한 로컬 복사본을 사용했습니다. 아래는 0.2.3 파일의 로컬 검증 기록입니다. GitHub 게시와 CI 결과는 해당 커밋·실행 기록으로 별도 확인하며, 이 기록은 사용자 기기 설치나 새 대화의 스킬 노출을 뜻하지 않습니다.
 
-- [환경 구성과 재사용](../../guided-execution/references/environment.md): 실제 도구·검사·호스트 기능, 적용 범위가 있는 선호·교훈을 `plan.context`에 기록하는 운영 지침. 자동 탐색기나 권한 정책 엔진은 아닙니다.
-- [명시적인 상태 전이](../../guided-execution/scripts/loop_control.py): 준비된 작업 시작, 생산 후 버전 기록, 실제 로그 등록, 완료·실패, 실제 결정 출처 기록, 관련 작업 무효화. 기존 명령과 schema 1 유지.
-- [읽기 전용 보고서](../../guided-execution/scripts/render_report.py): 최소 텍스트의 온톨로지 그래프 파이프라인. 작업·검증·결정·선택적인 명시된 에이전트를 다른 도형으로, 계획과 기록·재시도 경로를 다른 선으로 표시합니다. 별도 모바일 배치와 접힌 상세 기록을 제공하며 원본 로그·명령 실행·승인 기능은 없습니다.
+- [환경 구성과 재사용](../../plugins/guided-execution/skills/guided-execution/references/environment.md): 실제 도구·검사·호스트 기능, 적용 범위가 있는 선호·교훈을 `plan.context`에 기록하는 운영 지침. 자동 탐색기나 권한 정책 엔진은 아닙니다.
+- [명시적인 상태 전이](../../plugins/guided-execution/skills/guided-execution/scripts/loop_control.py): 준비된 작업 시작, 생산 후 버전 기록, 실제 로그 등록, 완료·실패, 실제 결정 출처 기록, 관련 작업 무효화. 기존 명령과 schema 1 유지.
+- [읽기 전용 보고서](../../plugins/guided-execution/skills/guided-execution/scripts/render_report.py): 최소 텍스트의 온톨로지 그래프 파이프라인. 작업·검증·결정·선택적인 명시된 에이전트를 다른 도형으로, 계획과 기록·재시도 경로를 다른 선으로 표시합니다. 별도 모바일 배치와 접힌 상세 기록을 제공하며 원본 로그·명령 실행·승인 기능은 없습니다.
 - CI가 이제 배포 검사 외에 guided-execution의 기능 검사도 실행하도록 변경했습니다.
 
 ### 실행한 검사
@@ -130,10 +130,10 @@ Linux의 로컬 검증이며 macOS·Windows 실행은 확인하지 않았습니�
 
 ### 대상
 
-- Standalone: [guided-execution](../../guided-execution/SKILL.md)
+- Standalone: [guided-execution](../../plugins/guided-execution/skills/guided-execution/SKILL.md)
 - Plugin: [guided-execution manifest](../../plugins/guided-execution/.codex-plugin/plugin.json)
-- 실행 규칙: [project loop](../../guided-execution/references/execution.md)
-- 기록 규약: [workspace contract](../../guided-execution/references/workspace.md)
+- 실행 규칙: [project loop](../../plugins/guided-execution/skills/guided-execution/references/execution.md)
+- 기록 규약: [workspace contract](../../plugins/guided-execution/skills/guided-execution/references/workspace.md)
 
 0.1.1은 새로운 여러 단계의 작업에서 프로젝트 분석 후 중요한 미결정 판단 1개를 먼저 질문하고, 답변을 받은 뒤 의존 작업을 실행하도록 안내합니다. 초기 질문은 요청 전체의 최대 3개 결정·2회 한도에 포함됩니다. 명시적으로 정해진 판단, 명시적 위임·질문 생략 요청, 결정이 정해진 범위의 재개만 초기 질문을 생략할 수 있습니다. 호스트 에이전트가 실제 작업·검증·피드백 반영을 수행하며, 보조 도구는 작업을 실행하거나 권한을 부여하지 않습니다.
 
