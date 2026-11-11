@@ -1,6 +1,6 @@
 # Historical draft and current source
 
-The current [reusable skill](../../korean-product-writing/SKILL.md) passed one [six-case reused-input regression](tests/regression-v4/results.md) after the V3 omissions were corrected. This is bounded semantic evidence, not a universal reliability or automatic-loading claim. The draft entrypoint remains `SKILL.draft.md` with no draft UI metadata; the separate canonical source and skills-only Plugin are deliberate packaging changes. No global installation was performed.
+The current [reusable skill](../../plugins/korean-product-writing/skills/korean-product-writing/SKILL.md) passed one [six-case reused-input regression](tests/regression-v4/results.md) after the V3 omissions were corrected. This is bounded semantic evidence, not a universal reliability or automatic-loading claim. The draft entrypoint remains `SKILL.draft.md` with no draft UI metadata; the separate canonical source and skills-only Plugin are deliberate packaging changes. No global installation was performed.
 
 The snapshots below preserve the earlier failures and their then-current inactive status; they are historical, not the latest validation result.
 

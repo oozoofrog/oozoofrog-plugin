@@ -89,6 +89,7 @@ goal: <한 문장 목표>
 ## 참고
 
 - 문맥 사용량 경고 기준은 40만 토큰, 이후 15만 토큰마다 한 번 더 알린다. 환경 변수 `HANDOFF_TOKENS`, `HANDOFF_TOKENS_STEP`으로 바꾼다.
+- T3 Code 위임 스레드(`T3CODE_THREAD_ID`가 `thread:delegated-task:`로 시작)에서는 경고하지 않는다. 이어받을 사람이 없어 인계 문서 작성 비용만 들기 때문이다.
 - `_context/`는 기본으로 git에 올라가지 않는다(`_context/.gitignore`가 `*`). 커밋하려면 그 파일을 고친다. git이 추적하는 인계 문서는 남의 저장소에서 온 지시가 섞일 수 있어 자동으로 넣지 않고 위치만 알린다.
 - 압축이 일어나면 압축 요약이 `_context/sessions/`에 저장된다.
 - 자동 정리 기준(환경 변수로 변경):

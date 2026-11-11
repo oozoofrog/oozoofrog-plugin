@@ -5,12 +5,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGES = ('korean-product-writing','refactor','openai-decisions','handoff','model-advisor')
 class PortableSkillDistributionTests(unittest.TestCase):
-    def test_complete_sources_mirrors_and_metadata(self):
+    def test_complete_sources_and_metadata(self):
         for name in PACKAGES:
             with self.subTest(name=name):
-                source=ROOT/name;mirror=ROOT/'plugins'/name/'skills'/name
-                files=lambda p:{str(q.relative_to(p)):q.read_bytes() for q in p.rglob('*') if q.is_file() and q.suffix not in ('.pyc','.pyo') and '__pycache__' not in q.parts}
-                self.assertEqual(files(source),files(mirror))
+                source=ROOT/'plugins'/name/'skills'/name
+                self.assertTrue((source/'SKILL.md').is_file())
+                self.assertTrue((source/'agents/openai.yaml').is_file())
                 package=json.loads((ROOT/'plugins'/name/'.codex-plugin/plugin.json').read_text())
                 self.assertEqual(name,package['name'])
                 self.assertIn(package['description'],(source/'SKILL.md').read_text())
@@ -23,7 +23,7 @@ class PortableSkillDistributionTests(unittest.TestCase):
         self.assertEqual([],list(draft.rglob('SKILL.md')))
         self.assertFalse((draft/'agents').exists())
         self.assertIn('NOT PASSED',(draft/'STATUS.md').read_text())
-        current=ROOT/'korean-product-writing'
+        current=ROOT/'plugins/korean-product-writing/skills/korean-product-writing'
         for old,new in [('SKILL.draft.md','SKILL.md'),('references/examples.md','references/examples.md'),('references/sources.md','references/sources.md')]:
             self.assertEqual((draft/old).read_bytes(),(current/new).read_bytes())
         self.assertIn('regression-v4/results.md',(draft/'STATUS.md').read_text())

@@ -4,11 +4,10 @@
 
 ```sh
 python3 -m unittest discover -s scripts/tests -v
-python3 scripts/sync_skill_mirrors.py
 git diff --check
 ```
 
-변경한 Plugin의 원본·미러·manifest·UI metadata·README·CHANGELOG를 맞추고 해당 패키지의 검사를 실행합니다. 게시 시 main의 검증한 커밋과 원격 카탈로그를 확인합니다. 설치·활성화·새 세션 노출과 실제 앱 동작은 배포 검사와 구분합니다.
+스킬 원본은 `plugins/<plugin>/skills/<skill>/` 하나뿐입니다. 변경한 Plugin의 스킬·manifest·UI metadata·README·CHANGELOG를 맞추고 해당 패키지의 검사를 실행합니다. 게시 시 main의 검증한 커밋과 원격 카탈로그를 확인합니다. 설치·활성화·새 세션 노출과 실제 앱 동작은 배포 검사와 구분합니다.
 
-- WinPilot은 [Windows 개발·배포 절차](../winpilot/references/development.md)를 따릅니다.
+- WinPilot은 [Windows 개발·배포 절차](../plugins/winpilot/skills/winpilot/references/development.md)를 따릅니다.
 - 사용자 프로필·기존 설치본·실행 자료를 배포 변경 때문에 삭제하거나 초기화하지 않습니다.

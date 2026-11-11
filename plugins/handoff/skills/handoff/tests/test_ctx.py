@@ -54,6 +54,7 @@ class Base(unittest.TestCase):
         os.environ["HANDOFF_STATE_DIR"] = str(self.tmp / "state")
         os.environ.pop("HANDOFF_TOKENS", None)
         os.environ.pop("HANDOFF_TOKENS_STEP", None)
+        os.environ.pop("T3CODE_THREAD_ID", None)
 
     def tearDown(self):
         subprocess.run(["rm", "-rf", str(self.tmp)])
@@ -219,6 +220,12 @@ class StopTests(Base):
 
     def test_stop_hook_active_guard(self):
         self.assertIsNone(self.stop(900_000, active=True))
+
+    def test_unattended_delegated_thread_is_not_blocked(self):
+        os.environ["T3CODE_THREAD_ID"] = "thread:delegated-task:command%3Amcp%3Aabc%3Adelegate-task%3Adef"
+        self.assertIsNone(self.stop(900_000))
+        os.environ["T3CODE_THREAD_ID"] = "1b0a6462-c096-4e24-9de7-0da71eeaa43d"
+        self.assertEqual(self.stop(900_000)["decision"], "block")
 
     def test_recent_handoff_suppresses(self):
         self.write_handoff()

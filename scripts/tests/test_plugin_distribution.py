@@ -13,6 +13,17 @@ SWIFT_PLUGIN_SKILL = SWIFT_PLUGIN_ROOT / "skills" / "swift-intelligence"
 IGNORED_NAMES = {".DS_Store", "__pycache__"}
 IGNORED_SUFFIXES = {".pyc", ".pyo"}
 
+def skill_root(name: str) -> Path:
+    """The Plugin copy is the only source of each skill."""
+    return REPO_ROOT / "plugins" / name / "skills" / name
+
+
+def tracked_files(root: Path) -> set[str]:
+    output = subprocess.run(["git", "ls-files", "-z", "--", "."], cwd=root, check=True,
+                            capture_output=True).stdout.decode("utf-8")
+    return {name for name in output.split("\0") if name}
+
+
 def tree_files(root: Path) -> dict[str, tuple[int, bytes]]:
     files: dict[str, tuple[int, bytes]] = {}
     for path in sorted(root.rglob("*")):
@@ -89,10 +100,8 @@ class PluginDistributionTests(unittest.TestCase):
                     self.assertEqual(expected_args, server["args"])
 
     def test_guided_execution_distribution(self) -> None:
-        from test_sync_skill_mirrors import load_module
-        source = REPO_ROOT / "guided-execution"
+        source = skill_root("guided-execution")
         plugin = REPO_ROOT / "plugins/guided-execution"
-        mirror = plugin / "skills/guided-execution"
         expected = {
             "SKILL.md", "agents/openai.yaml", "assets/icon.svg",
             "references/questions.md", "references/execution.md", "references/workspace.md",
@@ -106,13 +115,11 @@ class PluginDistributionTests(unittest.TestCase):
             "claude-mod/types/index.d.ts",
         }
         self.assertEqual(expected, set(tree_files(source)))
-        self.assertEqual(tree_files(source), tree_files(mirror))
         self.assertEqual(
             {".codex-plugin/plugin.json", ".claude-plugin/plugin.json"} | claude_mod
             | {f"skills/guided-execution/{path}" for path in expected},
             set(tree_files(plugin)),
         )
-        self.assertIn("guided-execution", load_module().PACKAGES)
         manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
         self.assertEqual("0.6.0", manifest["version"])
         self.assertEqual("./skills/", manifest["skills"])
@@ -140,7 +147,7 @@ class PluginDistributionTests(unittest.TestCase):
 
     def test_openai_decisions_distribution(self) -> None:
         from test_document_links import local_targets
-        source = REPO_ROOT / "openai-decisions"
+        source = skill_root("openai-decisions")
         plugin = REPO_ROOT / "plugins/openai-decisions"
         manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text())
         metadata = {}
@@ -161,16 +168,12 @@ class PluginDistributionTests(unittest.TestCase):
                     self.assertTrue((document.parent / target).is_file(), (document, target))
 
     def test_refactor_distribution(self) -> None:
-        from test_sync_skill_mirrors import load_module
         from test_document_links import local_targets
-        source = REPO_ROOT / "refactor"
+        source = skill_root("refactor")
         plugin = REPO_ROOT / "plugins/refactor"
-        mirror = plugin / "skills/refactor"
         expected = {"SKILL.md", "agents/openai.yaml", "references/swift.md", "references/swiftlint-build.md"}
         self.assertEqual(expected, set(tree_files(source)))
-        self.assertEqual(tree_files(source), tree_files(mirror))
         self.assertEqual({".codex-plugin/plugin.json", ".claude-plugin/plugin.json"} | {f"skills/refactor/{p}" for p in expected}, set(tree_files(plugin)))
-        self.assertIn("refactor", load_module().PACKAGES)
         refactor_manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text())
         self.assertEqual("refactor", refactor_manifest["name"])
         self.assertEqual("0.2.0", refactor_manifest["version"])
@@ -199,16 +202,13 @@ class PluginDistributionTests(unittest.TestCase):
                     self.assertTrue((document.parent / target).is_file(), (document, target))
 
     def test_handoff_distribution(self) -> None:
-        from test_sync_skill_mirrors import load_module
-        source = REPO_ROOT / "handoff"
+        source = skill_root("handoff")
         plugin = REPO_ROOT / "plugins/handoff"
         expected = {"SKILL.md", "agents/openai.yaml", "scripts/ctx.py", "scripts/ctx_hook.py",
                     "scripts/ctxlib.py", "tests/test_ctx.py"}
         self.assertEqual(expected, set(tree_files(source)))
-        self.assertEqual(tree_files(source), tree_files(plugin / "skills/handoff"))
         self.assertEqual({".codex-plugin/plugin.json", ".claude-plugin/plugin.json", "claude-hooks/hooks.json"}
                          | {f"skills/handoff/{path}" for path in expected}, set(tree_files(plugin)))
-        self.assertIn("handoff", load_module().PACKAGES)
         codex = json.loads((plugin / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
         claude = json.loads((plugin / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
         # Hooks are Claude Code only: Codex discovers hooks/hooks.json, so they live in claude-hooks/.
@@ -242,12 +242,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertLessEqual(len(metadata["default_prompt"]), 128)
 
     def test_c4fy_distribution(self) -> None:
-        source = REPO_ROOT / "c4fy"
-        mirror = REPO_ROOT / "plugins/c4fy/skills/c4fy"
-        from test_sync_skill_mirrors import load_module
-        module = load_module()
-        self.assertIn("c4fy", module.PACKAGES)
-        self.assertEqual(module.package_files(source), module.package_files(mirror))
+        source = mirror = skill_root("c4fy")
         manifest = json.loads((REPO_ROOT / "plugins/c4fy/.codex-plugin/plugin.json").read_text())
         self.assertEqual(manifest["version"], json.loads((source / "package.json").read_text())["version"])
         self.assertIn("description: " + manifest["description"], (source / "SKILL.md").read_text())
@@ -263,7 +258,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertNotIn("dependencies", json.loads((source / "package.json").read_text()))
 
     def test_c4fy_documented_scope_matches_ui_levels(self) -> None:
-        metadata = (REPO_ROOT / "c4fy/agents/openai.yaml").read_text(encoding="utf-8")
+        metadata = (skill_root("c4fy") / "agents/openai.yaml").read_text(encoding="utf-8")
         short = next(line.split(": ", 1)[1] for line in metadata.splitlines()
                      if line.strip().startswith("short_description:"))
         levels = re.findall(r"\bC[1-4]\b", json.loads(short))
@@ -277,13 +272,9 @@ class PluginDistributionTests(unittest.TestCase):
                 self.assertNotRegex(section, r"C4 코드[^.\n]*(?:대상이 아닙니다|제외)")
 
     def test_winpilot_distribution(self) -> None:
-        from test_sync_skill_mirrors import load_module
         from test_document_links import local_targets
-        source = REPO_ROOT / "winpilot"
         plugin = REPO_ROOT / "plugins/winpilot"
-        mirror = plugin / "skills/winpilot"
-        module = load_module()
-        self.assertEqual(module.package_files(source), module.package_files(mirror))
+        source = skill_root("winpilot")
         manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
         runtime = json.loads((source / "runtime/distribution.json").read_text())
         self.assertEqual(manifest["version"].split("+")[0], runtime["version"])
@@ -299,26 +290,31 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertIn(json.loads(metadata["default_prompt"]), manifest["interface"]["defaultPrompt"])
         self.assertIn("WinPilot", (REPO_ROOT / "README.md").read_text(encoding="utf-8"))
         self.assertIn("WinPilot", (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8"))
-        for root in (source, mirror):
+        for root in (source,):
             for document in root.rglob("*.md"):
                 if any(part in {"evidence", "bin", "obj", "artifacts"} for part in document.relative_to(root).parts):
                     continue
                 for target in local_targets(document.read_text(encoding="utf-8")):
                     self.assertTrue((document.parent / target).exists(), (document, target))
-        files = module.package_files(source)
+        files = tracked_files(source)
         self.assertFalse(any(part in {"bin", "obj", "artifacts", "evidence"} for name in files for part in Path(name).parts))
         self.assertNotIn("game-start-reference.png", runtime["files"])
 
 
     def test_mac_automation_packages_are_external(self) -> None:
-        from test_sync_skill_mirrors import load_module
-        module = load_module()
         for name in ("mac-computer-use", "simulator-pilot"):
-            self.assertNotIn(name, module.PACKAGES)
             self.assertFalse((REPO_ROOT / name).exists())
             self.assertFalse((REPO_ROOT / "plugins" / name).exists())
         self.assertIn("https://github.com/oozoofrog/mac-pilot", (REPO_ROOT / "README.md").read_text())
 
+
+    def test_plugins_are_the_only_skill_source(self) -> None:
+        marketplace = json.loads((REPO_ROOT / ".claude-plugin/marketplace.json").read_text(encoding="utf-8"))
+        for entry in marketplace["plugins"]:
+            with self.subTest(plugin=entry["name"]):
+                self.assertTrue((skill_root(entry["name"]) / "SKILL.md").is_file())
+                self.assertEqual(set(), tracked_files(REPO_ROOT / entry["name"]) if (REPO_ROOT / entry["name"]).is_dir() else set())
+        self.assertFalse((REPO_ROOT / "scripts/sync_skill_mirrors.py").exists())
 
     def test_retired_packages_are_not_distributed(self) -> None:
         for name in ("gptplease", "gptpro", "gptwork", "astra-orchestrator", "jev-start", "jev-blender-use", "jev-computer-use",
@@ -330,12 +326,10 @@ class PluginDistributionTests(unittest.TestCase):
             self.assertFalse((REPO_ROOT / "plugins" / name / ".codex-plugin" / "plugin.json").exists())
 
     def test_local_ai_studio_distribution(self) -> None:
-        source = REPO_ROOT / "local-ai-studio"
+        source = mirror = skill_root("local-ai-studio")
         plugin = REPO_ROOT / "plugins" / source.name
-        mirror = plugin / "skills" / source.name
         skill_files = {"SKILL.md", "agents/openai.yaml", "references/cli-workflows.md", "references/setup.md", "references/whisper.md"}
         self.assertEqual(skill_files, set(tree_files(source)))
-        self.assertEqual(tree_files(source), tree_files(mirror))
         # Exact allowlist excludes weights, generated media, credentials and binaries.
         self.assertEqual(
             {".codex-plugin/plugin.json", ".claude-plugin/plugin.json"}
@@ -358,8 +352,6 @@ class PluginDistributionTests(unittest.TestCase):
             self.assertIsInstance(prompt, str)
             self.assertIn("$local-ai-studio", prompt)
             self.assertLessEqual(len(prompt), 128)
-        from test_sync_skill_mirrors import load_module
-        self.assertIn(source.name, load_module().PACKAGES)
         from test_document_links import local_targets
         for root in (source, mirror):
             for document in root.rglob("*.md"):
@@ -367,7 +359,7 @@ class PluginDistributionTests(unittest.TestCase):
                     self.assertTrue((document.parent / target).exists(), (document, target))
 
     def test_local_ai_studio_discovery_metadata(self) -> None:
-        source = REPO_ROOT / "local-ai-studio"
+        source = skill_root("local-ai-studio")
         # This package uses only JSON-compatible quoted YAML scalars, no dependencies
         # or explicit-only policy: normal automatic skill discovery remains enabled.
         lines = (source / "agents" / "openai.yaml").read_text().splitlines()

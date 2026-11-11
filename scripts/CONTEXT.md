@@ -6,7 +6,6 @@
 
 ## Key Files
 - [sync_repo.sh](./sync_repo.sh): fetch/rebase/add/commit/push 흐름을 묶는 핵심 동기화 스크립트
-- [sync_skill_mirrors.py](./sync_skill_mirrors.py): standalone Skill 및 Plugin-shaped 원본 패키지와 배포 사본의 내용·모드 일치 검사 및 원자 동기화
 - [auto_sync_daemon.py](./auto_sync_daemon.py): 변경 감시와 debounce 기반 자동 동기화 실행기
 - [install_auto_sync_launchd.sh](./install_auto_sync_launchd.sh): launchd 설치 진입점
 - [uninstall_auto_sync_launchd.sh](./uninstall_auto_sync_launchd.sh): launchd 제거 진입점

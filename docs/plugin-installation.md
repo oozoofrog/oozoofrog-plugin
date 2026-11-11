@@ -16,7 +16,7 @@ MCP를 포함한 `swift-intelligence`와 `winpilot`은 Claude 매니페스트에
 
 ## Guided Execution
 
-`guided-execution@oozoofrog-plugin`은 프로젝트 분석, 최소 질문, 검증 루프를 연결하는 [협업 실행 스킬](../guided-execution/SKILL.md) 0.6.0입니다. Python 3로 실행하는 표준 라이브러리 보조 도구와 검사 코드를 포함하며, MCP 서버·별도 모델·인증 정보를 등록하지 않습니다. Claude Code용 매니페스트는 읽기 전용 Mod(`claude-mod/`)를 함께 불러옵니다. Codex 매니페스트는 Mod를 포함하지 않습니다.
+`guided-execution@oozoofrog-plugin`은 프로젝트 분석, 최소 질문, 검증 루프를 연결하는 [협업 실행 스킬](../plugins/guided-execution/skills/guided-execution/SKILL.md) 0.6.0입니다. Python 3로 실행하는 표준 라이브러리 보조 도구와 검사 코드를 포함하며, MCP 서버·별도 모델·인증 정보를 등록하지 않습니다. Claude Code용 매니페스트는 읽기 전용 Mod(`claude-mod/`)를 함께 불러옵니다. Codex 매니페스트는 Mod를 포함하지 않습니다.
 
 처음 등록할 때는 다음 명령을 사용합니다.
 
@@ -33,17 +33,17 @@ codex plugin marketplace upgrade oozoofrog-plugin
 codex plugin add guided-execution@oozoofrog-plugin
 ```
 
-프로젝트를 연 뒤 `$guided-execution`으로 목표와 요구사항을 전달합니다. 새로운 여러 단계의 작업에서는 실제 프로젝트를 확인한 뒤 중요한 미결정 판단 1개를 먼저 질문하고, 답변을 반영해 `.agent-loop/<run-id>/`를 만들어 실행합니다. 답변에 의존하는 구현은 기다리며, 이미 허용된 독립 조사·준비만 계속할 수 있습니다. 단독 설치를 선택하면 저장소의 `guided-execution/` 전체를 사용하며 `references/`, `scripts/`, `agents/`, `assets/`의 상대 경로를 유지합니다. 기존 설치와 중복되는지 확인하고 사용자 설정을 임의로 교체하지 않습니다.
+프로젝트를 연 뒤 `$guided-execution`으로 목표와 요구사항을 전달합니다. 새로운 여러 단계의 작업에서는 실제 프로젝트를 확인한 뒤 중요한 미결정 판단 1개를 먼저 질문하고, 답변을 반영해 `.agent-loop/<run-id>/`를 만들어 실행합니다. 답변에 의존하는 구현은 기다리며, 이미 허용된 독립 조사·준비만 계속할 수 있습니다. 단독 설치를 선택하면 저장소의 `plugins/guided-execution/skills/guided-execution/` 전체를 사용하며 `references/`, `scripts/`, `agents/`, `assets/`의 상대 경로를 유지합니다. 기존 설치와 중복되는지 확인하고 사용자 설정을 임의로 교체하지 않습니다.
 
 초기 질문 1개는 요청 전체의 기본 한도인 독립적인 선택·선호 결정 최대 3개, 최대 2회에 포함됩니다. 관련 판단이 이미 명시적으로 정해졌거나, 사용자가 해당 선택을 명시적으로 위임하거나 질문을 원하지 않는다고 했거나, 결정이 정해진 범위를 그대로 재개하는 경우에만 질문을 생략하고 그 근거를 기록합니다. 기술적으로 구현 가능하거나 선택을 되돌릴 수 있다는 이유만으로 생략하지 않습니다. 필요한 실행 권한은 질문 예산으로 생략되지 않고, 기존에 받은 권한은 그 범위에서 재사용합니다. 이미 허용된 작업에는 별도의 시작 승인을 반복하지 않습니다.
 
 저장소에 게시된 0.6.0 파일과 사용자 기기의 설치·활성화·새 대화 노출은 별도로 확인해야 합니다. 위 설치 명령은 실제 게시된 버전을 가져오므로 설치 후 버전과 경로를 확인하세요.
 
-작업 단위는 기본 총 3회 시도 후 구체적인 장애 요인을 남깁니다. `loop_control.py`는 명시적인 상태 전이를 기록하고 `render_report.py`는 실행 기록의 정적 HTML 보고서를 생성합니다. `serve_dashboard.py`는 한 실행을 `127.0.0.1`에서 토큰으로 보호해 온톨로지 그래프로 실시간 표시하며, Claude Code Mod의 패널 버튼이 실행합니다. Mod는 진행 중인 작업에서 일어나는 도구 호출을 관찰해 해당 작업 노드에 보여 줍니다. 이 활동은 기록을 바꾸지 않습니다. 요청은 요구사항과 작업별 세부 할 일로 나뉘어 기록되고(`todo-add`, `todo-set`), Claude Code에서는 세션 할 일 목록에도 반영됩니다. 패널과 대시보드는 세션 작업과 요구사항 할 일을 서로 다른 보기로 보여 줍니다. [환경 구성과 재사용](../guided-execution/references/environment.md)을 먼저 확인하세요. 보조 도구가 확인하는 것은 기록의 무결성이며, 실제 명령 실행·현재 파일 검증·완료 기준의 적절성은 호스트 에이전트가 확인합니다. [작업 환경 규약](../guided-execution/references/workspace.md)과 [검증 범위](validation/guided-execution.md)를 참고하세요.
+작업 단위는 기본 총 3회 시도 후 구체적인 장애 요인을 남깁니다. `loop_control.py`는 명시적인 상태 전이를 기록하고 `render_report.py`는 실행 기록의 정적 HTML 보고서를 생성합니다. `serve_dashboard.py`는 한 실행을 `127.0.0.1`에서 토큰으로 보호해 온톨로지 그래프로 실시간 표시하며, Claude Code Mod의 패널 버튼이 실행합니다. Mod는 진행 중인 작업에서 일어나는 도구 호출을 관찰해 해당 작업 노드에 보여 줍니다. 이 활동은 기록을 바꾸지 않습니다. 요청은 요구사항과 작업별 세부 할 일로 나뉘어 기록되고(`todo-add`, `todo-set`), Claude Code에서는 세션 할 일 목록에도 반영됩니다. 패널과 대시보드는 세션 작업과 요구사항 할 일을 서로 다른 보기로 보여 줍니다. [환경 구성과 재사용](../plugins/guided-execution/skills/guided-execution/references/environment.md)을 먼저 확인하세요. 보조 도구가 확인하는 것은 기록의 무결성이며, 실제 명령 실행·현재 파일 검증·완료 기준의 적절성은 호스트 에이전트가 확인합니다. [작업 환경 규약](../plugins/guided-execution/skills/guided-execution/references/workspace.md)과 [검증 범위](validation/guided-execution.md)를 참고하세요.
 
 ## Handoff
 
-`handoff@oozoofrog-plugin` 0.1.0은 작업 상태를 프로젝트 안의 `_context/handoff/<브랜치>.md`에 남기는 [인계 문서 스킬](../handoff/SKILL.md)과 Claude Code 훅 4개(SessionStart, Stop, PreCompact, PostCompact)를 함께 설치합니다. 훅은 `claude-hooks/hooks.json`에 있고 Claude 매니페스트만 이를 가리킵니다. Codex에서는 스킬만 사용할 수 있습니다. Python 3과 Git이 필요하며, macOS에서는 `xcode-select --install`로 함께 설치됩니다.
+`handoff@oozoofrog-plugin` 0.1.0은 작업 상태를 프로젝트 안의 `_context/handoff/<브랜치>.md`에 남기는 [인계 문서 스킬](../plugins/handoff/skills/handoff/SKILL.md)과 Claude Code 훅 4개(SessionStart, Stop, PreCompact, PostCompact)를 함께 설치합니다. 훅은 `claude-hooks/hooks.json`에 있고 Claude 매니페스트만 이를 가리킵니다. Codex에서는 스킬만 사용할 수 있습니다. Python 3과 Git이 필요하며, macOS에서는 `xcode-select --install`로 함께 설치됩니다.
 
 ```sh
 claude plugin marketplace add oozoofrog/oozoofrog-plugin
@@ -54,7 +54,7 @@ claude plugin install handoff@oozoofrog-plugin
 
 ## Model Advisor
 
-`model-advisor@oozoofrog-plugin` 0.1.0은 [모델 선택 스킬](../model-advisor/SKILL.md)만 설치합니다. 훅과 MCP 서버는 없습니다. 백그라운드 세션으로 넘기려면 `claude` CLI가 필요하고, 넘길 프로젝트 폴더에서 `claude`를 한 번 실행해 신뢰를 승인해 두어야 합니다.
+`model-advisor@oozoofrog-plugin` 0.1.0은 [모델 선택 스킬](../plugins/model-advisor/skills/model-advisor/SKILL.md)만 설치합니다. 훅과 MCP 서버는 없습니다. 백그라운드 세션으로 넘기려면 `claude` CLI가 필요하고, 넘길 프로젝트 폴더에서 `claude`를 한 번 실행해 신뢰를 승인해 두어야 합니다.
 
 ```sh
 claude plugin marketplace add oozoofrog/oozoofrog-plugin
@@ -65,7 +65,7 @@ claude plugin install model-advisor@oozoofrog-plugin
 
 ## OpenAI Decisions
 
-`openai-decisions@oozoofrog-plugin`은 [스킬](../openai-decisions/SKILL.md)만 제공합니다. 기존 `openai_decide` MCP/Pi 도구나 `openai-decisions` CLI가 있으면 이를 사용하고, 없으면 [공식 CLI 직접 호출](../openai-decisions/references/cli.md)을 따릅니다. Plugin 설치는 MCP 서버·API 키·과금 계정을 자동 등록하지 않습니다. API 키는 기존 비밀 입력·자격증명 저장소로 전달하고 설정 파일이나 대화에 복사하지 않습니다.
+`openai-decisions@oozoofrog-plugin`은 [스킬](../plugins/openai-decisions/skills/openai-decisions/SKILL.md)만 제공합니다. 기존 `openai_decide` MCP/Pi 도구나 `openai-decisions` CLI가 있으면 이를 사용하고, 없으면 [공식 CLI 직접 호출](../plugins/openai-decisions/skills/openai-decisions/references/cli.md)을 따릅니다. Plugin 설치는 MCP 서버·API 키·과금 계정을 자동 등록하지 않습니다. API 키는 기존 비밀 입력·자격증명 저장소로 전달하고 설정 파일이나 대화에 복사하지 않습니다.
 
 `openai-decisions` 0.1.0을 설치하려면 등록한 marketplace를 갱신한 뒤 선택한 Plugin을 추가합니다. marketplace가 없으면 먼저 `codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main`으로 등록합니다.
 
@@ -80,7 +80,7 @@ codex plugin add openai-decisions@oozoofrog-plugin
 
 Windows x64에서 `codex plugin marketplace upgrade oozoofrog-plugin` 후 `codex plugin add winpilot@oozoofrog-plugin`을 실행합니다. marketplace가 없으면 `codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main`으로 먼저 등록합니다.
 
-WinPilot 0.5.1은 [스킬](../winpilot/SKILL.md)과 MCP 설정을 함께 제공합니다. 첫 서버 연결에서 GitHub Release의 독립 실행형 ZIP을 내려받아 SHA-256을 검증하고 `%LOCALAPPDATA%/WinPilot/0.5.1/`에 설치합니다. 별도 .NET 설치·Python·SDK는 실행에 필요하지 않습니다. 빌드·시험·오프라인 설치는 [개발 안내](../winpilot/references/development.md)를 따릅니다. unsigned 배포이며 Windows SmartScreen 승인이 필요할 수 있습니다.
+WinPilot 0.5.1은 [스킬](../plugins/winpilot/skills/winpilot/SKILL.md)과 MCP 설정을 함께 제공합니다. 첫 서버 연결에서 GitHub Release의 독립 실행형 ZIP을 내려받아 SHA-256을 검증하고 `%LOCALAPPDATA%/WinPilot/0.5.1/`에 설치합니다. 별도 .NET 설치·Python·SDK는 실행에 필요하지 않습니다. 빌드·시험·오프라인 설치는 [개발 안내](../plugins/winpilot/skills/winpilot/references/development.md)를 따릅니다. unsigned 배포이며 Windows SmartScreen 승인이 필요할 수 있습니다.
 
 기존 `windows-pilot` 실행 파일명과 7개 MCP 도구명은 유지합니다. 기존 standalone 스킬·MCP 설정·개인 캡처·원본 폴더는 자동 삭제하지 않습니다. 동일 서버를 Plugin MCP와 수동 MCP 양쪽에 등록하지 마세요. 설치 상태와 현재 대화의 도구 노출은 별도로 확인하며 새 대화에서 `$winpilot`을 호출할 수 있습니다. [검증 범위](validation/winpilot.md)를 참고하세요.
 
@@ -107,15 +107,15 @@ Swift Intelligence는 macOS, Command Line Tools를 포함한 Xcode, Python 3가 
 
 ## Local AI Studio
 
-버전 0.3.0은 별도 `whisper-cli`를 사용하는 [Whisper 전사·추정 타임스탬프 흐름](../local-ai-studio/references/whisper.md)도 제공합니다. 기존 모델 재사용, crop 오프셋, DTW 실패와 정확도 한계를 구분합니다. 별도 CLI 지침이며 네이티브 앱 통합을 뜻하지 않습니다.
+버전 0.3.0은 별도 `whisper-cli`를 사용하는 [Whisper 전사·추정 타임스탬프 흐름](../plugins/local-ai-studio/skills/local-ai-studio/references/whisper.md)도 제공합니다. 기존 모델 재사용, crop 오프셋, DTW 실패와 정확도 한계를 구분합니다. 별도 CLI 지침이며 네이티브 앱 통합을 뜻하지 않습니다.
 
 `local-ai-studio`는 Local AI Studio를 사용한 이미지·음성·영상·음악·영어→한국어 번역 작업을 수행하는 skills-only Plugin `0.3.0`입니다. Local AI Studio 또는 온디바이스 모델 작업을 요청했는데 LocalAIHub나 필요한 모델 그룹이 없으면 현재 소스를 확인해 로컬에 설치한 뒤 결과를 검증·전달합니다. 일반 미디어 요청만으로 설치를 시작하지 않습니다. 새 작업에서 `$local-ai-studio` 또는 `$local-ai-studio:local-ai-studio`로 호출할 수 있으며 사용자가 선택한 도구·모델·출력 위치·형식을 우선합니다.
 
-아직 푸시하지 않은 checkout을 시험하려면 저장소 루트에서 `codex plugin marketplace add "$PWD"`로 등록한 뒤 `codex plugin add local-ai-studio@oozoofrog-plugin`를 사용하세요. 기존 `oozoofrog-plugin` marketplace가 있으면 source가 원격인지 해당 checkout인지 먼저 확인합니다. Standalone을 선택하면 `local-ai-studio/`를 skill-installer로 설치하되 Plugin과 중복 설치하지 않고 기존 전역 스킬을 임의로 덮어쓰지 않습니다.
+아직 푸시하지 않은 checkout을 시험하려면 저장소 루트에서 `codex plugin marketplace add "$PWD"`로 등록한 뒤 `codex plugin add local-ai-studio@oozoofrog-plugin`를 사용하세요. 기존 `oozoofrog-plugin` marketplace가 있으면 source가 원격인지 해당 checkout인지 먼저 확인합니다. Standalone을 선택하면 `plugins/local-ai-studio/skills/local-ai-studio/`를 skill-installer로 설치하되 Plugin과 중복 설치하지 않고 기존 전역 스킬을 임의로 덮어쓰지 않습니다.
 
-Plugin 설치 자체는 LocalAIHub나 모델을 설치하지 않습니다. 스킬을 호출해 로컬 작업을 요청하면 Apple Silicon/macOS와 저장 공간을 확인하고 [LocalAIHub 설치 절차](../local-ai-studio/references/setup.md)로 필요한 소스·앱·모델 그룹을 준비할 수 있습니다. 이미 설치된 경우 `ai --help`, `ai status`, `ai models`와 선택 root/`AIHUB_ROOT`를 확인해 재다운로드를 피합니다. 참조 Mac의 `/Volumes/eyedisk/AI/bin/ai`와 `/Volumes/eyedisk/AI/LocalAIHub/README.md`는 발견 후보일 뿐 타 기기의 기본 경로가 아닙니다. 모델·생성 미디어·인증·runner·MCP·app·hook을 Plugin에 번들하지 않으며 marketplace `ON_INSTALL`도 모델 라이선스 동의나 인증을 대신하지 않습니다.
+Plugin 설치 자체는 LocalAIHub나 모델을 설치하지 않습니다. 스킬을 호출해 로컬 작업을 요청하면 Apple Silicon/macOS와 저장 공간을 확인하고 [LocalAIHub 설치 절차](../plugins/local-ai-studio/skills/local-ai-studio/references/setup.md)로 필요한 소스·앱·모델 그룹을 준비할 수 있습니다. 이미 설치된 경우 `ai --help`, `ai status`, `ai models`와 선택 root/`AIHUB_ROOT`를 확인해 재다운로드를 피합니다. 참조 Mac의 `/Volumes/eyedisk/AI/bin/ai`와 `/Volumes/eyedisk/AI/LocalAIHub/README.md`는 발견 후보일 뿐 타 기기의 기본 경로가 아닙니다. 모델·생성 미디어·인증·runner·MCP·app·hook을 Plugin에 번들하지 않으며 marketplace `ON_INSTALL`도 모델 라이선스 동의나 인증을 대신하지 않습니다.
 
-Qwen Image 2.1 설치 플래그는 사용자의 명시적 라이선스 동의 후에만 사용합니다. 24 GB Mac에서는 다른 app/UI 작업도 포함해 대형 생성 모델을 직렬로 실행합니다. TTS 출력 디렉터리·전사 stem·그 외 파일 경로의 차이와 `music --prompt`/bare `music`의 동작을 [명령 참고](../local-ai-studio/references/cli-workflows.md)에 정리했습니다.
+Qwen Image 2.1 설치 플래그는 사용자의 명시적 라이선스 동의 후에만 사용합니다. 24 GB Mac에서는 다른 app/UI 작업도 포함해 대형 생성 모델을 직렬로 실행합니다. TTS 출력 디렉터리·전사 stem·그 외 파일 경로의 차이와 `music --prompt`/bare `music`의 동작을 [명령 참고](../plugins/local-ai-studio/skills/local-ai-studio/references/cli-workflows.md)에 정리했습니다.
 
 Plugin 설치 성공, 새 세션에서 읽은 스킬 경로, 모델 readiness, 실제 추론 완료, 결과의 파일·형식·품질 확인은 별도 단계입니다. 배포 검사만으로 실제 생성·재생 품질이나 설치 후 노출을 주장하지 않습니다.
 
@@ -130,13 +130,13 @@ codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
 codex plugin add interface-first-design@oozoofrog-plugin
 ```
 
-게시 전 checkout 검증에는 저장소 루트에서 `codex plugin marketplace add "$PWD"`를 사용하고 source가 그 checkout인지 확인합니다. Standalone 설치는 `interface-first-design/`을 skill-installer로 설치하며 기존 설치본을 임의로 덮어쓰거나 Plugin과 중복 설치하지 않습니다.
+게시 전 checkout 검증에는 저장소 루트에서 `codex plugin marketplace add "$PWD"`를 사용하고 source가 그 checkout인지 확인합니다. Standalone 설치는 `plugins/interface-first-design/skills/interface-first-design/`을 skill-installer로 설치하며 기존 설치본을 임의로 덮어쓰거나 Plugin과 중복 설치하지 않습니다.
 
-새 작업에서 `$interface-first-design` 또는 `$interface-first-design:interface-first-design`으로 호출합니다. [스킬](../interface-first-design/SKILL.md)과 [가상 예시](../interface-first-design/references/examples.md)를 참고하세요. 패키지 검사 통과, 원격 카탈로그 반영, 설치 성공, 새 세션 노출, 실제 제품 UI 동작 검증은 각각 확인해야 합니다.
+새 작업에서 `$interface-first-design` 또는 `$interface-first-design:interface-first-design`으로 호출합니다. [스킬](../plugins/interface-first-design/skills/interface-first-design/SKILL.md)과 [가상 예시](../plugins/interface-first-design/skills/interface-first-design/references/examples.md)를 참고하세요. 패키지 검사 통과, 원격 카탈로그 반영, 설치 성공, 새 세션 노출, 실제 제품 UI 동작 검증은 각각 확인해야 합니다.
 
 ## Refactor
 
-`refactor` 0.2.0은 동작 보존 리팩토링과 요청한 SwiftLint 빌드 통합을 수행하는 skills-only Plugin입니다. 통합 시 [빌드 통합 지침](../refactor/references/swiftlint-build.md)에 따라 프로젝트 구조에 맞춰 빌드 파일을 수정하고 실제 실행을 검증합니다. 별도 런타임·MCP·hooks를 설치하지 않습니다. Swift 작업은 분석 전용 요청에서도 SwiftLint 진단을 반드시 사용합니다. 도구가 없으면 요청 권한과 저장소·환경 제약에 따라 설치합니다. 진단을 확보하지 못하면 원인과 필요한 조치를 보고하고 작업을 미완료로 남깁니다.
+`refactor` 0.2.0은 동작 보존 리팩토링과 요청한 SwiftLint 빌드 통합을 수행하는 skills-only Plugin입니다. 통합 시 [빌드 통합 지침](../plugins/refactor/skills/refactor/references/swiftlint-build.md)에 따라 프로젝트 구조에 맞춰 빌드 파일을 수정하고 실제 실행을 검증합니다. 별도 런타임·MCP·hooks를 설치하지 않습니다. Swift 작업은 분석 전용 요청에서도 SwiftLint 진단을 반드시 사용합니다. 도구가 없으면 요청 권한과 저장소·환경 제약에 따라 설치합니다. 진단을 확보하지 못하면 원인과 필요한 조치를 보고하고 작업을 미완료로 남깁니다.
 
 ```sh
 # marketplace가 없는 경우 먼저 등록합니다.

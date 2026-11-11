@@ -6,7 +6,6 @@ on:
       - '.agents/plugins/**'
       - 'plugins/**'
       - 'scripts/**'
-      - 'guided-execution/**'
       - '**/SKILL.md'
       - '**/agents/openai.yaml'
       - '**/*.md'
@@ -17,7 +16,6 @@ on:
       - '.agents/plugins/**'
       - 'plugins/**'
       - 'scripts/**'
-      - 'guided-execution/**'
       - '**/SKILL.md'
       - '**/agents/openai.yaml'
       - '**/*.md'
@@ -40,8 +38,6 @@ jobs:
       - name: Distribution and documentation checks
         run: python -I -S -B -m unittest discover -s scripts/tests -v
       - name: Guided execution checks
-        run: python -I -S -B -m unittest discover -s guided-execution/tests -v
-      - name: Skill mirrors
-        run: python -I -S -B scripts/sync_skill_mirrors.py
+        run: python -I -S -B -m unittest discover -s plugins/guided-execution/skills/guided-execution/tests -v
       - name: Whitespace checks
         run: git diff --check
