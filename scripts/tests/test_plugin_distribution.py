@@ -42,7 +42,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ['swift-intelligence', 'local-ai-studio', 'jev-native', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'astra-implementation-prompt', 'openai-decisions', 'guided-execution', 'handoff', 'model-advisor', 'auto-flow'],
+            ['swift-intelligence', 'local-ai-studio', 'jev-client', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'astra-implementation-prompt', 'openai-decisions', 'guided-execution', 'handoff', 'model-advisor', 'auto-flow'],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -317,7 +317,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertFalse((REPO_ROOT / "scripts/sync_skill_mirrors.py").exists())
 
     def test_retired_packages_are_not_distributed(self) -> None:
-        for name in ("gptplease", "gptpro", "gptwork", "astra-orchestrator", "jev-start", "jev-blender-use", "jev-computer-use",
+        for name in ("gptplease", "gptpro", "gptwork", "astra-orchestrator", "jev-start", "jev-blender-use", "jev-computer-use", "jev-native",
                      "astra-team-building", "figma-computer-use", "session-continuity",
                      "ponytail-beck-tdd", "unreal-agent",
                      "team-coordination", "audit", "outcome-brief", "verify-work",

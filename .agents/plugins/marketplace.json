@@ -29,10 +29,10 @@
       "category": "Productivity"
     },
     {
-      "name": "jev-native",
+      "name": "jev-client",
       "source": {
         "source": "local",
-        "path": "./plugins/jev-native"
+        "path": "./plugins/jev-client"
       },
       "policy": {
         "installation": "AVAILABLE",

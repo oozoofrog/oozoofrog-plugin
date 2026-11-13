@@ -32,9 +32,9 @@ $guided-execution 프로젝트와 도구·기존 선호를 확인하고, 미결�
 
 프로젝트의 실제 도구·검사와 적용 가능한 선호·교훈을 확인하고 다음 실행에 반영합니다. Python 표준 라이브러리 도구로 작업 시작, 검사 근거, 사용자 결정, 관련 작업 재검증을 기록하며 문자를 최소화한 읽기 전용 온톨로지 그래프 파이프라인을 만듭니다. 작업·에이전트 기록·검증·결정을 다른 도형으로 구분하고 계획·기록·수정 경로를 표시하며, 모바일은 세로로 배치합니다. 상세 근거는 접힌 영역에 남깁니다. 온톨로지·지식그래프 사례를 반영한 적극적인 CSS 모션과 주변 관계 강조는 연출임을 표시하고 모션 끄기와 시스템 동작 줄이기를 지원하며, 실제 상태나 실행 기록을 바꾸지 않습니다. 기존 기록 검사 명령과 schema 1은 유지합니다. 실제 작업과 권한 확인은 호스트 에이전트가 수행하며, 보고서는 실시간 제어 화면이 아닙니다. 별도 백그라운드 실행기는 포함하지 않습니다. Claude Code에서는 읽기 전용 Mod가 현재 실행의 할 일을 채팅 옆 패널(목록·관계 보기)과 프롬프트 위 한 줄로 보여 주고, 패널 버튼으로 토큰이 필요한 `127.0.0.1` 실시간 대시보드를 엽니다. 대시보드의 상태 색은 기록에서만 가져오며, Haiku 요약은 단계 묶음과 이름만 정하고 '기록 아님'으로 표시합니다. [실시간 보드](plugins/guided-execution/skills/guided-execution/references/workspace.md#live-board)를 참고하세요. [환경 구성과 재사용](plugins/guided-execution/skills/guided-execution/references/environment.md)을 참고하세요. [설치 안내](docs/plugin-installation.md#guided-execution), [작업 환경 규약](plugins/guided-execution/skills/guided-execution/references/workspace.md), [검증 범위](docs/validation/guided-execution.md)를 확인하세요.
 
-## JEV Native 고정 소스
+## Jev Client
 
-공개 commit으로 고정한 [네이티브 제어기 소스](tools/jev-native/README.md)와 [동반 스킬](plugins/jev-native/skills/jev-native/SKILL.md)을 포함합니다. 바이너리·기존 설치본은 교체하지 않습니다. [출처와 보류한 최신 변경](docs/jev-native-source.md)에서 소스·단위 검사와 실제 데스크톱 동작을 구분합니다.
+[jev-client](plugins/jev-client/skills/jev-client/SKILL.md)는 Swift로 만든 `jev-client` 명령으로 TypeSafe Jev(System One API)에 참/거짓·선택·점수 질문을 보내고, TypeSafe와 OpenAI API 키를 macOS 키체인에 저장합니다. 명령은 `tools/jev-client/Scripts/install.sh`로 빌드해 `~/.local/bin`에 설치합니다.
 
 ## OpenAI Decisions
 

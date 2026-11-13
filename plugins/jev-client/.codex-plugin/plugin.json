@@ -1,0 +1,24 @@
+{
+  "name": "jev-client",
+  "version": "0.1.0",
+  "description": "Call TypeSafe Jev (System One API) from the Swift jev-client command and register TypeSafe or OpenAI API keys in the macOS Keychain. Use for explicit Jev or TypeSafe requests: typed yes/no, choice or score judgments with probabilities, listing models, or checking and saving API keys.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "skills": "./skills/",
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
+  "interface": {
+    "displayName": "Jev Client",
+    "shortDescription": "Ask TypeSafe Jev typed questions and manage API keys",
+    "longDescription": "Call TypeSafe Jev (System One API) from the Swift jev-client command and register TypeSafe or OpenAI API keys in the macOS Keychain. Use for explicit Jev or TypeSafe requests: typed yes/no, choice or score judgments with probabilities, listing models, or checking and saving API keys. The runtime is built from tools/jev-client; the Plugin installs no app, hook or MCP server.",
+    "developerName": "oozoofrog",
+    "category": "Productivity",
+    "capabilities": [
+      "Read"
+    ],
+    "defaultPrompt": [
+      "Use $jev-client to ask Jev these typed questions about the evidence and return the answers with probabilities."
+    ]
+  }
+}
