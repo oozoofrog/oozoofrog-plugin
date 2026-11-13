@@ -117,15 +117,17 @@ const notes = []
 async function run(prompt, opts) {
   if (spawned >= HARD_CAP) throw new Error(`에이전트 상한 ${HARD_CAP} 도달`)
   spawned++ // 상한은 run() 호출 수이며 에이전트 이름 재시도는 세지 않는다.
+  // 하위 세션 이름에 모델·effort를 붙여 T3/workflows 화면에서 바로 보이게 한다
+  if (opts.model) opts = { ...opts, label: `${opts.label} · ${opts.model}/${opts.effort || 'default'}` }
   if (!opts.agentType) return agent(prompt, opts)
   const { agentType, ...rest } = opts
   const types = ['flow-planner', 'flow-verifier'].includes(agentType)
     ? [`auto-flow:${agentType}`, agentType]
     : [agentType]
+  // 대체는 agent()가 throw한 경우(에이전트 이름을 찾지 못함)에만 한다.
+  // null은 사용자가 건너뛰었거나 API 오류로 끝난 것이므로 다시 띄우지 않고 그대로 돌려준다.
   for (let i = 0; i < types.length; i++) {
-    let r = null
-    try { r = await agent(prompt, { ...rest, agentType: types[i] }) } catch (e) { r = null }
-    if (r !== null) return r
+    try { return await agent(prompt, { ...rest, agentType: types[i] }) } catch (e) { /* 다음 이름으로 */ }
     const next = types[i + 1] || '기본'
     notes.push(`${types[i]} 에이전트를 쓰지 못해 ${next} 에이전트로 대체`)
     log(notes[notes.length - 1])
@@ -135,7 +137,7 @@ async function run(prompt, opts) {
 
 const task = args && args.task
 if (!task) throw new Error('args.task가 필요하다')
-const runId = (args.runId || 'run').replace(/[^A-Za-z0-9_-]/g, '')
+const runId = String(args.runId || 'run').replace(/[^A-Za-z0-9_-]/g, '')
 const ctx = args.context ? `\n\n## 메인 세션이 넘긴 맥락\n${args.context}` : ''
 
 // 0. Triage — 메인이 tier를 넘기면 건너뜀
@@ -145,6 +147,7 @@ if (!tier) {
   phase('Triage')
   const t = await run(`${TIER_RULES}\n\n## 작업\n${task}${ctx}\n\n필요하면 코드를 짧게 훑어 판단하라. 깊게 읽지 마라.`,
     { phase: 'Triage', label: 'triage', model: 'sonnet', effort: 'low', schema: TRIAGE_SCHEMA })
+  if (!t) return { tier: null, outcome: 'unknown', spawned, notes: [...notes, 'Triage 결과 없음(건너뜀 또는 오류): 실행하지 않음'] }
   tier = t.tier
   if (!unitTexts) unitTexts = t.units
   log(`분류: ${tier} — ${t.reason}`)
@@ -164,8 +167,9 @@ if (tier === 'large') {
     { phase: 'Explore', label: 'explore', agentType: 'Explore', model: 'sonnet', effort: 'low' })
   phase('Plan')
   const cap = Math.min(MAX_UNITS.large, HARD_CAP - spawned - 1 - reserved)
-  const plan = await run(`작업을 최대 ${cap}개의 독립 단위로 계획하라.\n\n## 작업\n${task}${ctx}\n\n## 코드 지도\n${map}`,
+  const plan = await run(`작업을 최대 ${cap}개의 독립 단위로 계획하라.\n\n## 작업\n${task}${ctx}\n\n## 코드 지도\n${map || '(탐색 결과 없음: 직접 읽고 계획하라)'}`,
     { phase: 'Plan', label: 'plan', agentType: 'flow-planner', model: 'fable', effort: 'high', schema: PLAN_SCHEMA })
+  if (!plan) return { tier, outcome: 'unknown', spawned, notes: [...notes, 'Plan 결과 없음(건너뜀 또는 오류): 실행하지 않음'] }
   contracts = plan.contracts
   if (plan.risks.length) log(`계획 위험: ${plan.risks.join(' / ')}`)
   if (plan.indivisible || plan.units.length <= 1) {
@@ -200,7 +204,7 @@ ${parallelOk
     : '- 현재 작업 트리를 직접 수정하라. 커밋하지 마라.'}`
 
 const execOne = (u) => run(execPrompt(u), {
-  phase: 'Execute', label: `exec:${u.id}:${u.exec.model}`, ...u.exec, schema: EXEC_SCHEMA,
+  phase: 'Execute', label: `exec:${u.id}`, ...u.exec, schema: EXEC_SCHEMA,
   ...(parallelOk ? { isolation: 'worktree' } : {}),
 }).then(r => ({ ...u, result: r }))
 
@@ -234,7 +238,7 @@ ${tier === 'bulk' && args.validator
 ${focus || ''}`
 
 phase('Verify')
-let verify = await run(verifyPrompt(''), { phase: 'Verify', label: `verify:${vcfg.model}`, agentType: 'flow-verifier', ...vcfg, schema: VERIFY_SCHEMA })
+let verify = await run(verifyPrompt(''), { phase: 'Verify', label: 'verify', agentType: 'flow-verifier', ...vcfg, schema: VERIFY_SCHEMA })
 
 // 5. Fix — 실패 시 1회, 규칙대로 상향
 function escalate(exec, kind) {
@@ -269,13 +273,13 @@ if (verify && verify.overall === 'fail' && failed.length) {
     fix = await run(`## 작업\n${task}${ctx}\n\n## 검증에서 실패한 단위와 지적\n${fixable.map(p => `### ${p.f.id} [${p.f.kind}]\n${p.f.findings.join('\n')}`).join('\n\n')}
 ${contracts ? `## 단위 사이 계약\n${contracts}` : ''}
 현재 작업 트리를 직접 고쳐라. 커밋하지 마라. 지적된 항목을 모두 해결하고 관련 테스트를 돌려 checksRun과 evidence에 남겨라.`,
-      { phase: 'Fix', label: `fix:${cfg.model}`, ...cfg, schema: EXEC_SCHEMA })
+      { phase: 'Fix', label: 'fix', ...cfg, schema: EXEC_SCHEMA })
     phase('Re-verify')
     reverify = await run(`## 작업\n${task}${ctx}\n\n변경은 이미 현재 작업 트리에 있다. 통합은 하지 마라.
 ## 이전 검증의 지적\n${fixable.map(p => `### ${p.f.id} [${p.f.kind}]\n${p.f.findings.join('\n')}`).join('\n\n')}
 ## 수정 결과\n${JSON.stringify(fix)}
 지적 항목이 해결됐는지와 회귀가 없는지만 확인하라. 전체 테스트는 1회 돌려라.`,
-      { phase: 'Re-verify', label: `reverify:${vcfg.model}`, agentType: 'flow-verifier', ...vcfg, schema: VERIFY_SCHEMA })
+      { phase: 'Re-verify', label: 'reverify', agentType: 'flow-verifier', ...vcfg, schema: VERIFY_SCHEMA })
   } else if (fixable.length) {
     notes.push('에이전트 상한 때문에 Fix를 실행하지 못함')
   }
