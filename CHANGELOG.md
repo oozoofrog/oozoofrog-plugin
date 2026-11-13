@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add `app-feedback` 0.1.0: a vendorable Swift package for iOS feedback email, Debug-only encrypted diagnostics and optional checks, a macOS Keychain decryption tool, and a shared Claude Code/Codex integration skill. Includes stable SwiftUI presentation hosting and mailto fallback handling.
+
 - Make `plugins/<plugin>/skills/<skill>/` the only source of every skill. Remove the 12 top-level standalone copies and `scripts/sync_skill_mirrors.py`; distribution tests, CI and documentation links now read the Plugin copy and fail if a top-level copy returns. Standalone installation uses the same Plugin skill folder.
 
 - `handoff`: the Stop hook no longer asks for a handoff in unattended T3 Code delegated threads, where no one can `/clear` and the request only adds a costly turn on a large context.

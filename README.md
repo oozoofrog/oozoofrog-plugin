@@ -51,6 +51,7 @@ Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed 
 | `guided-execution@oozoofrog-plugin` | [Inspect a project, align the key human decision, and execute verified work loops](plugins/guided-execution/skills/guided-execution/SKILL.md), with a focused initial question, a request-wide clarification budget, and project-local evidence; see [scope](#guided-execution). |
 | `handoff@oozoofrog-plugin` | [Keep work state in a project-local handoff document](plugins/handoff/skills/handoff/SKILL.md) so a new Claude Code session continues after `/clear` without relying on compaction; see [Handoff](#handoff). |
 | `model-advisor@oozoofrog-plugin` | [Recommend a Claude model and effort for a task](plugins/model-advisor/skills/model-advisor/SKILL.md), and on request hand the task to a subagent or background Claude Code session running that model; see [Model Advisor](#model-advisor). |
+| `app-feedback@oozoofrog-plugin` | [iOS 피드백 메일·암호화 진단 첨부·Mac 복호화](plugins/app-feedback/skills/app-feedback/SKILL.md). Swift 로컬 패키지와 설치 스킬. |
 
 ## Examples
 
@@ -131,3 +132,9 @@ Plugin-specific references and validation records describe their own scope and l
 ## External Mac automation project
 
 Mac desktop and iOS Simulator automation live in the independent [Mac Pilot repository](https://github.com/oozoofrog/mac-pilot), with their own marketplace and releases.
+
+## App Feedback
+
+iOS 앱에 개발자에게 피드백 보내기 기능을 추가하고 설정·검증한다. 앱에 피드백 보내기 기능 추가, 피드백 메일, Debug 진단 기록 첨부, Mac에서 피드백 복호화 요청에 사용한다. Swift 패키지와 공개키 암호화를 제공하며 서버 전송이나 분석 SDK는 다루지 않는다.
+
+[설치·갱신](plugins/app-feedback/skills/app-feedback/SKILL.md), [검증 범위](docs/validation/app-feedback.md). iOS 17+ SwiftUI UI와 macOS 14+ 복호화 도구를 제공한다. 패키지는 스킬의 `assets/AppFeedback/`를 앱 저장소로 복사해 로컬 의존성으로 추가한다. macOS에서는 메일 UI를 제공하지 않으며 다른 플랫폼은 지원을 검증하지 않았다. 설치나 새 세션의 스킬 노출은 저장소 검사와 별개다.
