@@ -80,6 +80,7 @@ T3 도구(`delegate_task`)가 없는 환경에서는 이 절을 건너뛴다. Wo
 - `claude.preferCodexForExecution`이 true면(Claude 주간 사용량 80% 이상) 6.3의 실행 분담을 쓴다.
 - `warnings`가 있으면 사용자에게 그대로 알린다. 쓸 수 있는 계정이 없으면 이 단계를 하지 않고 알린다. 다른 제공자로 바꾸지 않는다.
 - 이 스레드에서 첫 위임 전에 `orchestrator_capabilities`를 한 번 호출해 모델이 실제로 있는지 확인한다.
+- 모든 `delegate_task`에 `title`을 `<역할> · <모델>/<effort>` 형식으로 준다. 예: `review · gpt-6.1-sol/high`, `exec:u2 · gpt-6-luna/medium`. 자식 스레드 목록에서 모델과 effort가 바로 보이게 하기 위해서다.
 
 ### 6.2 교차 검토 (Workflow가 끝난 뒤)
 

@@ -64,9 +64,14 @@ def main():
     # 남은 사용량이 많은 순. 같으면 먼저 초기화되는 계정을 먼저 쓴다.
     known = [c for c in codex if c["remainingPercent"] is not None]
     known.sort(key=lambda c: (-c["remainingPercent"], c["resetsAt"] or ""))
-    usable = [c for c in known if c["usedPercent"] < FULL_AT] or known
-    if known and len(usable) < len(known):
-        warnings.append("한도에 가까운 계정 제외: " + ", ".join(c["providerInstanceId"] for c in known if c not in usable))
+    usable = [c for c in known if c["usedPercent"] < FULL_AT]
+    if known and not usable:
+        # 모두 한도에 가까우면 아직 남은 계정만 쓴다. 100%인 계정은 쓸 수 없다.
+        usable = [c for c in known if c["usedPercent"] < 100]
+        if usable:
+            warnings.append(f"모든 Codex 계정이 {FULL_AT}% 이상 사용됨")
+    if len(usable) < len(known):
+        warnings.append("제외한 계정: " + ", ".join(c["providerInstanceId"] for c in known if c not in usable))
     if not usable:
         warnings.append("쓸 수 있는 Codex 계정이 없음")
 

@@ -78,10 +78,7 @@ const workflow = new AsyncFunction('args', 'agent', 'phase', 'log', 'parallel', 
       if (opts.agentType && opts.agentType !== 'Explore') {
         const accepted = mode === 'namespaced' ? opts.agentType.startsWith('auto-flow:')
           : mode === 'bare' && !opts.agentType.startsWith('auto-flow:')
-        if (!accepted) {
-          if (opts.agentType.startsWith('auto-flow:')) throw Error('unavailable')
-          return null
-        }
+        if (!accepted) throw Error('unavailable')
       }
       if (opts.phase === 'Explore') return 'code map'
       if (opts.phase === 'Plan') return { contracts: '', risks: [], indivisible: false,
@@ -116,6 +113,24 @@ const workflow = new AsyncFunction('args', 'agent', 'phase', 'log', 'parallel', 
       assert.deepEqual(calls.filter(opts => opts.phase === 'Fix').map(opts => [opts.model, opts.effort]),
         [['sonnet', 'high']])
     }
+  }
+  // null(건너뜀·API 오류)은 다른 이름으로 다시 띄우지 않는다.
+  for (const skipped of ['Triage', 'Plan', 'Verify']) {
+    const calls = []
+    const agent = async (prompt, opts) => {
+      calls.push(opts)
+      if (opts.phase === skipped) return null
+      if (opts.phase === 'Triage') return { tier: 'large', units: [], reason: '' }
+      if (opts.phase === 'Explore') return 'code map'
+      if (opts.phase === 'Plan') return { contracts: '', risks: [], indivisible: true, units: [] }
+      return { status: 'done', summary: '', changedFiles: [], checksRun: [], evidence: '', lowConfidence: [] }
+    }
+    const result = await workflow({ task: 'test', runId: 20261113231500 }, agent, () => {}, () => {},
+      () => { throw Error('unexpected parallel call') })
+    assert.equal(result.outcome, 'unknown')
+    assert.equal(calls.filter(opts => opts.phase === skipped).length, 1)
+    assert.ok(!calls.some(opts => opts.phase === 'Fix'))
+    if (skipped !== 'Verify') assert.ok(!calls.some(opts => opts.phase === 'Execute'))
   }
 })().catch(error => { console.error(error); process.exitCode = 1 })
 """
