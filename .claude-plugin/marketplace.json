@@ -21,9 +21,9 @@
       "category": "productivity"
     },
     {
-      "name": "jev-native",
-      "source": "./plugins/jev-native",
-      "description": "Operate native macOS apps and windows with a Swift controller, JEV action selection, a separate virtual cursor, and a hideable target-window preview. Use for requested desktop app workflows; Codex delegates original text and image interpretation when needed.",
+      "name": "jev-client",
+      "source": "./plugins/jev-client",
+      "description": "Call TypeSafe Jev (System One API) from the Swift jev-client command and register TypeSafe or OpenAI API keys in the macOS Keychain. Use for explicit Jev or TypeSafe requests: typed yes/no, choice or score judgments with probabilities, listing models, or checking and saving API keys.",
       "category": "productivity"
     },
     {

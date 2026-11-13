@@ -1,0 +1,4 @@
+interface:
+  display_name: "Jev Client"
+  short_description: "Ask TypeSafe Jev typed questions and manage API keys"
+  default_prompt: "Use $jev-client to ask Jev these typed questions about the evidence and return the answers with probabilities."

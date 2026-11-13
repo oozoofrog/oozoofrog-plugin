@@ -40,7 +40,7 @@ Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed 
 | --- | --- |
 | `swift-intelligence@oozoofrog-plugin` | [Semantic Swift navigation](plugins/swift-intelligence/skills/swift-intelligence/SKILL.md) using SourceKit. macOS, Xcode with Command Line Tools, and Python 3 are required; the Plugin includes MCP configuration. |
 | `local-ai-studio@oozoofrog-plugin` | [Requested local AI Studio or on-device model work](plugins/local-ai-studio/skills/local-ai-studio/SKILL.md), including separate Whisper transcription and timestamp estimates on Apple Silicon. See [model setup](#local-ai-studio). |
-| `jev-native@oozoofrog-plugin` | [Native macOS app workflows](plugins/jev-native/skills/jev-native/SKILL.md) with a virtual cursor and target preview. Its runtime and credentials are separate from the skills-only Plugin. |
+| `jev-client@oozoofrog-plugin` | [Ask TypeSafe Jev typed questions](plugins/jev-client/skills/jev-client/SKILL.md) with the Swift `jev-client` command, and save TypeSafe or OpenAI API keys in the macOS Keychain. Build the command from [tools/jev-client](tools/jev-client/Scripts/install.sh). |
 | `korean-product-writing@oozoofrog-plugin` | [Write or edit Korean product copy and guidance](plugins/korean-product-writing/skills/korean-product-writing/SKILL.md), preserving facts and conditions; excludes literary creation and legal contract texts. |
 | `interface-first-design@oozoofrog-plugin` | [Design or review product screens and interactions](plugins/interface-first-design/skills/interface-first-design/SKILL.md); see [scope](#interface-first-design). |
 | `winpilot@oozoofrog-plugin` | [WinPilot observes and controls Windows apps and games](plugins/winpilot/skills/winpilot/SKILL.md). The Windows x64 Plugin includes MCP configuration and installs a hash-pinned runtime on first connection. See [installation](docs/plugin-installation.md#winpilot). |
@@ -124,13 +124,12 @@ C4fy creates source-backed C1/C2/C3/C4 architecture maps with optional component
 
 Call the OpenAI Decisions API directly to classify text, JSON, or images, estimate predicate probabilities, or score against an ordered rubric. Use for explicit Decisions API requests or bounded semantic judgments that benefit from measured probabilities; not for general chat or free-form extraction.
 
-The skills-only Plugin uses an existing `openai_decide` MCP/Pi tool or `openai-decisions` CLI. If those are unavailable, it documents direct calls through the official OpenAI CLI. Plugin installation does not register tools, provision credentials, or enable API billing. See [CLI prerequisites](plugins/openai-decisions/skills/openai-decisions/references/cli.md) and [installation](docs/plugin-installation.md#openai-decisions).
+The skills-only Plugin bundles an `openai-decisions` command (Python 3) that wraps the official OpenAI CLI's `openai decisions create` for both Codex and Claude Code, and documents direct CLI calls as a fallback. Plugin installation does not register tools, provision credentials, or enable API billing. See [CLI prerequisites](plugins/openai-decisions/skills/openai-decisions/references/cli.md) and [installation](docs/plugin-installation.md#openai-decisions).
 
 ## More documentation
 
 - [Installation and Plugin-specific requirements](docs/plugin-installation.md)
 - [Release procedure](docs/plugin-release.md) and [changelog](CHANGELOG.md)
-- [JEV Native source and provenance](docs/jev-native-source.md)
 - [Historical validation](docs/gptplease-transport-validation.md) for removed GPT Please functionality; it is not a current Plugin.
 
 Plugin-specific references and validation records describe their own scope and limits. Historical records do not establish current availability or behavior.

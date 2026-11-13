@@ -1,0 +1,10 @@
+{
+  "name": "jev-client",
+  "version": "0.1.0",
+  "description": "Call TypeSafe Jev (System One API) from the Swift jev-client command and register TypeSafe or OpenAI API keys in the macOS Keychain. Use for explicit Jev or TypeSafe requests: typed yes/no, choice or score judgments with probabilities, listing models, or checking and saving API keys.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin"
+}

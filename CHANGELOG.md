@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add `jev-client` 0.1.0: a Swift command (`tools/jev-client`, installed by `Scripts/install.sh`) that lists TypeSafe models, sends System One requests, and saves TypeSafe or OpenAI API keys in the login Keychain from a hidden prompt, the pasteboard, stdin or a secret file. Keys are written through `security -i` stdin, kept out of argv and redacted from API errors; requests are not retried. The OpenAI key goes to `local.openai-decisions`/`openai`, which `openai-decisions` reads first.
+
+- Remove `jev-native`: the Plugin, both marketplace entries, the pinned `tools/jev-native` source snapshot and its provenance note. Run records under `~/Library/Application Support/JEV Native` are user data and are not touched.
+
 - `openai-decisions` 0.2.0: bundle `scripts/openai-decisions`, a dependency-free Python 3 command over the official OpenAI CLI's `openai decisions create` (1.51.2 or later), used the same way from Codex and Claude Code. `status` reports the CLI version and the available credential source without an API call; `create` converts the `state`/`image_urls`/`timeout_seconds` request (or passes a native one through), passes `prompt_cache_key`, `prompt_cache_options` and `safety_identifier` through, validates questions before the call, reads the key from `OPENAI_API_KEY` or Keychain into the child environment only, refuses a custom `OPENAI_BASE_URL` before reading Keychain, and never retries a timeout. The skill no longer refers to the removed `openai_decide` MCP/Pi tool.
 
 - Add `auto-flow` 0.1.0: task-tiered Claude model/effort planning, execution, integrated verification and one escalation, plus T3 Code cross-provider review and execution sharing using local usage data. Resolve scripts from the loaded skill directory; try namespaced plugin agents, bare names, then the default agent while logging fallbacks. Codex receives the skill only; the Workflow script and two agents require Claude Code, and cross-provider steps require T3 Code. Add both marketplace entries, bilingual catalog documentation and distribution/fallback tests.
