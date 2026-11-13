@@ -152,3 +152,14 @@ codex plugin list --marketplace oozoofrog-plugin --json
 ## 별도 Mac 자동화 프로젝트
 
 Mac·iOS 시뮬레이터 자동화는 [Mac Pilot](https://github.com/oozoofrog/mac-pilot)에서 설치·개발·배포합니다. 기존 Keychain·프로필·캡처와 사용자 설정은 유지합니다.
+
+## App Feedback
+
+`app-feedback` 0.1.0 provides a Swift package, a macOS Keychain tool, and one shared Claude Code/Codex skill. It has no MCP server or hooks. After the change is published to the marketplace's `main` branch:
+
+```sh
+codex plugin add app-feedback@oozoofrog-plugin
+claude plugin install app-feedback@oozoofrog-plugin
+```
+
+Invoke `$app-feedback` in Codex or `/app-feedback:app-feedback` in Claude Code. The [skill](../plugins/app-feedback/skills/app-feedback/SKILL.md) explains how to copy its `assets/AppFeedback/` into a separate app repository and register that copy as a local Swift package. Standalone installation must copy the complete skill directory, including assets and scripts. Swift 6 and Xcode are needed for the iOS 17+ app integration; macOS 14+ is needed for the developer Keychain tool. No third-party Swift dependency is required. See [validation](validation/app-feedback.md) for the tested toolchain and limits; installation and fresh-session skill exposure are separate checks.

@@ -116,3 +116,9 @@ Plugin manifest와 marketplace는 저장소 배포 검사로 확인합니다. �
 ## 별도 Mac 자동화 프로젝트
 
 Mac·iOS 시뮬레이터 자동화는 [Mac Pilot](https://github.com/oozoofrog/mac-pilot)에서 설치·개발·배포합니다. 기존 Keychain·프로필·캡처와 사용자 설정은 유지합니다.
+
+## 앱 피드백
+
+iOS 앱에 개발자에게 피드백 보내기 기능을 추가하고 설정·검증한다. 앱에 피드백 보내기 기능 추가, 피드백 메일, Debug 진단 기록 첨부, Mac에서 피드백 복호화 요청에 사용한다. Swift 패키지와 공개키 암호화를 제공하며 서버 전송이나 분석 SDK는 다루지 않는다.
+
+`app-feedback@oozoofrog-plugin` 0.1.0은 iOS 17+ SwiftUI 메일 UI와 macOS 14+ 복호화 도구를 제공한다. [스킬](plugins/app-feedback/skills/app-feedback/SKILL.md)의 `assets/AppFeedback/`을 앱에 복사해 로컬 패키지로 연결한다. [검증 범위](docs/validation/app-feedback.md). 다른 Apple 플랫폼의 메일 UI는 지원하지 않는다.

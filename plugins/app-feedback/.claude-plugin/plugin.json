@@ -1,0 +1,10 @@
+{
+  "name": "app-feedback",
+  "version": "0.1.0",
+  "description": "iOS 앱에 개발자에게 피드백 보내기 기능을 추가하고 설정·검증한다. 앱에 피드백 보내기 기능 추가, 피드백 메일, Debug 진단 기록 첨부, Mac에서 피드백 복호화 요청에 사용한다. Swift 패키지와 공개키 암호화를 제공하며 서버 전송이나 분석 SDK는 다루지 않는다.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin"
+}

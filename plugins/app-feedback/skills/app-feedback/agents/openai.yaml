@@ -1,0 +1,4 @@
+interface:
+  display_name: "앱 피드백"
+  short_description: "iOS 피드백 메일·암호화 진단 기록 연결과 Mac 복호화"
+  default_prompt: "$app-feedback 이 앱 설정에 피드백 메일과 Debug 암호화 진단 첨부를 추가해 주세요."
