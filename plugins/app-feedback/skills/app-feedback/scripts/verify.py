@@ -15,12 +15,12 @@ def main():
     parser.add_argument('--output', required=True, type=Path)
     args = parser.parse_args()
     output = args.output.resolve()
-    if sys.platform != 'darwin' or not output.is_relative_to('/Volumes/eyedisk/build'):
-        parser.error('requires macOS and --output below /Volumes/eyedisk/build')
-    if not Path('/Volumes/eyedisk').is_dir():
+    skill = Path(__file__).resolve().parents[1]
+    if sys.platform != 'darwin' or output.is_relative_to(skill):
+        parser.error('requires macOS and a new --output directory outside the skill')
+    if output.is_relative_to('/Volumes/eyedisk') and not Path('/Volumes/eyedisk').is_dir():
         parser.error('/Volumes/eyedisk is unavailable')
     output.mkdir(parents=True, exist_ok=False)
-    skill = Path(__file__).resolve().parents[1]
     package = skill / 'assets/AppFeedback'
     environment = dict(os.environ)
     for name, folder in [('TMPDIR', 'tmp'), ('CLANG_MODULE_CACHE_PATH', 'modules'),

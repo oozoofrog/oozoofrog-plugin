@@ -14,12 +14,14 @@ def main():
     parser.add_argument('--output', required=True, type=Path)
     args = parser.parse_args()
     output = args.output.resolve()
-    if sys.platform != 'darwin' or not output.is_relative_to('/Volumes/eyedisk/build'):
-        parser.error('requires macOS and --output below /Volumes/eyedisk/build')
-    if not Path('/Volumes/eyedisk').is_dir() or not shutil.which('xcodegen'):
-        parser.error('requires mounted eyedisk and an existing XcodeGen installation')
-    output.mkdir(parents=True, exist_ok=False)
     skill = Path(__file__).resolve().parents[1]
+    if sys.platform != 'darwin' or output.is_relative_to(skill):
+        parser.error('requires macOS and a new --output directory outside the skill')
+    if output.is_relative_to('/Volumes/eyedisk') and not Path('/Volumes/eyedisk').is_dir():
+        parser.error('/Volumes/eyedisk is unavailable')
+    if not shutil.which('xcodegen'):
+        parser.error('requires an existing XcodeGen installation')
+    output.mkdir(parents=True, exist_ok=False)
     shutil.copytree(skill / 'assets/AppFeedback', output / 'Vendor/AppFeedback')
     reference = (skill / 'references/integration.md').read_text()
     source = reference.split('```swift\n', 1)[1].split('\n```', 1)[0]
