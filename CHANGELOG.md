@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add `auto-flow` 0.1.0: task-tiered Claude model/effort planning, execution, integrated verification and one escalation, plus T3 Code cross-provider review and execution sharing using local usage data. Resolve scripts from the loaded skill directory; try namespaced plugin agents, bare names, then the default agent while logging fallbacks. Codex receives the skill only; the Workflow script and two agents require Claude Code, and cross-provider steps require T3 Code. Add both marketplace entries, bilingual catalog documentation and distribution/fallback tests.
+
 - Make `plugins/<plugin>/skills/<skill>/` the only source of every skill. Remove the 12 top-level standalone copies and `scripts/sync_skill_mirrors.py`; distribution tests, CI and documentation links now read the Plugin copy and fail if a top-level copy returns. Standalone installation uses the same Plugin skill folder.
 
 - `handoff`: the Stop hook no longer asks for a handoff in unattended T3 Code delegated threads, where no one can `/clear` and the request only adds a costly turn on a large context.
