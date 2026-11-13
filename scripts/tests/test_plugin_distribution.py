@@ -42,7 +42,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ['swift-intelligence', 'local-ai-studio', 'jev-native', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'astra-implementation-prompt', 'openai-decisions', 'guided-execution', 'handoff', 'model-advisor'],
+            ['swift-intelligence', 'local-ai-studio', 'jev-native', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'astra-implementation-prompt', 'openai-decisions', 'guided-execution', 'handoff', 'model-advisor', 'auto-flow'],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:

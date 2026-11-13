@@ -51,6 +51,7 @@ Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed 
 | `guided-execution@oozoofrog-plugin` | [Inspect a project, align the key human decision, and execute verified work loops](plugins/guided-execution/skills/guided-execution/SKILL.md), with a focused initial question, a request-wide clarification budget, and project-local evidence; see [scope](#guided-execution). |
 | `handoff@oozoofrog-plugin` | [Keep work state in a project-local handoff document](plugins/handoff/skills/handoff/SKILL.md) so a new Claude Code session continues after `/clear` without relying on compaction; see [Handoff](#handoff). |
 | `model-advisor@oozoofrog-plugin` | [Recommend a Claude model and effort for a task](plugins/model-advisor/skills/model-advisor/SKILL.md), and on request hand the task to a subagent or background Claude Code session running that model; see [Model Advisor](#model-advisor). |
+| `auto-flow@oozoofrog-plugin` | [Run a task-tiered Claude Workflow](plugins/auto-flow/skills/auto-flow/SKILL.md) with model and effort selection, one failure escalation, and optional T3 Code cross-provider review; see [Auto Flow](#auto-flow). |
 
 ## Examples
 
@@ -90,6 +91,12 @@ The Plugin writes `_context/handoff/<branch>.md` inside the project (ignored by 
 작업 설명을 받아 어떤 Claude 모델(Haiku 5.5, Sonnet 5.5, Opus 5.5, Fable 5.2)과 effort가 어울리는지 판단해 추천하고, 원하면 그 모델·effort로 띄운 서브에이전트나 백그라운드 Claude Code 세션에 지시를 넘긴다. "이 작업은 어떤 모델이 좋을까", "Opus로 충분해?", "Fable이 필요한가", "effort 올릴까?", "Sonnet 세션으로 넘겨줘", "추천 모델로 돌려줘", "이건 Haiku한테 맡겨", 큰 작업을 시작하기 전 모델·effort 선택 상담, 작업 중 결과가 부족해 모델이나 effort를 올릴지 판단할 때, 서브에이전트에 쓸 모델을 고를 때 사용한다. API 파라미터·마이그레이션 질문은 다루지 않는다. 현재 세션의 모델은 바꾸지 못하므로 그 경우 `/model`·`/effort`를 안내한다.
 
 The skill picks a starting model and effort from the task type, applies upgrade and downgrade signals, and states its assumptions. When asked to hand off, it writes a self-contained brief and either calls a subagent with that `model` and `effort`, or starts `claude --bg --model <alias> --effort <level>` in the project folder and checks the model shown by `claude logs`. It cannot change the current session's model; it points to `/compact`, `/model` and `/effort` instead. Background handoff needs the `claude` CLI and a trusted project folder. Model guidance, prices and benchmark figures follow the claude.dev post of 2026-11-09. In Codex only the skill is available. See [installation](docs/plugin-installation.md#model-advisor).
+
+## Auto Flow
+
+작업 난이도를 분류해 단계마다 맞는 Claude 모델(Haiku·Sonnet·Opus·Fable)과 effort로 계획·실행·통합 검증하는 Workflow를 실행한다. 실패하면 한 번만 모델이나 effort를 올려 수정한다. "/auto-flow", "auto-flow로 해줘", "모델 알아서 골라서 워크플로로 진행해줘", "토큰 효율적으로 워크플로 돌려줘", "교차 검토까지 해줘", "Codex도 섞어서 진행해줘"에 사용한다. T3 Code에서는 Codex 계정을 남은 사용량 기준으로 골라 교차 검토와 실행 분담에 쓴다.
+
+[Auto Flow](plugins/auto-flow/skills/auto-flow/SKILL.md) 0.1.0 classifies task difficulty, plans and executes with Claude models and effort, integrates verification, and escalates once on failure. Codex receives the skill only; the Workflow script and the two plugin agents work only in Claude Code with its Workflow tool. Sessions without that tool must report the limitation and must not imitate Workflow. Cross-provider steps need T3 Code `delegate_task` tools, Python 3, and usage data in `~/.t3/caches/*.json`. Agent lookup tries `auto-flow:flow-planner` / `auto-flow:flow-verifier`, then bare names, then the default agent with a note; the nine-agent cap counts `run()` calls, not name retries. See [installation](docs/plugin-installation.md#auto-flow).
 
 ## Local AI Studio
 

@@ -73,6 +73,16 @@ skills-only Plugin `0.3.0`을 제공합니다. Plugin에 모델·런타임·생�
 
 [모델 선택](plugins/model-advisor/skills/model-advisor/SKILL.md) (`model-advisor` 0.1.0)은 작업에 맞는 Claude 모델(Haiku 5.5, Sonnet 5.5, Opus 5.5, Fable 5.2)과 effort를 추천합니다. 넘겨 달라고 하면 이 대화 없이도 시작할 수 있는 지시문을 써서, 그 모델·effort로 서브에이전트를 부르거나 `claude --bg`로 백그라운드 Claude Code 세션을 띄웁니다. 띄운 뒤 `claude logs`에서 실제 모델을 확인하고 `claude attach <id>`로 여는 방법을 알려 줍니다. 현재 세션의 모델은 바꾸지 못하므로 `/compact`, `/model`, `/effort` 순서를 안내합니다. 백그라운드 세션은 `claude` CLI와 신뢰 승인을 마친 프로젝트 폴더가 필요합니다. 모델별 기준과 가격은 2026-11-09 claude.dev 글을 따릅니다. Codex에서는 스킬만 쓸 수 있습니다. [설치](docs/plugin-installation.md#model-advisor)를 확인하세요.
 
+## Auto Flow
+
+| Plugin | 용도 |
+| --- | --- |
+| `auto-flow@oozoofrog-plugin` | [난이도별 Claude Workflow와 T3 Code 교차 검토](plugins/auto-flow/skills/auto-flow/SKILL.md) |
+
+작업 난이도를 분류해 단계마다 맞는 Claude 모델(Haiku·Sonnet·Opus·Fable)과 effort로 계획·실행·통합 검증하는 Workflow를 실행한다. 실패하면 한 번만 모델이나 effort를 올려 수정한다. "/auto-flow", "auto-flow로 해줘", "모델 알아서 골라서 워크플로로 진행해줘", "토큰 효율적으로 워크플로 돌려줘", "교차 검토까지 해줘", "Codex도 섞어서 진행해줘"에 사용한다. T3 Code에서는 Codex 계정을 남은 사용량 기준으로 골라 교차 검토와 실행 분담에 쓴다.
+
+`auto-flow` 0.1.0에서 Codex에는 스킬만 제공됩니다. Workflow 스크립트와 두 Plugin 에이전트는 Claude Code의 Workflow 도구에서만 동작합니다. 이 도구가 없는 세션은 실행 불가를 알리고 Workflow를 흉내 내지 않습니다. 교차 제공자 단계에는 T3 Code `delegate_task` 도구, Python 3, `~/.t3/caches/*.json` 사용량 데이터가 필요합니다. 에이전트는 `auto-flow:flow-planner`·`auto-flow:flow-verifier`, bare 이름, 기본 에이전트 순서로 찾으며 대체 기록을 남깁니다. 9개 상한은 이름 재시도가 아닌 `run()` 호출 수입니다. [설치](docs/plugin-installation.md#auto-flow)를 확인하세요.
+
 ## 설치
 
 필요한 Plugin만 선택해 설치합니다. 아래 명령은 해당 변경이 원격 marketplace에 반영된 뒤 사용할 수 있습니다.

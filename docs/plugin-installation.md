@@ -63,6 +63,24 @@ claude plugin install model-advisor@oozoofrog-plugin
 
 같은 스킬을 `~/.claude/skills/model-advisor`에 직접 둔 적이 있다면 둘 중 하나만 남깁니다. 둘 다 있으면 같은 요청에 두 스킬이 함께 후보로 뜹니다.
 
+## Auto Flow
+
+`auto-flow@oozoofrog-plugin` 0.1.0은 [자동 워크플로 스킬](../plugins/auto-flow/skills/auto-flow/SKILL.md), Claude Code Workflow 스크립트, `auto-flow:flow-planner`·`auto-flow:flow-verifier` Plugin 에이전트를 제공합니다. 작업 난이도에 맞는 Claude 모델·effort로 계획·실행·통합 검증하고 실패 시 한 번 상향하며, T3 Code에서는 Codex 교차 검토·실행 분담을 지원합니다.
+
+Codex에는 스킬만 제공됩니다. Workflow 스크립트와 두 에이전트는 Claude Code에서만 동작하며 Workflow 도구가 필요합니다. 이 도구가 없는 세션에서는 실행할 수 없다고 알리고 Workflow를 흉내 내지 않습니다. 교차 제공자 단계에는 T3 Code `delegate_task` 도구와 `~/.t3/caches/*.json` 사용량 데이터, Python 3이 필요합니다. Plugin은 도구나 인증·계정·사용량 데이터를 설치하지 않습니다.
+
+변경이 main의 원격 marketplace에 반영된 뒤 원하는 환경에 설치합니다.
+
+```sh
+claude plugin marketplace add oozoofrog/oozoofrog-plugin
+claude plugin install auto-flow@oozoofrog-plugin
+# Codex에서는 스킬만 설치합니다.
+codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
+codex plugin add auto-flow@oozoofrog-plugin
+```
+
+기존 marketplace는 먼저 Claude Code에서 `claude plugin marketplace update oozoofrog-plugin`, Codex에서 `codex plugin marketplace upgrade oozoofrog-plugin`로 갱신합니다. Claude Code를 다시 시작한 새 세션에서 `/auto-flow:auto-flow`를 호출합니다. Codex에서는 `$auto-flow`로 환경 제한을 확인합니다. 기존 개인 스킬·에이전트는 자동 삭제하거나 덮어쓰지 않습니다. 설치·새 세션 노출과 실제 Workflow 실행은 별도 검증 대상입니다. 특히 Workflow `agent()`에서 namespaced Plugin 에이전트 이름이 해석되는지는 실제 Claude Code에서 확인해야 합니다. 이름 조회 실패 시 bare 이름, 기본 에이전트 순서로 대체하고 `notes`에 남깁니다.
+
 ## OpenAI Decisions
 
 `openai-decisions@oozoofrog-plugin`은 [스킬](../plugins/openai-decisions/skills/openai-decisions/SKILL.md)만 제공합니다. 기존 `openai_decide` MCP/Pi 도구나 `openai-decisions` CLI가 있으면 이를 사용하고, 없으면 [공식 CLI 직접 호출](../plugins/openai-decisions/skills/openai-decisions/references/cli.md)을 따릅니다. Plugin 설치는 MCP 서버·API 키·과금 계정을 자동 등록하지 않습니다. API 키는 기존 비밀 입력·자격증명 저장소로 전달하고 설정 파일이나 대화에 복사하지 않습니다.

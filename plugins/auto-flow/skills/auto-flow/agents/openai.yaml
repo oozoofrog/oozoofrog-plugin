@@ -1,0 +1,4 @@
+interface:
+  display_name: "자동 워크플로"
+  short_description: "작업 난이도별 Claude 모델·effort 워크플로와 T3 Code 교차 검토"
+  default_prompt: "$auto-flow 모델 알아서 골라서 워크플로로 진행하고, 필요하면 Codex 교차 검토까지 해주세요."
