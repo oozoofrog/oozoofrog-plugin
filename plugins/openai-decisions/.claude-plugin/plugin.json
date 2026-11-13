@@ -1,6 +1,6 @@
 {
   "name": "openai-decisions",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Call the OpenAI Decisions API directly to classify text, JSON, or images, estimate predicate probabilities, or score against an ordered rubric. Use for explicit Decisions API requests or bounded semantic judgments that benefit from measured probabilities; not for general chat or free-form extraction.",
   "author": {
     "name": "oozoofrog",

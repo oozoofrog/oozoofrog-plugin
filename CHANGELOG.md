@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `openai-decisions` 0.2.0: bundle `scripts/openai-decisions`, a dependency-free Python 3 command over the official OpenAI CLI's `openai decisions create` (1.51.2 or later), used the same way from Codex and Claude Code. `status` reports the CLI version and the available credential source without an API call; `create` converts the `state`/`image_urls`/`timeout_seconds` request (or passes a native one through), passes `prompt_cache_key`, `prompt_cache_options` and `safety_identifier` through, validates questions before the call, reads the key from `OPENAI_API_KEY` or Keychain into the child environment only, refuses a custom `OPENAI_BASE_URL` before reading Keychain, and never retries a timeout. The skill no longer refers to the removed `openai_decide` MCP/Pi tool.
+
 - Add `auto-flow` 0.1.0: task-tiered Claude model/effort planning, execution, integrated verification and one escalation, plus T3 Code cross-provider review and execution sharing using local usage data. Resolve scripts from the loaded skill directory; try namespaced plugin agents, bare names, then the default agent while logging fallbacks. Codex receives the skill only; the Workflow script and two agents require Claude Code, and cross-provider steps require T3 Code. Add both marketplace entries, bilingual catalog documentation and distribution/fallback tests.
 
 - Make `plugins/<plugin>/skills/<skill>/` the only source of every skill. Remove the 12 top-level standalone copies and `scripts/sync_skill_mirrors.py`; distribution tests, CI and documentation links now read the Plugin copy and fail if a top-level copy returns. Standalone installation uses the same Plugin skill folder.
