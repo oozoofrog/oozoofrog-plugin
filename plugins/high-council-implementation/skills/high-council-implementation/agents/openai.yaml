@@ -1,0 +1,4 @@
+interface:
+  display_name: "High Council Implementation"
+  short_description: "Review a high-tier model's prompt before implementing"
+  default_prompt: "Use $high-council-implementation to prepare an implementation prompt with the best available high-tier model for my review and choice of implementation model."

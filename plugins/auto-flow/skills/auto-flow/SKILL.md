@@ -14,7 +14,16 @@ description: 작업 난이도를 분류해 단계마다 맞는 Claude 모델(Hai
 - 6절의 교차 제공자 단계는 T3 Code의 `delegate_task` 도구와 `~/.t3/caches/*.json` 사용량 데이터가 필요하다. 도구나 쓸 수 있는 사용량 데이터가 없으면 해당 단계를 실행하지 않고 알린다.
 - Claude Code가 스킬을 읽을 때 출력하는 `Base directory for this skill: <path>`를 이 스킬의 기준 디렉터리로 쓴다. 아래의 `workflow.js`와 `pick-provider.py`는 모두 그 디렉터리 아래 파일로 해석한다.
 
-## 1. 분류 (메인 세션이 직접)
+## 리더 세션과 하위 세션
+
+- 이 스킬을 요청받은 세션이 리더다. 분류, 단위 나누기, 하위 세션 생성, 결과 통합 판단, 사용자 보고는 리더가 한다.
+- 사용자에게 하는 답을 뺀 모든 진행은 영어로 한다. 사용자가 한국어로 지시했더라도 그 지시를 영어로 옮겨 전달한다.
+- 하위 세션(Workflow 에이전트, `delegate_task` 자식)에 주는 지시는 모두 영어로 쓴다. Workflow args의 `task`, `units`, `context`, `validator` 설명과 `delegate_task`의 `task`가 여기에 해당한다. 코드, 경로, 사용자에게 보일 문구처럼 원문이 필요한 것은 그대로 인용한다.
+- 하위 세션은 영어로 작업하고 결과를 리더에게만 돌려준다. 사용자에게 직접 묻지 않고, 막힌 점과 결정이 필요한 점은 결과에 적는다. 하위 세션이 다시 하위 세션을 만들지 않는다.
+- Workflow의 `log`와 결과의 `notes`도 영어다. 리더가 사용자의 언어로 옮겨 보고한다.
+- 사용자와의 대화와 보고는 리더가 사용자의 언어로 한다.
+
+## 1. 분류 (리더 세션이 직접)
 
 지금까지의 대화 맥락으로 tier를 정한다. 확인이 필요하면 코드를 짧게만 훑는다. 두 tier 사이에서 망설여지면 높은 쪽을 고른다.
 
@@ -48,11 +57,11 @@ description: 작업 난이도를 분류해 단계마다 맞는 Claude 모델(Hai
 
 ```json
 {
-  "task": "사용자 요청을 구체적으로",
+  "task": "The user's request, stated concretely, in English",
   "tier": "scoped",
-  "units": ["단위1 목표", "단위2 목표"],
-  "context": "메인이 이미 파악한 관련 파일·제약·재현 방법",
-  "validator": "bulk일 때만, 선택",
+  "units": ["Goal of unit 1", "Goal of unit 2"],
+  "context": "Relevant files, constraints, and reproduction steps the leader already found",
+  "validator": "bulk only, optional",
   "worktree": false,
   "runId": "20261113231500"
 }
@@ -113,7 +122,7 @@ Report only defects you can point to in the code. No style comments.
 
 ### 6.3 실행 분담 (Claude 사용량이 높거나 사용자가 Codex 실행을 요청할 때)
 
-Workflow 대신 단위마다 `delegate_task`로 실행한다.
+Workflow 대신 단위마다 `delegate_task`로 실행한다. `task`는 영어로 쓰고 목표, 소유 파일, 수용 기준, 검증 명령, 리더에게 돌려줄 결과 형식(변경 파일, 돌린 검사와 결과, 확신이 낮은 부분, 막힌 점)을 넣는다. 사용자에게 묻지 말고 영어로 리더에게 보고하라는 문장도 넣는다.
 
 | tier | 실행 모델 |
 |---|---|

@@ -37,7 +37,7 @@ Use the authorized project's `.agent-loop/<run-id>/`. Keep different projects, w
 
 ## 4. Execute and verify
 
-Select ready work; account for data dependencies, shared state, permissions, and resource limits. Parallelize only independent work. One coordinator writes loop state; workers return scoped artifacts and evidence.
+Select ready work; account for data dependencies, shared state, permissions, and resource limits. Parallelize only independent work. The session that received the request is the leader and the one coordinator that writes loop state; workers return scoped artifacts and evidence to it. Create every sub-session with an English brief and have it report back in English; only the leader talks to the user. See [build the graph](references/execution.md#build-the-graph).
 
 Use `loop_control.py` for explicit start, check recording, finish, decision resolution, and invalidation transitions described in workspace.md. For each unit: record an attempt → produce → run relevant checks → capture evidence → choose the next action. A pass requires actual observed checks on the current artifacts. Run `check` and `status`; these validate records, not semantic truth or real permissions. Legacy/manual state edits and replans require coordinator review.
 

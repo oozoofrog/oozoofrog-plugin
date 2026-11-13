@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Agent-using skills work in English except for the answer to the user (`auto-flow` 0.2.0, `guided-execution` 0.6.1, `model-advisor` 0.1.1, `high-council-implementation` 0.1.0). The session that received the request is the leader; it translates the user's instruction into English before passing it on, briefs every sub-session in English, and answers the user in the user's language. `auto-flow`'s Workflow prompts, phase descriptions, logs, notes and its `flow-planner` and `flow-verifier` agents are now English, and each sub-session is told to work and reply in English, report only to the leader, not ask the user, and start no further sub-sessions.
+
+- Rename `astra-implementation-prompt` to `high-council-implementation` 0.1.0. The prompt author and optional council reviewers are chosen from the high-tier models the host's current tool schemas actually accept instead of a fixed Astra author and Sol or Terra implementer; an unavailable model is reported, never substituted. The old Plugin name is no longer distributed; uninstall it and install `high-council-implementation@oozoofrog-plugin`.
+
 - Add `jev-client` 0.1.0: a Swift command (`tools/jev-client`, installed by `Scripts/install.sh`) that lists TypeSafe models, sends System One requests, and saves TypeSafe or OpenAI API keys in the login Keychain from a hidden prompt, the pasteboard, stdin or a secret file. Keys are written through `security -i` stdin, kept out of argv and redacted from API errors; requests are not retried. The OpenAI key goes to `local.openai-decisions`/`openai`, which `openai-decisions` reads first.
 
 - Remove `jev-native`: the Plugin, both marketplace entries, the pinned `tools/jev-native` source snapshot and its provenance note. Run records under `~/Library/Application Support/JEV Native` are user data and are not touched.

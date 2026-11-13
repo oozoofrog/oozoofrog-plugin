@@ -57,9 +57,9 @@
       "category": "productivity"
     },
     {
-      "name": "astra-implementation-prompt",
-      "source": "./plugins/astra-implementation-prompt",
-      "description": "Use when the user asks Astra Max to prepare an implementation prompt for review and a later user-selected implementation chat. Do not use for ordinary implementation requests.",
+      "name": "high-council-implementation",
+      "source": "./plugins/high-council-implementation",
+      "description": "Use when the user asks a high-tier model or a council of them to prepare an implementation prompt for review and a later user-selected implementation session. Do not use for ordinary implementation requests.",
       "category": "productivity"
     },
     {

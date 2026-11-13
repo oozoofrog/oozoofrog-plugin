@@ -1,6 +1,6 @@
 {
   "name": "guided-execution",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Use when a user requests implementation or continuation of a multi-step project with minimal clarification, iterative verification, or human decision points, or explicitly invokes guided-execution. Exclude ordinary factual answers, tutoring, standalone reviews, and simple edits requiring no project coordination.",
   "author": {
     "name": "oozoofrog",

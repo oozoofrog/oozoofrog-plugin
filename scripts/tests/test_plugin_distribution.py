@@ -42,7 +42,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ['swift-intelligence', 'local-ai-studio', 'jev-client', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'astra-implementation-prompt', 'openai-decisions', 'guided-execution', 'handoff', 'model-advisor', 'auto-flow'],
+            ['swift-intelligence', 'local-ai-studio', 'jev-client', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'high-council-implementation', 'openai-decisions', 'guided-execution', 'handoff', 'model-advisor', 'auto-flow'],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -121,14 +121,14 @@ class PluginDistributionTests(unittest.TestCase):
             set(tree_files(plugin)),
         )
         manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
-        self.assertEqual("0.6.0", manifest["version"])
+        self.assertEqual("0.6.1", manifest["version"])
         self.assertEqual("./skills/", manifest["skills"])
         for key in ("mcpServers", "apps", "hooks"):
             self.assertNotIn(key, manifest)
         # Codex discovers hooks/hooks.json; the Claude mod lives elsewhere and only the Claude manifest names it.
         self.assertFalse((plugin / "hooks").exists())
         claude = json.loads((plugin / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
-        self.assertEqual("0.6.0", claude["version"])
+        self.assertEqual("0.6.1", claude["version"])
         self.assertEqual("./claude-mod/hooks.json", claude["hooks"])
         self.assertEqual("./claude-mod/types/index.d.ts", claude["types"])
         self.assertEqual({"modules": ["./register.tsx"]},
@@ -317,7 +317,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertFalse((REPO_ROOT / "scripts/sync_skill_mirrors.py").exists())
 
     def test_retired_packages_are_not_distributed(self) -> None:
-        for name in ("gptplease", "gptpro", "gptwork", "astra-orchestrator", "jev-start", "jev-blender-use", "jev-computer-use", "jev-native",
+        for name in ("gptplease", "gptpro", "gptwork", "astra-orchestrator", "jev-start", "jev-blender-use", "jev-computer-use", "jev-native", "astra-implementation-prompt",
                      "astra-team-building", "figma-computer-use", "session-continuity",
                      "ponytail-beck-tdd", "unreal-agent",
                      "team-coordination", "audit", "outcome-brief", "verify-work",
