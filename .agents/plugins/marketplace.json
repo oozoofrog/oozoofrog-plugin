@@ -101,10 +101,10 @@
       "category": "Productivity"
     },
     {
-      "name": "astra-implementation-prompt",
+      "name": "high-council-implementation",
       "source": {
         "source": "local",
-        "path": "./plugins/astra-implementation-prompt"
+        "path": "./plugins/high-council-implementation"
       },
       "policy": {
         "installation": "AVAILABLE",

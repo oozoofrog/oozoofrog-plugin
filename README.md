@@ -46,7 +46,7 @@ Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed 
 | `winpilot@oozoofrog-plugin` | [WinPilot observes and controls Windows apps and games](plugins/winpilot/skills/winpilot/SKILL.md). The Windows x64 Plugin includes MCP configuration and installs a hash-pinned runtime on first connection. See [installation](docs/plugin-installation.md#winpilot). |
 | `c4fy@oozoofrog-plugin` | [Create source-backed C4 architecture maps](plugins/c4fy/skills/c4fy/SKILL.md) as standalone HTML; see [C4fy](#c4fy). |
 | `refactor@oozoofrog-plugin` | [Refactor code while preserving behavior](plugins/refactor/skills/refactor/SKILL.md), or integrate SwiftLint into project builds; see [Refactor](#refactor). |
-| `astra-implementation-prompt@oozoofrog-plugin` | [Prepare an implementation prompt with Astra Max for review](plugins/astra-implementation-prompt/skills/astra-implementation-prompt/SKILL.md), before the user chooses whether and how to start an implementation chat. See [scope](#astra-implementation-prompt). |
+| `high-council-implementation@oozoofrog-plugin` | [Prepare an implementation prompt with an available high-tier model, optionally reviewed by others](plugins/high-council-implementation/skills/high-council-implementation/SKILL.md), before the user chooses whether and how to start an implementation session. See [scope](#high-council-implementation). |
 | `openai-decisions@oozoofrog-plugin` | [Call the OpenAI Decisions API](plugins/openai-decisions/skills/openai-decisions/SKILL.md) for text, JSON, image classification, probabilities, and rubric scores; see [scope and prerequisites](#openai-decisions). |
 | `guided-execution@oozoofrog-plugin` | [Inspect a project, align the key human decision, and execute verified work loops](plugins/guided-execution/skills/guided-execution/SKILL.md), with a focused initial question, a request-wide clarification budget, and project-local evidence; see [scope](#guided-execution). |
 | `handoff@oozoofrog-plugin` | [Keep work state in a project-local handoff document](plugins/handoff/skills/handoff/SKILL.md) so a new Claude Code session continues after `/clear` without relying on compaction; see [Handoff](#handoff). |
@@ -62,7 +62,7 @@ Use $swift-intelligence to find the implementations and references of this Swift
 Use $local-ai-studio with my existing local Whisper model to transcribe this recording and report timestamp estimates and their review status.
 Use $interface-first-design to review this product screen's actions, states, and recovery paths.
 Use $c4fy to map this repository's architecture with source evidence, including code structure for the components that need it.
-Use $astra-implementation-prompt to prepare an implementation prompt with Astra Max for my review and choice of implementation model.
+Use $high-council-implementation to prepare an implementation prompt with the best available high-tier model for my review and choice of implementation model.
 Use $guided-execution to inspect this project, ask me one high-value alignment question, then use my answer to implement and verify the requested feature.
 ```
 
@@ -72,7 +72,7 @@ These are requests, not examples of verified results.
 
 Use when a user requests implementation or continuation of a multi-step project with minimal clarification, iterative verification, or human decision points, or explicitly invokes guided-execution. Exclude ordinary factual answers, tutoring, standalone reviews, and simple edits requiring no project coordination.
 
-Version 0.6.0 first inspects project evidence, then normally asks one focused question about the highest-impact unsettled human priority, workflow, scope tradeoff, or quality target. It recommends a direction and waits for the user's answer before dependent implementation. Technical feasibility, repository conventions, and reversibility alone do not settle the user's preferred outcome.
+Version 0.6.1 first inspects project evidence, then normally asks one focused question about the highest-impact unsettled human priority, workflow, scope tradeoff, or quality target. It recommends a direction and waits for the user's answer before dependent implementation. Technical feasibility, repository conventions, and reversibility alone do not settle the user's preferred outcome.
 
 Skip that initial question only when the relevant human decisions are already explicit in the request or prior answers, the user explicitly delegates those choices or requests no questions, or unchanged work resumes with those decisions settled. Record the concrete exception and do not invent a question when every material decision is already settled. The initial question counts toward the same request-wide maximum of three independent discretionary decisions across two rounds, including later preference and quality-review questions.
 
@@ -96,7 +96,7 @@ The skill picks a starting model and effort from the task type, applies upgrade 
 
 작업 난이도를 분류해 단계마다 맞는 Claude 모델(Haiku·Sonnet·Opus·Fable)과 effort로 계획·실행·통합 검증하는 Workflow를 실행한다. 실패하면 한 번만 모델이나 effort를 올려 수정한다. "/auto-flow", "auto-flow로 해줘", "모델 알아서 골라서 워크플로로 진행해줘", "토큰 효율적으로 워크플로 돌려줘", "교차 검토까지 해줘", "Codex도 섞어서 진행해줘"에 사용한다. T3 Code에서는 Codex 계정을 남은 사용량 기준으로 골라 교차 검토와 실행 분담에 쓴다.
 
-[Auto Flow](plugins/auto-flow/skills/auto-flow/SKILL.md) 0.1.0 classifies task difficulty, plans and executes with Claude models and effort, integrates verification, and escalates once on failure. Codex receives the skill only; the Workflow script and the two plugin agents work only in Claude Code with its Workflow tool. Sessions without that tool must report the limitation and must not imitate Workflow. Cross-provider steps need T3 Code `delegate_task` tools, Python 3, and usage data in `~/.t3/caches/*.json`. Agent lookup tries `auto-flow:flow-planner` / `auto-flow:flow-verifier`, then bare names, then the default agent with a note; the nine-agent cap counts `run()` calls, not name retries. See [installation](docs/plugin-installation.md#auto-flow).
+[Auto Flow](plugins/auto-flow/skills/auto-flow/SKILL.md) 0.2.0 classifies task difficulty, plans and executes with Claude models and effort, integrates verification, and escalates once on failure. Codex receives the skill only; the Workflow script and the two plugin agents work only in Claude Code with its Workflow tool. Sessions without that tool must report the limitation and must not imitate Workflow. Cross-provider steps need T3 Code `delegate_task` tools, Python 3, and usage data in `~/.t3/caches/*.json`. Agent lookup tries `auto-flow:flow-planner` / `auto-flow:flow-verifier`, then bare names, then the default agent with a note; the nine-agent cap counts `run()` calls, not name retries. See [installation](docs/plugin-installation.md#auto-flow).
 
 ## Local AI Studio
 
@@ -104,9 +104,9 @@ The skills-only Plugin uses Local AI Studio or selected on-device tools on Apple
 
 Local Whisper uses a separate `whisper-cli` workflow and can reuse verified weights. It does not imply native app integration. Timestamps, including experimental DTW points, are estimates and do not verify sung boundaries or authorize subtitle replacement. See the [Whisper workflow and limits](plugins/local-ai-studio/skills/local-ai-studio/references/whisper.md).
 
-## Astra Implementation Prompt
+## High Council Implementation
 
-Use when the user asks Astra Max to prepare an implementation prompt for review and a later user-selected implementation chat. Do not use for ordinary implementation requests. The full prompt is presented for review; the user chooses the implementation model and whether to start a new chat. Preparing a prompt alone does not authorize implementation or chat creation. See the [workflow](plugins/astra-implementation-prompt/skills/astra-implementation-prompt/references/workflow.md).
+Use when the user asks a high-tier model or a council of them to prepare an implementation prompt for review and a later user-selected implementation session. Do not use for ordinary implementation requests. The author and any council reviewers are chosen from the high-tier models the host's current tool schemas actually accept, not from a fixed vendor; an unavailable model is reported, never substituted. Agents are briefed in English and the user's instruction is translated before it is passed on; the leader session answers the user in the user's language. The full prompt is presented for review; the user chooses the implementation model and whether to start a new session. Preparing a prompt alone does not authorize implementation or session creation. See the [workflow](plugins/high-council-implementation/skills/high-council-implementation/references/workflow.md).
 
 ## Interface First Design
 

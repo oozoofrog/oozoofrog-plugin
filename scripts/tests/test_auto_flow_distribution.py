@@ -42,7 +42,7 @@ class AutoFlowDistributionTests(unittest.TestCase):
                         (SKILL / "agents/openai.yaml").read_text().splitlines()[1:])
         metadata = {key: json.loads(value) for key, value in metadata.items()}
         codex = json.loads((PLUGIN / ".codex-plugin/plugin.json").read_text())
-        self.assertEqual("0.1.0", codex["version"])
+        self.assertEqual("0.2.0", codex["version"])
         self.assertEqual("./skills/", codex["skills"])
         self.assertEqual(description, codex["description"])
         self.assertEqual(description, codex["interface"]["longDescription"])

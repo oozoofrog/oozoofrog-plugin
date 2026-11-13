@@ -1,0 +1,25 @@
+{
+  "name": "high-council-implementation",
+  "version": "0.1.0",
+  "description": "Use when the user asks a high-tier model or a council of them to prepare an implementation prompt for review and a later user-selected implementation session. Do not use for ordinary implementation requests.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "skills": "./skills/",
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
+  "interface": {
+    "displayName": "High Council Implementation",
+    "shortDescription": "Review a high-tier model's prompt before implementing",
+    "longDescription": "Use when the user asks a high-tier model or a council of them to prepare an implementation prompt for review and a later user-selected implementation session. Do not use for ordinary implementation requests.",
+    "developerName": "oozoofrog",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $high-council-implementation to prepare an implementation prompt with the best available high-tier model for my review and choice of implementation model."
+    ]
+  }
+}

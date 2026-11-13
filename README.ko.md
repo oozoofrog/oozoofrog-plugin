@@ -6,7 +6,7 @@
 
 [English](README.md) | 한국어
 
-[Astra Implementation Prompt](plugins/astra-implementation-prompt/skills/astra-implementation-prompt/SKILL.md)는 Astra Max로 구현 프롬프트를 작성해 검토하려는 명시적 요청에 사용합니다. 전체 프롬프트를 검토한 뒤 사용자가 구현 모델과 새 채팅 시작 여부를 선택합니다. 일반 구현 요청에는 적용하지 않습니다. [작업 절차](plugins/astra-implementation-prompt/skills/astra-implementation-prompt/references/workflow.md)를 확인하세요.
+[High Council Implementation](plugins/high-council-implementation/skills/high-council-implementation/SKILL.md)은 고등 모델 하나 또는 여럿(council)에게 구현 프롬프트를 작성·검토하게 하려는 명시적 요청에 사용합니다. 작성 모델과 검토 모델은 특정 제공자에 고정하지 않고, 지금 호스트 도구가 실제로 받는 고등 모델 중에서 고릅니다. 쓸 수 없는 모델은 다른 모델로 바꾸지 않고 알립니다. 에이전트에게 주는 지시는 사용자가 한국어로 요청했더라도 영어로 옮겨 전달하고, 사용자에게 하는 답은 사용자의 언어로 합니다. 전체 프롬프트를 검토한 뒤 사용자가 구현 모델과 새 세션 시작 여부를 선택합니다. 일반 구현 요청에는 적용하지 않습니다. [작업 절차](plugins/high-council-implementation/skills/high-council-implementation/references/workflow.md)를 확인하세요.
 
 [Interface First Design](plugins/interface-first-design/skills/interface-first-design/SKILL.md) (`interface-first-design` 0.1.0)은 제품 UI를 설계·구현·검토할 때 사용합니다. 설명문이 화면 구조·보이는 조작·상태 피드백을 대신하는 경우에 특히 유용합니다. 기능 이름·사용자 콘텐츠·실제 데이터·오류·동의 안내는 보존합니다. 에이전트의 답변이나 기술 문서에는 적용하지 않습니다. 런타임이나 hooks가 없는 skills-only Plugin이며, 배포 검사와 행동 평가·실제 UI 검증은 구분합니다. [설치 안내](docs/plugin-installation.md#interface-first-design)를 참고하세요. [검증 결과와 한계](docs/validation/interface-first-design.md).
 
@@ -18,7 +18,7 @@
 
 ## 협업 실행
 
-[협업 실행](plugins/guided-execution/skills/guided-execution/SKILL.md) (`guided-execution` 0.6.0)은 여러 단계의 프로젝트 구현·재개에서 프로젝트 분석, 최소 질문, 실제 검증과 사람의 판단을 연결하는 Plugin입니다. 일반 정보 답변, 학습 지도, 단독 리뷰, 프로젝트 조율이 필요 없는 작은 수정은 적용 대상에서 제외합니다.
+[협업 실행](plugins/guided-execution/skills/guided-execution/SKILL.md) (`guided-execution` 0.6.1)은 여러 단계의 프로젝트 구현·재개에서 프로젝트 분석, 최소 질문, 실제 검증과 사람의 판단을 연결하는 Plugin입니다. 일반 정보 답변, 학습 지도, 단독 리뷰, 프로젝트 조율이 필요 없는 작은 수정은 적용 대상에서 제외합니다.
 
 새로운 여러 단계의 작업은 프로젝트 자료와 기존 결정을 먼저 확인한 뒤, 아직 정해지지 않은 중요한 우선순위·사용 흐름·범위·품질 기준에 관해 질문 1개를 먼저 합니다. 확인한 맥락과 추천안을 제시하고, 답변을 받은 뒤 해당 판단에 의존하는 구현을 시작합니다. 구현할 수 있다는 판단이나 쉽게 되돌릴 수 있다는 이유만으로 사람의 의견을 생략하지 않습니다.
 
@@ -71,7 +71,7 @@ skills-only Plugin `0.3.0`을 제공합니다. Plugin에 모델·런타임·생�
 
 ## 모델 선택
 
-[모델 선택](plugins/model-advisor/skills/model-advisor/SKILL.md) (`model-advisor` 0.1.0)은 작업에 맞는 Claude 모델(Haiku 5.5, Sonnet 5.5, Opus 5.5, Fable 5.2)과 effort를 추천합니다. 넘겨 달라고 하면 이 대화 없이도 시작할 수 있는 지시문을 써서, 그 모델·effort로 서브에이전트를 부르거나 `claude --bg`로 백그라운드 Claude Code 세션을 띄웁니다. 띄운 뒤 `claude logs`에서 실제 모델을 확인하고 `claude attach <id>`로 여는 방법을 알려 줍니다. 현재 세션의 모델은 바꾸지 못하므로 `/compact`, `/model`, `/effort` 순서를 안내합니다. 백그라운드 세션은 `claude` CLI와 신뢰 승인을 마친 프로젝트 폴더가 필요합니다. 모델별 기준과 가격은 2026-11-09 claude.dev 글을 따릅니다. Codex에서는 스킬만 쓸 수 있습니다. [설치](docs/plugin-installation.md#model-advisor)를 확인하세요.
+[모델 선택](plugins/model-advisor/skills/model-advisor/SKILL.md) (`model-advisor` 0.1.1)은 작업에 맞는 Claude 모델(Haiku 5.5, Sonnet 5.5, Opus 5.5, Fable 5.2)과 effort를 추천합니다. 넘겨 달라고 하면 이 대화 없이도 시작할 수 있는 지시문을 써서, 그 모델·effort로 서브에이전트를 부르거나 `claude --bg`로 백그라운드 Claude Code 세션을 띄웁니다. 띄운 뒤 `claude logs`에서 실제 모델을 확인하고 `claude attach <id>`로 여는 방법을 알려 줍니다. 현재 세션의 모델은 바꾸지 못하므로 `/compact`, `/model`, `/effort` 순서를 안내합니다. 백그라운드 세션은 `claude` CLI와 신뢰 승인을 마친 프로젝트 폴더가 필요합니다. 모델별 기준과 가격은 2026-11-09 claude.dev 글을 따릅니다. Codex에서는 스킬만 쓸 수 있습니다. [설치](docs/plugin-installation.md#model-advisor)를 확인하세요.
 
 ## Auto Flow
 
@@ -81,7 +81,7 @@ skills-only Plugin `0.3.0`을 제공합니다. Plugin에 모델·런타임·생�
 
 작업 난이도를 분류해 단계마다 맞는 Claude 모델(Haiku·Sonnet·Opus·Fable)과 effort로 계획·실행·통합 검증하는 Workflow를 실행한다. 실패하면 한 번만 모델이나 effort를 올려 수정한다. "/auto-flow", "auto-flow로 해줘", "모델 알아서 골라서 워크플로로 진행해줘", "토큰 효율적으로 워크플로 돌려줘", "교차 검토까지 해줘", "Codex도 섞어서 진행해줘"에 사용한다. T3 Code에서는 Codex 계정을 남은 사용량 기준으로 골라 교차 검토와 실행 분담에 쓴다.
 
-`auto-flow` 0.1.0에서 Codex에는 스킬만 제공됩니다. Workflow 스크립트와 두 Plugin 에이전트는 Claude Code의 Workflow 도구에서만 동작합니다. 이 도구가 없는 세션은 실행 불가를 알리고 Workflow를 흉내 내지 않습니다. 교차 제공자 단계에는 T3 Code `delegate_task` 도구, Python 3, `~/.t3/caches/*.json` 사용량 데이터가 필요합니다. 에이전트는 `auto-flow:flow-planner`·`auto-flow:flow-verifier`, bare 이름, 기본 에이전트 순서로 찾으며 대체 기록을 남깁니다. 9개 상한은 이름 재시도가 아닌 `run()` 호출 수입니다. [설치](docs/plugin-installation.md#auto-flow)를 확인하세요.
+`auto-flow` 0.2.0에서 Codex에는 스킬만 제공됩니다. Workflow 스크립트와 두 Plugin 에이전트는 Claude Code의 Workflow 도구에서만 동작합니다. 이 도구가 없는 세션은 실행 불가를 알리고 Workflow를 흉내 내지 않습니다. 교차 제공자 단계에는 T3 Code `delegate_task` 도구, Python 3, `~/.t3/caches/*.json` 사용량 데이터가 필요합니다. 에이전트는 `auto-flow:flow-planner`·`auto-flow:flow-verifier`, bare 이름, 기본 에이전트 순서로 찾으며 대체 기록을 남깁니다. 9개 상한은 이름 재시도가 아닌 `run()` 호출 수입니다. [설치](docs/plugin-installation.md#auto-flow)를 확인하세요.
 
 ## 설치
 

@@ -8,10 +8,10 @@ from test_document_links import local_targets
 from test_plugin_distribution import tree_files
 
 ROOT = Path(__file__).resolve().parents[2]
-NAME = "astra-implementation-prompt"
+NAME = "high-council-implementation"
 
 
-class AstraImplementationPromptDistributionTests(unittest.TestCase):
+class HighCouncilImplementationDistributionTests(unittest.TestCase):
     def test_package_is_portable_and_complete(self):
         plugin = ROOT / "plugins" / NAME
         source = plugin / "skills" / NAME

@@ -16,7 +16,7 @@ MCP를 포함한 `swift-intelligence`와 `winpilot`은 Claude 매니페스트에
 
 ## Guided Execution
 
-`guided-execution@oozoofrog-plugin`은 프로젝트 분석, 최소 질문, 검증 루프를 연결하는 [협업 실행 스킬](../plugins/guided-execution/skills/guided-execution/SKILL.md) 0.6.0입니다. Python 3로 실행하는 표준 라이브러리 보조 도구와 검사 코드를 포함하며, MCP 서버·별도 모델·인증 정보를 등록하지 않습니다. Claude Code용 매니페스트는 읽기 전용 Mod(`claude-mod/`)를 함께 불러옵니다. Codex 매니페스트는 Mod를 포함하지 않습니다.
+`guided-execution@oozoofrog-plugin`은 프로젝트 분석, 최소 질문, 검증 루프를 연결하는 [협업 실행 스킬](../plugins/guided-execution/skills/guided-execution/SKILL.md) 0.6.1입니다. Python 3로 실행하는 표준 라이브러리 보조 도구와 검사 코드를 포함하며, MCP 서버·별도 모델·인증 정보를 등록하지 않습니다. Claude Code용 매니페스트는 읽기 전용 Mod(`claude-mod/`)를 함께 불러옵니다. Codex 매니페스트는 Mod를 포함하지 않습니다.
 
 처음 등록할 때는 다음 명령을 사용합니다.
 
@@ -54,7 +54,7 @@ claude plugin install handoff@oozoofrog-plugin
 
 ## Model Advisor
 
-`model-advisor@oozoofrog-plugin` 0.1.0은 [모델 선택 스킬](../plugins/model-advisor/skills/model-advisor/SKILL.md)만 설치합니다. 훅과 MCP 서버는 없습니다. 백그라운드 세션으로 넘기려면 `claude` CLI가 필요하고, 넘길 프로젝트 폴더에서 `claude`를 한 번 실행해 신뢰를 승인해 두어야 합니다.
+`model-advisor@oozoofrog-plugin` 0.1.1은 [모델 선택 스킬](../plugins/model-advisor/skills/model-advisor/SKILL.md)만 설치합니다. 훅과 MCP 서버는 없습니다. 백그라운드 세션으로 넘기려면 `claude` CLI가 필요하고, 넘길 프로젝트 폴더에서 `claude`를 한 번 실행해 신뢰를 승인해 두어야 합니다.
 
 ```sh
 claude plugin marketplace add oozoofrog/oozoofrog-plugin
@@ -65,7 +65,7 @@ claude plugin install model-advisor@oozoofrog-plugin
 
 ## Auto Flow
 
-`auto-flow@oozoofrog-plugin` 0.1.0은 [자동 워크플로 스킬](../plugins/auto-flow/skills/auto-flow/SKILL.md), Claude Code Workflow 스크립트, `auto-flow:flow-planner`·`auto-flow:flow-verifier` Plugin 에이전트를 제공합니다. 작업 난이도에 맞는 Claude 모델·effort로 계획·실행·통합 검증하고 실패 시 한 번 상향하며, T3 Code에서는 Codex 교차 검토·실행 분담을 지원합니다.
+`auto-flow@oozoofrog-plugin` 0.2.0은 [자동 워크플로 스킬](../plugins/auto-flow/skills/auto-flow/SKILL.md), Claude Code Workflow 스크립트, `auto-flow:flow-planner`·`auto-flow:flow-verifier` Plugin 에이전트를 제공합니다. 작업 난이도에 맞는 Claude 모델·effort로 계획·실행·통합 검증하고 실패 시 한 번 상향하며, T3 Code에서는 Codex 교차 검토·실행 분담을 지원합니다.
 
 Codex에는 스킬만 제공됩니다. Workflow 스크립트와 두 에이전트는 Claude Code에서만 동작하며 Workflow 도구가 필요합니다. 이 도구가 없는 세션에서는 실행할 수 없다고 알리고 Workflow를 흉내 내지 않습니다. 교차 제공자 단계에는 T3 Code `delegate_task` 도구와 `~/.t3/caches/*.json` 사용량 데이터, Python 3이 필요합니다. Plugin은 도구나 인증·계정·사용량 데이터를 설치하지 않습니다.
 
