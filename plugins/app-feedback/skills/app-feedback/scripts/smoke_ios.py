@@ -65,10 +65,16 @@ targets:
                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         (output / (name + '.log')).write_text(proc.stdout)
         warnings = len(re.findall(r'\bwarning:', proc.stdout))
-        results.append(dict(name=name, command=command, exit=proc.returncode, warnings=warnings))
+        apple_warnings = [line for line in proc.stdout.splitlines()
+                          if 'appintentsmetadataprocessor' in line and
+                          'warning: Metadata extraction skipped, no AppIntents.framework dependency found' in line]
+        results.append(dict(name=name, command=command, exit=proc.returncode, warnings=warnings,
+                            apple_tool_warnings=apple_warnings))
         (output / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
         print(f'{name}: exit={proc.returncode}, warnings={warnings}', flush=True)
-        if proc.returncode or warnings:
+        # Preserve this Apple-tool diagnostic without adding an unrelated AppIntents dependency.
+        # Compiler warnings and every other tool warning still fail verification.
+        if proc.returncode or warnings != len(apple_warnings):
             raise RuntimeError(f'see {output / (name + ".log")}')
 
     run('generate-project', ['xcodegen', 'generate', '--spec', str(output / 'project.yml')])

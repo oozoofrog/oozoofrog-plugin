@@ -90,6 +90,8 @@ def main():
             assert not destination.exists()
         # The Release library object must not retain Debug-only provider/sealing/checklist symbols.
         objects = list((output / 'swiftpm').glob('*/release/AppFeedback.build/*.swift.o'))
+        if not objects:
+            objects = list((output / 'swiftpm').glob('out/Products/Release/AppFeedback.o'))
         assert objects, 'Release objects not found'
         symbols = run('release-symbols', ['nm'] + [str(path) for path in objects])
         assert not any(name in symbols for name in ('FeedbackSealing', 'FeedbackDiagnostics', 'FeedbackCheck'))
