@@ -42,7 +42,7 @@ class AutoFlowDistributionTests(unittest.TestCase):
                         (SKILL / "agents/openai.yaml").read_text().splitlines()[1:])
         metadata = {key: json.loads(value) for key, value in metadata.items()}
         codex = json.loads((PLUGIN / ".codex-plugin/plugin.json").read_text())
-        self.assertEqual("0.2.0", codex["version"])
+        self.assertEqual("0.3.0", codex["version"])
         self.assertEqual("./skills/", codex["skills"])
         self.assertEqual(description, codex["description"])
         self.assertEqual(description, codex["interface"]["longDescription"])
@@ -132,6 +132,51 @@ const workflow = new AsyncFunction('args', 'agent', 'phase', 'log', 'parallel', 
     assert.ok(!calls.some(opts => opts.phase === 'Fix'))
     if (skipped !== 'Verify') assert.ok(!calls.some(opts => opts.phase === 'Execute'))
   }
+})().catch(error => { console.error(error); process.exitCode = 1 })
+"""
+        result = subprocess.run(["node", "-e", harness, str(SKILL / "workflow.js")],
+                                capture_output=True, text=True)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+    @unittest.skipUnless(shutil.which("node"), "Node is needed for mocked Workflow execution")
+    def test_security_tier_reports_safeguard_blocks_without_escalation(self):
+        harness = r"""
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const source = fs.readFileSync(process.argv[1], 'utf8').replace('export const meta', 'const meta')
+const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
+const workflow = new AsyncFunction('args', 'agent', 'phase', 'log', 'parallel', source)
+;(async () => {
+  const calls = [], prompts = []
+  const agent = async (prompt, opts) => {
+    calls.push(opts); prompts.push(prompt)
+    if (opts.phase === 'Verify') return { overall: 'fail', units: [
+      { id: 'u1', verdict: 'fail', kind: 'safeguard', findings: ['PoC refused'] },
+      { id: 'u2', verdict: 'pass', kind: 'none', findings: [] },
+    ], checksRun: [], integration: '', summary: '' }
+    const blocked = prompt.includes('## Your unit (u1)')
+    return { status: blocked ? 'partial' : 'done', summary: blocked ? 'exploit PoC blocked' : '',
+      changedFiles: [], checksRun: [], evidence: '', lowConfidence: [], blocked: blocked ? 'safeguard' : 'none' }
+  }
+  const result = await workflow({ task: 'audit', tier: 'security', units: ['red team', 'review'] },
+    agent, () => {}, () => {}, () => { throw Error('unexpected parallel call') })
+  const exec = calls.filter(o => o.phase === 'Execute')
+  assert.deepEqual(exec.map(o => [o.model, o.effort]), [['fable', 'high'], ['fable', 'high']])
+  assert.ok(prompts.filter((_, i) => calls[i].phase === 'Execute').every(p => p.includes('blocked to "safeguard"')))
+  assert.deepEqual(calls.filter(o => o.phase === 'Verify').map(o => [o.model, o.effort]), [['opus', 'high']])
+  assert.ok(!calls.some(o => o.phase === 'Fix' || o.phase === 'Re-verify'))
+  assert.equal(result.outcome, 'fail')
+  assert.deepEqual(result.unresolved, [])
+  assert.deepEqual(result.safeguardBlocked.map(b => [b.id, b.model, b.detail]),
+    [['u1', 'fable/high', 'exploit PoC blocked']])
+  assert.ok(result.notes.some(n => n.includes('safeguard-blocked')))
+  // Other tiers never get the security rules or a safeguardBlocked entry.
+  const plain = await workflow({ task: 'fix', tier: 'scoped' }, async (prompt, opts) => {
+    assert.ok(!prompt.includes('blocked to "safeguard"'))
+    if (opts.phase === 'Verify') return { overall: 'pass', units: [], checksRun: [], integration: '', summary: '' }
+    return { status: 'done', summary: '', changedFiles: [], checksRun: [], evidence: '', lowConfidence: [] }
+  }, () => {}, () => {}, () => { throw Error('unexpected parallel call') })
+  assert.deepEqual(plain.safeguardBlocked, [])
 })().catch(error => { console.error(error); process.exitCode = 1 })
 """
         result = subprocess.run(["node", "-e", harness, str(SKILL / "workflow.js")],

@@ -1,6 +1,6 @@
 ---
 name: auto-flow
-description: 작업 난이도를 분류해 단계마다 맞는 Claude 모델(Haiku·Sonnet·Opus·Fable)과 effort로 계획·실행·통합 검증하는 Workflow를 실행한다. 실패하면 한 번만 모델이나 effort를 올려 수정한다. "/auto-flow", "auto-flow로 해줘", "모델 알아서 골라서 워크플로로 진행해줘", "토큰 효율적으로 워크플로 돌려줘", "교차 검토까지 해줘", "Codex도 섞어서 진행해줘"에 사용한다. T3 Code에서는 Codex 계정을 남은 사용량 기준으로 골라 교차 검토와 실행 분담에 쓴다.
+description: 작업 난이도를 분류해 단계마다 맞는 Claude 모델(Haiku·Sonnet·Opus·Fable)과 effort로 계획·실행·통합 검증하는 Workflow를 실행한다. 실패하면 한 번만 모델이나 effort를 올려 수정한다. "/auto-flow", "auto-flow로 해줘", "모델 알아서 골라서 워크플로로 진행해줘", "토큰 효율적으로 워크플로 돌려줘", "교차 검토까지 해줘", "Codex도 섞어서 진행해줘", "보안 점검·공격 시나리오까지 워크플로로 해줘"에 사용한다. 보안 점검은 security tier(Fable)로 돌리고, Fable 안전장치에 막힌 단위만 사용자가 허용하면 Mythos 5.2로 넘긴다. T3 Code에서는 Codex 계정을 남은 사용량 기준으로 골라 교차 검토와 실행 분담에 쓴다.
 ---
 
 # auto-flow
@@ -34,13 +34,16 @@ description: 작업 난이도를 분류해 단계마다 맞는 Claude 모델(Hai
 | scoped | 명세가 분명, 파일 약 5개 이하, 설계 결정 없음, 테스트로 확인 가능 | sonnet/medium |
 | daily | 원인·접근을 스스로 찾아야 함(디버깅, 여러 모듈 기능, 설계 선택 1~2개). 애매하면 여기 | opus/medium |
 | large | 모듈 경계·공개 인터페이스 변경, 리팩터링·마이그레이션·아키텍처, 파일 약 15개 이상 | fable 계획 → 단위별 sonnet/opus 실행 |
+| security | 사용자가 소유한 시스템의 보안 점검·위협 모델·공격 시나리오 시험(레드팀, PoC). 취약점을 찾는 것이 목적이면 범위가 작아도 여기 | fable/high, 검증 opus/high |
 
 한 단계 올리는 조건: 자동 검증 수단이 없다 / 요구가 모호하다 / 되돌리기 어렵다(데이터 마이그레이션, 공개 API, 보안, 동시성) / 명세는 분명하지만 본질적으로 어렵다.
+
+보안 코드를 고치는 일반 변경은 security가 아니라 원래 tier에서 한 단계 올린다. security는 결함을 찾는 작업이고, 실행 단위는 안전장치에 막히면 우회하지 않고 막힌 부분을 `blocked: "safeguard"`로 보고한다. 하위 세션에는 코드와 합성 시험 데이터만 넘기고 실제 카드·키·토큰·개인정보는 넘기지 않는다.
 
 ## 2. 단위 나누기 (large 제외)
 
 - 서로 다른 파일 집합을 건드리는 독립 작업만 나눈다. 같은 파일을 두 단위가 고치면 합친다. 확신이 없으면 1개.
-- 상한: bulk 6청크(청크당 20~50항목), scoped 2, daily 3. large는 계획자가 최대 4개로 나눈다.
+- 상한: bulk 6청크(청크당 20~50항목), scoped 2, daily 3, security 2(예: 앱별·표면별). large는 계획자가 최대 4개로 나눈다.
 - bulk는 결과를 자동 확인할 명령이 있으면 `validator`로 넘긴다.
 
 ## 3. worktree 여부
@@ -76,6 +79,7 @@ description: 작업 난이도를 분류해 단계마다 맞는 Claude 모델(Hai
 - `unresolved`나 최종 fail이 있으면 findings를 그대로 보여 주고 다음 행동을 제안한다. 자동으로 재시도하지 않는다.
 - 결과는 커밋되지 않은 변경으로 남는다. 커밋은 사용자가 결정한다.
 - worktree를 썼다면 `git worktree list`와 `git branch --list 'auto-flow/*'`로 정리됐는지 확인하고, 남은 것이 있으면 위치를 보고한다.
+- `safeguardBlocked`가 비어 있지 않으면 단위별로 무엇이 막혔는지 보여 주고 7절대로 진행한다. 다른 Claude 모델로 자동 재시도하지 않는다.
 
 ## 6. 교차 제공자 단계 (T3 Code에서만)
 
@@ -96,7 +100,7 @@ T3 도구(`delegate_task`)가 없는 환경에서는 이 절을 건너뛴다. Wo
 | 조건 | 검토 모델 |
 |---|---|
 | daily | gpt-6.1-sol / high |
-| large, 또는 되돌리기 어려운 변경(데이터 마이그레이션, 공개 API, 보안, 동시성) | gpt-6-astra / high |
+| large, security, 또는 되돌리기 어려운 변경(데이터 마이그레이션, 공개 API, 보안, 동시성) | gpt-6-astra / high |
 | scoped, bulk, direct | 하지 않는다(사용자가 요청하면 gpt-6.1-sol / high) |
 
 - Workflow의 `outcome`이 fail이면 하지 않는다. 먼저 5절대로 보고한다.
@@ -130,6 +134,7 @@ Workflow 대신 단위마다 `delegate_task`로 실행한다. `task`는 영어�
 | scoped | gpt-6.1-sol / medium |
 | daily | gpt-6.1-sol / high |
 | large | 메인이 2절 규칙으로 최대 4단위로 나눠 단위별 scoped·daily 모델 사용. 나눌 수 없으면 gpt-6-astra / high |
+| security | gpt-6-astra / high |
 
 - 단위가 2개 이상이면 `isolation: "worktree"`, `mode: "async"`로 띄우고 알림을 기다린다. 확인하려고 반복 조회하지 않는다. 단위가 1개면 `shared`로 둔다.
 - 위임은 한 번에 최대 4개다.
@@ -141,9 +146,30 @@ Workflow 대신 단위마다 `delegate_task`로 실행한다. `task`는 영어�
 
 5절 보고에 더해, 위임마다 쓴 계정·모델과 그때의 남은 사용량, 자식 스레드 링크를 적는다.
 
+## 7. Mythos 대체 (security tier, 사용자가 허용할 때만)
+
+Claude Mythos 5.2(`claude-mythos-5-2`)는 Fable 5.2와 같은 모델에서 사이버보안·생명과학 안전장치를 완화한 버전이다. 능력은 같으므로 일반 실패(defect·incomplete·approach)에는 쓰지 않는다. 쓸 수 있는 경우는 security 단위가 Fable 안전장치에 막혔을 때 하나뿐이다.
+
+1. Workflow 결과의 `safeguardBlocked`가 비어 있지 않으면, 막힌 단위와 이유를 사용자에게 보고하고 Mythos로 넘길지 묻는다. 이번 요청에서 사용자가 Mythos 대체를 미리 허용했더라도 이 질문은 생략하지 않는다. 넘기는 내용과 데이터 보관 조건을 보여 줘야 하기 때문이다.
+2. 질문에 함께 적을 것:
+   - Mythos는 Anthropic 검증 프로그램(예: Cyber Verification Program)을 통과한 조직만 호출할 수 있다.
+   - 기본 30일 데이터 보관이 필수다.
+   - 넘길 내용은 막힌 단위의 목표, 관련 코드 경로, 합성 시험 데이터뿐이다.
+3. 사용자가 승인하면 막힌 단위만 넘긴다. 지시문은 영어로 쓰고 목표, 소유 범위(수정 여부), 방어 목적이라는 점, 실제 비밀 정보를 읽거나 출력하지 말 것, 결과 형식을 넣는다.
+   - T3 Code에서는 먼저 `orchestrator_capabilities`로 `claude-mythos-5-2`가 목록에 있는지 확인한다. 있으면 `delegate_task`(`target.model: "claude-mythos-5-2"`, effort 명시, `title: "security:<unit> · claude-mythos-5-2/<effort>"`)로 넘긴다. 자식 스레드에 기록이 남기 때문이다.
+   - T3가 아니거나 목록에 없을 때만 백그라운드 Claude Code 세션을 쓴다. 지시문은 파일로 저장해 넘긴다. `--allowedTools`·`--disallowedTools`는 값을 여러 개 받으므로 그 뒤에 지시문을 인자로 붙이면 도구 이름으로 읽힌다. 이 옵션을 쓸 때는 지시문을 표준 입력으로 넘긴다.
+
+```sh
+claude --bg --model claude-mythos-5-2 --effort high -n "security:<unit> · mythos-5.2/high" "$(cat <지시문 파일 절대 경로>)"
+```
+
+4. 모델 ID가 거부되거나 계정에 접근 권한이 없으면, 그 오류를 그대로 보고하고 멈춘다. 다른 모델로 바꾸지 않는다.
+5. Mythos 결과도 6.2의 교차 검토(gpt-6-astra / high) 대상이다. 보고에는 Mythos를 쓴 단위와 넘긴 이유를 적는다.
+
 ## 상향 규칙 (스크립트가 자동 적용, 1회)
 
 - defect·incomplete: 같은 모델, effort 한 단계 위로 올린다(opus는 high까지).
 - approach: 모델 한 단계 위, effort는 medium(haiku → sonnet → opus → fable).
 - fable/high에서도 approach로 실패하면 자동 상향하지 않고 보고한다.
 - bulk의 실패 항목과 lowConfidence 항목은 sonnet/medium으로 다시 처리한다.
+- safeguard(security 단위가 안전장치에 막힘): 자동 상향하지 않는다. `safeguardBlocked`로 돌려주고 리더가 7절을 따른다.
