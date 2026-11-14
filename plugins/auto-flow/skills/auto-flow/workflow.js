@@ -16,6 +16,7 @@ export const meta = {
 // 의존: Claude Code Workflow + Plugin agents/flow-planner.md, agents/flow-verifier.md
 // Plugin 이름(auto-flow:*) → bare 이름 → 기본 에이전트 순으로 대체. 내장 Explore는 네임스페이스 없음.
 // args: { task, tier?, units?, context?, validator?, worktree?, runId? }
+// Mythos는 Workflow 모델이 아니다. security 단위가 Fable 안전장치에 막히면 safeguardBlocked로 돌려주고, 대체 여부는 리더가 사용자 동의를 받아 정한다.
 
 const MODELS = ['haiku', 'sonnet', 'opus', 'fable']
 const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max']
@@ -23,14 +24,16 @@ const EXEC = {
   bulk: { model: 'haiku', effort: 'medium' },
   scoped: { model: 'sonnet', effort: 'medium' },
   daily: { model: 'opus', effort: 'medium' },
+  security: { model: 'fable', effort: 'high' },
 }
 const VERIFY = {
   bulk: { model: 'sonnet', effort: 'medium' },
   scoped: { model: 'opus', effort: 'medium' },
   daily: { model: 'opus', effort: 'high' },
   large: { model: 'opus', effort: 'high' },
+  security: { model: 'opus', effort: 'high' },
 }
-const MAX_UNITS = { bulk: 6, scoped: 2, daily: 3, large: 4 }
+const MAX_UNITS = { bulk: 6, scoped: 2, daily: 3, large: 4, security: 2 }
 const HARD_CAP = 9
 
 // 하위 세션에 주는 지시, meta, log, notes는 모두 영어로 쓴다. 사용자에게는 리더가 사용자의 언어로 옮겨 보고한다.
@@ -47,6 +50,7 @@ const TIER_RULES = `Classify the task as one of the tiers below. If you hesitate
 - scoped: what to change and where is clearly specified. About 5 files or fewer, no design decisions, and a test or build can confirm the result.
 - daily: the cause or approach must be found (debugging, a feature across several modules, one or two design choices). Use this when nothing else fits.
 - large: changes module boundaries or public interfaces. Refactoring, migration, or architecture change, about 15 files or more, or work that must be split into units and run in parallel.
+- security: a defensive security review, threat model, or attack-scenario test (red team, proof-of-concept against the user's own code) of a system the user owns. Choose it whenever finding vulnerabilities is the goal, even if the scope is small; ordinary code changes that merely touch security code stay in their usual tier, raised by one.
 Raise the tier by one when: there is no automated check / the requirement is ambiguous / the change is hard to undo (data migration, public API, security, concurrency) / the spec is clear but the problem is inherently hard.
 units: split only independent work that touches different sets of files. If two units would edit the same file, merge them. When unsure, return one unit.`
 
@@ -60,6 +64,7 @@ const EXEC_SCHEMA = {
     evidence: { type: 'string' },
     lowConfidence: { type: 'array', items: { type: 'string' } },
     branch: { type: 'string' },
+    blocked: { enum: ['none', 'safeguard'] },
   },
   required: ['status', 'summary', 'changedFiles', 'checksRun', 'evidence', 'lowConfidence'],
 }
@@ -74,7 +79,7 @@ const VERIFY_SCHEMA = {
         properties: {
           id: { type: 'string' },
           verdict: { enum: ['pass', 'fail'] },
-          kind: { enum: ['none', 'defect', 'incomplete', 'approach'] },
+          kind: { enum: ['none', 'defect', 'incomplete', 'approach', 'safeguard'] },
           findings: { type: 'array', items: { type: 'string' } },
         },
         required: ['id', 'verdict', 'kind', 'findings'],
@@ -89,7 +94,7 @@ const VERIFY_SCHEMA = {
 const TRIAGE_SCHEMA = {
   type: 'object',
   properties: {
-    tier: { enum: ['direct', 'bulk', 'scoped', 'daily', 'large'] },
+    tier: { enum: ['direct', 'bulk', 'scoped', 'daily', 'large', 'security'] },
     units: { type: 'array', items: { type: 'string' } },
     reason: { type: 'string' },
   },
@@ -199,6 +204,11 @@ notes.forEach(n => log(n))
 // 3. Execute
 phase('Execute')
 const parallelOk = useWorktree && units.length > 1
+// security: 사용자 소유 시스템의 방어 목적만. 안전장치를 우회하지 않고 막힌 부분을 그대로 보고하게 한다(리더가 Mythos 대체를 판단하는 근거).
+const SECURITY_RULES = `- Scope: defensive work on a system the user owns. Work from code and synthetic test data only. Never read, print, or send real secrets or personal data (cards, keys, tokens, credentials, user records); report only their location and kind.
+- If your safety safeguards stop you from doing part of this unit, do not work around them and do not silently replace it with weaker work. Set blocked to "safeguard", finish the parts you can, and state in summary exactly which part was blocked and what it was meant to show.
+- Otherwise set blocked to "none".
+`
 const execPrompt = (u) => `## Whole task\n${task}${ctx}
 ## Your unit (${u.id})\n${u.goal}
 ${u.files.length ? `Files you own (do not edit anything else): ${u.files.join(', ')}` : ''}
@@ -208,7 +218,7 @@ ${u.checks ? `## Check commands\n${u.checks}` : ''}
 ## Rules
 - Run only the targeted tests or checks yourself and record the results in checksRun and evidence. Do not run the full build; the integration step runs it once.
 - List anything you are unsure about in lowConfidence.
-${parallelOk
+${tier === 'security' ? SECURITY_RULES : ''}${parallelOk
     ? `- You are in an isolated git worktree. When done, run \`git switch -c auto-flow/${runId}-${u.id}\`, commit your changes, and return that name in branch.`
     : '- Edit the current working tree directly. Do not commit.'}`
 
@@ -244,6 +254,7 @@ ${tier === 'bulk' && args.validator
     : tier === 'bulk'
       ? 'Inspect by hand a sample of 10% of the results, at most 30 items, and every lowConfidence item.'
       : 'Run the full build and tests once, then try to refute that each unit actually met its goal and acceptance criteria.'}
+${tier === 'security' ? 'A unit whose result reports blocked "safeguard" for the part that is still missing gets verdict fail and kind safeguard; do not call that defect or approach.' : ''}
 ${focus || ''}`
 
 phase('Verify')
@@ -251,6 +262,7 @@ let verify = await run(verifyPrompt(''), { phase: 'Verify', label: 'verify', age
 
 // 5. Fix — 실패 시 1회, 규칙대로 상향
 function escalate(exec, kind) {
+  if (kind === 'safeguard') return null // 다른 모델로 자동 대체하지 않는다. 리더가 사용자에게 묻는다.
   if (tier === 'bulk') return { model: 'sonnet', effort: 'medium' }
   if (kind === 'approach') {
     const i = MODELS.indexOf(exec.model)
@@ -268,7 +280,7 @@ if (verify && verify.overall === 'fail' && failed.length) {
     const unit = done.find(d => d.id === f.id) || done[0]
     return { f, cfg: escalate(unit.exec, f.kind) }
   })
-  unresolved = plans.filter(p => !p.cfg).map(p => p.f)
+  unresolved = plans.filter(p => !p.cfg && p.f.kind !== 'safeguard').map(p => p.f)
   const fixable = plans.filter(p => p.cfg)
   if (fixable.length && spawned + 2 <= HARD_CAP) {
     const cfg = fixable.reduce((a, p) => {
@@ -295,6 +307,20 @@ Check only that the findings are resolved and that nothing regressed. Run the fu
   if (unresolved.length) notes.push(`units whose approach failed even at fable/high are reported without escalation: ${unresolved.map(u => u.id).join(', ')}`)
 }
 
+// 안전장치에 막힌 security 단위. 실행 결과의 자기 보고, 검증의 safeguard 판정, 결과 없음(거절일 수 있음)을 모은다.
+const safeguardBlocked = tier !== 'security' ? [] : done.filter(d =>
+  !d.result || d.result.blocked === 'safeguard' || failed.some(f => f.id === d.id && f.kind === 'safeguard'),
+).map(d => ({
+  id: d.id,
+  goal: d.goal,
+  model: `${d.exec.model}/${d.exec.effort}`,
+  detail: d.result ? d.result.summary : 'no result: the agent was skipped, errored, or may have been refused',
+}))
+if (safeguardBlocked.length) {
+  notes.push(`safeguard-blocked security units (not escalated; the leader decides on a Mythos fallback with the user): ${safeguardBlocked.map(b => b.id).join(', ')}`)
+  log(notes[notes.length - 1])
+}
+
 const final = reverify || verify
 return {
   tier,
@@ -304,6 +330,7 @@ return {
   fix,
   reverify,
   unresolved,
+  safeguardBlocked,
   spawned,
   notes,
 }

@@ -65,7 +65,7 @@ claude plugin install model-advisor@oozoofrog-plugin
 
 ## Auto Flow
 
-`auto-flow@oozoofrog-plugin` 0.2.0은 [자동 워크플로 스킬](../plugins/auto-flow/skills/auto-flow/SKILL.md), Claude Code Workflow 스크립트, `auto-flow:flow-planner`·`auto-flow:flow-verifier` Plugin 에이전트를 제공합니다. 작업 난이도에 맞는 Claude 모델·effort로 계획·실행·통합 검증하고 실패 시 한 번 상향하며, T3 Code에서는 Codex 교차 검토·실행 분담을 지원합니다.
+`auto-flow@oozoofrog-plugin` 0.3.0은 [자동 워크플로 스킬](../plugins/auto-flow/skills/auto-flow/SKILL.md), Claude Code Workflow 스크립트, `auto-flow:flow-planner`·`auto-flow:flow-verifier` Plugin 에이전트를 제공합니다. 작업 난이도에 맞는 Claude 모델·effort로 계획·실행·통합 검증하고 실패 시 한 번 상향합니다. 보안 점검은 security tier(Fable 5.2)로 실행하고, Fable 안전장치에 막힌 단위는 사용자가 허용할 때만 Mythos 5.2 백그라운드 세션으로 넘깁니다(Anthropic 검증 프로그램을 통과한 조직만 호출 가능, 기본 30일 데이터 보관). T3 Code에서는 Codex 교차 검토·실행 분담을 지원합니다.
 
 Codex에는 스킬만 제공됩니다. Workflow 스크립트와 두 에이전트는 Claude Code에서만 동작하며 Workflow 도구가 필요합니다. 이 도구가 없는 세션에서는 실행할 수 없다고 알리고 Workflow를 흉내 내지 않습니다. 교차 제공자 단계에는 T3 Code `delegate_task` 도구와 `~/.t3/caches/*.json` 사용량 데이터, Python 3이 필요합니다. Plugin은 도구나 인증·계정·사용량 데이터를 설치하지 않습니다.
 
