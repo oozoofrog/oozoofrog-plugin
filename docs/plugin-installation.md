@@ -85,7 +85,7 @@ codex plugin add auto-flow@oozoofrog-plugin
 
 `openai-decisions@oozoofrog-plugin`은 [스킬](../plugins/openai-decisions/skills/openai-decisions/SKILL.md)만 제공합니다. 스킬에 들어 있는 `scripts/openai-decisions`(Python 3)가 공식 OpenAI CLI 1.51.2 이상의 `openai decisions create`를 호출하며, Codex와 Claude Code가 같은 명령을 씁니다. 터미널에서 바로 쓰려면 이 파일을 `~/.local/bin/openai-decisions`로 링크합니다. 실행할 수 없으면 [공식 CLI 직접 호출](../plugins/openai-decisions/skills/openai-decisions/references/cli.md)을 따릅니다. Plugin 설치는 MCP 서버·API 키·과금 계정을 자동 등록하지 않습니다. API 키는 기존 비밀 입력·자격증명 저장소로 전달하고 설정 파일이나 대화에 복사하지 않습니다.
 
-`openai-decisions` 0.2.0을 설치하려면 등록한 marketplace를 갱신한 뒤 선택한 Plugin을 추가합니다. marketplace가 없으면 먼저 `codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main`으로 등록합니다.
+`openai-decisions` 0.3.0을 설치하려면 등록한 marketplace를 갱신한 뒤 선택한 Plugin을 추가합니다. marketplace가 없으면 먼저 `codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main`으로 등록합니다.
 
 ```sh
 codex plugin marketplace upgrade oozoofrog-plugin

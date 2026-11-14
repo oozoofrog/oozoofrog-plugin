@@ -3,9 +3,16 @@
 
 Subcommands:
   status                      CLI and credential availability, no API call.
-  create [--input FILE] [--image FILE]...
+  create [--input FILE] [--image FILE]... [--summary]
                               Read a request (wrapper or native shape) from
                               stdin or FILE and print the CLI JSON response.
+                              --summary prints the summary shared with
+                              jev-client instead.
+
+Results go to stdout as JSON, diagnostics to stderr. Exit codes (shared with
+jev-client): 0 success; 2 bad arguments or request, nothing sent; 3 the CLI or
+a credential is missing, nothing sent; 4 the API call failed or timed out and
+may have been billed (not a negative answer).
 
 The API key is passed to the child process environment only. It is never
 printed, logged, or placed in command-line arguments.
@@ -40,10 +47,16 @@ IMAGE_TYPES = {
     ".webp": "image/webp",
 }
 WRAPPER_ONLY_KEYS = ("state", "image_urls", "timeout_seconds")  # never sent to the CLI
+CONTRACT_VERSION = 1  # summary shape and exit codes shared with jev-client
+EXIT_INVALID = 2      # bad arguments or request; nothing was sent
+EXIT_NOT_READY = 3    # CLI or credential missing; nothing was sent
+EXIT_API_FAILURE = 4  # sent or attempted and failed; may have been billed
 
 
 class Failure(Exception):
-    pass
+    def __init__(self, message: str, code: int = EXIT_INVALID):
+        super().__init__(message)
+        self.code = code
 
 
 # ---------------------------------------------------------------- CLI lookup
@@ -134,7 +147,8 @@ def resolve_credentials() -> tuple[dict, str]:
     if custom and normalized_base(custom) != OFFICIAL_BASE_URL:
         raise Failure(
             "OPENAI_API_KEY is unset and Keychain credentials are only sent to "
-            f"{OFFICIAL_BASE_URL}; unset the custom OPENAI_BASE_URL or set OPENAI_API_KEY"
+            f"{OFFICIAL_BASE_URL}; unset the custom OPENAI_BASE_URL or set OPENAI_API_KEY",
+            EXIT_NOT_READY,
         )
     for service, account in KEYCHAIN_ENTRIES:
         key = keychain_read(service, account)
@@ -146,15 +160,16 @@ def resolve_credentials() -> tuple[dict, str]:
         )
     raise Failure(
         "no OpenAI API key: set OPENAI_API_KEY through a secret manager or store it in "
-        "Keychain service local.openai-decisions, account openai"
+        "Keychain service local.openai-decisions, account openai",
+        EXIT_NOT_READY,
     )
 
 
 # ------------------------------------------------------------------ requests
 
-def fail_if(condition: bool, message: str) -> None:
+def fail_if(condition: bool, message: str, code: int = EXIT_INVALID) -> None:
     if condition:
-        raise Failure(message)
+        raise Failure(message, code)
 
 
 def validate_questions(questions) -> None:
@@ -171,8 +186,10 @@ def validate_questions(questions) -> None:
         kind = question.get("type")
         fail_if(kind not in QUESTION_TYPES, f"{where}.type must be predicate, choice, or score")
         instructions = question.get("instructions")
-        fail_if(not isinstance(instructions, str) or not instructions.strip(),
-                f"{where}.instructions must be a non-empty string")
+        # Text, or the API's list of input_text / input_image parts (per-question images).
+        fail_if(not (isinstance(instructions, str) and instructions.strip())
+                and not (isinstance(instructions, list) and instructions),
+                f"{where}.instructions must be non-empty text or a non-empty list of parts")
         if kind == "choice":
             choices = question.get("choices")
             fail_if(not isinstance(choices, list) or not 2 <= len(choices) <= 255,
@@ -279,8 +296,10 @@ def command_status(_args) -> int:
         "model": MODEL,
         "api_checked": False,
     }
+    report["ready"] = bool(report["openai_cli_supported"] and report["credential_source"])
+    report["contract"] = CONTRACT_VERSION
     print(json.dumps(report, indent=2))
-    return 0 if report["openai_cli_supported"] and report["credential_source"] else 1
+    return 0 if report["ready"] else EXIT_NOT_READY
 
 
 def redact(data: bytes, secret: str) -> bytes:
@@ -288,6 +307,61 @@ def redact(data: bytes, secret: str) -> bytes:
     if not secret:
         return data
     return data.replace(secret.encode("utf-8"), b"[REDACTED]")
+
+
+def unit(value) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return value if math.isfinite(value) and 0 <= value <= 1 else None
+
+
+def summarize(response: bytes) -> dict:
+    """Convert a Decisions response into the summary shape shared with `jev-client ask --summary`.
+
+    One entry per answer with `name`, `type` (`yesno`, `choice`, `score`, `refusal`, or `unknown`)
+    and the usable numbers. `probability` is P(yes) for `yesno` and the probability of the selected
+    option for `choice`. Confidence is left out because the two providers compute it differently.
+    """
+    try:
+        data = json.loads(response.decode("utf-8"))
+        answers = data["answers"]
+        if not isinstance(answers, list):
+            raise TypeError
+    except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError):
+        raise Failure("the CLI response has no `answers` list", EXIT_API_FAILURE)
+    entries = []
+    for answer in answers:
+        answer = answer if isinstance(answer, dict) else {}
+        entry = {"name": answer.get("name"), "type": "unknown"}
+        kind = answer.get("type")
+        if kind == "refusal":
+            entry["type"] = "refusal"
+        elif kind == "predicate" and unit(answer.get("probability")) is not None:
+            entry.update(type="yesno", probability=answer["probability"])
+        elif kind == "choice" and isinstance(answer.get("choice"), (str, bool)):
+            options = answer.get("probabilities")
+            for option in options if isinstance(options, list) else []:
+                if (isinstance(option, dict) and option.get("value") == answer["choice"]
+                        and type(option.get("value")) is type(answer["choice"])
+                        and unit(option.get("probability")) is not None):
+                    entry.update(type="choice", answer=answer["choice"], probability=option["probability"])
+                    break
+        elif kind == "score" and not isinstance(answer.get("score"), bool) \
+                and isinstance(answer.get("score"), (int, float)) and math.isfinite(answer["score"]):
+            entry.update(type="score", answer=answer["score"])
+        entries.append(entry)
+    summary = {
+        "contract": CONTRACT_VERSION,
+        "provider": "openai-decisions",
+        "complete": bool(entries) and all(e["type"] in ("yesno", "choice", "score") for e in entries),
+        "answers": entries,
+    }
+    if isinstance(data.get("model"), str):
+        summary["model"] = data["model"]
+    usage = data.get("usage")
+    if isinstance(usage, dict) and isinstance(usage.get("input_tokens"), int):
+        summary["usage"] = {"input_tokens": usage["input_tokens"]}
+    return summary
 
 
 def command_create(args) -> int:
@@ -312,10 +386,10 @@ def command_create(args) -> int:
 
     path = openai_bin()
     fail_if(not path, "official OpenAI CLI not found; install with "
-            "`brew install --cask openai/tools/openai`")
+            "`brew install --cask openai/tools/openai`", EXIT_NOT_READY)
     _, version = cli_version(path)
     fail_if(not version or version < MIN_CLI_VERSION,
-            "OpenAI CLI 1.51.2 or later is required (check `openai --version`)")
+            "OpenAI CLI 1.51.2 or later is required (check `openai --version`)", EXIT_NOT_READY)
     extra, _source = resolve_credentials()
 
     try:
@@ -325,15 +399,21 @@ def command_create(args) -> int:
         )
     except subprocess.TimeoutExpired:
         raise Failure(f"request timed out after {timeout}s; not retried because the "
-                      "first call may already have incurred usage")
+                      "first call may already have incurred usage", EXIT_API_FAILURE)
     except OSError as error:
-        raise Failure(f"cannot run {path}: {error.strerror}")
+        raise Failure(f"cannot run {path}: {error.strerror}", EXIT_API_FAILURE)
     secret = extra.get("OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY") or ""
-    sys.stdout.buffer.write(redact(result.stdout, secret))
-    sys.stdout.buffer.flush()
+    output = redact(result.stdout, secret)
     if result.returncode != 0:
+        sys.stdout.buffer.write(output)
+        sys.stdout.buffer.flush()
         sys.stderr.buffer.write(redact(result.stderr, secret))
-        raise Failure(f"openai decisions create failed with exit code {result.returncode}")
+        raise Failure(f"openai decisions create failed with exit code {result.returncode}",
+                      EXIT_API_FAILURE)
+    if args.summary:
+        output = (json.dumps(summarize(output), ensure_ascii=False, sort_keys=True) + "\n").encode("utf-8")
+    sys.stdout.buffer.write(output)
+    sys.stdout.buffer.flush()
     return 0
 
 
@@ -344,12 +424,14 @@ def main(argv=None) -> int:
     create = sub.add_parser("create", help="send a Decisions request")
     create.add_argument("--input", help="absolute path to a request JSON file (default: stdin)")
     create.add_argument("--image", action="append", help="absolute path to an image; repeatable")
+    create.add_argument("--summary", action="store_true",
+                        help="print the summary shape shared with jev-client instead of the raw response")
     args = parser.parse_args(argv)
     try:
         return command_status(args) if args.command == "status" else command_create(args)
     except Failure as error:
         print(f"openai-decisions: {error}", file=sys.stderr)
-        return 1
+        return error.code
 
 
 if __name__ == "__main__":
