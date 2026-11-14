@@ -1,6 +1,6 @@
 # CLI setup and direct requests
 
-The skill ships `scripts/openai-decisions`, a dependency-free Python 3 wrapper over the official OpenAI CLI. Use it directly from the skill directory, or link it onto `PATH`, for example `ln -s <skill-dir>/scripts/openai-decisions ~/.local/bin/openai-decisions`. Run `openai-decisions status` before diagnosing credentials. For tests only, `OPENAI_DECISIONS_OPENAI_BIN` selects a different `openai` executable and `OPENAI_DECISIONS_SECURITY_BIN` replaces `/usr/bin/security`, the program that reads the Keychain key. Do not set `OPENAI_DECISIONS_SECURITY_BIN` outside tests: whatever it names receives the Keychain lookup and returns the key that is sent to OpenAI.
+The skill ships `scripts/openai-decisions`, a dependency-free Python 3 wrapper over the official OpenAI CLI. Use it directly from the skill directory, or link it onto `PATH`, for example `ln -s <skill-dir>/scripts/openai-decisions ~/.local/bin/openai-decisions`. Run `openai-decisions status` before diagnosing credentials. `tools/jev-client/Scripts/install.sh` creates that link together with `jev-client`. For tests only, `OPENAI_DECISIONS_OPENAI_BIN` selects a different `openai` executable and `OPENAI_DECISIONS_SECURITY_BIN` replaces `/usr/bin/security`, the program that reads the Keychain key. Do not set `OPENAI_DECISIONS_SECURITY_BIN` outside tests: whatever it names receives the Keychain lookup and returns the key that is sent to OpenAI.
 
 ## Official CLI fallback
 

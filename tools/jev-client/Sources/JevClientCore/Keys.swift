@@ -10,9 +10,26 @@ public enum Provider: String, CaseIterable, Sendable {
     public var environmentName: String { self == .typesafe ? "TYPESAFE_API_KEY" : "OPENAI_API_KEY" }
 }
 
+/// Exit codes shared with `openai-decisions`, so callers can tell failures apart.
+public enum ExitCode {
+    /// Any other failure (for example a Keychain write).
+    public static let failure: Int32 = 1
+    /// Bad arguments or request. Nothing was sent.
+    public static let invalid: Int32 = 2
+    /// No usable credential. Nothing was sent.
+    public static let notReady: Int32 = 3
+    /// The request was sent or attempted and failed; it may have been billed. Not a negative answer.
+    public static let apiFailure: Int32 = 4
+}
+
 public struct Failure: Error, CustomStringConvertible {
     public let description: String
-    public init(_ description: String) { self.description = description }
+    /// Process exit code: see `ExitCode`.
+    public let code: Int32
+    public init(_ description: String, code: Int32 = ExitCode.failure) {
+        self.description = description
+        self.code = code
+    }
 }
 
 /// Runs `/usr/bin/security`. Writes go through `security -i` on stdin so the key never appears in argv.

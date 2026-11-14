@@ -34,7 +34,8 @@ FAKE_OPENAI = textwrap.dedent(
         print(json.dumps({"error": {"message": "Incorrect API key provided: " + key}}))
         print("401 Unauthorized: " + key, file=sys.stderr)
         sys.exit(1)
-    print(json.dumps({"object": "decision", "answers": [{"name": "refund", "probability": 0.9}]}))
+    print(os.environ.get("FAKE_RESPONSE") or json.dumps(
+        {"object": "decision", "answers": [{"name": "refund", "probability": 0.9}]}))
     sys.exit(int(os.environ.get("FAKE_OPENAI_EXIT", "0")))
     """
 )
@@ -219,6 +220,65 @@ class OpenAIDecisionsCLITests(unittest.TestCase):
         self.assertFalse(report["api_checked"])
         self.assertNotIn(FAKE_KEY, result.stdout + result.stderr)
         self.assertFalse(self.capture.exists())
+
+    def test_exit_codes_tell_failures_apart(self) -> None:
+        request = json.dumps({"state": "x", "questions": [{"type": "predicate", "name": "p", "instructions": "x"}]})
+        self.assertEqual(2, self.run_cli(["create"], "not json", OPENAI_API_KEY=FAKE_KEY).returncode)
+        self.assertEqual(2, self.run_cli(["create", "--unknown"], request, OPENAI_API_KEY=FAKE_KEY).returncode)
+        self.assertEqual(3, self.run_cli(["create"], request).returncode)
+        self.assertEqual(3, self.run_cli(["create"], request, OPENAI_API_KEY=FAKE_KEY,
+                                         FAKE_OPENAI_VERSION="openai version 1.40.0").returncode)
+        self.assertEqual(3, self.run_cli(["status"]).returncode)
+        self.assertFalse(self.capture.exists())
+        self.assertEqual(4, self.run_cli(["create"], request, OPENAI_API_KEY=FAKE_KEY, FAKE_OPENAI_EXIT="1").returncode)
+
+    def test_status_reports_ready_and_contract(self) -> None:
+        ready = json.loads(self.run_cli(["status"], OPENAI_API_KEY=FAKE_KEY).stdout)
+        self.assertTrue(ready["ready"])
+        self.assertEqual(1, ready["contract"])
+        self.assertFalse(json.loads(self.run_cli(["status"]).stdout)["ready"])
+
+    def test_per_question_image_parts_are_accepted(self) -> None:
+        parts = [{"type": "input_text", "text": "Is this a variant?"},
+                 {"type": "input_image", "image_url": "https://example.com/a.png"}]
+        request = {"state": "x", "questions": [{"type": "predicate", "name": "p", "instructions": parts}]}
+        result = self.run_cli(["create"], json.dumps(request), OPENAI_API_KEY=FAKE_KEY)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(parts, self.captured()["stdin"]["questions"][0]["instructions"])
+
+    def test_summary_shape(self) -> None:
+        response = {"model": "gpt-6-luna", "usage": {"input_tokens": 170, "output_tokens": 0}, "answers": [
+            {"type": "predicate", "name": "refund", "probability": 1.0},
+            {"type": "choice", "name": "team", "choice": "billing", "confidence": 0.9,
+             "probabilities": [{"value": "billing", "probability": 0.96}, {"value": "other", "probability": 0.04}]},
+            {"type": "score", "name": "severity", "score": 1.1, "confidence": 0.5},
+        ]}
+        request = json.dumps({"state": "x", "questions": [{"type": "predicate", "name": "p", "instructions": "x"}]})
+        result = self.run_cli(["create", "--summary"], request, OPENAI_API_KEY=FAKE_KEY,
+                              FAKE_RESPONSE=json.dumps(response))
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual({
+            "contract": 1, "provider": "openai-decisions", "model": "gpt-6-luna", "complete": True,
+            "usage": {"input_tokens": 170},
+            "answers": [
+                {"name": "refund", "type": "yesno", "probability": 1.0},
+                {"name": "team", "type": "choice", "answer": "billing", "probability": 0.96},
+                {"name": "severity", "type": "score", "answer": 1.1},
+            ]}, json.loads(result.stdout))
+
+    def test_summary_keeps_refusals_and_unusable_answers_visible(self) -> None:
+        response = {"answers": [{"type": "refusal", "name": "a"},
+                                {"type": "predicate", "name": "b", "probability": 1.5},
+                                {"type": "predicate", "name": "c", "probability": 0.2}]}
+        request = json.dumps({"state": "x", "questions": [{"type": "predicate", "name": "p", "instructions": "x"}]})
+        result = self.run_cli(["create", "--summary"], request, OPENAI_API_KEY=FAKE_KEY,
+                              FAKE_RESPONSE=json.dumps(response))
+        self.assertEqual(0, result.returncode, result.stderr)
+        summary = json.loads(result.stdout)
+        self.assertFalse(summary["complete"])
+        self.assertEqual(["refusal", "unknown", "yesno"], [a["type"] for a in summary["answers"]])
+        broken = self.run_cli(["create", "--summary"], request, OPENAI_API_KEY=FAKE_KEY, FAKE_RESPONSE="{}")
+        self.assertEqual(4, broken.returncode)
 
 
 if __name__ == "__main__":
