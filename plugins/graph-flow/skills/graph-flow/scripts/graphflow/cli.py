@@ -6,7 +6,7 @@ import os
 import pathlib
 import sys
 
-from . import core, graph, plan, state, store
+from . import assign, checks, core, decisions, gate, graph, merge, plan, route, state, store
 
 
 class Parser(argparse.ArgumentParser):
@@ -86,6 +86,127 @@ def _host_set(args, actor):
     return {"capabilities": args.capabilities}
 
 
+def _snapshot(run_dir):
+    with store.transaction(run_dir) as tx:
+        return tx.plan, state.derive(tx.plan, tx.events)
+
+
+def _project(args):
+    return store.project_root(args.project) if args.project else (
+        store.project_of(args.run) if args.run else store.project_root())
+
+
+def _lazy_import(name):
+    try:
+        return importlib.import_module("graphflow." + name)
+    except ModuleNotFoundError as exc:
+        if exc.name != "graphflow." + name:
+            raise
+        raise core.GFError("not_implemented", name + " is not implemented yet")
+
+
+def _require_human_terminal(actor):
+    if actor["role"] != "human":
+        raise core.GFError("forbidden", "decide answer requires role human", core.EXIT_FORBIDDEN)
+    if os.environ.get("GF_HUMAN_TERMINAL") != "1":
+        raise core.GFError("forbidden", "decide answer requires GF_HUMAN_TERMINAL=1", core.EXIT_FORBIDDEN)
+    if not sys.stdin.isatty():
+        raise core.GFError("forbidden", "decide answer requires stdin to be a TTY", core.EXIT_FORBIDDEN)
+
+
+def _loop(args, actor):
+    path, node = args.command_path, getattr(args, "target_node", None)
+    if path == ("ready",):
+        current_plan, derived = _snapshot(args.run)
+        return {"ready": graph.ready(current_plan or {"nodes": []}, derived)}
+    if path == ("route",):
+        current_plan, derived = _snapshot(args.run)
+        definition = plan.node_by_id(current_plan, node)
+        current = dict(derived["nodes"][node])
+        if definition["kind"] == "review":
+            current["target_family"] = (derived["nodes"][definition["target"]].get("assignment") or {}).get("family")
+        return route.suggest(definition, current, derived["run"]["host"],
+                             route.load_usage(), route.load_routing())
+    if path == ("assign",):
+        return assign.assign(args.run, node, args.executor, args.model, args.effort,
+                             args.provider, args.family, args.isolation, actor)
+    if path == ("brief",):
+        if args.plan_brief:
+            return {"brief": assign.plan_brief(_project(args), args.run)}
+        if node is None:
+            raise core.GFError("usage", "brief requires a node or --plan")
+        text = assign.brief(args.run, node)
+        return {"brief": text, "path": str(pathlib.Path(args.run).resolve() / "brief" / (node + ".md"))}
+    if path == ("start",):
+        return checks.start(args.run, node, args.cwd, actor)
+    if path == ("red",):
+        return checks.red(args.run, node, args.check, args.cwd, actor)
+    if path == ("check", "run"):
+        with store.transaction(args.run) as tx:
+            definition = plan.node_by_id(tx.plan, node)
+            check = next((c for c in definition["checks"] if c["id"] == args.check), None)
+            if check is None:
+                raise core.GFError("unknown_check", "unknown check: " + args.check, core.EXIT_STATE)
+            if check["type"] != "cmd":
+                raise core.GFError("wrong_check_type", "check run requires a cmd check", core.EXIT_STATE)
+        result = checks.run_cmd(args.run, node, check, "loop", args.cwd, actor)
+        return result, core.EXIT_NEGATIVE if result["result"] == "failed" else core.EXIT_OK
+    if path == ("check", "record"):
+        return checks.record_host(args.run, node, args.check, args.result, args.note, actor)
+    if path == ("submit",):
+        return checks.submit(args.run, node, args.commit, args.branch, args.notes,
+                             args.low_confidence, args.cwd, actor)
+    if path == ("review", "submit"):
+        findings = _read_json(args.findings)
+        if not isinstance(findings, list):
+            raise core.GFError("bad_json", "findings must be a JSON list")
+        return checks.review_submit(args.run, node, args.verdict, findings, actor)
+    if path == ("merge",):
+        return merge.merge(args.run, args.nodes, actor)
+    if path == ("gate",):
+        if args.final:
+            result = gate.gate_final(args.run, args.cwd, actor)
+            passed = result["result"] == "passed"
+        else:
+            if node is None:
+                raise core.GFError("usage", "gate requires a node or --final")
+            result = gate.gate(args.run, node, args.cwd, actor)
+            passed = result["verdict"] == "pass"
+        return result, core.EXIT_OK if passed else core.EXIT_NEGATIVE
+    if path == ("reopen",):
+        return gate.reopen(args.run, node, args.reason, actor)
+    if path == ("decide", "ask"):
+        evidence = {"command": args.evidence_command, "files": args.files, "checks": []}
+        return decisions.ask(args.run, args.kind, args.question, node, args.check,
+                             args.purpose, evidence, actor)
+    if path == ("decide", "list"):
+        _, derived = _snapshot(args.run)
+        own = actor["node"] if actor["role"] in ("worker", "reviewer") else None
+        return {"decisions": decisions.open_decisions(derived, own)}
+    if path == ("decide", "wait"):
+        if actor["role"] in ("worker", "reviewer"):
+            _, derived = _snapshot(args.run)
+            decision = derived["decisions"].get(args.id)
+            if decision is not None and decision["node"] != actor["node"]:
+                raise core.GFError("forbidden", "decision wait is limited to own node", core.EXIT_FORBIDDEN)
+        return decisions.wait(args.run, args.id, args.timeout)
+    if path == ("decide", "answer"):
+        return decisions.answer(args.run, args.id, args.outcome, args.answer, "terminal", actor)
+    if path[0] == "learn":
+        learn = _lazy_import("learn")
+        root = _project(args)
+        if path[1] == "add":
+            return learn.add(root, args.run, args.from_node, args.text, args.review_when,
+                             args.paths, args.tags, actor)
+        if path[1] == "list":
+            return {"constraints": learn.all_constraints(root)}
+        if path[1] == "promote":
+            return learn.promote(root, args.id, args.run_command, actor, args.run)
+        return learn.retire(root, args.id, args.reason, actor, args.run)
+    if path == ("trace",):
+        return _lazy_import("trace").trace(args.run)
+
+
 # Extensions add an entry here and argument declarations in _parser.
 COMMANDS = {}
 
@@ -112,9 +233,12 @@ for _path in ("init", "plan validate", "learn list", "learn promote", "learn ret
 for _path, _handler in (("init", _init), ("plan validate", _validate),
                         ("plan set", _set_plan), ("status", _status), ("host set", _host_set)):
     COMMANDS[tuple(_path.split())]["handler"] = _handler
+for _path, _entry in COMMANDS.items():
+    if _entry["handler"] is None and _path not in (("mcp",), ("serve",)):
+        _entry["handler"] = _loop
 
 
-def _parser():
+def _parser(authorize_only=False):
     parser = Parser(prog="gf", allow_abbrev=False)
     for name in ("run", "project", "role", "node"):
         parser.add_argument("--" + name, default=os.environ.get("GF_" + name.upper()) if name != "project" else None)
@@ -130,7 +254,9 @@ def _parser():
         else:
             sub = commands.add_parser(path[0], allow_abbrev=False)
         sub.set_defaults(command_path=path)
-        if path == ("init",):
+        if authorize_only:
+            sub.add_argument("arguments", nargs=argparse.REMAINDER)
+        elif path == ("init",):
             sub.add_argument("run_id")
         elif path in (("plan", "validate"), ("plan", "set")):
             sub.add_argument("file")
@@ -138,9 +264,72 @@ def _parser():
             sub.add_argument("capabilities", nargs="+")
         elif path == ("status",):
             sub.add_argument("target_node", nargs="?")
-        else:
-            # Placeholder commands accept their future syntax; authorization still runs.
+        elif path in (("route",), ("assign",), ("start",), ("red",), ("submit",),
+                      ("reopen",), ("review", "submit"), ("check", "run"), ("check", "record")):
+            sub.add_argument("target_node")
+        elif path == ("brief",):
+            choice = sub.add_mutually_exclusive_group(required=True)
+            choice.add_argument("target_node", nargs="?")
+            choice.add_argument("--plan", dest="plan_brief", action="store_true")
+        elif path == ("gate",):
+            choice = sub.add_mutually_exclusive_group(required=True)
+            choice.add_argument("target_node", nargs="?")
+            choice.add_argument("--final", action="store_true")
+        elif path == ("merge",):
+            sub.add_argument("nodes", nargs="+")
+        elif path == ("decide", "ask"):
+            sub.add_argument("--kind", required=True)
+            sub.add_argument("--question", required=True)
+            sub.add_argument("--node", dest="target_node")
+            sub.add_argument("--check")
+            sub.add_argument("--purpose")
+            sub.add_argument("--command", dest="evidence_command")
+            sub.add_argument("--files", nargs="+", default=[])
+        elif path == ("decide", "wait"):
+            sub.add_argument("id")
+            sub.add_argument("--timeout", type=float, default=600)
+        elif path == ("decide", "answer"):
+            sub.add_argument("id")
+            sub.add_argument("--outcome", required=True)
+            sub.add_argument("--answer", default="")
+        elif path == ("learn", "add"):
+            sub.add_argument("--from", dest="from_node", required=True)
+            sub.add_argument("--text", required=True)
+            sub.add_argument("--review-when", required=True)
+            sub.add_argument("--paths", nargs="+", default=[])
+            sub.add_argument("--tags", nargs="+", default=[])
+        elif path in (("learn", "promote"), ("learn", "retire")):
+            sub.add_argument("id")
+            if path[1] == "promote":
+                sub.add_argument("--run", dest="run_command", required=True)
+            else:
+                sub.add_argument("--reason", required=True)
+        elif path in (("mcp",), ("serve",)):
             sub.add_argument("arguments", nargs=argparse.REMAINDER)
+        if authorize_only:
+            continue
+        if path in (("start",), ("red",), ("check", "run"), ("submit",), ("gate",)):
+            sub.add_argument("--cwd")
+        if path == ("assign",):
+            for field in ("executor", "model", "effort", "provider", "family", "isolation"):
+                sub.add_argument("--" + field, required=True)
+        elif path == ("red",):
+            sub.add_argument("check", nargs="?")
+        elif path in (("check", "run"), ("check", "record")):
+            sub.add_argument("check")
+            if path[1] == "record":
+                sub.add_argument("--result", choices=("passed", "failed"), required=True)
+                sub.add_argument("--note", default="")
+        elif path == ("submit",):
+            sub.add_argument("--commit")
+            sub.add_argument("--branch")
+            sub.add_argument("--notes", default="")
+            sub.add_argument("--low-confidence", action="extend", nargs="+", default=[])
+        elif path == ("review", "submit"):
+            sub.add_argument("--verdict", choices=("pass", "fail"), required=True)
+            sub.add_argument("--findings", required=True)
+        elif path == ("reopen",):
+            sub.add_argument("--reason", required=True)
     return parser
 
 
@@ -148,35 +337,37 @@ def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     json_output = "--json" in argv
     try:
-        parser = _parser()
-        args, unknown = parser.parse_known_args(argv)
-        if unknown and COMMANDS[args.command_path]["handler"] is not None:
-            parser.error("unrecognized arguments: %s" % " ".join(unknown))
-        actor = core.actor_from_env(args.role, args.node)
+        # Authorize the command before requiring its arguments (section 2).
+        identity, _ = _parser(authorize_only=True).parse_known_args(argv)
+        actor = core.actor_from_env(identity.role, identity.node)
         role = actor["role"]
         if role in ("worker", "reviewer") and not actor["node"]:
             raise core.GFError("node_required", "worker and reviewer roles require a node")
-        entry = COMMANDS[args.command_path]
+        entry = COMMANDS[identity.command_path]
+        if identity.command_path == ("decide", "answer"):
+            _require_human_terminal(actor)
         if role not in entry["roles"]:
-            raise core.GFError("forbidden", "role %s cannot run %s" % (role, " ".join(args.command_path)), 3)
+            raise core.GFError("forbidden", "role %s cannot run %s" % (role, " ".join(identity.command_path)), 3)
+        parser = _parser()
+        args, unknown = parser.parse_known_args(argv)
+        if unknown and entry["handler"] is not None:
+            parser.error("unrecognized arguments: %s" % " ".join(unknown))
         target = getattr(args, "target_node", None)
-        arguments = getattr(args, "arguments", [])
-        if (not target and args.command_path in (("start",), ("red",), ("check", "run"),
-                                                ("check", "record"), ("submit",), ("review", "submit"))
-                and arguments and not arguments[0].startswith("-")):
-            target = arguments[0]
-        if (entry["own_node_only"] and role in ("worker", "reviewer") and target
+        if args.command_path == ("decide", "ask") and role in ("worker", "reviewer") and target is None:
+            args.target_node = target = actor["node"]
+        if (entry["own_node_only"] and role in ("worker", "reviewer") and target is not None
                 and target != actor["node"] and not (role == "reviewer" and args.command_path == ("status",))):
             raise core.GFError("forbidden", "command is limited to own node", 3)
         if entry["handler"] is None:
             raise core.GFError("not_implemented", "%s is not implemented yet" % " ".join(args.command_path))
-        if entry["needs_run"] and not args.run:
+        if (entry["needs_run"] and not args.run
+                and not (args.command_path == ("brief",) and args.plan_brief)):
             raise core.GFError("run_required", "--run or GF_RUN is required")
         result = entry["handler"](args, actor)
         payload, code = result if isinstance(result, tuple) else (result, 0)
-        output = dict(payload, ok=(code == 0))
-        if code:
-            output.update(code="invalid_plan", message="plan validation failed")
+        output = dict(ok=True, **payload)
+        if code and args.command_path == ("plan", "validate"):
+            output.update(ok=False, code="invalid_plan", message="plan validation failed")
     except core.GFError as exc:
         code = exc.exit_code
         output = {"ok": False, "code": exc.code, "message": exc.message}
@@ -185,6 +376,12 @@ def main(argv=None):
     except Exception as exc:
         code = core.EXIT_IO
         output = {"ok": False, "code": "internal", "message": str(exc)}
-    print(json.dumps(output, ensure_ascii=False) if json_output else
-          (output.get("message") or json.dumps(payload, ensure_ascii=False)))
+    if json_output:
+        print(json.dumps(output, ensure_ascii=False))
+    elif "brief" in output:
+        print(output["brief"], end="" if output["brief"].endswith("\n") else "\n")
+    elif output.get("rejection"):
+        print(gate.render_rejection(output["rejection"]))
+    else:
+        print(output.get("message") or json.dumps(output, ensure_ascii=False))
     return code
