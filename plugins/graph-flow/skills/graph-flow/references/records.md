@@ -648,13 +648,18 @@ The MCP tool list and the dashboard's HTTP API are specified by the units that o
     "kind": "work", "status": "running", "attempts": 2, "max_attempts": 3,
     "lane": 2, "laps": ["returned", "current"],
     "returned_reasons": [["Every note is exported", "An empty note was omitted"]],
-    "reviewed_by_other_family": false
+    "reviewed_by_other_family": false,
+    "inputs": [],
+    "outputs": [{"label": "Note exporter", "other_title": "Review the export", "delivered": false}]
   }],
   "edges": [{"from": "export", "to": "review-export", "label": "Note exporter", "delivered": false, "gate": "returned"}],
   "decisions": [{
     "id": "d14", "node": "publish-ok", "node_title": "Approve publication",
     "question": "Publish the reviewed export?", "kind": "authorization",
-    "context": {"why": "The export is ready to share"}, "has_evidence": true
+    "context": {"why": "The export is ready to share"}, "has_evidence": true,
+    "verified": ["Every note is exported"],
+    "unverified": ["A new reader can follow the instructions", "Installation order needs a second look"],
+    "worker_note": "Please read the installation section."
   }],
   "lessons": [{"text": "Keep the original notes unchanged", "node_title": "Create the export"}],
   "counts": {"done": 0, "doing": 1, "waiting": 0, "needs_you": 1, "returned": 1},
@@ -664,10 +669,14 @@ The MCP tool list and the dashboard's HTTP API are specified by the units that o
 
 - `title` falls back to the plan's `goal` (empty string without a plan). `nodes` follows plan order; each title falls back to its id and each summary to its goal. Node `kind`, `status`, `attempts`, and `max_attempts` come from the plan/state; `lane` is the effective lane.
 - `laps` has one entry for every `node.start` after the node's current basis. A rejection (`reject` or budget-exhausted `replan`) makes that attempt `returned`; a pass makes it `passed`; otherwise it is `current`. A current submitted attempt with an open, non-stale decision is `waiting_for_you`. Decision nodes normally have no attempts and an empty list.
-- `returned_reasons` has one list per rejection after the current basis, in event order, including earlier attempts while a retry runs. Strings come only from failed gate-phase node checks' current plan titles (fallback: check id) and matching reviewer finding `text` for the rejected submission. It never copies a rejection's technical reason, command, exit code, log, file or line. Duplicate strings within one rejection are collapsed. When no such human-readable evidence is recorded (for example a merge rejection), that rejection's list is empty. Run-level `_run` check results have no rejecting-node/submission binding, so the view does not attribute them to a particular rejection.
+- `returned_reasons` has one list per rejection after the current basis, in event order, including earlier attempts while a retry runs. Strings come only from failed gate-phase node checks' current plan titles (untitled checks are omitted) and matching reviewer finding `text` for the rejected submission. It never copies a rejection's technical reason, command, exit code, log, file or line. Duplicate strings within one rejection are collapsed. When no such human-readable evidence is recorded (for example a merge rejection), that rejection's list is empty. Run-level `_run` check results have no rejecting-node/submission binding, so the view does not attribute them to a particular rejection.
+- Node `inputs` and `outputs` contain `{label, other_title, delivered}` entries copied from incoming/outgoing `edges`, in edge order. `other_title` is the title (legacy fallback: id) of the producer/receiver respectively. No matching edges means `[]`; labels follow the edge fallback below, and implicit review-edge labels remain empty.
 - `reviewed_by_other_family` is true only when a passed review is bound to the node's current submission and both assignment families are known and different. A review's fail verdict still counts as review evidence; it does not mean the work passed.
 - `edges` contains each node's `needs` entries in order, then its implicit review-target edge if any. A needs label falls back to `artifact`; an implicit review-target edge has no recorded artifact or label, so its label is the empty string. These are separate entries even when they have the same endpoints. `delivered` means the producer is passed. `gate` is `open` for a passed producer, else `returned` if it has any current-basis rejection, else `waiting_for_you` if it has an open, non-stale decision, else `closed`.
 - `decisions` contains only open, non-stale decisions in ask order. A decision node supplies its `context`; a decision bound to a human check uses that check's context; otherwise context is `{}`. `has_evidence` means at least one recorded `command`, `files`, or `checks` evidence slot is non-empty; evidence contents are not copied. An unbound decision has `node: null`, `node_title: null`, and empty context.
+- Each decision also has `verified`: titles of non-human checks whose current-attempt result passed (gate phase takes precedence over loop; omit untitled checks). `unverified` lists human check titles, falling back to their prompts and omitting checks with neither, followed by the current submission’s nonempty low-confidence strings. Human checks remain in this list because no machine confirmed them. `worker_note` is the current submission’s notes text or `null` when absent. An unbound decision has `verified: []`, `unverified: []`, and `worker_note: null`. These are derived read-only from the same records; no outcomes are guessed.
 - `lessons` contains all project learning constraints whose healed status is `active`, in store order (not promoted or retired constraints). Each entry has `text` and `node_title`. A source recorded in `derived_from` gets its current title (fallback: id) only when its source run matches this run and its node exists in this plan. No title snapshot is stored for other runs or removed nodes: their `node_title` is `null`. No learning store means `[]`.
 - `counts.done` counts passed nodes. Among non-passed nodes without open decisions, `doing` counts running, submitted, or unverified nodes and `waiting` counts the rest. `needs_you` counts open, non-stale decisions, including unbound questions. `returned` counts non-passed nodes with at least one current-basis rejection, including retries; it can overlap `doing` or `waiting`. These counters are integers, not an exclusive partition. `complete` is exactly whether derived `run.status` is `complete`.
 - Without a plan, `nodes` and `edges` are empty and node counters are zero; unbound decisions and project lessons can still be present. Existing fallback ids and artifact names may themselves be technical, so leaders should provide presentation fields for person-facing flows.
+
+The dashboard HTTP contract and fixed public static allowlist are in [dashboard.md](dashboard.md#get-staticname). Only those GET static requests skip token authentication; every request still needs the loopback Host check, and all APIs still require the token.

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Graph flow</title>
+<style nonce="__NONCE__">
+:root{color-scheme:dark;--night:#221a38;--ink:#1a1330;--panel:#2e2448;--soft:#3a2e5a;--line:#6a5a8e;--cream:#fff3e4;--muted:#cdbfe0;--paper:#fff6ea;--mint:#8fe6c0;--violet:#c3b1ff;--amber:#ffd166;--coral:#ff9479}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--night);color:var(--cream);font:15px/1.65 "Apple SD Gothic Neo","Pretendard",system-ui,sans-serif}
+body:before{content:"";position:fixed;right:19%;top:-173px;width:280px;height:280px;border:3px solid var(--ink);border-radius:50%;background:#ffb38d;z-index:-1}
+button,input,textarea,select{font:inherit}
+button,select,textarea{border:3px solid var(--ink);border-radius:14px}
+button,select{padding:9px 16px;background:var(--paper);color:var(--ink);box-shadow:0 4px 0 var(--ink);cursor:pointer}
+button:hover{transform:translateY(-1px)}
+button:active{transform:translateY(2px);box-shadow:0 2px 0 var(--ink)}
+button:disabled{opacity:.55;cursor:wait}
+button.primary,button[aria-pressed=true]{background:var(--mint)}
+button.amber{background:var(--amber)}
+:focus-visible{outline:3px solid var(--amber);outline-offset:5px}
+h1,h2,h3{font-family:ui-rounded,"Apple SD Gothic Neo",system-ui,sans-serif;line-height:1.35}
+h1{font-size:25px;margin:4px 0 8px}
+h2{font-size:23px;margin:8px 0 16px}
+h3{font-size:17px;margin:0 0 10px}
+p{margin:8px 0}
+small,.muted{color:var(--muted);font-size:13px}
+.eyebrow{font-size:11px;letter-spacing:.12em;color:var(--muted);margin:0 0 10px}
+header{padding:30px 38px 16px;display:flex;justify-content:space-between;gap:24px;align-items:center}
+nav{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+nav button{padding:7px 15px}
+#picker-label{display:flex;align-items:center;gap:10px}
+#picker{max-width:260px}
+main{padding:0 30px 30px}
+#notice{margin:12px 8px;padding:20px;background:var(--soft);border:3px solid var(--ink);border-radius:18px}
+#notice button{margin-left:16px}
+#flow{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:16px}
+#map{position:relative;min-height:660px;height:calc(100vh - 200px);max-height:940px;overflow:hidden;border-radius:22px}
+#map canvas,#map .labels{position:absolute;inset:0}
+#map canvas{touch-action:pan-y}
+.labels{pointer-events:none}
+.labels button,.labels .route-label{pointer-events:auto}
+.planet-label{border:0;background:transparent;color:var(--cream);box-shadow:none;text-align:center;padding:0;width:180px;line-height:1.45}
+.planet-label strong{display:block;font-size:15px}
+.planet-label small{display:block;margin-top:5px;font-size:12px}
+.compact-label strong{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.compact-label small{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.speech.compact-speech{font-size:10px;padding:4px 7px;max-width:110px}
+.planet-label:hover{transform:none;color:var(--amber)}
+.speech{padding:6px 11px;background:var(--paper);color:var(--ink);border:2.5px solid var(--ink);border-radius:13px;box-shadow:0 4px 0 var(--ink);font-size:12px;max-width:210px;text-align:center;white-space:normal}
+.route-label,.station{padding:3px 10px;border:2px solid var(--line);border-radius:20px;background:var(--soft);font-size:12px;color:var(--cream)}
+.station{background:#4c3d77}
+.dim{opacity:.35}
+aside{padding:24px;background:var(--panel);border:3px solid var(--ink);border-radius:26px;box-shadow:0 6px 0 var(--ink);align-self:start;min-height:650px}
+.card{padding:18px;border:3px solid var(--ink);border-radius:19px;background:var(--soft);box-shadow:0 4px 0 var(--ink);margin:0 0 16px}
+.paper{background:var(--paper);color:var(--ink)}
+.paper .muted,.paper small{color:#78668f}
+aside .card{padding:15px;margin-bottom:13px}
+aside .card p{margin:5px 0;font-size:13px;line-height:1.55}
+aside .card small{display:block;line-height:1.35;margin-top:9px}
+aside .card h3{font-size:16px}
+aside .count-list{margin:8px 0}
+aside .count-list li{margin:4px 0;font-size:13px}
+.card button{margin:9px 6px 0 0}
+.card p{overflow-wrap:anywhere}
+.card .eyebrow{color:#a18cb9}
+.count-list{padding:0;list-style:none}
+.count-list li{margin:6px 0}
+.dot{display:inline-block;width:11px;height:11px;border:2px solid var(--ink);border-radius:50%;margin-right:10px;background:var(--line)}
+.dot.done{background:var(--mint)}
+.dot.doing{background:var(--violet)}
+.dot.needs_you{background:var(--amber)}
+.dot.returned{background:var(--coral)}
+.legend p{font-size:12px;color:var(--muted);margin:12px 0}
+ul{padding-left:22px}
+#accessible{margin:26px 8px;max-width:1100px}
+#accessible summary{cursor:pointer;color:var(--muted)}
+#node-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;padding:14px 0;list-style:none}
+#node-list li{margin:0}
+#edge-list li{margin:8px 0}
+.list-fallback #map{display:none}
+.list-fallback #flow{display:block}
+.list-fallback aside{min-height:0}
+.list-fallback #accessible{max-width:none}
+#decision{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,1fr);gap:24px;padding:18px 8px}
+#decision .reading{min-height:580px;position:relative;padding:32px;padding-bottom:170px}
+#decision .reading img{position:absolute;bottom:18px;right:24px;width:125px}
+#decision .reading .speech{position:absolute;bottom:125px;right:150px}
+textarea{width:100%;resize:vertical;min-height:90px;background:var(--night);color:var(--cream);padding:14px;border-color:var(--line)}
+label{display:block}
+#answer-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+#answer-message{color:var(--amber)}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 ui-monospace,monospace;max-height:350px;overflow:auto}
+.evidence{margin-top:20px}
+.evidence summary{cursor:pointer}
+#history{padding:20px 8px}
+.timeline{display:flex;gap:30px;overflow:auto;list-style:none;padding:55px 15px 38px;position:relative}
+.timeline li{min-width:170px;text-align:center;position:relative}
+.timeline li:after{content:"";position:absolute;top:24px;left:110px;width:100%;border-top:4px dotted var(--line);z-index:-1}
+.timeline li:last-child:after{display:none}
+.mini-planet{display:block;width:50px;height:50px;margin:0 auto 18px;border:3px solid var(--ink);border-radius:50%;background:var(--line);box-shadow:0 4px 0 var(--ink)}
+.mini-planet.passed{background:var(--mint)}
+.mini-planet.current{background:var(--violet)}
+.mini-planet.returned{background:var(--coral)}
+.mini-planet.waiting_for_you{background:var(--amber)}
+.history-grid{display:grid;grid-template-columns:1.2fr 1.2fr 1fr;gap:24px}
+.empty{padding:25px 0}
+.skip{position:absolute;left:12px;top:-80px;background:var(--paper);color:var(--ink);padding:10px;z-index:10}
+.skip:focus{top:12px}
+[hidden]{display:none!important}
+@media(max-width:1050px){#flow{grid-template-columns:minmax(0,1fr) 290px}
+aside{padding:18px}
+header{padding:24px}
+main{padding:0 16px 24px}
+#map{min-height:560px}
+}
+@media(max-width:760px){header{display:block;padding:22px 18px}
+nav{margin-top:18px}
+#flow,#decision,.history-grid{grid-template-columns:1fr}
+#map{height:340px;min-height:300px}
+aside{min-height:0}
+#decision{padding:10px 0}
+#decision .reading{min-height:360px;padding:24px;padding-bottom:150px}
+body:before{right:-130px;opacity:.5}
+#picker-label{margin-top:12px}
+h1{font-size:22px}
+}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}
+button:hover{transform:none}
+}
+
+</style>
+<script type="module" nonce="__NONCE__" src="/static/page.js"></script>
+</head>
+<body>
+<a class="skip" href="#accessible" data-i18n="skip"></a>
+<header><div><p class="eyebrow">GRAPH · FLOW</p><h1 id="title">Graph flow</h1><p id="subtitle" class="muted" aria-live="polite"></p></div><nav aria-label="Views"><button id="flow-tab" data-i18n="flow" aria-pressed="true"></button><button id="history-tab" data-i18n="history" aria-pressed="false"></button><label id="picker-label" hidden><span data-i18n="chooseRun"></span><select id="picker"></select></label></nav></header>
+<main><section id="notice" role="status" hidden></section><section id="flow"><div id="map" role="region" aria-label="Flow map"></div><aside id="panel"></aside></section><section id="decision" hidden aria-labelledby="decision-title"></section><section id="history" hidden></section><details id="accessible"><summary data-i18n="listView"></summary><h2 data-i18n="nodes"></h2><ul id="node-list"></ul><h2 data-i18n="handoffs"></h2><ul id="edge-list"></ul><h2 data-i18n="yourTurn"></h2><ul id="decision-list"></ul></details></main>
+</body></html>

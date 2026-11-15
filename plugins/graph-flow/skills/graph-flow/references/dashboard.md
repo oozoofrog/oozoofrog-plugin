@@ -1,6 +1,6 @@
 # Dashboard HTTP API
 
-This is the contract for `graphflow/server.py`, its future `page.html`, and an optional host-side pane. State, readiness, decisions and trace use the formats in [records.md](records.md), sections 5, 7 and 9. The dashboard is the human answer surface described by P10 in [principles.md](principles.md).
+This is the contract for `graphflow/server.py`, its `page.html` and `page.js`, and an optional host-side pane. State, readiness, decisions and trace use the formats in [records.md](records.md), sections 5, 7 and 9. The dashboard is the human answer surface described by P10 in [principles.md](principles.md).
 
 ## Process and access
 
@@ -12,13 +12,13 @@ A person starts the independent process with `gf serve`. `serve(host="127.0.0.1"
 
 Stdout contains one JSON line, `{"ok": true, "url": "http://127.0.0.1:12345/?t=TOKEN", "port": 12345}`. The process serves until interrupted, closes its listener on shutdown, and removes `server.json` under the same lock only if the record still names its PID. It does not follow an agent session's lifetime. `make_server(port=0)` returns `(httpd, token)` without blocking or publishing a record; its caller owns serving, shutdown and close.
 
-Every route, including the page and unknown routes, requires:
+Every route, including the page and unknown routes, requires the Host check below. Only GET `/static/<name>` skips token authentication; all other routes require a token:
 
 - Exactly one `Host` header, either `127.0.0.1:<bound port>` or `localhost:<bound port>`. A missing, duplicate or foreign Host returns HTTP 403, code `bad_host`.
 - For GET, `X-GF-Token: <token>` or query parameter `t=<token>`. An existing header takes precedence over the query. The token is checked with `hmac.compare_digest`.
 - For POST, the token must be in `X-GF-Token`; a query token does not authorize a write. Missing, wrong or duplicate tokens return HTTP 401, code `unauthorized`.
 
-Authenticate before dispatching. Authenticated methods other than GET and POST return HTTP 405, code `method_not_allowed`; HEAD has no response body. JSON responses always include `Cache-Control: no-store`. The page and evidence also carry `no-store`. Responses include `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff` and `X-Frame-Options: DENY`; access logging is disabled so it cannot record token URLs. No CORS access is granted.
+Authenticate before dispatching (except the public static GET route described below). Authenticated methods other than GET and POST return HTTP 405, code `method_not_allowed`; HEAD has no response body. JSON responses always include `Cache-Control: no-store`. The page and evidence also carry `no-store`. Responses include `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff` and `X-Frame-Options: DENY`; access logging is disabled so it cannot record token URLs. No CORS access is granted.
 
 POST bodies must be UTF-8 JSON objects with one nonnegative `Content-Length`, no `Transfer-Encoding`, and a size of at most 65,536 bytes (64 KB). Over-limit bodies return HTTP 413, code `body_too_large`. Invalid framing, empty bodies, malformed UTF-8/JSON, and JSON values other than objects return HTTP 400, code `bad_body`.
 
@@ -31,10 +31,14 @@ Returns `text/html; charset=utf-8`, loading `page.html` beside `server.py`. If t
 Every response creates a fresh random nonce, replaces every literal `__NONCE__` in the file with that nonce, and sets this Content-Security-Policy (the same nonce for script and style):
 
 ```text
-default-src 'none'; script-src 'nonce-<nonce>'; style-src 'nonce-<nonce>'; connect-src 'self'; img-src data:; base-uri 'none'; form-action 'none'
+default-src 'none'; script-src 'nonce-<nonce>' 'self'; style-src 'nonce-<nonce>'; connect-src 'self'; img-src 'self' data: blob:; base-uri 'none'; form-action 'none'
 ```
 
-The page must put `nonce="__NONCE__"` on its inline `<script>` and `<style>` elements. Read the startup query token and send `X-GF-Token` on API requests, especially POST; use DOM text operations for evidence, questions, filenames and other record text.
+The page puts `nonce="__NONCE__"` on its `<style>` and its single `<script type="module" src="/static/page.js">`. It reads the startup query token, removes `t` with `history.replaceState`, and sends `X-GF-Token` on every API request. All record text uses `textContent`. There are no external origins, inline style attributes, eval, or unsafe CSP allowances. CSSOM/element.style changes support three.js and CSS2DRenderer.
+
+## GET /static/<name>
+
+The exact, case-sensitive allowlist is `page.js`, `vendor/three.module.min.js`, `vendor/CSS2DRenderer.js`, `assets/frog-wave.png`, `assets/frog-walk-a.png`, `assets/frog-walk-b.png`, and `assets/frog-report.png`. JavaScript uses `text/javascript; charset=utf-8`; artwork uses `image/png`. These public library/art files contain no run data. GET requires the same Host check, but no token, because ES module imports cannot attach one. Unknown names, dot segments, percent-encoded names/separators, and traversal under `/static/` return 404 without decoding or normalizing the requested path. Static responses include `no-store` and the usual security headers. POST and other methods retain authentication; no API route is public.
 
 ## GET /api/projects
 
@@ -58,7 +62,7 @@ Returns every open, non-stale decision from every readable run of every register
 
 ## GET /api/run?project=<root>&run=<id>
 
-Returns `{"plan": <stored normalized plan or null>, "state": <derived state>, "ready": [<node IDs>], "trace": <trace result>}` for one run. The state, readiness and trace are read under that run's lock. Readiness uses `graph.ready`; trace uses `trace.trace`.
+Returns `{"plan": <stored normalized plan or null>, "state": <derived state>, "ready": [<node IDs>], "trace": <trace result>, "view": <presentation view>}` for one run. The `view` shape is defined in [records.md section 12](records.md#12-dashboard-presentation-view). It includes readable decision `verified`/`unverified` lists and `worker_note`, and node `inputs`/`outputs` derived from edges. The normal page uses only `view`; raw records/evidence appear only in the manually opened details disclosure. The state, readiness, trace and view are read under that run's lock. Readiness uses `graph.ready`; trace uses `trace.trace`.
 
 The `project` string must exactly match a registered absolute root (HTTP 404, `unknown_project`, otherwise). The run ID must fully match `[a-z0-9][a-z0-9._-]{0,63}`, resolve inside the project's runs directory and exist with an event log (HTTP 404, `unknown_run`, otherwise). These addressing rules also apply to evidence and answer endpoints. URL-encode query values, especially roots and log paths.
 
@@ -105,3 +109,19 @@ Errors are JSON objects: `{"ok": false, "code": "<slug>", "message": "<descripti
 | 500 | `internal`: unexpected exception; generic message, no traceback or exception text |
 
 When an answer returns 409, reload the queue and current run before offering another answer. Authentication failures take precedence over route and body errors. Unsupported GET/POST routes return 404 after authorization (POST also validates its JSON body). Methods other than GET/POST are refused after authorization.
+
+## Dashboard and demo
+
+The page defaults to the most recently active readable open run, offers a picker for multiple runs, and polls about every two seconds while visible. Flow and selected-node views share the same orthographic three.js scene. A real HTML list remains available, and becomes the primary view if WebGL is unavailable. Reduced motion disables walking and camera animation. Korean and English copy is selected from `navigator.language`. History uses plan order because `view` does not contain enough information to interleave different nodes' attempts in global time order. Direction/information decisions use their API-supported `answered` action and require text; review/authorization decisions offer approve or send back (required reason).
+
+From the repository root, this one line creates a fresh isolated demo project and starts its server (choose fresh paths if these already exist):
+
+```sh
+python3 -B -c 'import sys; sys.path.insert(0,"plugins/graph-flow/skills/graph-flow/tests"); from test_page import build_demo_run; build_demo_run("/tmp/gf-demo-home", "/tmp/gf-demo-project"); from graphflow.server import serve; serve()'
+```
+
+Open the printed URL. `build_demo_run(gf_home, project_dir)` is importable from `tests/test_page.py`, returns the run directory, and sets `GF_HOME` for the current process. It initializes git only in the supplied fresh demo project; the plugin checkout is untouched. It uses real library calls for two passed nodes, one returned and running on its second attempt, one submitted with a contextual human question and uncertainty, two not started, Korean presentation fields, and a recorded lesson. To restart that existing demo without recreating it:
+
+```sh
+GF_HOME=/tmp/gf-demo-home python3 -B plugins/graph-flow/skills/graph-flow/scripts/gf serve
+```

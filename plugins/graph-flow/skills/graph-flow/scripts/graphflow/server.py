@@ -12,6 +12,11 @@ from urllib.parse import parse_qs, urlsplit
 from . import core, decisions, graph, learn, state, store, trace
 
 PAGE_PATH = pathlib.Path(__file__).with_name("page.html")
+STATIC_TYPES = {name: "text/javascript; charset=utf-8" for name in
+                ("page.js", "vendor/three.module.min.js", "vendor/CSS2DRenderer.js")}
+STATIC_TYPES.update({"assets/frog-%s.png" % pose: "image/png" for pose in
+                     ("wave", "walk-a", "walk-b", "report")})
+STATIC_ROOT = pathlib.Path(__file__).parent
 MAX_BODY = 64 * 1024
 MAX_EVIDENCE = 200 * 1024
 RUN_ID = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}")
@@ -126,7 +131,7 @@ def _queue():
 def _history(node, st, events):
     """Present current-basis attempts without copying technical rejection records."""
     laps, returned, results, reviews = [], [], {}, {}
-    titles = {c["id"]: c.get("title", c["id"]) for c in node["checks"]}
+    titles = {c["id"]: c.get("title") for c in node["checks"]}
     for event in events:
         if event["seq"] <= st["basis"]:
             continue
@@ -149,8 +154,8 @@ def _history(node, st, events):
                 elif verdict == "pass":
                     laps[attempt - 1] = "passed"
             if verdict in ("reject", "replan"):
-                reasons = [titles.get(cid, cid) for cid, result in results.items()
-                           if result.get("result") == "failed"]
+                reasons = [titles[cid] for cid, result in results.items()
+                           if titles.get(cid) and result.get("result") == "failed"]
                 for review in reviews.values():
                     if review.get("target_submission") == data.get("submission"):
                         reasons.extend(f["text"] for f in review.get("findings") or []
@@ -191,7 +196,8 @@ def _view(current, derived, events, project):
                               "kind": node["kind"], "status": st["status"],
                               "attempts": st["attempts"], "max_attempts": st["max_attempts"],
                               "lane": st["effective_lane"], "laps": laps,
-                              "returned_reasons": reasons, "reviewed_by_other_family": reviewed})
+                              "returned_reasons": reasons, "reviewed_by_other_family": reviewed,
+                              "inputs": [], "outputs": []})
         if passed:
             view["counts"]["done"] += 1
         elif not st["open_decisions"]:
@@ -207,6 +213,13 @@ def _view(current, derived, events, project):
             view["edges"].append({"from": producer, "to": nid, "label": label,
                                   "delivered": gates[producer] == "open", "gate": gates[producer]})
 
+    presented = {n["id"]: n for n in view["nodes"]}
+    for edge in view["edges"]:
+        presented[edge["to"]]["inputs"].append({"label": edge["label"],
+            "other_title": title(edge["from"]), "delivered": edge["delivered"]})
+        presented[edge["from"]]["outputs"].append({"label": edge["label"],
+            "other_title": title(edge["to"]), "delivered": edge["delivered"]})
+
     for decision in opened:
         node = nodes.get(decision["node"], {})
         context = node.get("context", {}) if node.get("kind") == "decision" else {}
@@ -214,10 +227,29 @@ def _view(current, derived, events, project):
             context = next((c.get("context", {}) for c in node.get("checks", [])
                             if c["id"] == decision["check"] and c["type"] == "human"), {})
         evidence = decision.get("evidence") or {}
+        st = derived["nodes"].get(decision["node"]) or {}
+        submission = st.get("submission") or {}
+        verified, unverified = [], []
+        for check in node.get("checks", []):
+            if check["type"] == "human":
+                wording = check.get("title") or check.get("prompt")
+                if wording:
+                    unverified.append(wording)
+            elif check.get("title"):
+                results = (st.get("checks") or {}).get(check["id"], {})
+                # Gate is the authoritative later check when both phases exist.
+                result = results.get("gate") or results.get("loop") or {}
+                if result.get("attempt") == st.get("attempts") and result.get("result") == "passed":
+                    verified.append(check["title"])
+        uncertainty = submission.get("low_confidence") or []
+        if isinstance(uncertainty, str):
+            uncertainty = [uncertainty]
+        unverified.extend(note for note in uncertainty if isinstance(note, str) and note)
         view["decisions"].append({"id": decision["id"], "node": decision["node"],
                                   "node_title": title(decision["node"]),
                                   "question": decision["question"], "kind": decision["kind"],
-                                  "context": context,
+                                  "context": context, "verified": verified, "unverified": unverified,
+                                  "worker_note": submission.get("notes"),
                                   "has_evidence": any(evidence.get(k) for k in ("command", "files", "checks"))})
     view["counts"]["needs_you"] = len(opened)
 
@@ -279,8 +311,8 @@ def _handler(token):
             self.send_header("X-Frame-Options", "DENY")
             if nonce is not None:
                 self.send_header("Content-Security-Policy",
-                                 "default-src 'none'; script-src 'nonce-%s'; style-src 'nonce-%s'; "
-                                 "connect-src 'self'; img-src data:; base-uri 'none'; form-action 'none'"
+                                 "default-src 'none'; script-src 'nonce-%s' 'self'; style-src 'nonce-%s'; "
+                                 "connect-src 'self'; img-src 'self' data: blob:; base-uri 'none'; form-action 'none'"
                                  % (nonce, nonce))
             self.end_headers()
             if self.command != "HEAD":
@@ -302,6 +334,8 @@ def _handler(token):
                 raise _HTTPError(403, "bad_host", "Host must name this loopback server")
             parsed = urlsplit(self.path)
             query = parse_qs(parsed.query, keep_blank_values=True)
+            if self.command == "GET" and parsed.path.startswith("/static/"):
+                return parsed.path, query
             supplied = self.headers.get_all("X-GF-Token", [])
             if not supplied and self.command == "GET":
                 supplied = query.get("t", [])
@@ -348,6 +382,15 @@ def _handler(token):
                 run = _run(body["project"], body["run"])
                 answer = decisions.answer(run, body["id"], body["outcome"], body["answer"], "dashboard", HUMAN)
                 return self._json(200, {"ok": True, "decision": answer})
+            if path.startswith("/static/"):
+                name = path[len("/static/"):]
+                if name not in STATIC_TYPES:
+                    raise _HTTPError(404, "not_found", "unknown static file")
+                try:
+                    content = (STATIC_ROOT / name).read_bytes()
+                except OSError:
+                    raise _HTTPError(404, "not_found", "static file is unavailable")
+                return self._send(200, content, STATIC_TYPES[name])
             if path == "/":
                 nonce = secrets.token_urlsafe(24)
                 try:

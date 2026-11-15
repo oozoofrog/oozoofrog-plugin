@@ -154,6 +154,64 @@ class ServerTests(unittest.TestCase):
             self.assertEqual((caught.exception.code, caught.exception.exit_code), ("bad_host", 2))
         self.assertEqual(self.httpd.server_address[0], "127.0.0.1")
 
+    def test_static_allowlist_and_host_without_token(self):
+        for name, content_type in server.STATIC_TYPES.items():
+            status, headers, body = self.request("GET", "/static/" + name, token=False)
+            self.assertEqual(status, 200, name)
+            self.assertEqual(headers["Content-Type"], content_type)
+            self.assertEqual(body, (server.STATIC_ROOT / name).read_bytes())
+            self.assertEqual(headers["Cache-Control"], "no-store")
+            self.assert_error(403, "bad_host", "GET", "/static/" + name, token=False,
+                              headers={"Host": "foreign.example"})
+        for path in ("missing", "server.py", "../server.py", "vendor/../page.js",
+                     "vendor%2fthree.module.min.js", "vendor%2Fthree.module.min.js",
+                     "%70age.js", "%2e%2e/page.js", "./page.js", "assets//frog-wave.png",
+                     "vendor/%2e%2e/page.js", "%252e%252e/page.js", "page.js/", ""):
+            self.assert_error(404, "not_found", "GET", "/static/" + path, token=False)
+        self.assert_error(401, "unauthorized", "POST", "/static/page.js", token=False, body={})
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            connection.putrequest("GET", "/static/page.js", skip_host=True)
+            connection.endheaders()
+            self.assertEqual(connection.getresponse().status, 403)
+        finally:
+            connection.close()
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            connection.putrequest("GET", "/static/page.js")
+            connection.putheader("Host", "localhost:%s" % self.port)
+            connection.endheaders()
+            self.assertEqual(connection.getresponse().status, 403)
+        finally:
+            connection.close()
+
+    def test_demo_view_additions_and_current_attempt_only(self):
+        from test_page import build_demo_run
+        project = self.root / "demo-project"
+        run = build_demo_run(self.home, project)
+        status, data = self.json_request("GET", "/api/run?" + urlencode({"project": str(project), "run": run.name}))
+        self.assertEqual(status, 200)
+        decision = data["view"]["decisions"][0]
+        self.assertEqual(decision["verified"], ["약속한 결과가 빠짐없이 있어요"])
+        self.assertEqual(len(decision["unverified"]), 2)
+        self.assertTrue(decision["worker_note"])
+        current, events, derived = server._snapshot(run)
+        # Untitled checks are omitted, and human prompts supply a readable fallback.
+        guide = next(n for n in current["nodes"] if n["id"] == "guide")
+        guide["checks"][0].pop("title")
+        guide["checks"][1].pop("title")
+        presentation = server._view(current, derived, events, project)
+        self.assertEqual(presentation["decisions"][0]["verified"], [])
+        self.assertEqual(presentation["decisions"][0]["unverified"][0], "사용 설명서를 통과시킬까요?")
+        guide["checks"][0]["title"] = "Readable check"
+        derived["nodes"]["guide"]["attempts"] += 1
+        presentation = server._view(current, derived, events, project)
+        self.assertEqual(presentation["decisions"][0]["verified"], [])
+        self.assertEqual(data["view"]["nodes"][3]["inputs"],
+                         [{"label": "기록 사용법", "other_title": "기록 저장", "delivered": True}])
+        self.assertEqual(data["view"]["nodes"][3]["outputs"],
+                         [{"label": "읽기 쉬운 설명", "other_title": "현황판 화면", "delivered": False}])
+
     def test_unsupported_methods(self):
         for method in ("PUT", "DELETE", "PATCH", "OPTIONS", "HEAD", "TRACE", "BREW"):
             with self.subTest(method=method):
@@ -361,7 +419,7 @@ class ServerTests(unittest.TestCase):
         done, retry, human, waiting, review = view["nodes"]
         self.assertEqual(done["laps"], ["passed"])
         self.assertEqual(retry["laps"], ["returned", "current"])
-        self.assertEqual(retry["returned_reasons"], [["The result meets the requirement", "scope",
+        self.assertEqual(retry["returned_reasons"], [["The result meets the requirement",
                                                       "A required case is missing"]])
         self.assertEqual((retry["status"], retry["attempts"], retry["max_attempts"]), ("running", 2, 3))
         self.assertEqual(human["laps"], ["waiting_for_you"])
@@ -374,7 +432,8 @@ class ServerTests(unittest.TestCase):
             {"from": "retry", "to": "review-retry", "label": "", "delivered": False, "gate": "returned"}])
         self.assertEqual(view["decisions"], [{"id": "d%d" % ask, "node": "human", "node_title": "Human",
                                             "question": "Does this wording fit?", "kind": "review",
-                                            "context": context, "has_evidence": False}])
+                                            "context": context, "has_evidence": False,
+                                            "verified": [], "unverified": ["The wording fits"], "worker_note": None}])
         self.assertEqual(view["lessons"], [{"text": active["text"], "node_title": "Done"},
                                          {"text": unknown["text"], "node_title": None}])
         self.assertEqual(view["counts"], {"done": 1, "doing": 1, "waiting": 2, "needs_you": 1, "returned": 1})
@@ -505,8 +564,8 @@ class ServerTests(unittest.TestCase):
             self.assertIn(b"page is not installed", body)
             csp = headers["Content-Security-Policy"]
             nonce = csp.split("'nonce-")[1].split("'")[0]
-            self.assertEqual(csp, "default-src 'none'; script-src 'nonce-%s'; style-src 'nonce-%s'; "
-                             "connect-src 'self'; img-src data:; base-uri 'none'; form-action 'none'" % (nonce, nonce))
+            self.assertEqual(csp, "default-src 'none'; script-src 'nonce-%s' 'self'; style-src 'nonce-%s'; "
+                             "connect-src 'self'; img-src 'self' data: blob:; base-uri 'none'; form-action 'none'" % (nonce, nonce))
             path.parent.mkdir()
             path.write_text('<style nonce="__NONCE__"></style><script nonce="__NONCE__"></script>', encoding="utf-8")
             status, headers, body = self.request("GET", "/")
