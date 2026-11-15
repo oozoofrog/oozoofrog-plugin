@@ -259,7 +259,7 @@ The `seq` of a `node.submit` or `review.submit` event is that submission's **id*
 
 ### Basis: what invalidates a node
 
-For every node the state keeps `basis`: the `seq` of the latest event that invalidated it, or 0. **Events about a node with `seq <= basis` are ignored for that node**, so after an invalidation it is `pending` again with zero attempts, no submission, no check results, and no verdict. Invalidating events:
+For every node the state keeps `basis`: the `seq` of the latest event that invalidated it, or 0. **Events about a node with `seq <= basis` are ignored for that node**, with one exception: its latest assignment is kept. After an invalidation the node is `pending` (or `assigned`, if it had an assignment) with zero attempts, no submission, no check results, and no verdict. Invalidating events:
 
 1. a `plan.set` that changes the fingerprint of the node, or of any node it depends on directly or transitively (through `needs.from`; a review node also depends on its `target`);
 2. a `node.reopen` naming the node or any node it depends on;
@@ -358,7 +358,7 @@ Decisions are bound, not counted: a decision is **stale** when its node's `basis
 | `submitted` | `node.submit` or `review.submit` |
 | `passed`, `rejected`, `unverified`, `held`, `awaiting_approval`, `replan` | The matching `gate.verdict` (`pass`, `reject`, `unverified`, `hold`, `needs_approval`, `replan`) |
 
-A node **has a current submission** when its status is `submitted`, `unverified`, `held`, or `awaiting_approval`.
+A node **has a current submission** when its status is `submitted`, `unverified`, `held`, or `awaiting_approval`. The `submission` field itself is kept until the next `node.start`, so verdicts and decisions bound to a submission id stay matched to it after the node is `passed` or `rejected`.
 
 `trajectory_clean` is true when, in the current attempt, no check timed out, no loop-phase scope result has violations, and `attempts <= 2`.
 
