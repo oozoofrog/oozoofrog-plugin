@@ -319,6 +319,10 @@ def start(run_dir, node_id, cwd, actor):
 
 
 def submit(run_dir, node_id, commit, branch, notes, low_confidence, cwd, actor):
+    if notes is not None and not isinstance(notes, str):
+        raise _error("bad_notes", "notes must be a string or null", _core.EXIT_USAGE)
+    if not isinstance(low_confidence, list) or any(not isinstance(v, str) for v in low_confidence):
+        raise _error("bad_low_confidence", "low_confidence must be a list of strings", _core.EXIT_USAGE)
     _, st, token = _capture(run_dir, node_id, "loop", "work")
     directory = _cwd(run_dir, cwd)
     if commit is not None:

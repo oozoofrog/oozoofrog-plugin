@@ -610,6 +610,24 @@ class HostRedSubmitTests(ChecksCase):
         self.assertNotIn("id", event["data"])
         self.assertEqual(self.status()["status"], "submitted")
 
+    def test_submit_validates_presentation_types_before_writing(self):
+        self.start()
+        for notes in (5, {}, [], False):
+            with self.subTest(notes=notes):
+                exc = self.error("bad_notes", checks.submit, self.run, "work", None, None,
+                                 notes, [], None, ACTOR)
+                self.assertEqual(exc.exit_code, core.EXIT_USAGE)
+        for low_confidence in (5, {}, "legacy string", None, ["text", 7], [None]):
+            with self.subTest(low_confidence=low_confidence):
+                exc = self.error("bad_low_confidence", checks.submit, self.run, "work", None, None,
+                                 None, low_confidence, None, ACTOR)
+                self.assertEqual(exc.exit_code, core.EXIT_USAGE)
+        self.assertEqual(self.results("node.submit"), [])
+        self.assertEqual(self.status()["status"], "running")
+        data = checks.submit(self.run, "work", None, None, None, ["Needs another look"], None, ACTOR)
+        self.assertIsNone(data["notes"])
+        self.assertEqual(data["low_confidence"], ["Needs another look"])
+
     def test_submit_committed_resolves_full_sha(self):
         self.start()
         self.write("owned.txt", "committed work")

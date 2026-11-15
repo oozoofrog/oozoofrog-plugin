@@ -93,7 +93,7 @@ const STRINGS = {
     "runOption": "{project} · 흐름 {n}",
     "purposeReview": "사람이 직접 살펴봐야 하는 결과를 받아들일지 정해 주세요.",
     "purposeAuthorization": "되돌리기 어려운 일을 허락할지 정해 주세요.",
-    "purposeTrajectory": "시도를 모두 쓰거나, 정해진 시간을 넘기거나, 맡은 범위를 벗어난 일을 받아들일지 정해 주세요.",
+    "purposeTrajectory": "평소와 다르게 진행된 일을 받아들일지 정해 주세요.",
     "purposeHold": "멈춰 둔 일을 어떻게 이어 갈지 정해 주세요.",
     "purposeDirection": "다음에 어느 방향으로 갈지 알려 주세요.",
     "purposeInformation": "계속하는 데 필요한 정보를 알려 주세요.",
@@ -105,7 +105,13 @@ const STRINGS = {
     "evidenceReminder": "결정하기 전에 읽어야 할 근거가 기록되어 있어요.",
     "decisionClosed": "이 결정은 더 이상 열려 있지 않아요. 적던 답은 지웠어요.",
     "runChanged": "흐름이 바뀌어서 결정을 닫고 적던 답을 지웠어요.",
-    "brand": "Graph flow"
+    "brand": "Graph flow",
+    "failed": "통과하지 못한 것",
+    "acceptAnyway": "그래도 받아들이기",
+    "used_all_attempts": "세 번의 시도를 모두 썼어요.",
+    "timed_out": "정해진 시간을 넘겼어요.",
+    "left_its_files": "맡은 파일의 범위를 벗어났어요.",
+    "untitledFailure": "설명이 없는 확인 하나가 통과하지 못했어요."
   },
   "en": {
     "flow": "Whole flow",
@@ -200,7 +206,7 @@ const STRINGS = {
     "runOption": "{project} · flow {n}",
     "purposeReview": "Decide whether to accept a result that needs a human look.",
     "purposeAuthorization": "Decide whether to allow work that is hard to undo.",
-    "purposeTrajectory": "Decide whether to accept work that used every attempt, timed out, or went beyond its assigned files.",
+    "purposeTrajectory": "Decide whether to accept work with an unclean path.",
     "purposeHold": "Decide how to continue work that was put on hold.",
     "purposeDirection": "Tell us which direction to take next.",
     "purposeInformation": "Provide the information needed to continue.",
@@ -212,37 +218,93 @@ const STRINGS = {
     "evidenceReminder": "There is recorded evidence to read before deciding.",
     "decisionClosed": "This decision is no longer open. Your draft was discarded.",
     "runChanged": "The flow changed, so the decision was closed and your draft discarded.",
-    "brand": "Graph flow"
+    "brand": "Graph flow",
+    "failed": "Did not pass",
+    "acceptAnyway": "Accept anyway",
+    "used_all_attempts": "All three attempts were used.",
+    "timed_out": "A check exceeded its time limit.",
+    "left_its_files": "Work went beyond its assigned files.",
+    "untitledFailure": "A check without a description did not pass."
   }
 };
 // UI_STRINGS_END
 
 export function sameRun(a, b) { return a?.project === b?.project && a?.run === b?.run; }
-export function captureDecision(run, decision) {
-  return {target:Object.freeze({project:run.project, run:run.run, id:decision.id}), purpose:decision.purpose, kind:decision.kind, detailsOpened:false};
-}
-export function answerTarget(open) { return {...open.target}; }
-export function draftKey(target) { return JSON.stringify([target.project, target.run, target.id]); }
-export function reconcileDecision(open, run, decisions, drafts) {
-  const reason = open && (!sameRun(open.target, run) ? 'runChanged' : !decisions.some(d => d.id === open.target.id) ? 'decisionClosed' : '');
-  if (!reason) return {open, drafts, reason:''};
-  const remaining = {...drafts}; delete remaining[draftKey(open.target)];
-  return {open:null, drafts:remaining, reason};
-}
-export function decisionIsCurrent(open, active, run, decisions) {
-  return !!open && active === open && !reconcileDecision(open, run, decisions, {}).reason;
-}
 export function purposeWording(purpose, language = 'en') {
   const keys = {human_check:'purposeReview', review:'purposeReview', lane3:'purposeAuthorization', authorization:'purposeAuthorization', trajectory:'purposeTrajectory', hold:'purposeHold', direction:'purposeDirection', information:'purposeInformation'};
   const key = Object.hasOwn(keys, purpose) ? keys[purpose] : 'purposeNeutral';
   return STRINGS[language][key];
 }
-export function purposeAction(purpose, language = 'en') {
+export function purposeAction(purpose, language = 'en', failed = []) {
+  if (purpose === 'hold' || failed.length) return STRINGS[language].acceptAnyway;
   const keys = {lane3:'allow', authorization:'allow', human_check:'accept', review:'accept', trajectory:'accept', hold:'continue'};
   return STRINGS[language][Object.hasOwn(keys, purpose) ? keys[purpose] : 'confirmChoice'];
 }
-export function canApprove(open) {
-  return !!open && (!(open.purpose === 'lane3' || open.purpose === 'authorization' || open.kind === 'authorization') || open.detailsOpened);
+export function canApprove(session) {
+  return !!session && (!(session.purpose === 'lane3' || session.purpose === 'authorization' ||
+    session.kind === 'authorization' || session.purpose === 'hold' || session.failed?.length) || session.detailsOpened);
+}
+export function decisionQuestion(d) {
+  const generated = `Approve ${d.record_purpose ?? d.purpose} for ${d.node}?`;
+  return d.node && d.question === generated ? '' : d.question;
+}
+export function createDecisionController() {
+  let session = null, view = null, chosen = null;
+  const requests = new WeakMap();
+  const current = () => !!session && view?.decisions.some(d => d.id === session.target.id);
+  const update = d => { session.decision = d; session.purpose = d.purpose; session.kind = d.kind; session.failed = d.failed || []; };
+  const controller = {
+    get session() { return session; },
+    get requiresDetails() { return !!session && !canApprove({...session, detailsOpened:false}); },
+    open(id) {
+      if (session?.busy) return null;
+      const decision = view?.decisions.find(d => d.id === id);
+      if (!decision || !chosen) return null;
+      if (!session || !sameRun(session.target, chosen) || session.target.id !== id) {
+        session = {target:Object.freeze({project:chosen.project, run:chosen.run, id}), draft:'', detailsOpened:false, busy:false};
+      }
+      update(decision); return session;
+    },
+    close() {
+      if (session?.busy) return false;
+      session = null; return true;
+    },
+    refresh(nextView, nextChosen) {
+      // Keep the submitting view and its target until the response is reported.
+      if (session?.busy) return '';
+      view = nextView; chosen = nextChosen;
+      if (!session) return '';
+      const reason = !sameRun(session.target, chosen) ? 'runChanged' : !current() ? 'decisionClosed' : '';
+      if (reason) session = null;
+      else update(view.decisions.find(d => d.id === session.target.id));
+      return reason;
+    },
+    setDraft(text) { if (session && !session.busy) session.draft = text; },
+    openDetails() { if (current()) session.detailsOpened = true; },
+    canSubmit(outcome, text = session?.draft || '') {
+      if (!current() || session.busy) return false;
+      const question = ['direction','information'].includes(session.kind);
+      if (question ? outcome !== 'answered' : !['approved','revision_requested','rejected'].includes(outcome)) return false;
+      return outcome === 'approved' ? canApprove(session) : !!text.trim();
+    },
+    buildRequest(outcome, text = session?.draft || '') {
+      if (!controller.canSubmit(outcome, text)) return null;
+      session.draft = text; session.busy = true;
+      const request = {...session.target, outcome, answer:text.trim()};
+      requests.set(request, session); return request;
+    },
+    onResult(request, error = null) {
+      const matches = !!session && session === requests.get(request) && session.busy;
+      requests.delete(request);
+      const notice = !error ? 'answered' : error.status === 409 ? 'stale' : 'answerFailed';
+      if (matches) {
+        session.busy = false;
+        if (!error || error.status === 409) session = null;
+      }
+      return {notice, close:matches && !session, refresh:sameRun(request, chosen)};
+    }
+  };
+  return controller;
 }
 
 if (typeof document !== 'undefined') {
@@ -266,10 +328,11 @@ document.documentElement.lang = language;
 document.querySelectorAll('[data-i18n]').forEach(e => { e.textContent = t(e.dataset.i18n); });
 document.querySelector('nav').setAttribute('aria-label', t('flow'));
 $('map').setAttribute('aria-label', t('flow'));
-let chosen = null, projects = [], view = null, fingerprint = '', mode = 'flow', selected = null, activeDecision = null;
+let chosen = null, projects = [], view = null, fingerprint = '', mode = 'flow', selected = null;
 let mapFailed = false, queuedRefresh = false;
-let busy = false, timer = 0, loading = false, generation = 0, renderer = null;
-let drafts = {}, decisionNotice = '';
+let timer = 0, loading = false, generation = 0, renderer = null;
+const decisionController = createDecisionController();
+let decisionUI = null, decisionNotice = '';
 
 async function api(path, body, text = false) {
   const response = await fetch(path, {method: body ? 'POST' : 'GET', headers: {'X-GF-Token': token, ...(body ? {'Content-Type':'application/json'} : {})}, ...(body ? {body:JSON.stringify(body)} : {})});
@@ -282,10 +345,11 @@ function title(node) { return node && node.title && node.title !== node.id ? nod
 function otherTitle(value) { return view.nodes.some(n => n.id === value && n.title === value) ? t('unnamed') : value || t('unnamed'); }
 // Legacy plans may have only an artifact path; keep that technical fallback out of normal views.
 function label(value) { return !value || /[\/\\]|\.[a-z0-9]{1,8}$/.test(value) || view.nodes.some(n => n.id === value) ? t('handoff') : value; }
-function question(d) { return /^Approve \S+ for .+\?$/.test(d.question) ? '' : d.question; }
+function question(d) { return decisionQuestion(d); }
 function decisionTitle(d) { return title(view.nodes.find(n => n.id === d.node)); }
 function decisionHeading(parent, d, tag) {
   parent.append(el(tag, decisionTitle(d)), el('p', purposeWording(d.purpose, language)));
+  if (d.purpose === 'trajectory') textList(parent, (d.trajectory_reasons || []).map(key => t(key)));
   if (question(d)) parent.append(el('p', question(d)));
 }
 function needs(node) { return view.decisions.some(d => d.node === node.id); }
@@ -307,8 +371,13 @@ function countCard() {
   for (const key of ['done','doing','needs_you','waiting','returned']) { const item = el('li'); item.append(el('span', undefined, 'dot ' + key), el('span', `${t(key)} ${view.counts[key]}`)); list.append(item); }
   c.append(list); return c;
 }
+function failedBlock(parent, d) {
+  if (!d.failed?.length) return;
+  const failed = card(t('failed')); failed.classList.add('failed');
+  textList(failed, d.failed.map(text => text === STRINGS.en.untitledFailure ? t('untitledFailure') : text)); parent.append(failed);
+}
 function decisionCard(d) {
-  const c = card(t('yourTurn'), null, true); decisionHeading(c, d, 'h3'); if (d.context.why) c.append(el('p', d.context.why));
+  const c = card(t('yourTurn'), null, true); decisionHeading(c, d, 'h3'); failedBlock(c, d); if (d.context.why) c.append(el('p', d.context.why));
   for (const key of ['if_approved','if_rejected','undo']) { if (d.context[key]) { c.append(el('small', t({if_approved:'ifApproved',if_rejected:'ifRejected',undo:'undo'}[key])), el('p', d.context[key])); } }
   c.append(button(t('read'), () => openDecision(d.id), 'amber')); return c;
 }
@@ -339,86 +408,83 @@ function accessible() {
   clear($('node-list')); clear($('edge-list')); clear($('decision-list'));
   view.nodes.forEach(n => { const item = el('li', undefined, 'card'); item.append(button(title(n), () => selectNode(n.id)), el('p', status(n)), el('p', attempts(n), 'muted'), el('p', n.summary)); if (n.returned_reasons.length) textList(item, n.returned_reasons.flat(), 'noReason'); $('node-list').append(item); });
   view.edges.forEach(e => { const a = view.nodes.find(n => n.id === e.from), b = view.nodes.find(n => n.id === e.to); $('edge-list').append(el('li', `${title(a)} → ${title(b)} · ${label(e.label)} · ${t(e.delivered ? 'delivered' : 'notDelivered')}`)); });
-  view.decisions.forEach(d => { const item = el('li'); item.append(button(decisionTitle(d), () => openDecision(d.id)), el('p', purposeWording(d.purpose, language))); if (question(d)) item.append(el('p', question(d))); if (d.context.why) item.append(el('p', d.context.why)); $('decision-list').append(item); });
+  view.decisions.forEach(d => { const item = el('li'); item.append(button(t('read'), () => openDecision(d.id))); decisionHeading(item, d, 'h3'); failedBlock(item, d); if (d.context.why) item.append(el('p', d.context.why)); $('decision-list').append(item); });
   if (!view.decisions.length) $('decision-list').append(el('li', t('nothing')));
 }
 function showMode(next) {
-  if (next !== 'decision') discardDecision();
+  if (next !== 'decision' && !discardDecision()) return false;
   mode = next; $('flow').hidden = next !== 'flow'; $('decision').hidden = next !== 'decision'; $('history').hidden = next !== 'history';
   $('flow-tab').setAttribute('aria-pressed', String(next === 'flow')); $('history-tab').setAttribute('aria-pressed', String(next === 'history'));
-  if (renderer) renderer.wake();
+  if (renderer) renderer.wake(); return true;
 }
 function discardDecision() {
-  if (activeDecision) delete drafts[draftKey(activeDecision.target)];
-  activeDecision = null; busy = false; clear($('decision'));
+  if (!decisionController.close()) return false;
+  decisionUI = null; clear($('decision')); return true;
 }
 function closeInvalidDecision(run, decisions) {
-  const next = reconcileDecision(activeDecision, run, decisions, drafts);
-  if (!next.reason) return false;
-  drafts = next.drafts; wholeFlow(); decisionNotice = next.reason; notice(decisionNotice); return true;
+  const reason = decisionController.refresh({decisions}, run);
+  if (!reason) return false;
+  wholeFlow(); decisionNotice = reason; notice(decisionNotice); return true;
 }
-function wholeFlow() { selected = null; showMode('flow'); if (view) panel(); if (renderer) renderer.select(null); }
-function selectNode(id) { selected = id; showMode('flow'); panel(); if (renderer) renderer.select(id); }
+function wholeFlow() { if (!showMode('flow')) return; selected = null; if (view) panel(); if (renderer) renderer.select(null); }
+function selectNode(id) { if (!showMode('flow')) return; selected = id; panel(); if (renderer) renderer.select(id); }
 function focusHeading(heading) { heading.tabIndex = -1; heading.focus(); }
 function openDecision(id, focus = true) {
-  const d = view?.decisions.find(item => item.id === id); if (!d || !chosen) { wholeFlow(); return; }
-  if (!activeDecision || !sameRun(activeDecision.target, chosen) || activeDecision.target.id !== id) {
-    discardDecision(); activeDecision = captureDecision(chosen, d);
-  }
-  const session = activeDecision, openedGeneration = generation;
-  session.purpose = d.purpose; session.kind = d.kind;
-  const current = () => generation === openedGeneration && decisionIsCurrent(session, activeDecision, chosen, view?.decisions || []);
+  const session = decisionController.open(id); if (!session) return;
+  const current = () => decisionController.session === session;
+  const d = session.decision;
+  if (decisionUI?.session === session) { decisionUI.update(); return; }
   decisionNotice = ''; notice('');
   showMode('decision'); const box = $('decision'); clear(box);
-  const reading = card(t('yourTurn'), null, true); reading.classList.add('reading'); decisionHeading(reading, d, 'h2'); const heading = reading.querySelector('h2'); heading.id = 'decision-title';
-  const node = view.nodes.find(n => n.id === d.node); if (node) reading.append(el('p', node.summary));
-  const report = el('div', undefined, 'worker-report');
-  const mascot = el('img'); mascot.src = '/static/assets/frog-report.png'; mascot.alt = ''; report.append(mascot, el('div', d.worker_note || t('notRecorded'), 'speech')); reading.append(report); box.append(reading);
-  const right = el('div'); right.append(card(t('why'), d.context.why || t('notRecorded')));
-  const verified = card(t('verified')); textList(verified, d.verified); right.append(verified);
-  const unverified = card(t('unverified')); textList(unverified, d.unverified); right.append(unverified);
-  const outcomes = card(t('choiceEffects'), null, true); for (const [key, name] of [['if_approved','ifApproved'],['if_rejected','ifRejected'],['undo','undo']]) { outcomes.append(el('small', t(name)), el('p', d.context[key] || t('notRecorded'))); } reading.append(outcomes);
+  const reading = card(t('yourTurn'), null, true); reading.classList.add('reading');
+  const introduction = el('div'); reading.append(introduction);
+  const report = el('div', undefined, 'worker-report'), note = el('div', undefined, 'speech');
+  const mascot = el('img'); mascot.src = '/static/assets/frog-report.png'; mascot.alt = ''; report.append(mascot, note); reading.append(report);
+  const outcomes = card(t('choiceEffects'), null, true); reading.append(outcomes);
   const isQuestion = ['direction','information'].includes(d.kind);
-  const answerLabel = el('label', t(isQuestion ? 'answerLabel' : 'backReason')); answerLabel.htmlFor = 'answer-text'; const input = el('textarea'); input.id = 'answer-text'; input.required = true; input.value = drafts[draftKey(session.target)] || ''; input.addEventListener('input', () => { if (current()) drafts[draftKey(session.target)] = input.value; }); reading.append(answerLabel, input);
+  const answerLabel = el('label', t(isQuestion ? 'answerLabel' : 'backReason')); answerLabel.htmlFor = 'answer-text';
+  const input = el('textarea'); input.id = 'answer-text'; input.required = true; input.value = session.draft;
+  input.addEventListener('input', () => { if (current()) { decisionController.setDraft(input.value); updateActions(); } }); reading.append(answerLabel, input);
   const message = el('p'); message.id = 'answer-message'; message.setAttribute('role','status'); reading.append(message);
   const actions = el('div'); actions.id = 'answer-actions';
-  let approveButton;
-  const updateActions = () => { actions.querySelectorAll('button').forEach(b => { b.disabled = !current() || busy === session; }); if (approveButton) approveButton.disabled = !current() || busy === session || !canApprove(session); input.disabled = !current() || busy === session; };
-  const send = async outcome => {
-    if (!current() || busy === session || (outcome === 'approved' && !canApprove(session))) return;
-    if ((outcome !== 'approved') && !input.value.trim()) { message.textContent = t('required'); input.focus(); return; }
-    busy = session; updateActions(); message.textContent = t('sending');
-    try {
-      await api('/api/answer', {...answerTarget(session), outcome, answer:input.value.trim()});
-      if (!current()) return;
-      wholeFlow(); decisionNotice = 'answered'; notice(decisionNotice); refresh(true);
-    } catch (error) {
-      if (!current()) return;
-      if (error.status === 409) { wholeFlow(); decisionNotice = 'stale'; notice(decisionNotice); refresh(true); }
-      else message.textContent = t('answerFailed');
-    } finally { if (busy === session) busy = false; updateActions(); }
+  const updateActions = () => {
+    actions.querySelectorAll('button[data-outcome]').forEach(b => { b.disabled = !current() || !decisionController.canSubmit(b.dataset.outcome, input.value); });
+    backButton.disabled = !!decisionController.session?.busy;
+    input.disabled = !current() || session.busy; $('picker').disabled = !!decisionController.session?.busy;
   };
-  if (isQuestion) actions.append(button(t('answer'), () => send('answered'), 'primary'));
-  else {
-    approveButton = button(purposeAction(d.purpose, language), () => send('approved'), 'primary'); actions.append(approveButton, button(t('sendBack'), () => send('revision_requested')));
-  }
-  actions.append(button(t('flow'), wholeFlow)); reading.append(actions);
+  const send = async outcome => {
+    if (!current()) return;
+    const request = decisionController.buildRequest(outcome, input.value);
+    if (!request) { if (!input.value.trim() && outcome !== 'approved') { message.textContent = t('required'); input.focus(); } return; }
+    updateActions(); message.textContent = t('sending');
+    let error = null;
+    try { await api('/api/answer', request); } catch (failure) { error = failure; }
+    const result = decisionController.onResult(request, error);
+    if (result.close && mode === 'decision') wholeFlow();
+    decisionNotice = result.notice; notice(decisionNotice);
+    if (current()) { message.textContent = t(result.notice); updateActions(); }
+    $('picker').disabled = !!decisionController.session?.busy;
+    if (result.refresh) refresh(true);
+  };
+  let approveButton;
+  const actionButton = (outcome, text, cls) => { const b = button(text, () => send(outcome), cls); b.dataset.outcome = outcome; return b; };
+  if (isQuestion) actions.append(actionButton('answered', t('answer'), 'primary'));
+  else { approveButton = actionButton('approved', '', 'primary'); actions.append(approveButton, actionButton('revision_requested', t('sendBack'))); }
+  const backButton = button(t('flow'), wholeFlow); actions.append(backButton); reading.append(actions);
+  const right = el('div'), surrounding = el('div'); right.append(surrounding);
   const details = el('details', undefined, 'evidence'); details.append(el('summary', t('details'))); const raw = el('pre');
   details.open = session.detailsOpened;
-  const markDetailsOpened = () => { if (current() && details.open) { session.detailsOpened = true; updateActions(); } };
+  const markDetailsOpened = () => { if (current() && details.open) { decisionController.openDetails(); updateActions(); } };
   details.addEventListener('toggle', markDetailsOpened);
-  if (d.has_evidence) {
-    const reminder = el('p', t('evidenceReminder'));
-    reminder.append(button(t('details'), () => { if (current()) { details.open = true; markDetailsOpened(); details.querySelector('summary').focus(); } }));
-    reading.append(reminder);
-  }
+  const reminder = el('p', t('evidenceReminder'));
+  reminder.append(button(t('details'), () => { if (current()) { details.open = true; markDetailsOpened(); details.querySelector('summary').focus(); } })); reading.append(reminder);
   details.append(button(t('loadEvidence'), async () => {
     if (!current()) return;
     raw.textContent = t('loading');
     try {
       const payload = await api(query('/api/run', {}, session.target));
       if (!current()) return;
-      const decision = payload.state.decisions[d.id];
+      const decision = payload.state.decisions[session.target.id];
       // Raw records stay inside this deliberately opened disclosure.
       const evidence = decision ? decision.evidence : null; const paths = new Set();
       const collect = value => { if (Array.isArray(value)) value.forEach(collect); else if (value && typeof value === 'object') { if (typeof value.log === 'string') paths.add(value.log); Object.values(value).forEach(collect); } };
@@ -427,10 +493,25 @@ function openDecision(id, focus = true) {
       if (!current()) return;
       raw.textContent = (evidence ? JSON.stringify(evidence, null, 2) : t('noEvidence')) + (logs.length ? '\n\n' + logs.join('\n\n') : '\n' + t('noEvidence'));
     } catch { if (current()) raw.textContent = t('evidenceFailed'); }
-  }), raw); right.append(details); box.append(right); updateActions(); if (focus) focusHeading(heading);
+  }), raw); right.append(details); box.append(reading, right);
+  const update = () => {
+    const decision = session.decision;
+    clear(introduction); decisionHeading(introduction, decision, 'h2'); const heading = introduction.querySelector('h2'); heading.id = 'decision-title';
+    const node = view.nodes.find(n => n.id === decision.node); if (node) introduction.append(el('p', node.summary));
+    note.textContent = decision.worker_note || t('notRecorded');
+    clear(outcomes); outcomes.append(el('p', t('choiceEffects'), 'eyebrow'));
+    for (const [key, name] of [['if_approved','ifApproved'],['if_rejected','ifRejected'],['undo','undo']]) outcomes.append(el('small', t(name)), el('p', decision.context[key] || t('notRecorded')));
+    clear(surrounding); surrounding.append(card(t('why'), decision.context.why || t('notRecorded')));
+    failedBlock(surrounding, decision);
+    for (const key of ['verified','unverified']) { const c = card(t(key)); textList(c, decision[key]); surrounding.append(c); }
+    reminder.hidden = !decision.has_evidence && !decisionController.requiresDetails;
+    if (approveButton) approveButton.textContent = purposeAction(decision.purpose, language, decision.failed);
+    updateActions();
+  };
+  decisionUI = {session, update}; update(); if (focus) focusHeading(introduction.querySelector('h2'));
 }
 function historyView() {
-  showMode('history'); const box = $('history'); clear(box); box.append(el('p', t('planOrder'), 'muted'));
+  if (!showMode('history')) return; const box = $('history'); clear(box); box.append(el('p', t('planOrder'), 'muted'));
   const strip = el('ol', undefined, 'timeline');
   view.nodes.forEach(n => {
     const laps = n.laps.length ? n.laps : [needs(n) ? 'waiting_for_you' : 'unused'];
@@ -443,16 +524,17 @@ function historyView() {
   const counts = el('div'); counts.append(countCard(), button(t('flow'), wholeFlow, 'primary')); grid.append(returns, lessons, counts); box.append(grid);
 }
 function applyView(next) {
+  if (decisionController.session?.busy) return;
   closeInvalidDecision(chosen, next.decisions);
   const nextFingerprint = JSON.stringify(next); if (nextFingerprint === fingerprint) return;
   view = next; fingerprint = nextFingerprint; showMode(mode); if (!view.nodes.some(n => n.id === selected)) selected = null;
   $('title').textContent = view.title || t('brand'); $('subtitle').textContent = view.complete ? t('complete') : t('overview', {total:view.nodes.length, done:view.counts.done, needs:view.counts.needs_you});
   accessible(); panel(); if (renderer) renderer.update(view, selected);
   if (mode === 'history') historyView();
-  if (mode === 'decision' && activeDecision && busy !== activeDecision) openDecision(activeDecision.target.id, false);
+  if (mode === 'decision' && decisionController.session) openDecision(decisionController.session.target.id, false);
 }
 function setChosen(next) {
-  if (sameRun(chosen, next)) return;
+  if (decisionController.session?.busy || sameRun(chosen, next)) return;
   closeInvalidDecision(next, []); chosen = next; generation++; resetView(); showMode('flow');
 }
 function chooseRuns(data) {
@@ -460,25 +542,26 @@ function chooseRuns(data) {
   const runs = projects.flatMap(p => (p.runs || []).map((r, i) => ({...r, project:p.root, projectName:p.name, number:i + 1})));
   runs.sort((a,b) => Number(b.status === 'open') - Number(a.status === 'open') || (b.last_event || '').localeCompare(a.last_event || ''));
   if (!chosen || !runs.some(r => r.project === chosen.project && r.id === chosen.run)) { const first = runs.find(r => !r.error) || runs[0]; setChosen(first ? {project:first.project,run:first.id} : null); }
-  const picker = $('picker'); clear(picker);
+  const picker = $('picker'); picker.disabled = !!decisionController.session?.busy; clear(picker);
   runs.forEach((r, i) => { const option = el('option', t('runOption', {project:r.projectName,n:r.number})); option.value = String(i); option.selected = !!chosen && r.project === chosen.project && r.id === chosen.run; picker.append(option); });
   $('picker-label').hidden = runs.length < 2;
-  picker.onchange = () => { const r = runs[Number(picker.value)]; setChosen({project:r.project,run:r.id}); refresh(true); };
+  picker.onchange = () => { if (decisionController.session?.busy) return; const r = runs[Number(picker.value)]; setChosen({project:r.project,run:r.id}); refresh(true); };
   return runs.find(r => chosen && r.project === chosen.project && r.id === chosen.run);
 }
 async function refresh(force = false) {
   if (document.hidden) return;
+  if (decisionController.session?.busy) { schedule(); return; }
   if (loading) { queuedRefresh = queuedRefresh || force; return; }
   loading = true; const currentGeneration = generation;
   try {
     const projectData = await api('/api/projects');
-    if (currentGeneration !== generation || document.hidden) return;
+    if (currentGeneration !== generation || document.hidden || decisionController.session?.busy) return;
     const available = chooseRuns(projectData);
     if (currentGeneration !== generation) { queuedRefresh = true; return; }
     if (!projects.length) { resetView(); notice(decisionNotice || 'noProjects'); return; }
     if (!chosen) { resetView(); notice(decisionNotice || (projects.some(p => p.error) ? 'unreadable' : 'noRun')); return; }
     if (available && available.error) { resetView(); notice(decisionNotice || 'unreadable', true); return; }
-    const data = await api(query('/api/run')); if (currentGeneration !== generation || document.hidden) return;
+    const data = await api(query('/api/run')); if (currentGeneration !== generation || document.hidden || decisionController.session?.busy) return;
     notice(decisionNotice || (!data.plan ? 'noPlan' : mapFailed ? 'fallback' : '')); applyView(data.view);
   } catch (error) { if (currentGeneration === generation) notice(error.status === 401 ? 'unauthorized' : error.status === 400 || error.status === 404 || error.status === 500 ? 'unreadable' : 'lost', true); }
   finally { loading = false; if (queuedRefresh) { queuedRefresh = false; refresh(true); } else schedule(); }

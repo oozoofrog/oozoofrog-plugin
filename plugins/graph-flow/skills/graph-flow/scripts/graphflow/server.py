@@ -128,15 +128,69 @@ def _queue():
     return {"queue": queue}
 
 
+def _text(value, fallback=""):
+    return value if isinstance(value, str) and value.strip() else fallback
+
+
+def _objects(value):
+    return [v for v in value if isinstance(v, dict)] if isinstance(value, list) else []
+
+
+def _mapping(value):
+    return value if isinstance(value, dict) else {}
+
+
+def _strings(value):
+    # Older submissions sometimes used a single uncertainty string.
+    values = [value] if isinstance(value, str) else value if isinstance(value, list) else []
+    return [v for v in values if isinstance(v, str) and v.strip()]
+
+
+def _finding_text(review):
+    return [_text(f.get("text")) for f in _objects(review.get("findings"))
+            if _text(f.get("text"))]
+
+
+def _attempt_results(nid, st, events):
+    """All observations used by trajectory_clean, including superseded failures."""
+    results = []
+    for event in events:
+        if event["seq"] <= st.get("basis", 0):
+            continue
+        data = _mapping(event.get("data"))
+        if data.get("node") != nid:
+            continue
+        if event["type"] == "node.start":
+            results = []
+        elif (event["type"] == "check.result" and isinstance(data.get("check"), str)
+              and data.get("attempt") == st.get("attempts")):
+            results.append(data)
+    return results
+
+
+def _trajectory_reasons(st, results):
+    reasons = []
+    if type(st.get("attempts")) is int and st["attempts"] > 2:
+        reasons.append("used_all_attempts")
+    if any(r.get("timed_out") is True for r in results):
+        reasons.append("timed_out")
+    if any(r.get("phase") == "loop" and r.get("type") == "scope"
+           and r.get("violations") for r in results):
+        reasons.append("left_its_files")
+    return reasons
+
+
 def _history(node, st, events):
     """Present current-basis attempts without copying technical rejection records."""
     laps, returned, results, reviews = [], [], {}, {}
-    titles = {c["id"]: c.get("title") for c in node["checks"]}
+    titles = {c["id"]: _text(c.get("title")) for c in _objects(node.get("checks"))
+              if isinstance(c.get("id"), str)}
     for event in events:
         if event["seq"] <= st["basis"]:
             continue
-        kind, data = event["type"], event["data"]
-        if kind == "review.submit" and data.get("target") == node["id"]:
+        kind, data = event["type"], _mapping(event.get("data"))
+        if (kind == "review.submit" and data.get("target") == node["id"]
+                and isinstance(data.get("node"), str)):
             reviews[data["node"]] = data
         if data.get("node") != node["id"]:
             continue
@@ -144,11 +198,11 @@ def _history(node, st, events):
             laps.append("current")
             results = {}
         elif (kind == "check.result" and data.get("phase") == "gate"
-              and data.get("attempt") == len(laps)):
+              and data.get("attempt") == len(laps) and isinstance(data.get("check"), str)):
             results[data["check"]] = data
         elif kind == "gate.verdict":
             verdict, attempt = data.get("verdict"), data.get("attempt", 0)
-            if 1 <= attempt <= len(laps):
+            if type(attempt) is int and 1 <= attempt <= len(laps):
                 if verdict in ("reject", "replan"):
                     laps[attempt - 1] = "returned"
                 elif verdict == "pass":
@@ -158,8 +212,7 @@ def _history(node, st, events):
                            if titles.get(cid) and result.get("result") == "failed"]
                 for review in reviews.values():
                     if review.get("target_submission") == data.get("submission"):
-                        reasons.extend(f["text"] for f in review.get("findings") or []
-                                       if isinstance(f, dict) and isinstance(f.get("text"), str))
+                        reasons.extend(_finding_text(review))
                 returned.append(list(dict.fromkeys(reasons)))
             results = {}
     if laps and st["submission"] and st["open_decisions"] and laps[-1] == "current":
@@ -171,13 +224,13 @@ def _view(current, derived, events, project):
     current = current or {}
     nodes = {n["id"]: n for n in current.get("nodes", [])}
     opened = decisions.open_decisions(derived)
-    view = {"title": current.get("title", current.get("goal", "")), "nodes": [],
+    view = {"title": _text(current.get("title"), _text(current.get("goal"))), "nodes": [],
             "edges": [], "decisions": [], "lessons": [],
             "counts": dict.fromkeys(("done", "doing", "waiting", "needs_you", "returned"), 0),
             "complete": derived["run"]["status"] == "complete"}
 
     def title(nid):
-        return nodes.get(nid, {}).get("title", nid)
+        return _text(nodes.get(nid, {}).get("title"), nid)
 
     gates = {}
     for nid, node in nodes.items():
@@ -186,17 +239,18 @@ def _view(current, derived, events, project):
         passed = st["status"] == "passed"
         gates[nid] = ("open" if passed else "returned" if reasons else
                       "waiting_for_you" if st["open_decisions"] else "closed")
-        family = (st["assignment"] or {}).get("family")
-        submission = (st["submission"] or {}).get("id")
-        reviewed = any(family and r["family"] and family != r["family"]
-                       and r["status"] == "passed" and submission is not None
-                       and r["target_submission"] == submission for r in st["reviews"])
+        family = _mapping(st["assignment"]).get("family")
+        submission = _mapping(st["submission"]).get("id")
+        reviewed = any(isinstance(family, str) and isinstance(r.get("family"), str)
+                       and family and r["family"] and family != r["family"]
+                       and r.get("status") == "passed" and submission is not None
+                       and r.get("target_submission") == submission for r in _objects(st["reviews"]))
         view["nodes"].append({"id": nid, "title": title(nid),
-                              "summary": node.get("summary", node["goal"]),
+                              "summary": _text(node.get("summary"), _text(node.get("goal"))),
                               "kind": node["kind"], "status": st["status"],
                               "attempts": st["attempts"], "max_attempts": st["max_attempts"],
                               "lane": st["effective_lane"], "laps": laps,
-                              "returned_reasons": reasons, "reviewed_by_other_family": reviewed,
+                              "returned_reasons": reasons, "reviewed_by_other_family": bool(reviewed),
                               "inputs": [], "outputs": []})
         if passed:
             view["counts"]["done"] += 1
@@ -206,7 +260,8 @@ def _view(current, derived, events, project):
         view["counts"]["returned"] += int(bool(reasons) and not passed)
 
     for nid, node in nodes.items():
-        edges = [(need["from"], need.get("label", need["artifact"])) for need in node["needs"]]
+        edges = [(need["from"], _text(need.get("label"), _text(need.get("artifact"))))
+                 for need in _objects(node.get("needs"))]
         if node["kind"] == "review":
             edges.append((node["target"], ""))
         for producer, label in edges:
@@ -222,47 +277,61 @@ def _view(current, derived, events, project):
 
     for decision in opened:
         node = nodes.get(decision["node"], {})
+        checks = _objects(node.get("checks"))
         context = node.get("context", {}) if node.get("kind") == "decision" else {}
         if node.get("kind") != "decision":
-            context = next((c.get("context", {}) for c in node.get("checks", [])
-                            if c["id"] == decision["check"] and c["type"] == "human"), {})
-        evidence = decision.get("evidence") or {}
+            context = next((c.get("context") for c in checks
+                            if c.get("id") == decision["check"] and c.get("type") == "human"), {})
+        context = {k: v for k, v in _mapping(context).items()
+                   if k in ("why", "if_approved", "if_rejected", "undo") and _text(v)}
+        evidence = _mapping(decision.get("evidence"))
         st = derived["nodes"].get(decision["node"]) or {}
-        submission = st.get("submission") or {}
-        verified, unverified = [], []
-        for check in node.get("checks", []):
-            if check["type"] == "human":
-                wording = check.get("title") or check.get("prompt")
+        submission = _mapping(st.get("submission"))
+        verified, unverified, failed = [], [], []
+        observations = _attempt_results(decision["node"], st, events)
+        latest = {r["check"]: r for r in observations if r.get("phase") in ("loop", "gate")}
+        check_titles = {c["id"]: _text(c.get("title")) for c in checks if isinstance(c.get("id"), str)}
+        for result in latest.values():
+            wording = check_titles.get(result["check"])
+            if result.get("result") == "failed":
+                failed.append(wording or "A check without a description did not pass.")
+            elif result.get("result") == "passed" and wording:
+                verified.append(wording)
+        for check in checks:
+            if check.get("type") == "human":
+                wording = _text(check.get("title"), _text(check.get("prompt")))
                 if wording:
                     unverified.append(wording)
-            elif check.get("title"):
-                results = (st.get("checks") or {}).get(check["id"], {})
-                # Gate is the authoritative later check when both phases exist.
-                result = results.get("gate") or results.get("loop") or {}
-                if result.get("attempt") == st.get("attempts") and result.get("result") == "passed":
-                    verified.append(check["title"])
-        uncertainty = submission.get("low_confidence") or []
-        if isinstance(uncertainty, str):
-            uncertainty = [uncertainty]
-        unverified.extend(note for note in uncertainty if isinstance(note, str) and note)
+        for review in _objects(st.get("reviews")):
+            if (submission.get("id") is not None and review.get("target_submission") == submission["id"]
+                    and review.get("verdict") == "fail"):
+                failed.extend(_finding_text(review))
+        unverified.extend(_strings(submission.get("low_confidence")))
         view["decisions"].append({"id": decision["id"], "node": decision["node"],
                                   "node_title": title(decision["node"]),
-                                  "question": decision["question"], "kind": decision["kind"],
-                                  "purpose": (decision["kind"] if decision.get("purpose") in (None, "node", "free")
-                                              else decision["purpose"]),
+                                  "question": _text(decision.get("question")), "kind": _text(decision.get("kind")),
+                                  "purpose": (_text(decision.get("kind")) if decision.get("purpose") in (None, "node", "free")
+                                              else _text(decision.get("purpose"))),
+                                  "record_purpose": _text(decision.get("purpose")),
                                   "context": context, "verified": verified, "unverified": unverified,
-                                  "worker_note": submission.get("notes"),
+                                  "failed": failed, "trajectory_reasons": _trajectory_reasons(st, observations),
+                                  "worker_note": _text(submission.get("notes"), None),
                                   "has_evidence": any(evidence.get(k) for k in ("command", "files", "checks"))})
     view["counts"]["needs_you"] = len(opened)
 
-    # Absent learning files mean no lessons, without creating a project lock on GET.
+    # A malformed learning record must not make the run itself unreadable.
     if (pathlib.Path(project) / ".graph-flow" / "constraints.jsonl").is_file():
-        for constraint in learn.all_constraints(project):
-            if constraint["status"] != "active":
+        try:
+            constraints = learn.all_constraints(project)
+        except core.GFError:
+            constraints = []
+        for constraint in _objects(constraints):
+            if constraint.get("status") != "active" or not _text(constraint.get("text")):
                 continue
-            source = constraint["derived_from"]
+            source = _mapping(constraint.get("derived_from"))
             node_title = None
-            if source.get("run") == derived["run"]["id"] and source.get("node") in nodes:
+            if (source.get("run") == derived["run"]["id"]
+                    and isinstance(source.get("node"), str) and source["node"] in nodes):
                 node_title = title(source["node"])
             view["lessons"].append({"text": constraint["text"], "node_title": node_title})
     return view

@@ -257,6 +257,94 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(data["view"]["nodes"][3]["outputs"],
                          [{"label": "읽기 쉬운 설명", "other_title": "현황판 화면", "delivered": False}])
 
+    def test_decisions_show_latest_failures_and_bound_review_findings_for_every_purpose(self):
+        run, project = self.runs[0], self.projects[0]
+        current, _, derived = server._snapshot(run)
+        submission = derived["nodes"]["build"]["submission"]["id"]
+        current["nodes"][0]["checks"][0]["title"] = "The result is complete"
+        with store.transaction(run) as tx:
+            def result(check, outcome, **extra):
+                tx.append("check.result", dict(node="build", check=check, type="cmd", phase="loop",
+                          attempt=1, result=outcome, **extra), ACTOR)
+            result("unit", "failed", timed_out=True)
+            result("unnamed", "failed")
+            result("old", "failed")
+            result("old", "passed")
+            tx.append("check.result", {"node": "build", "check": "scope", "type": "scope",
+                      "phase": "loop", "attempt": 1, "result": "passed", "violations": ["outside"]}, ACTOR)
+            tx.append("review.submit", {"node": "review", "target": "build", "attempt": 1,
+                      "target_submission": submission, "verdict": "fail",
+                      "findings": [{"text": "A case is missing"}, {"text": {}}, 7]}, ACTOR)
+        for purpose in ("hold", "trajectory", "human_check"):
+            decisions.ask(run, "review", "Please read", "build", None, purpose, None, ACTOR)
+        events = store.events(run)
+        derived = state.derive(current, events)
+        view = server._view(current, derived, events, project)
+        for decision in view["decisions"]:
+            self.assertEqual(decision["failed"], ["The result is complete",
+                "A check without a description did not pass.", "A case is missing"])
+            self.assertEqual(decision["verified"], [])
+            self.assertEqual(decision["trajectory_reasons"], ["timed_out", "left_its_files"])
+        # A later successful result replaces that failure, but not the timeout fact.
+        with store.transaction(run) as tx:
+            tx.append("check.result", {"node": "build", "check": "unit", "type": "cmd",
+                      "phase": "loop", "attempt": 1, "result": "passed"}, ACTOR)
+        events = store.events(run); derived = state.derive(current, events)
+        view = server._view(current, derived, events, project)
+        self.assertEqual(view["decisions"][0]["verified"], ["The result is complete"])
+        self.assertEqual(view["decisions"][0]["failed"], [
+            "A check without a description did not pass.", "A case is missing"])
+        derived["nodes"]["build"]["reviews"][0]["target_submission"] = -1
+        self.assertNotIn("A case is missing", server._view(current, derived, events, project)["decisions"][0]["failed"])
+
+    def test_run_tolerates_legacy_submission_evidence_and_finding_shapes(self):
+        run = self.runs[0]
+        for uncertainty in (5, {}, None, "Legacy note", ["Readable note", 4, None, {"text": "bad"}]):
+            for findings in (5, {}, [None, {"text": {}}, {"text": "Readable finding"}]):
+                with self.subTest(uncertainty=uncertainty, findings=findings):
+                    with store.transaction(run) as tx:
+                        event = tx.append("node.submit", {"node": "build", "attempt": 1,
+                            "notes": {"bad": "shape"}, "low_confidence": uncertainty}, ACTOR)
+                        tx.append("review.submit", {"node": "review", "attempt": 1, "target": "build",
+                            "target_submission": event["seq"], "verdict": "fail", "findings": findings}, ACTOR)
+                    decisions.ask(run, "review", "Read this", "build", None, "hold", 5, ACTOR)
+                    status, body = self.json_request("GET", self.api("/api/run"))
+                    self.assertEqual(status, 200, body)
+                    d = body["view"]["decisions"][0]
+                    self.assertIsNone(d["worker_note"])
+                    expected = [uncertainty] if isinstance(uncertainty, str) else ["Readable note"] if isinstance(uncertainty, list) else []
+                    self.assertEqual(d["unverified"], expected)
+                    self.assertEqual(d["failed"], ["Readable finding"] if isinstance(findings, list) else [])
+                    with store.transaction(run) as tx:
+                        tx.append("gate.verdict", {"node": "build", "attempt": "bad", "submission": event["seq"],
+                                  "verdict": "reject"}, ACTOR)
+                    self.assertEqual(self.json_request("GET", self.api("/api/run"))[0], 200)
+
+    def test_view_filters_malformed_presentation_and_constraint_source_values(self):
+        current, events, derived = server._snapshot(self.runs[0])
+        current["title"] = {}; current["nodes"][0].update(title=[], summary={})
+        check = current["nodes"][0]["checks"][0]
+        check.update(title={})
+        current["nodes"][0]["checks"].append({"id": "human", "type": "human", "title": [], "prompt": 5})
+        derived["decisions"][self.asks[0]]["check"] = "human"
+        for context in (5, [], {"why": {}, "undo": ["bad"], "if_approved": "Readable effect"}):
+            current["nodes"][0]["checks"][-1]["context"] = context
+            view = server._view(current, derived, events, self.projects[0])
+            self.assertEqual(view["title"], "server test")
+            self.assertEqual(view["nodes"][0]["title"], "build")
+            self.assertEqual(view["nodes"][0]["summary"], "build")
+            self.assertEqual(view["decisions"][0]["unverified"], [])
+            self.assertEqual(view["decisions"][0]["context"], {"if_approved": "Readable effect"} if isinstance(context, dict) else {})
+        constraint_path = self.projects[0] / ".graph-flow/constraints.jsonl"
+        constraint_path.write_text("{}\n")
+        self.assertEqual(self.json_request("GET", self.api("/api/run"))[0], 200)
+        with mock.patch.object(learn, "all_constraints", return_value=[
+                {"status": "active", "text": {}, "derived_from": {}},
+                {"status": "active", "text": "Readable lesson", "derived_from": {"run": derived["run"]["id"], "node": []}},
+                {"status": "active", "text": "Another lesson", "derived_from": 5}]):
+            lessons = server._view(current, derived, events, self.projects[0])["lessons"]
+        self.assertEqual(lessons, [{"text": "Readable lesson", "node_title": None}, {"text": "Another lesson", "node_title": None}])
+
     def test_unsupported_methods(self):
         for method in ("PUT", "DELETE", "PATCH", "OPTIONS", "HEAD", "TRACE", "BREW"):
             with self.subTest(method=method):
@@ -480,7 +568,8 @@ class ServerTests(unittest.TestCase):
                                             "question": "Does this wording fit?", "kind": "review",
                                         "purpose": "human_check",
                                             "context": context, "has_evidence": False,
-                                            "verified": [], "unverified": ["The wording fits"], "worker_note": None}])
+                                            "verified": [], "unverified": ["The wording fits"], "worker_note": None,
+                                        "record_purpose": "human_check", "failed": [], "trajectory_reasons": []}])
         self.assertEqual(view["lessons"], [{"text": active["text"], "node_title": "Done"},
                                          {"text": unknown["text"], "node_title": None}])
         self.assertEqual(view["counts"], {"done": 1, "doing": 1, "waiting": 2, "needs_you": 1, "returned": 1})
@@ -698,6 +787,45 @@ class ReviewRegressionTest(unittest.TestCase):
         laps, returned = server._history(node, state, events)[:2]
         self.assertEqual(laps, ["returned"])
         self.assertEqual(returned, [["A case is missing"]])
+
+    def test_trajectory_reasons_follow_derive_current_attempt_facts(self):
+        raw = {"schema_version": 1, "goal": "flow", "nodes": [{"id": "work", "kind": "work",
+               "goal": "work", "lane": 1, "owns": [], "checks": [CMD]}]}
+        current, _ = plan.normalize(raw)
+        events = []
+        def append(kind, **data):
+            events.append({"seq": len(events) + 1, "type": kind, "data": data, "plan_revision": 1})
+        def reasons():
+            st = state.derive(current, events)["nodes"]["work"]
+            actual = server._trajectory_reasons(st, server._attempt_results("work", st, events))
+            self.assertEqual(bool(actual), not st["trajectory_clean"])
+            return actual
+        append("node.start", node="work", attempt=1)
+        self.assertEqual(reasons(), [])
+        append("check.result", node="work", check="unit", attempt=1, phase="loop", timed_out=True)
+        append("check.result", node="work", check="unit", attempt=1, phase="loop", timed_out=False)
+        self.assertEqual(reasons(), ["timed_out"])
+        append("check.result", node="work", check="scope", type="scope", attempt=1, phase="loop", violations=["outside"])
+        self.assertEqual(reasons(), ["timed_out", "left_its_files"])
+        append("node.start", node="work", attempt=2)
+        self.assertEqual(reasons(), [])
+        append("check.result", node="work", check="old", attempt=1, phase="loop", timed_out=True)
+        append("check.result", node="work", check="scope", type="scope", attempt=2, phase="gate", violations=["outside"])
+        self.assertEqual(reasons(), [])
+        append("node.start", node="work", attempt=3)
+        self.assertEqual(reasons(), ["used_all_attempts"])
+
+    def test_history_tolerates_non_iterable_findings_and_non_string_titles(self):
+        node = {"id": "work", "checks": [{"id": "unit", "title": {"bad": "shape"}}]}
+        st = {"basis": 0, "submission": None, "open_decisions": []}
+        for findings in (5, {}, "text", [{"text": []}, {"text": "Readable finding"}]):
+            events = [
+                {"seq": 1, "type": "node.start", "data": {"node": "work"}},
+                {"seq": 2, "type": "review.submit", "data": {"node": "review", "target": "work", "target_submission": 5, "findings": findings}},
+                {"seq": 3, "type": "check.result", "data": {"node": "work", "check": "unit", "phase": "gate", "attempt": 1, "result": "failed"}},
+                {"seq": 4, "type": "gate.verdict", "data": {"node": "work", "verdict": "reject", "attempt": {}, "submission": 5}}]
+            _, returned = server._history(node, st, events)
+            self.assertEqual(returned, [["Readable finding"]] if isinstance(findings, list) else [[]])
 
     def test_requests_have_a_socket_timeout(self):
         httpd, token = server.make_server()

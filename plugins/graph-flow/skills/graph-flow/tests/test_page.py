@@ -126,65 +126,204 @@ class PageTests(unittest.TestCase):
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.assertEqual(result.returncode, 0, result.stderr.decode())
 
-    @unittest.skipUnless(shutil.which('node'), 'node is not on PATH; dashboard decision behavior tests skipped')
-    def test_decision_behavior(self):
-        script = r'''
+    def run_controller(self, body):
+        if not shutil.which('node'):
+            self.skipTest('node is not on PATH; dashboard decision behavior tests skipped')
+        script = r"""
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const source = readFileSync(process.argv[2], 'utf8');
-const {captureDecision, answerTarget, draftKey, reconcileDecision, decisionIsCurrent, canApprove, purposeWording, purposeAction} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+const {createDecisionController, decisionQuestion, purposeWording, purposeAction} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const first = {project:'/project', run:'first'}, second = {project:'/project', run:'second'};
-const decision = {id:'d7', purpose:'lane3', kind:'authorization'};
-let chosen = {...first};
-const open = captureDecision(chosen, decision);
-chosen.run = second.run;
-assert.deepEqual(answerTarget(open), {...first, id:'d7'}, 'POST must use the captured target');
-assert(Object.isFrozen(open.target));
-const other = captureDecision(chosen, decision);
-const key = draftKey(open.target), otherKey = draftKey(other.target);
-assert.notEqual(key, otherKey, 'same id in different runs must have separate drafts');
-assert.notEqual(key, draftKey({...open.target, project:'/other'}));
-assert.notEqual(draftKey({project:'a,b',run:'c',id:'d'}), draftKey({project:'a',run:'b,c',id:'d'}));
-const drafts = {[key]:'first draft', [otherKey]:'second draft'};
-const changed = reconcileDecision(open, chosen, [decision], drafts);
-assert.equal(changed.open, null);
-assert.equal(changed.reason, 'runChanged');
-assert.equal(changed.drafts[key], undefined, 'run change must discard the old draft');
-assert.equal(changed.drafts[otherKey], 'second draft');
-assert.equal(drafts[key], 'first draft', 'reconciliation must be pure');
-const missing = reconcileDecision(open, first, [], drafts);
-assert.equal(missing.open, null);
-assert.equal(missing.reason, 'decisionClosed');
-assert.equal(missing.drafts[key], undefined);
-assert.equal(reconcileDecision(open, first, [decision], drafts).open, open);
-assert.equal(reconcileDecision(open, null, [decision], drafts).open, null);
-assert.equal(reconcileDecision(open, {...first, project:'/other'}, [decision], drafts).open, null);
-assert.equal(decisionIsCurrent(open, open, first, [decision]), true);
-assert.equal(decisionIsCurrent(open, open, chosen, [decision]), false);
-assert.equal(decisionIsCurrent(open, null, first, [decision]), false, 'late POST must not revive a closed view');
-assert.equal(decisionIsCurrent(open, captureDecision(first, decision), first, [decision]), false, 'late POST must not affect a reopened view');
-assert.equal(canApprove(open), false);
-assert.equal(canApprove({...open, detailsOpened:true}), true);
-assert.equal(canApprove(captureDecision(first, {...decision, purpose:'authorization'})), false);
-assert.equal(canApprove(captureDecision(first, {...decision, purpose:'future-purpose'})), false, 'authorization kind retains the details gate');
-assert.equal(canApprove(captureDecision(first, {...decision, purpose:'human_check', kind:'review'})), true);
-assert.equal(canApprove(null), false);
-for (const language of ['ko','en']) {
-  const meanings = ['human_check','lane3','trajectory','hold','direction','information'].map(p => purposeWording(p, language));
-  assert.equal(new Set(meanings).size, meanings.length, 'decision purposes must remain distinct');
-  assert.equal(purposeWording('authorization', language), purposeWording('lane3', language));
-  assert.equal(purposeWording('review', language), purposeWording('human_check', language));
-  for (const purpose of ['future-purpose','node','free',undefined,'toString','__proto__']) {
-    assert.equal(typeof purposeWording(purpose, language), 'string');
-    assert(!/approv|통과|승인|허락/i.test(purposeWording(purpose, language)), 'unknown purpose must use neutral wording');
-    assert(!/approv|통과|승인|허락/i.test(purposeAction(purpose, language)), 'unknown purpose must use a neutral action');
-  }
-}
-'''
+const decision = {id:'d7', purpose:'lane3', kind:'authorization', failed:[]};
+const controller = createDecisionController();
+const show = (decisions = [decision], run = first) => controller.refresh({decisions}, run);
+show();
+""" + body
         result = subprocess.run([shutil.which('node'), '--input-type=module', '-',
                                  str(S / 'scripts/graphflow/page.js')], input=script,
                                 text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_controller_bound_request(self):
+        self.run_controller(r"""
+let chosen = {...first};
+controller.refresh({decisions:[decision]}, chosen);
+const session = controller.open('d7');
+assert(Object.isFrozen(session.target));
+controller.openDetails();
+chosen.run = second.run;
+const request = controller.buildRequest('approved', '  Read it  ');
+assert.deepEqual(request, {...first, id:'d7', outcome:'approved', answer:'Read it'}, 'POST must use the bound target');
+assert.equal(session.busy, true);
+assert.equal(controller.buildRequest('approved', ''), null, 'double sends must be refused');
+assert.equal(controller.close(), false, 'a pending POST must keep the view open');
+assert.equal(show([], second), '', 'a pending POST suspends view-closing');
+assert.equal(controller.session, session);
+assert.equal(controller.open('different'), null);
+const result = controller.onResult(request);
+assert.deepEqual(result, {notice:'answered', close:true, refresh:false}, 'always report the real result, without refreshing a different run');
+assert.equal(controller.session, null);
+""")
+
+    def test_controller_details_gate(self):
+        self.run_controller(r"""
+for (const changes of [
+  {}, {purpose:'authorization'}, {purpose:'future-purpose'},
+  {purpose:'hold',kind:'review'},
+  {purpose:'human_check',kind:'review',failed:['A case did not pass']},
+  {purpose:'trajectory',kind:'review',failed:['A reviewer found a problem']}
+]) {
+  const d = {...decision, ...changes}; show([d]); controller.open(d.id);
+  assert.equal(controller.canSubmit('approved', ''), false, 'affirmative button must be disabled until details open');
+  assert.equal(controller.buildRequest('approved', ''), null, 'sending must enforce the same details gate');
+  assert.equal(controller.canSubmit('revision_requested', ''), false);
+  assert.equal(controller.canSubmit('revision_requested', 'Please fix this'), true);
+  controller.openDetails(); assert.equal(controller.canSubmit('approved', ''), true);
+  const request = controller.buildRequest('approved', ''); assert(request);
+  controller.onResult(request);
+}
+show([{...decision,purpose:'human_check',kind:'review'}]); controller.open('d7');
+assert.equal(controller.canSubmit('approved', ''), true);
+controller.close();
+show([{...decision,kind:'direction'}]); controller.open('d7');
+assert.equal(controller.canSubmit('approved', 'text'), false);
+assert.equal(controller.buildRequest('answered', '  '), null);
+assert.equal(controller.canSubmit('answered', 'This way'), true);
+""")
+
+    def test_controller_sessions_are_per_decision(self):
+        self.run_controller(r"""
+const another = {...decision,id:'d8'}; show([decision,another]);
+const old = controller.open('d7'); controller.setDraft('첫 답'); controller.openDetails();
+assert.equal(controller.canSubmit('approved', ''), true);
+const fresh = controller.open('d8');
+assert.notEqual(fresh, old, 'opening another id must create a new session');
+assert.equal(fresh.draft, ''); assert.equal(fresh.detailsOpened, false);
+assert.equal(controller.canSubmit('approved', ''), false, 'details for one decision must not unlock another');
+controller.setDraft('새 답'); show([decision,another]);
+assert.equal(controller.open('d8'), fresh, 'ordinary refresh must preserve the session and draft');
+assert.equal(fresh.draft, '새 답');
+assert.equal(show([decision]), 'decisionClosed'); assert.equal(controller.session, null);
+controller.open('d7'); controller.setDraft('draft');
+assert.equal(show([decision],second), 'runChanged'); assert.equal(controller.session,null);
+assert.equal(controller.open('d7').draft, '');
+""")
+
+    def test_controller_reports_late_results_and_errors(self):
+        self.run_controller(r"""
+controller.open('d7'); controller.openDetails();
+const request = controller.buildRequest('approved', '');
+assert.deepEqual(controller.onResult(request, {status:503}), {notice:'answerFailed', close:false, refresh:true});
+assert.equal(controller.session.busy, false);
+controller.close(); show([decision],second); const other = controller.open('d7');
+assert.deepEqual(controller.onResult(request), {notice:'answered', close:false, refresh:false}, 'a result after closure must still be reported');
+assert.equal(controller.session, other, 'late results cannot close another run');
+controller.openDetails(); const newer = controller.buildRequest('approved', '');
+assert.equal(controller.onResult(request).close, false, 'a repeated callback cannot settle a newer request');
+assert.equal(other.busy,true);
+assert.equal(controller.onResult(newer,{status:409}).notice,'stale');
+assert.equal(controller.session,null);
+""")
+
+    def test_decision_wording_and_exact_generated_question(self):
+        self.run_controller(r"""
+for (const language of ['ko','en']) {
+  const meanings = ['human_check','lane3','trajectory','hold','direction','information'].map(p => purposeWording(p, language));
+  assert.equal(new Set(meanings).size, meanings.length);
+  assert.equal(purposeWording('authorization', language), purposeWording('lane3', language));
+  assert.equal(purposeWording('review', language), purposeWording('human_check', language));
+  for (const purpose of ['future-purpose','node','free',undefined,'toString','__proto__']) {
+    assert.equal(typeof purposeWording(purpose, language), 'string');
+    assert(!/approv|통과|승인|허락/i.test(purposeWording(purpose, language)));
+    assert(!/approv|통과|승인|허락/i.test(purposeAction(purpose, language)));
+  }
+  assert.equal(purposeAction('hold',language), language === 'ko' ? '그래도 받아들이기' : 'Accept anyway');
+  assert.equal(purposeAction('human_check',language,['A failure']), purposeAction('hold',language));
+}
+assert.equal(decisionQuestion({purpose:'lane3',node:'build',question:'Approve lane3 for build?'}),'');
+assert.equal(decisionQuestion({purpose:'review',record_purpose:'free',node:'build',question:'Approve free for build?'}),'');
+for (const question of ['Approve deploy for prod?','Approve hold for another?','Approve lane3 for build? ']) {
+  assert.equal(decisionQuestion({purpose:'lane3',node:'build',question}),question);
+}
+""")
+
+    def test_dom_uses_controller_and_preserves_composing_input_on_refresh(self):
+        self.run_controller(r"""
+class Element {
+  constructor(tag) { this.tagName=tag; this.children=[]; this.dataset={}; this.listeners={}; this.hidden=false; this.disabled=false; this.value=''; this._text=''; this.style={}; this.classList={add(){},toggle(){}}; }
+  append(...children) { for (const c of children) { c.parent=this; this.children.push(c); } }
+  replaceChildren(...children) { for (const c of this.children) { if (c.contains(document.activeElement)) document.activeElement=null; c.parent=null; } this.children=[]; this._text=''; this.append(...children); }
+  contains(node) { return this===node || this.children.some(c=>c.contains(node)); }
+  set textContent(text) { this.replaceChildren(); this._text=String(text); }
+  get textContent() { return this._text + this.children.map(c=>c.textContent).join(' '); }
+  setAttribute(key,value) { this[key]=String(value); }
+  addEventListener(type,fn) { (this.listeners[type] ||= []).push(fn); }
+  dispatchEvent(event) { for (const fn of this.listeners[event.type] || []) fn(event); }
+  click() { if (!this.disabled) this.dispatchEvent({type:'click'}); }
+  focus() { document.activeElement=this; }
+  querySelectorAll(selector) {
+    const matches = c => selector==='button[data-outcome]' ? c.tagName==='button' && !!c.dataset.outcome : selector==='[data-i18n]' ? false : c.tagName===selector || selector===`#${c.id}`;
+    return this.children.flatMap(c=>[...(matches(c)?[c]:[]),...c.querySelectorAll(selector)]);
+  }
+  querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
+}
+const body=new Element('body'), root=new Element('html'), docEvents={};
+globalThis.document={body,documentElement:root,hidden:false,activeElement:null,
+  createElement:tag=>new Element(tag), getElementById:id=>body.querySelector(`#${id}`),
+  querySelector:selector=>body.querySelector(selector), querySelectorAll:selector=>body.querySelectorAll(selector),
+  addEventListener:(type,fn)=>{docEvents[type]=fn;}};
+body.append(new Element('nav'));
+for (const id of ['map','notice','picker','picker-label','flow','history','decision','flow-tab','history-tab','title','subtitle','node-list','edge-list','decision-list','panel','accessible']) {
+  const e=new Element(id==='picker'?'select':'div'); e.id=id; body.append(e);
+}
+Object.defineProperty(globalThis,'navigator',{value:{language:'en'},configurable:true});
+globalThis.location={href:'http://localhost:5000/?t=demo',port:'5000'};
+globalThis.history={replaceState(){}}; globalThis.sessionStorage={getItem(){return 'demo'},setItem(){}};
+globalThis.matchMedia=()=>({matches:true,addEventListener(){}});
+globalThis.setTimeout=()=>0; globalThis.clearTimeout=()=>{};
+const d={...decision,purpose:'hold',kind:'review',node:'work',question:'Approve hold for work?',record_purpose:'hold',
+  context:{},verified:['A verified fact'],unverified:[],worker_note:'Read me',has_evidence:false,failed:['Missing case'],trajectory_reasons:[]};
+let live={title:'Flow',nodes:[{id:'work',title:'Work',summary:'Summary',status:'submitted',attempts:1,max_attempts:3,laps:[],returned_reasons:[],inputs:[],outputs:[]}],edges:[],decisions:[d],lessons:[],counts:{done:0,doing:0,waiting:0,needs_you:1,returned:0},complete:false};
+const posts=[]; let resolvePost;
+globalThis.fetch=async (path,options)=>{
+  if (options.method==='POST') { posts.push(JSON.parse(options.body)); return new Promise(resolve=>{resolvePost=()=>resolve({ok:true,json:async()=>({ok:true})});}); }
+  return {ok:true,json:async()=>path==='/api/projects'?{projects:[{root:first.project,name:'Project',runs:[{id:first.run,status:'open'}]}]}:{plan:{},view:structuredClone(live),state:{decisions:{}}}};
+};
+const settle=async()=>{ for(let i=0;i<12;i++) await new Promise(setImmediate); };
+await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64')+'#dom'); await settle();
+const get=id=>document.getElementById(id);
+// Open through the HTML fallback; map and panel route to the same openDecision.
+get('decision-list').querySelector('button').click();
+const input=get('answer-text'), actions=get('answer-actions'), buttons=[...actions.children];
+assert(input, 'fallback must open the decision');
+assert.equal(buttons[0].textContent,'Accept anyway'); assert.equal(buttons[0].disabled,true, 'real affirmative button must use controller.canSubmit');
+buttons[0].dispatchEvent({type:'click'}); await settle();
+assert.equal(posts.length,0,'even a programmatic click must pass through buildRequest');
+input.value='고쳐 주세요'; input.dispatchEvent({type:'input'}); input.focus(); input.selectionStart=2; input.selectionEnd=4;
+input.dispatchEvent({type:'compositionstart'});
+live.title='Updated flow'; live.decisions[0].worker_note='Updated note';
+docEvents.visibilitychange(); await settle();
+assert.equal(get('title').textContent,'Updated flow', 'refresh must actually apply changed content');
+assert.equal(get('answer-text'),input,'refresh must preserve the textarea node');
+assert.equal(get('answer-actions'),actions,'refresh must preserve the actions node');
+assert.deepEqual(actions.children,buttons,'refresh must preserve every action button');
+assert.equal(document.activeElement,input); assert.equal(input.value,'고쳐 주세요');
+assert.equal(input.selectionStart,2); assert.equal(input.selectionEnd,4);
+input.dispatchEvent({type:'compositionend'});
+get('decision').querySelector('details').open=true;
+get('decision').querySelector('details').dispatchEvent({type:'toggle'});
+assert.equal(buttons[0].disabled,false);
+buttons[0].click(); await settle();
+assert.deepEqual(posts,[{...first,id:'d7',outcome:'approved',answer:'고쳐 주세요'}],'real POST must use the controller request');
+assert.equal(get('picker').disabled,true);
+live.decisions=[]; docEvents.visibilitychange(); get('flow-tab').click(); await settle();
+assert.equal(get('answer-text'),input,'a refresh or navigation must not close a pending POST');
+resolvePost(); await settle();
+assert.match(get('notice').textContent,/Answer sent/,'real outcome must survive the deferred decision-closing refresh');
+assert.equal(get('picker').disabled,false);
+assert.equal(get('answer-text'),null);
+""")
 
     def test_real_demo_and_decision_view(self):
         with tempfile.TemporaryDirectory() as directory, mock.patch.dict(os.environ):
