@@ -1,3 +1,0 @@
-three 0.170.0 (MIT), from the npm package "three".
-three.module.min.js: build/three.module.min.js, unmodified.
-CSS2DRenderer.js: examples/jsm/renderers/CSS2DRenderer.js; only change: import from ./three.module.min.js instead of the bare specifier.

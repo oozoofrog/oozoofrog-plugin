@@ -14,8 +14,7 @@ from . import core, decisions, graph, learn, state, store, trace
 from . import plan as planning
 
 PAGE_PATH = pathlib.Path(__file__).with_name("page.html")
-STATIC_TYPES = {name: "text/javascript; charset=utf-8" for name in
-                ("page.js", "vendor/three.module.min.js", "vendor/CSS2DRenderer.js")}
+STATIC_TYPES = {"page.js": "text/javascript; charset=utf-8"}
 STATIC_TYPES.update({"assets/frog-%s.png" % pose: "image/png" for pose in
                      ("wave", "walk-a", "walk-b", "report")})
 STATIC_ROOT = pathlib.Path(__file__).parent
@@ -270,12 +269,13 @@ def _view(current, derived, events, project):
         view["counts"]["returns_total"] += laps.count("returned")
 
     for nid, node in nodes.items():
-        edges = [(need["from"], _text(need.get("label"), _text(need.get("artifact"))))
+        edges = [(need["from"], nid, _text(need.get("label"), _text(need.get("artifact"))),
+                  "waits_for_decision" if nodes[need["from"]]["kind"] == "decision" else "hands_over")
                  for need in _objects(node.get("needs"))]
         if node["kind"] == "review":
-            edges.append((node["target"], ""))
-        for producer, label in edges:
-            view["edges"].append({"from": producer, "to": nid, "label": label,
+            edges.append((nid, node["target"], "", "reviews"))
+        for producer, receiver, label, relation in edges:
+            view["edges"].append({"from": producer, "to": receiver, "label": label, "relation": relation,
                                   "delivered": gates[producer] == "open", "gate": gates[producer]})
 
     presented = {n["id"]: n for n in view["nodes"]}

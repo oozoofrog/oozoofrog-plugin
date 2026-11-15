@@ -160,6 +160,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.httpd.server_address[0], "127.0.0.1")
 
     def test_static_allowlist_and_host_without_token(self):
+        self.assertEqual(set(server.STATIC_TYPES), {"page.js", *("assets/frog-%s.png" % p for p in ("wave", "walk-a", "walk-b", "report"))})
         for name, content_type in server.STATIC_TYPES.items():
             status, headers, body = self.request("GET", "/static/" + name, token=False)
             self.assertEqual(status, 200, name)
@@ -168,7 +169,7 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(headers["Cache-Control"], "no-store")
             self.assert_error(403, "bad_host", "GET", "/static/" + name, token=False,
                               headers={"Host": "foreign.example"})
-        for path in ("missing", "server.py", "../server.py", "vendor/../page.js",
+        for path in ("vendor/three.module.min.js", "vendor/CSS2DRenderer.js", "vendor/LICENSE", "vendor/VERSIONS.txt", "missing", "server.py", "../server.py", "vendor/../page.js",
                      "vendor%2fthree.module.min.js", "vendor%2Fthree.module.min.js",
                      "%70age.js", "%2e%2e/page.js", "./page.js", "assets//frog-wave.png",
                      "vendor/%2e%2e/page.js", "%252e%252e/page.js", "page.js/", ""):
@@ -561,10 +562,10 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(waiting["laps"], [])
         self.assertEqual(review["laps"], [])
         self.assertEqual(view["edges"], [
-            {"from": "retry", "to": "waiting", "label": "Draft", "delivered": False, "gate": "returned"},
-            {"from": "human", "to": "waiting", "label": "Chosen wording", "delivered": False, "gate": "waiting_for_you"},
-            {"from": "done", "to": "waiting", "label": "Finished result", "delivered": True, "gate": "open"},
-            {"from": "retry", "to": "review-retry", "label": "", "delivered": False, "gate": "returned"}])
+            {"from": "retry", "to": "waiting", "label": "Draft", "relation": "hands_over", "delivered": False, "gate": "returned"},
+            {"from": "human", "to": "waiting", "label": "Chosen wording", "relation": "hands_over", "delivered": False, "gate": "waiting_for_you"},
+            {"from": "done", "to": "waiting", "label": "Finished result", "relation": "hands_over", "delivered": True, "gate": "open"},
+            {"from": "review-retry", "to": "retry", "label": "", "relation": "reviews", "delivered": False, "gate": "closed"}])
         self.assertEqual(view["decisions"], [{"id": "d%d" % ask, "node": "human", "node_title": "Human",
                                             "question": "Does this wording fit?", "kind": "review",
                                         "purpose": "human_check",
@@ -588,6 +589,23 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(data["view"]["nodes"][1]["returned_reasons"], [])
         self.assertEqual(data["view"]["edges"][0]["gate"], "closed")
         self.assertEqual(data["view"]["counts"]["returned"], 0)
+
+    def test_view_edge_relations_follow_plan_types(self):
+        raw = {"schema_version": 1, "goal": "Choose and review", "nodes": [
+            {"id": "choice", "kind": "decision", "goal": "Choose", "lane": 1,
+             "question": "Proceed?", "decision_kind": "authorization", "outputs": ["choice"]},
+            {"id": "work", "kind": "work", "goal": "Make", "lane": 1, "grade": "scoped",
+             "owns": ["result.txt"], "checks": [dict(CMD)],
+             "needs": [{"from": "choice", "artifact": "choice", "label": "Permission"}]},
+            {"id": "review", "kind": "review", "target": "work", "goal": "Review", "lens": "correctness",
+             "lane": 1, "grade": "daily", "checks": [{"id": "cites", "type": "cites"}],
+             "needs": [{"from": "work", "artifact": "result.txt", "label": "Result"}]}]}
+        self.assertEqual(plan.validate(raw), [])
+        current, _ = plan.normalize(raw)
+        view = server._view(current, state.derive(current, []), [], self.projects[0])
+        self.assertEqual([(e["from"], e["to"], e["relation"]) for e in view["edges"]],
+                         [("choice", "work", "waits_for_decision"), ("work", "review", "hands_over"),
+                          ("review", "work", "reviews")])
 
     def test_view_decision_node_context_free_decisions_and_completion(self):
         raw = {"schema_version": 1, "goal": "Choose a direction", "nodes": [

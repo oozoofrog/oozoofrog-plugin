@@ -113,6 +113,10 @@ class PageTests(unittest.TestCase):
         self.assertEqual(html.count('<script'), 1)
         self.assertNotIn('unsafe-inline', html)
         self.assertNotIn('unsafe-eval', html)
+        for removed in ('three.module', 'CSS2DRenderer', 'WebGL', 'canvas'):
+            self.assertNotIn(removed, html + js)
+        self.assertIn('createElementNS', js)
+        self.assertFalse((S / 'scripts/graphflow/vendor').exists())
 
     def test_translation_keys_match(self):
         js = (S / 'scripts/graphflow/page.js').read_text(encoding='utf-8')
@@ -138,7 +142,7 @@ class PageTests(unittest.TestCase):
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const source = readFileSync(process.argv[2], 'utf8');
-const {createDecisionController, decisionQuestion, purposeWording, purposeAction, viewLanguage, attemptSegments, cometCount, failedBadgeCount, layeredLayout, crossingCount, transferPoint} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+const {createDecisionController, decisionQuestion, purposeWording, purposeAction, viewLanguage, attemptPips, innerLoopState, edgeRelationLabel, fitScale, MIN_FIT_SCALE, cometCount, failedBadgeCount, layeredLayout, crossingCount} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const first = {project:'/project', run:'first'}, second = {project:'/project', run:'second'};
 const decision = {id:'d7', purpose:'lane3', kind:'authorization', failed:[]};
 const controller = createDecisionController();
@@ -157,10 +161,10 @@ assert.equal(viewLanguage({language:'en'}, 'ko-KR'),'en');
 assert.equal(viewLanguage({}, 'ko-KR'),'en');
 assert.equal(viewLanguage(null,'ko-KR'),'ko');
 for(const [laps,max,status] of [[[],3,'pending'],[['current'],3,'running'],[['waiting_for_you'],3,'submitted'],[['returned','current'],3,'running'],[['passed'],3,'passed'],[['returned','returned','passed'],3,'passed'],[['current'],2,'running']]) {
-  const segments=attemptSegments(laps,max,status);
+  const segments=attemptPips(laps,max,status);
   assert.equal(segments.length,max);
   assert.deepEqual(segments.map(s=>s.state),Array.from({length:max},(_,i)=>laps[i]||'unused'));
-  segments.forEach((s,i)=>{assert.equal(s.used,!!laps[i]);assert.equal(s.thickness,laps[i]?3.2:.7);if(status==='passed'&&!s.used)assert(s.opacity<.2);});
+
 }
 assert.equal(cometCount({laps:['returned','returned','passed'],returned_reasons:[[],[],[]]}),2);
 assert.equal(cometCount({laps:[],returned_reasons:[[]]}),0);
@@ -168,42 +172,51 @@ assert.equal(failedBadgeCount({id:'a'},[{node:'a',failed:['first']},{node:'a',fa
 for(let n=0;n<9;n++) assert.equal(failedBadgeCount({id:'a'},[{node:'a',failed:Array(n).fill('fail')},{node:'b',failed:['other']}]),n);
 """)
 
-    def test_layered_depth_order_and_gates_on_demo_and_twelve_node_graph(self):
+    def test_layout_rectangles_depth_reviews_and_fit(self):
         with tempfile.TemporaryDirectory() as directory, mock.patch.dict(os.environ):
             root=pathlib.Path(directory)
             run=build_demo_run(root/'home',root/'project')
             current,events,derived=server._snapshot(run)
             demo=server._view(current,derived,events,root/'project')
         self.run_controller('const demo = '+json.dumps(demo)+r';'+r"""
-const nodes=Array.from({length:12},(_,i)=>({id:'n'+i,kind:'work',title:'Work item '+i}));
+const nodes=Array.from({length:12},(_,i)=>({id:'n'+i,kind:'work',title:'Work item '+i,returned_reasons:i===5?[['A required case did not pass']]:[]}));
 const edges=[];
-for(let i=3;i<12;i++) { const layer=Math.floor(i/3); for(const p of [(i%3),(i+1)%3]) edges.push({from:'n'+((layer-1)*3+p),to:'n'+i,gate:'closed'}); }
+for(let i=3;i<12;i++) { const layer=Math.floor(i/3); for(const p of [(i%3),(i+1)%3]) edges.push({from:'n'+((layer-1)*3+p),to:'n'+i,label:'Readable handoff '+i,relation:'hands_over',gate:'closed'}); }
 const crossed={nodes:nodes.slice(0,6),edges:[{from:'n0',to:'n5'},{from:'n1',to:'n4'},{from:'n2',to:'n3'}]};
-for(const data of [demo,{nodes,edges},crossed]) {
-  const layout=layeredLayout(data.nodes,data.edges,data.decisions);
-  const depth=id=>Math.max(0,...data.edges.filter(e=>e.to===id).map(e=>depth(e.from)+1));
+const reviewed={nodes:[{id:'work',kind:'work'},{id:'review',kind:'review',target:'work'},{id:'next',kind:'work'}],edges:[{from:'review',to:'work',relation:'reviews'},{from:'work',to:'review',relation:'hands_over'},{from:'review',to:'next',relation:'hands_over'}]};
+const overlap=(a,b)=>a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y;
+for(const data of [demo,{nodes,edges},crossed,reviewed]) for(const expanded of [null,data.nodes[0].id,data.nodes.at(-1).id]) {
+  const options={expanded,language:'en'}, layout=layeredLayout(data.nodes,data.edges,data.decisions,true,options);
+  const depth=id=>{const node=data.nodes.find(n=>n.id===id);return node.kind==='review'?depth(node.target)+1:Math.max(0,...data.edges.filter(e=>e.to===id&&e.relation!=='reviews').map(e=>depth(e.from)+1));};
   for(const node of data.nodes) {
     const p=layout.positions[node.id];assert.equal(p.depth,depth(node.id));
     assert.equal(p.layer,depth(node.id));assert(layout.layers[p.depth].includes(node.id));
   }
-  for(const route of layout.routes) {const p=transferPoint(route,route.gate.t);assert(Math.hypot(p.x-route.gate.x,p.y-route.gate.y)<.0001);}
-  const gates=[...layout.routes.map(r=>r.gate),...layout.nodeGates];
-  gates.forEach((a,i)=>gates.slice(i+1).forEach(b=>assert(Math.hypot(a.x-b.x,a.y-b.y)>=70,'gates must never overlap')));
-  gates.forEach(g=>layout.labels.forEach(l=>assert(g.x<l.left-28||g.x>l.right+28||g.y>l.top+28||g.y<l.bottom-28,'gate must clear titles')));
-  layout.labels.forEach((a,i)=>layout.labels.slice(i+1).forEach(b=>assert(a.right<=b.left||a.left>=b.right||a.top<=b.bottom||a.bottom>=b.top,'titles must not overlap')));
-  const unsorted=layeredLayout(data.nodes,data.edges,data.decisions,false);
-  assert(crossingCount(data.edges,layout.positions)<=crossingCount(data.edges,unsorted.positions));
-  assert.deepEqual(layout,layeredLayout(data.nodes,data.edges,data.decisions));
+  const rects=[...layout.cardRects,layout.goal,...layout.chips];
+  rects.forEach((a,i)=>rects.slice(i+1).forEach(b=>assert(!overlap(a,b),'cards and chips must never overlap: '+JSON.stringify([a,b]))));
+  const unsorted=layeredLayout(data.nodes,data.edges,data.decisions,false,options);
+  const deps=data.edges.filter(e=>e.relation!=='reviews');
+  assert(crossingCount(deps,layout.positions)<=crossingCount(deps,unsorted.positions));
+  assert.deepEqual(layout,layeredLayout(data.nodes,data.edges,data.decisions,true,options));
   assert(layout.goal.x>Math.max(...Object.values(layout.positions).map(p=>p.x)));
+  for(const [w,h] of [[1680,960],[1280,800],[845,912],[390,844]])assert(fitScale(layout.bounds,w,h,w<760)>=MIN_FIT_SCALE);
 }
-const reviewed={nodes:[{id:'planet',kind:'work'},{id:'moon',kind:'review',target:'planet'},{id:'next',kind:'work'}],edges:[{from:'planet',to:'moon'},{from:'moon',to:'next'}]};
 const layout=layeredLayout(reviewed.nodes,reviewed.edges);
-assert.equal(layout.routes.length,0);assert.equal(layout.positions.moon.satelliteOf,'planet');
-assert(!layout.layers.flat().includes('moon'));assert(layout.order.indexOf('moon')===layout.order.indexOf('planet')+1);
-const terminal=layeredLayout([{id:'last',kind:'work',laps:['returned','current'],status:'running'}],[],[{node:'last',failed:['Recorded failure']}]);
-assert.equal(terminal.nodeGates.length,1);
-assert.equal(terminal.nodeGates[0].state,'waiting_for_you','an open decision takes priority over old returns');
-assert.equal(layeredLayout([{id:'last',kind:'work',laps:['returned'],status:'rejected'}],[]).nodeGates[0].state,'returned');
+assert.equal(layout.positions.review.layer,layout.positions.work.layer+1);
+assert(layout.routes.some(e=>e.from==='review'&&e.to==='work'&&e.relation==='reviews'));
+assert(layout.order.includes('review'));
+assert.equal(fitScale({width:10000,height:10000},300,300),MIN_FIT_SCALE);
+assert.equal(fitScale({width:100,height:100},1000,1000),1);
+""")
+
+    def test_relation_labels_and_loop_states(self):
+        self.run_controller(r"""
+for(const [lang,labels] of [['ko',['넘겨줌','검토함','결정을 기다림']],['en',['hands over','reviews','waits for a decision']]]) {
+  ['hands_over','reviews','waits_for_decision'].forEach((relation,i)=>assert.equal(edgeRelationLabel({relation,label:''},lang),labels[i]));
+  assert.equal(edgeRelationLabel({relation:'hands_over',label:'Readable result'},lang),labels[0]+': Readable result');
+}
+for(const [status,attempts,state] of [['running',1,'make'],['running',2,'fix'],['running',3,'fix'],['submitted',1,'check'],['submitted',2,'check'],['unverified',2,'check'],['passed',1,'exit'],['passed',2,'exit'],['waiting_for_you',2,'report'],['awaiting_approval',1,'report'],['held',1,'report'],['pending',0,null]])assert.equal(innerLoopState(status,attempts),state);
+assert.deepEqual(attemptPips(['current'],3,'awaiting_approval').map(p=>p.state),['waiting_for_you','unused','unused']);
 """)
 
     def test_controller_bound_request(self):
@@ -240,6 +253,8 @@ for (const changes of [
   assert.equal(controller.buildRequest('approved', ''), null, 'sending must enforce the same details gate');
   assert.equal(controller.canSubmit('revision_requested', ''), false);
   assert.equal(controller.canSubmit('revision_requested', 'Please fix this'), true);
+  controller.openFile();
+  assert.equal(controller.canSubmit('approved', ''), !(d.failed.length || d.purpose==='hold'), 'files cannot unlock failed or held work');
   controller.openDetails(); assert.equal(controller.canSubmit('approved', ''), true);
   const request = controller.buildRequest('approved', ''); assert(request);
   controller.onResult(request);
@@ -314,7 +329,10 @@ for (const question of ['Approve deploy for prod?','Approve hold for another?','
         self.run_controller(r"""
 class Element {
   constructor(tag) { this.tagName=tag; this.children=[]; this.dataset={}; this.listeners={}; this.hidden=false; this.disabled=false; this.value=''; this._text=''; this.style={}; this.classList={add(){},toggle(){}}; }
-  append(...children) { for (const c of children) { c.parent=this; this.children.push(c); } }
+  prepend(...children) { this.children.unshift(...children); }
+  remove() { if(this.parent)this.parent.children=this.parent.children.filter(c=>c!==this); }
+  get firstElementChild() { return this.children[0]; }
+  append(...children) { for (const c of children) { if(c.parent)c.remove(); c.parent=this; this.children.push(c); } }
   replaceChildren(...children) { for (const c of this.children) { if (c.contains(document.activeElement)) document.activeElement=null; c.parent=null; } this.children=[]; this._text=''; this.append(...children); }
   contains(node) { return this===node || this.children.some(c=>c.contains(node)); }
   set textContent(text) { this.replaceChildren(); this._text=String(text); }
@@ -332,7 +350,7 @@ class Element {
 }
 const body=new Element('body'), root=new Element('html'), docEvents={};
 globalThis.document={body,documentElement:root,hidden:false,activeElement:null,
-  createElement:tag=>new Element(tag), getElementById:id=>body.querySelector(`#${id}`),
+  createElement:tag=>new Element(tag), createElementNS:(_,tag)=>new Element(tag), getElementById:id=>body.querySelector(`#${id}`),
   querySelector:selector=>body.querySelector(selector), querySelectorAll:selector=>body.querySelectorAll(selector),
   addEventListener:(type,fn)=>{docEvents[type]=fn;}};
 body.append(new Element('nav'));
@@ -342,6 +360,7 @@ for (const id of ['map','notice','picker','picker-label','flow','history','decis
 Object.defineProperty(globalThis,'navigator',{value:{language:'ko-KR'},configurable:true});
 globalThis.location={href:'http://localhost:5000/?t=demo',port:'5000'};
 globalThis.history={replaceState(){}}; globalThis.sessionStorage={getItem(){return 'demo'},setItem(){}};
+globalThis.ResizeObserver=class { observe(){} };
 globalThis.matchMedia=()=>({matches:true,addEventListener(){}});
 globalThis.setTimeout=()=>0; globalThis.clearTimeout=()=>{};
 const d={...decision,purpose:'hold',kind:'review',node:'work',question:'Approve hold for work?',record_purpose:'hold',
@@ -378,7 +397,7 @@ input.dispatchEvent({type:'compositionend'});
 const fileButton=get('decision').querySelectorAll('button').find(b=>b.textContent==='guide.md');
 assert(fileButton);fileButton.click();await settle();
 assert.match(get('decision').querySelectorAll('pre').find(p=>!p.hidden).textContent,/<script>literal Markdown<\/script>/);
-assert.equal(buttons[0].disabled,false,'successfully reading a file must open the details gate');
+assert.equal(buttons[0].disabled,true,'a worker-chosen file cannot unlock failed or held work');
 get('decision').querySelector('details').open=true;
 get('decision').querySelector('details').dispatchEvent({type:'toggle'});
 assert.equal(buttons[0].disabled,false);
