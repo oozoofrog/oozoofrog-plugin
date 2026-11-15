@@ -1,0 +1,4 @@
+interface:
+  display_name: "Graph Flow"
+  short_description: "Plan, verify, and track multi-step work as a graph"
+  default_prompt: "$graph-flow Plan this work as a graph with checks, and track progress."
