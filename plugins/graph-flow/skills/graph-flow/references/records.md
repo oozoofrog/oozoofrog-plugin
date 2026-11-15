@@ -159,7 +159,7 @@ Required top-level fields: `schema_version` (must be `1`), `goal` (non-empty str
 | `V2` | Duplicate or malformed node id or check id; more than one `scope` check or more than one `cites` check in a node | |
 | `V3` | A `needs` entry whose `from` does not exist, whose `artifact` is empty, or whose `artifact` is neither equal to or under one of the producer's `owns` nor in its `outputs` | P3 |
 | `V4` | A dependency cycle | P3 |
-| `V5` | A `work` node whose raw `checks` list is empty; a `cmd` check without `run`; a `review` node without `target` and `lens`, whose `target` is not a `work` node, or whose `lane` is not 1; a `decision` node without `question` and a valid `decision_kind`, or with checks | P1 |
+| `V5` | A `work` node whose raw `checks` list is empty; a `cmd` check without `run`; a `review` node without `target` and `lens`, whose `target` is not a `work` node, or whose `lane` is not 1; a `decision` node without `question` and a valid `decision_kind`, or with checks; an entry of `integration_checks` that is not a `cmd` check | P1 |
 | `V6` | `lane` missing or not 1, 2, 3 | P9 |
 | `V7` | Two nodes with overlapping `owns` and no dependency path between them in either direction (they could run at the same time). Two path lists overlap when any pair is equal or one is under the other | P4 |
 | `V8` | A path that is absolute, contains `..`, or is under `.git` or `.graph-flow` | |
@@ -432,7 +432,7 @@ SCOPE     notes.py, tests/test_export.py only
 {"unit": "export", "attempt": 2, "max_attempts": 3, "verdict": "red", "reason": "check unit exited 1", "evidence": {"log": "evidence/export/unit/a2-1f3e5a7c.log", "tail": ["AssertionError"]}, "scope": ["notes.py", "tests/test_export.py"]}
 ```
 
-For a scope failure the reason lists the violating files. `gate.evaluate` is pure and returns the failed results; `gate.gate` reads the log tails and builds the rejection.
+For a scope failure the reason lists the violating files. When several checks failed, the reasons are joined with `; ` and `evidence` holds the log and tail of the first failure. `gate.evaluate` is pure and returns the failed results; `gate.gate` reads the log tails and builds the rejection.
 
 ### Merge
 
@@ -566,7 +566,8 @@ def evaluate(plan, state, node_id, gate_results, integration_results, rollbacks)
 def build_rejection(node, node_state, failed, tails): ...   # tails: map of log path to list of last lines; returns the rejection object
 def gate(run_dir, node_id, cwd, actor): ...     # preconditions, runs checks, appends asks and gate.verdict; returns the verdict data
 def gate_final(run_dir, cwd, actor): ...        # appends gate.final; returns its data
-def reopen(run_dir, node_id, reason, actor): ...  # appends node.reopen; returns {"node", "stale": [ids]}
+def reopen(run_dir, node_id, reason, actor): ...  # node must be passed; appends node.reopen; returns {"node", "invalidated": [ids in plan order]}
+def render_rejection(rejection): ...            # the five-line UNIT/VERDICT/REASON/EVIDENCE/SCOPE text
 
 # graph.py
 def has_current_submission(node_state): ...     # bool

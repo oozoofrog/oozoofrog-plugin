@@ -179,6 +179,10 @@ def validate(plan):
     if any(not isinstance(tag, str) for tag in _list(plan.get("tags"))):
         problem("V1", None, "tags must contain strings")
     checks(plan.get("integration_checks"), None)
+    for check in _list(plan.get("integration_checks")):
+        # The gate executes integration checks itself, so only cmd checks make sense here.
+        if isinstance(check, dict) and check.get("type") != "cmd":
+            problem("V5", None, "integration checks must be cmd checks")
 
     seen = set()
     indexed = _index(plan)

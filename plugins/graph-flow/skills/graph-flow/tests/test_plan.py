@@ -105,6 +105,14 @@ class PlanTests(unittest.TestCase):
         self.assertEqual([], plan.validate(document(decision(checks=[]))))
         self.assertProblem(document(work(checks=[]), review()), "V5", "work")
 
+    def test_v5_integration_checks_must_be_commands(self):
+        value = document(work())
+        value["integration_checks"] = [{"id": "all", "type": "cmd", "run": "true"}]
+        self.assertEqual([], plan.validate(value))
+        for kind in ("host", "human", "scope", "cites"):
+            value["integration_checks"] = [{"id": "all", "type": kind}]
+            self.assertProblem(value, "V5", None)
+
     def test_required_top_level_fields(self):
         for key in ("schema_version", "goal", "nodes"):
             value = document(work())
