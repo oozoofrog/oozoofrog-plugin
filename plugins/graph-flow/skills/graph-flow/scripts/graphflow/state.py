@@ -27,6 +27,16 @@ PHASES = ("loop", "gate")
 
 
 def fingerprint(node):
+    node = copy.deepcopy(node)
+    for key in ("title", "summary", "context"):
+        node.pop(key, None)
+    for need in node.get("needs") or []:
+        if isinstance(need, dict):
+            need.pop("label", None)
+    for check in node.get("checks") or []:
+        if isinstance(check, dict):
+            check.pop("title", None)
+            check.pop("context", None)
     text = json.dumps(node, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 

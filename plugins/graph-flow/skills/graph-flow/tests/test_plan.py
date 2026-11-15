@@ -252,6 +252,24 @@ class PlanTests(unittest.TestCase):
 
 
 class NormalizeTests(unittest.TestCase):
+    def test_no_title_is_only_a_notice_for_every_node_kind(self):
+        value = document(work(), review(), decision())
+        normalized, notices = plan.normalize(value)
+        self.assertEqual([], plan.validate(value))
+        self.assertEqual([("no_title", n["id"]) for n in value["nodes"]],
+                         [(n["code"], n["node"]) for n in notices])
+        for notice in notices:
+            self.assertEqual(set(notice), {"code", "node", "message"})
+            self.assertTrue(notice["message"])
+        titled = copy.deepcopy(value)
+        for node in titled["nodes"]:
+            node["title"] = "사람이 읽는 제목"
+        titled, notices = plan.normalize(titled)
+        self.assertEqual([], notices)
+        for bare, named in zip(normalized["nodes"], titled["nodes"]):
+            self.assertEqual(bare["effective_lane"], named["effective_lane"])
+            self.assertEqual(bare["checks"], named["checks"])
+
     def test_pure_idempotent_defaults_and_unknown_fields(self):
         value = document(work(checks=[{"id": "scope", "type": "scope", "extra": [1]}]), review(), decision())
         value["extension"] = {"future": [1]}
@@ -262,7 +280,9 @@ class NormalizeTests(unittest.TestCase):
         self.assertEqual(normalized, plan.normalize(normalized)[0])
         self.assertEqual([{"id": "scope", "type": "scope", "extra": [1]}, {"id": "human", "type": "human"}], normalized["nodes"][0]["checks"])
         self.assertEqual([2, 1, 3], [n["effective_lane"] for n in normalized["nodes"]])
-        self.assertEqual([("no_machine_check", "work")], [(n["code"], n["node"]) for n in notices])
+        self.assertEqual([("no_machine_check", "work"), ("no_title", "work"),
+                          ("no_title", "review-work"), ("no_title", "approve")],
+                         [(n["code"], n["node"]) for n in notices])
         for node in normalized["nodes"]:
             for key in ("needs", "owns", "outputs", "reads", "checks"):
                 self.assertIsInstance(node[key], list)
@@ -279,7 +299,7 @@ class NormalizeTests(unittest.TestCase):
         self.assertEqual(1, normalized["nodes"][0]["effective_lane"])
         self.assertEqual(1, normalized["nodes"][0]["max_attempts"])
         self.assertEqual(value["nodes"][0]["checks"], normalized["nodes"][0]["checks"])
-        self.assertEqual([], notices)
+        self.assertEqual(["no_title"], [n["code"] for n in notices])
 
     def test_escalates_scope_cites_host_or_empty_checks_and_caps_at_three(self):
         for kind in ("scope", "cites", "host", None):
@@ -319,6 +339,67 @@ class NormalizeTests(unittest.TestCase):
             self.assertEqual([], plan.validate(normalized))
             self.assertEqual({"code", "node", "message"}, set(notices[0]))
             checks.append({"id": expected, "type": "host", "tool": "IDE", "expect": "pass"})
+
+
+class PresentationTests(unittest.TestCase):
+    def fixture(self):
+        checks = [{"id": "cmd", "type": "cmd", "run": "true"},
+                  {"id": "scope", "type": "scope"}, {"id": "cites", "type": "cites"},
+                  {"id": "host", "type": "host", "tool": "IDE", "expect": "pass"},
+                  {"id": "person", "type": "human"}]
+        value = document(work(checks=checks), review(), decision(
+            needs=[{"from": "work", "artifact": "work.py"}]))
+        value["integration_checks"] = [{"id": "all", "type": "cmd", "run": "true"}]
+        return value
+
+    def at(self, value, path):
+        for key in path:
+            value = value[key]
+        return value
+
+    def test_optional_strings_boundaries_types_and_empty_values(self):
+        fields = [((), "title", 80, None),
+                  (("nodes", 2, "needs", 0), "label", 60, "approve"),
+                  (("integration_checks", 0), "title", 120, None)]
+        for index, nid in enumerate(("work", "review-work", "approve")):
+            fields.extend([(("nodes", index), "title", 60, nid),
+                           (("nodes", index), "summary", 300, nid)])
+        for index in range(5):
+            fields.append((("nodes", 0, "checks", index), "title", 120, "work"))
+        for path, key, limit, nid in fields:
+            for text in ("사람을 위한 설명", "글" * limit):
+                value = self.fixture()
+                self.at(value, path)[key] = text
+                self.assertEqual([], plan.validate(value), (path, key))
+                self.assertEqual(text, self.at(plan.normalize(value)[0], path)[key])
+            for bad in (None, 1, True, [], {}, "", " \n", "글" * (limit + 1)):
+                with self.subTest(path=path, key=key, bad=bad):
+                    value = self.fixture()
+                    self.at(value, path)[key] = bad
+                    self.assertTrue(any(p["code"] == "V1" and p["node"] == nid
+                                        for p in plan.validate(value)))
+
+    def test_context_optional_keys_and_invalid_objects(self):
+        for path, nid in ((("nodes", 2), "approve"), (("nodes", 0, "checks", 4), "work")):
+            for context in ({}, {k: "이 결정을 설명합니다" for k in
+                                ("why", "if_approved", "if_rejected", "undo")}):
+                value = self.fixture()
+                self.at(value, path)["context"] = context
+                self.assertEqual([], plan.validate(value))
+            for bad in (None, "why", [], 1, True, {"unknown": "text"}):
+                value = self.fixture()
+                self.at(value, path)["context"] = bad
+                self.assertTrue(any(p["code"] == "V1" and p["node"] == nid
+                                    for p in plan.validate(value)))
+            for key in ("why", "if_approved", "if_rejected", "undo"):
+                value = self.fixture()
+                self.at(value, path)["context"] = {key: "글" * 300}
+                self.assertEqual([], plan.validate(value))
+                for bad in (None, 1, True, [], {}, "", " \n", "글" * 301):
+                    with self.subTest(path=path, key=key, bad=bad):
+                        self.at(value, path)["context"] = {key: bad}
+                        self.assertTrue(any(p["code"] == "V1" and p["node"] == nid
+                                            for p in plan.validate(value)))
 
 
 class QueryTests(unittest.TestCase):

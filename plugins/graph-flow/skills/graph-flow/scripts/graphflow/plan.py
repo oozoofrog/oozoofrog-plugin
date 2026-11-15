@@ -94,6 +94,9 @@ def normalize(plan):
                 node["checks"].append({"id": check_id, "type": "human"})
             notices.append({"code": "no_machine_check", "node": node.get("id"),
                             "message": "work without a cmd check requires human review"})
+        if "title" not in node:
+            notices.append({"code": "no_title", "node": node.get("id"),
+                            "message": "add a title in the user's language for the dashboard"})
     return result, notices
 
 
@@ -121,6 +124,24 @@ def validate(plan):
             if isinstance(path, str) and _bad_path(path):
                 problem("V8", node, "unsafe project-relative path: %s" % path)
 
+    def text(obj, key, limit, node):
+        if key in obj and (not isinstance(obj[key], str) or not obj[key].strip()
+                           or len(obj[key]) > limit):
+            problem("V1", node, "%s must be a non-empty string of at most %d characters" % (key, limit))
+
+    def context(obj, node):
+        if "context" not in obj:
+            return
+        value = obj["context"]
+        if not isinstance(value, dict):
+            problem("V1", node, "context must be an object")
+            return
+        for key in value:
+            if key not in ("why", "if_approved", "if_rejected", "undo"):
+                problem("V1", node, "unknown context key: %s" % (key,))
+            else:
+                text(value, key, 300, node)
+
     def checks(values, node):
         seen = set()
         singleton_types = set()
@@ -136,6 +157,7 @@ def validate(plan):
             if isinstance(check_id, str):
                 seen.add(check_id)
             kind = check.get("type")
+            text(check, "title", 120, node)
             if kind not in ("cmd", "scope", "cites", "host", "human"):
                 problem("V1", node, "unknown check type: %r" % kind)
             if node is not None and kind in ("scope", "cites"):
@@ -156,6 +178,7 @@ def validate(plan):
                 field(check, "expect", str, node)
             elif kind == "human":
                 field(check, "prompt", str, node, required=False)
+                context(check, node)
 
     if not isinstance(plan, dict):
         problem("V1", None, "plan must be an object")
@@ -163,6 +186,7 @@ def validate(plan):
     if type(plan.get("schema_version")) is not int or plan.get("schema_version") != 1:
         problem("V1", None, "schema_version must be 1")
     field(plan, "goal", str, None)
+    text(plan, "title", 80, None)
     field(plan, "nodes", list, None)
     if isinstance(plan.get("goal"), str) and not plan["goal"]:
         problem("V1", None, "goal must be non-empty")
@@ -200,6 +224,8 @@ def validate(plan):
         if kind not in ("work", "review", "decision"):
             problem("V1", node_id, "unknown node kind: %r" % kind)
         field(node, "goal", str, node_id)
+        text(node, "title", 60, node_id)
+        text(node, "summary", 300, node_id)
         if type(node.get("lane")) is not int or node.get("lane") not in (1, 2, 3):
             problem("V6", node_id, "lane must be 1, 2 or 3")
         if kind != "decision" or "grade" in node:
@@ -229,6 +255,7 @@ def validate(plan):
             if not isinstance(target, str) or indexed.get(target, {}).get("kind") != "work":
                 problem("V5", node_id, "review target must be a work node")
         if kind == "decision":
+            context(node, node_id)
             if not node.get("question") or node.get("decision_kind") not in _DECISIONS:
                 problem("V5", node_id, "decision requires question and a valid decision_kind")
             field(node, "question", str, node_id)
@@ -243,6 +270,7 @@ def validate(plan):
                 continue
             field(need, "from", str, node_id)
             field(need, "artifact", str, node_id)
+            text(need, "label", 60, node_id)
             producer_id, artifact = need.get("from"), need.get("artifact")
             producer = indexed.get(producer_id) if isinstance(producer_id, str) else None
             if producer is None:

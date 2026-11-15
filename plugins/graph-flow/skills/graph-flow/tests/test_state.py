@@ -10,7 +10,7 @@ import unittest
 SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-from graphflow import core, state  # noqa: E402
+from graphflow import core, plan as planmod, state  # noqa: E402
 
 RUN = "r1"
 ALL_KEYS = {"status", "kind", "lane", "effective_lane", "basis", "attempts", "max_attempts",
@@ -186,6 +186,71 @@ class FingerprintTests(unittest.TestCase):
         self.assertEqual(state.fingerprint(n), hashlib.sha256(text.encode("utf-8")).hexdigest())
         self.assertEqual(state.fingerprint(dict(reversed(list(n.items())))),
                          state.fingerprint(n))
+
+    def revision_fixture(self, p=None):
+        p, _ = planmod.normalize(p or plan_of(work("a", outputs=["a"]), work("b", ["a"], checks=[
+            {"id": "unit", "type": "cmd", "run": "true"}, {"id": "human", "type": "human"}]),
+                                            work("x"), review("v", "a"), decision("d", ["a"])))
+        log = Log()
+        log.plan_set(p)
+        for nid in ("a", "b", "x", "v"):
+            log.assign(nid)
+            log.start(nid, 1)
+            if nid == "x":
+                continue
+            sid = log.submit(nid, 1)
+            if nid == "a":
+                log.verdict("a", 1, "pass", submission=sid)
+        return log, p
+
+    def test_presentation_revisions_preserve_every_node_state_in_both_directions(self):
+        _, bare = self.revision_fixture()
+        presented = copy.deepcopy(bare)
+        presented["title"] = "사람이 읽는 작업 흐름"
+        for node in presented["nodes"]:
+            node.update(title="작업 제목", summary="사용자를 위한 결과를 만듭니다",
+                        context={"why": "결정이 필요한 이유"})
+            for need in node["needs"]:
+                need["label"] = "전달할 결과"
+            for check in node["checks"]:
+                check.update(title="결과가 요구를 충족하는지 확인",
+                             context={"undo": "다시 검토할 수 있습니다"})
+        for first, second in ((bare, presented), (presented, bare)):
+            with self.subTest(add_fields=first is bare):
+                # Use normalized revisions and the exact per-node hash map used by cli.py.
+                log, _ = self.revision_fixture(first)
+                before = state.derive(first, log.events)["nodes"]
+                original = copy.deepcopy(second)
+                log.plan_set(planmod.normalize(second)[0])
+                self.assertEqual(before, state.derive(second, log.events)["nodes"])
+                self.assertEqual(second, original)
+
+    def test_behavioral_revisions_still_invalidate_node_and_dependents(self):
+        for field in ("goal", "run", "artifact", "check_extension", "need_extension", "extension"):
+            with self.subTest(field=field):
+                log, first = self.revision_fixture()
+                second = copy.deepcopy(first)
+                node = second["nodes"][0]
+                if field == "run":
+                    node["checks"][0]["run"] = "false"
+                elif field == "check_extension":
+                    node["checks"][0]["extension"] = {"title": "behavior"}
+                elif field in ("artifact", "need_extension"):
+                    node = second["nodes"][1]
+                    node["needs"][0][field if field == "artifact" else "extension"] = "changed"
+                else:
+                    node[field] = "changed"
+                before = state.derive(first, log.events)["nodes"]
+                log.plan_set(planmod.normalize(second)[0])
+                after = state.derive(second, log.events)["nodes"]
+                changed = {"b"} if field in ("artifact", "need_extension") else {"a", "b", "v", "d"}
+                for nid in after:
+                    if nid in changed:
+                        self.assertEqual(after[nid]["basis"], log.events[-1]["seq"])
+                        self.assertIsNone(after[nid]["submission"])
+                        self.assertEqual(after[nid]["attempts"], 0)
+                    else:
+                        self.assertEqual(before[nid], after[nid])
 
 
 class ShapeTests(EnvCase):

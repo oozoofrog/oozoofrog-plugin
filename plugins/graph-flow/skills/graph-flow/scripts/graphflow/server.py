@@ -9,7 +9,7 @@ import stat
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
-from . import core, decisions, graph, state, store, trace
+from . import core, decisions, graph, learn, state, store, trace
 
 PAGE_PATH = pathlib.Path(__file__).with_name("page.html")
 MAX_BODY = 64 * 1024
@@ -121,6 +121,117 @@ def _queue():
                 continue
     queue.sort(key=lambda item: item["asked"])
     return {"queue": queue}
+
+
+def _history(node, st, events):
+    """Present current-basis attempts without copying technical rejection records."""
+    laps, returned, results, reviews = [], [], {}, {}
+    titles = {c["id"]: c.get("title", c["id"]) for c in node["checks"]}
+    for event in events:
+        if event["seq"] <= st["basis"]:
+            continue
+        kind, data = event["type"], event["data"]
+        if kind == "review.submit" and data.get("target") == node["id"]:
+            reviews[data["node"]] = data
+        if data.get("node") != node["id"]:
+            continue
+        if kind == "node.start":
+            laps.append("current")
+            results = {}
+        elif (kind == "check.result" and data.get("phase") == "gate"
+              and data.get("attempt") == len(laps)):
+            results[data["check"]] = data
+        elif kind == "gate.verdict":
+            verdict, attempt = data.get("verdict"), data.get("attempt", 0)
+            if 1 <= attempt <= len(laps):
+                if verdict in ("reject", "replan"):
+                    laps[attempt - 1] = "returned"
+                elif verdict == "pass":
+                    laps[attempt - 1] = "passed"
+            if verdict in ("reject", "replan"):
+                reasons = [titles.get(cid, cid) for cid, result in results.items()
+                           if result.get("result") == "failed"]
+                for review in reviews.values():
+                    if review.get("target_submission") == data.get("submission"):
+                        reasons.extend(f["text"] for f in review.get("findings") or []
+                                       if isinstance(f.get("text"), str))
+                returned.append(list(dict.fromkeys(reasons)))
+            results = {}
+    if laps and st["submission"] and st["open_decisions"] and laps[-1] == "current":
+        laps[-1] = "waiting_for_you"
+    return laps, returned
+
+
+def _view(current, derived, events, project):
+    current = current or {}
+    nodes = {n["id"]: n for n in current.get("nodes", [])}
+    opened = decisions.open_decisions(derived)
+    view = {"title": current.get("title", current.get("goal", "")), "nodes": [],
+            "edges": [], "decisions": [], "lessons": [],
+            "counts": dict.fromkeys(("done", "doing", "waiting", "needs_you", "returned"), 0),
+            "complete": derived["run"]["status"] == "complete"}
+
+    def title(nid):
+        return nodes.get(nid, {}).get("title", nid)
+
+    gates = {}
+    for nid, node in nodes.items():
+        st = derived["nodes"][nid]
+        laps, reasons = _history(node, st, events)
+        passed = st["status"] == "passed"
+        gates[nid] = ("open" if passed else "returned" if reasons else
+                      "waiting_for_you" if st["open_decisions"] else "closed")
+        family = (st["assignment"] or {}).get("family")
+        submission = (st["submission"] or {}).get("id")
+        reviewed = any(family and r["family"] and family != r["family"]
+                       and r["status"] == "passed" and submission is not None
+                       and r["target_submission"] == submission for r in st["reviews"])
+        view["nodes"].append({"id": nid, "title": title(nid),
+                              "summary": node.get("summary", node["goal"]),
+                              "kind": node["kind"], "status": st["status"],
+                              "attempts": st["attempts"], "max_attempts": st["max_attempts"],
+                              "lane": st["effective_lane"], "laps": laps,
+                              "returned_reasons": reasons, "reviewed_by_other_family": reviewed})
+        if passed:
+            view["counts"]["done"] += 1
+        elif not st["open_decisions"]:
+            bucket = "doing" if st["status"] in ("running", "submitted", "unverified") else "waiting"
+            view["counts"][bucket] += 1
+        view["counts"]["returned"] += int(bool(reasons) and not passed)
+
+    for nid, node in nodes.items():
+        edges = [(need["from"], need.get("label", need["artifact"])) for need in node["needs"]]
+        if node["kind"] == "review":
+            edges.append((node["target"], ""))
+        for producer, label in edges:
+            view["edges"].append({"from": producer, "to": nid, "label": label,
+                                  "delivered": gates[producer] == "open", "gate": gates[producer]})
+
+    for decision in opened:
+        node = nodes.get(decision["node"], {})
+        context = node.get("context", {}) if node.get("kind") == "decision" else {}
+        if node.get("kind") != "decision":
+            context = next((c.get("context", {}) for c in node.get("checks", [])
+                            if c["id"] == decision["check"] and c["type"] == "human"), {})
+        evidence = decision.get("evidence") or {}
+        view["decisions"].append({"id": decision["id"], "node": decision["node"],
+                                  "node_title": title(decision["node"]),
+                                  "question": decision["question"], "kind": decision["kind"],
+                                  "context": context,
+                                  "has_evidence": any(evidence.get(k) for k in ("command", "files", "checks"))})
+    view["counts"]["needs_you"] = len(opened)
+
+    # Absent learning files mean no lessons, without creating a project lock on GET.
+    if (pathlib.Path(project) / ".graph-flow" / "constraints.jsonl").is_file():
+        for constraint in learn.all_constraints(project):
+            if constraint["status"] != "active":
+                continue
+            source = constraint["derived_from"]
+            node_title = None
+            if source.get("run") == derived["run"]["id"] and source.get("node") in nodes:
+                node_title = title(source["node"])
+            view["lessons"].append({"text": constraint["text"], "node_title": node_title})
+    return view
 
 
 def _evidence(run_dir, relative):
@@ -254,9 +365,11 @@ def _handler(token):
                     return self._send(200, _evidence(run, query.get("path", [""])[0]), "text/plain; charset=utf-8")
                 with store.locked(run / ".lock"):
                     current = store.read_plan(run)
-                    derived = state.derive(current, store.events(run))
+                    events = store.events(run)
+                    derived = state.derive(current, events)
                     result = {"plan": current, "state": derived,
-                              "ready": graph.ready(current or {}, derived), "trace": trace.trace(run)}
+                              "ready": graph.ready(current or {}, derived), "trace": trace.trace(run),
+                              "view": _view(current, derived, events, store.project_of(run))}
                 return self._json(200, result)
             raise _HTTPError(404, "not_found", "unknown route")
 

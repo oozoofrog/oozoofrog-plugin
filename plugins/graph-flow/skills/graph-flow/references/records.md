@@ -78,6 +78,7 @@ A leader may also do a node's work itself (`inline`). That is allowed for lane 1
 ```json
 {
   "schema_version": 1,
+  "title": "Export your notes",
   "goal": "Export notes to JSON without modifying the source",
   "requirements": [{"id": "R1", "text": "Every note is exported"}],
   "tags": ["python"],
@@ -88,13 +89,15 @@ A leader may also do a node's work itself (`inline`). That is allowed for lane 1
     {
       "id": "export",
       "kind": "work",
+      "title": "Create the export",
+      "summary": "Produce a JSON copy of every note for the person requesting the export.",
       "goal": "Implement the JSON export",
       "needs": [],
       "owns": ["notes.py", "tests/test_export.py"],
       "outputs": [],
       "reads": ["README.md"],
       "checks": [
-        {"id": "unit", "type": "cmd", "run": "python3 -m unittest tests.test_export -v", "timeout_s": 600},
+        {"id": "unit", "type": "cmd", "title": "Every note is exported without changing the source", "run": "python3 -m unittest tests.test_export -v", "timeout_s": 600},
         {"id": "scope", "type": "scope"}
       ],
       "lane": 2,
@@ -106,7 +109,7 @@ A leader may also do a node's work itself (`inline`). That is allowed for lane 1
       "id": "review-export",
       "kind": "review",
       "goal": "Try to refute the export",
-      "needs": [{"from": "export", "artifact": "notes.py"}],
+      "needs": [{"from": "export", "artifact": "notes.py", "label": "Note exporter"}],
       "target": "export",
       "lens": "data-loss",
       "owns": [],
@@ -122,6 +125,7 @@ A leader may also do a node's work itself (`inline`). That is allowed for lane 1
       "needs": [{"from": "export", "artifact": "notes.py"}],
       "decision_kind": "authorization",
       "question": "Push branch notes-export to origin?",
+      "context": {"why": "The reviewed export is ready to share", "if_approved": "Publish the branch", "if_rejected": "Keep the work local", "undo": "The published branch can be deleted"},
       "owns": [],
       "outputs": ["approval"],
       "checks": [],
@@ -133,9 +137,11 @@ A leader may also do a node's work itself (`inline`). That is allowed for lane 1
 
 | Field | Rule |
 | --- | --- |
+| Plan `title` | Optional string, at most 80 characters; the flow's human-readable name |
+| Node `title`, `summary` | Optional strings on every kind: title at most 60 characters; summary at most 300, one sentence saying what the node produces and for whom |
 | `id` | `^[a-z0-9][a-z0-9._-]{0,63}$`, unique in the plan |
 | `kind` | `work`, `review`, `decision`. Deterministic steps such as the merge are `gf` commands recorded as events, not plan nodes (P6) |
-| `needs` | List of `{"from": <node id>, "artifact": <name>}` (P3) |
+| `needs` | List of `{"from": <node id>, "artifact": <name>, "label": <optional human artifact name>}`; `label` is a string of at most 60 characters (P3) |
 | `owns` | Project-relative paths. A path ending in `/` owns the directory. No absolute paths, no `..`, nothing under `.git` or `.graph-flow` |
 | `outputs` | Named non-file outputs (`findings`, `approval`) |
 | `checks` | Section 4. Check ids match the node id pattern and are unique within the node |
@@ -144,18 +150,20 @@ A leader may also do a node's work itself (`inline`). That is allowed for lane 1
 | `max_attempts` | Integer 1 to 3, default 3 (P2) |
 | `review` nodes | Need `target` (a `work` node id) and `lens`; own nothing |
 | `decision` nodes | Need `decision_kind` and `question`; own nothing; have no checks |
+| Check `title` | Optional string on any check type (including integration checks), at most 120 characters, saying what the check confirms in plain words |
+| Decision node / `human` check `context` | Optional object with optional string keys `why`, `if_approved`, `if_rejected`, `undo`, each at most 300 characters; no other keys |
 
-Unknown fields are preserved and ignored.
+All presentation strings above are written in the user's language. When present they must be non-empty (whitespace alone is empty); limits count Unicode characters. Missing presentation fields and empty `context` objects are valid. Unknown fields are preserved and ignored, except unknown keys inside decision-node or human-check `context`.
 
 ### Validation
 
 `plan.validate(plan)` returns problems `{"code", "node", "message"}` (`node` is `null` for plan-level problems) and never raises on a malformed plan. It checks the **raw** plan for V1 to V8, then normalizes a copy and checks V9 on it. Any problem makes `gf plan validate` exit 1 and `gf plan set` refuse the plan.
 
-Required top-level fields: `schema_version` (must be `1`), `goal` (non-empty string), `nodes` (non-empty list). Optional: `requirements`, `tags`, `integration_checks`.
+Required top-level fields: `schema_version` (must be `1`), `goal` (non-empty string), `nodes` (non-empty list). Optional: `title`, `requirements`, `tags`, `integration_checks`.
 
 | Code | Rejects | Principle |
 | --- | --- | --- |
-| `V1` | Missing or mistyped required field, unknown `kind`, bad `schema_version` | |
+| `V1` | Missing or mistyped required field, unknown `kind`, bad `schema_version`; a present presentation string with the wrong type, empty text, or length over its limit; decision/human-check `context` with the wrong type or an unknown key | |
 | `V2` | Duplicate or malformed node id or check id; more than one `scope` check or more than one `cites` check in a node | |
 | `V3` | A `needs` entry whose `from` does not exist, whose `artifact` is empty, or whose `artifact` is neither equal to or under one of the producer's `owns` nor in its `outputs` | P3 |
 | `V4` | A dependency cycle | P3 |
@@ -172,6 +180,7 @@ Required top-level fields: `schema_version` (must be `1`), `goal` (non-empty str
 1. Defaults are filled: `needs`, `owns`, `outputs`, `reads`, `checks` as empty lists; `max_attempts` 3.
 2. Every node gets `effective_lane = lane`.
 3. A `work` node with no check of type `cmd` gets `effective_lane = min(3, lane + 1)`, and, unless it already has a check of type `human`, an added check `{"id": X, "type": "human"}` where X is the first unused id among `human`, `human_review`, `human_review_2`, `human_review_3`, and so on. Notice code `no_machine_check`.
+4. Each node without `title` gets a notice `{"code": "no_title", "node": <id>, "message": "add a title in the user's language for the dashboard"}`. This notice changes neither its effective lane nor its checks and is never a validation problem.
 
 `scope`, `cites`, and `host` do not count as a machine check for rule 3: a node needs a deterministic check of its own behavior (P1). The scope comparison is run by the gate for every `work` node whether or not the plan lists a `scope` check (section 6).
 
@@ -180,7 +189,7 @@ Required top-level fields: `schema_version` (must be `1`), `goal` (non-empty str
 - `gf plan set <file>` validates, normalizes, writes `plans/NNNN.json`, then appends `plan.set`, all in one transaction (section 5). `store.read_plan` loads the revision named by the last `plan.set` event; a plan file without its event is ignored and its number is never reused (the next revision is the highest existing file number plus one, so numbers may have gaps).
 - A plan file is JSON with sorted keys, two-space indent, and a trailing newline; `plan_sha256` is the SHA-256 of exactly those bytes.
 - The `plan.set` event itself, and every later event, carries the new `plan_revision`.
-- A node's fingerprint is the SHA-256 hex of `json.dumps(node, sort_keys=True, separators=(",", ":"), ensure_ascii=False)` encoded as UTF-8, computed on the normalized node. `plan.set` records every node's fingerprint.
+- A node's fingerprint is the SHA-256 hex of `json.dumps(node, sort_keys=True, separators=(",", ":"), ensure_ascii=False)` encoded as UTF-8, computed on a copy of the normalized node with presentation fields excluded as specified under "Basis". `plan.set` records every node's fingerprint.
 - A changed fingerprint invalidates the node and everything that depends on it (section 5, "Basis"). A node removed from the plan disappears from the state.
 
 ## 4. Checks and evidence grades
@@ -258,6 +267,8 @@ Incomplete tail: readers ignore a final line that does not end in a newline or d
 The `seq` of a `node.submit` or `review.submit` event is that submission's **id**. A decision's `id` is `d` followed by the `seq` of its `decision.ask` event.
 
 ### Basis: what invalidates a node
+
+Fingerprinting excludes node `title`, `summary`, and `context`; `label` within every `needs` entry; and `title` and `context` within every check. All other fields, including unknown extension fields, retain their existing fingerprint behavior. The plan-level `title` is outside node fingerprints. Adding, editing, or removing only presentation fields in a new revision leaves every node's basis, status, attempts, submission, and evidence untouched, including dependents. A new plan revision still requires a fresh final gate for run completion.
 
 For every node the state keeps `basis`: the `seq` of the latest event that invalidated it, or 0. **Events about a node with `seq <= basis` are ignored for that node**, with one exception: its latest assignment is kept. After an invalidation the node is `pending` (or `assigned`, if it had an assignment) with zero attempts, no submission, no check results, and no verdict. Invalidating events:
 
@@ -623,3 +634,40 @@ def serve(host="127.0.0.1", port=0): ...        # writes server.json; blocks
 ```
 
 The MCP tool list and the dashboard's HTTP API are specified by the units that own `mcp.py` and `server.py`, in `references/mcp.md` and `references/dashboard.md`; both call only the functions above.
+
+## 12. Dashboard presentation view
+
+`GET /api/run` retains `plan`, `state`, `ready`, and `trace` and adds `view`. Build the view from the same current plan, events, and derived state loaded under the run lock, plus the learning store; no new events are written. The page can use this object without interpreting commands, evidence paths, exit codes, or technical rejection records. IDs remain addressing keys rather than display copy. Shape (arrays below show one representative entry):
+
+```json
+{
+  "title": "Export your notes",
+  "nodes": [{
+    "id": "export", "title": "Create the export",
+    "summary": "Produce a JSON copy of every note for the person requesting the export.",
+    "kind": "work", "status": "running", "attempts": 2, "max_attempts": 3,
+    "lane": 2, "laps": ["returned", "current"],
+    "returned_reasons": [["Every note is exported", "An empty note was omitted"]],
+    "reviewed_by_other_family": false
+  }],
+  "edges": [{"from": "export", "to": "review-export", "label": "Note exporter", "delivered": false, "gate": "returned"}],
+  "decisions": [{
+    "id": "d14", "node": "publish-ok", "node_title": "Approve publication",
+    "question": "Publish the reviewed export?", "kind": "authorization",
+    "context": {"why": "The export is ready to share"}, "has_evidence": true
+  }],
+  "lessons": [{"text": "Keep the original notes unchanged", "node_title": "Create the export"}],
+  "counts": {"done": 0, "doing": 1, "waiting": 0, "needs_you": 1, "returned": 1},
+  "complete": false
+}
+```
+
+- `title` falls back to the plan's `goal` (empty string without a plan). `nodes` follows plan order; each title falls back to its id and each summary to its goal. Node `kind`, `status`, `attempts`, and `max_attempts` come from the plan/state; `lane` is the effective lane.
+- `laps` has one entry for every `node.start` after the node's current basis. A rejection (`reject` or budget-exhausted `replan`) makes that attempt `returned`; a pass makes it `passed`; otherwise it is `current`. A current submitted attempt with an open, non-stale decision is `waiting_for_you`. Decision nodes normally have no attempts and an empty list.
+- `returned_reasons` has one list per rejection after the current basis, in event order, including earlier attempts while a retry runs. Strings come only from failed gate-phase node checks' current plan titles (fallback: check id) and matching reviewer finding `text` for the rejected submission. It never copies a rejection's technical reason, command, exit code, log, file or line. Duplicate strings within one rejection are collapsed. When no such human-readable evidence is recorded (for example a merge rejection), that rejection's list is empty. Run-level `_run` check results have no rejecting-node/submission binding, so the view does not attribute them to a particular rejection.
+- `reviewed_by_other_family` is true only when a passed review is bound to the node's current submission and both assignment families are known and different. A review's fail verdict still counts as review evidence; it does not mean the work passed.
+- `edges` contains each node's `needs` entries in order, then its implicit review-target edge if any. A needs label falls back to `artifact`; an implicit review-target edge has no recorded artifact or label, so its label is the empty string. These are separate entries even when they have the same endpoints. `delivered` means the producer is passed. `gate` is `open` for a passed producer, else `returned` if it has any current-basis rejection, else `waiting_for_you` if it has an open, non-stale decision, else `closed`.
+- `decisions` contains only open, non-stale decisions in ask order. A decision node supplies its `context`; a decision bound to a human check uses that check's context; otherwise context is `{}`. `has_evidence` means at least one recorded `command`, `files`, or `checks` evidence slot is non-empty; evidence contents are not copied. An unbound decision has `node: null`, `node_title: null`, and empty context.
+- `lessons` contains all project learning constraints whose healed status is `active`, in store order (not promoted or retired constraints). Each entry has `text` and `node_title`. A source recorded in `derived_from` gets its current title (fallback: id) only when its source run matches this run and its node exists in this plan. No title snapshot is stored for other runs or removed nodes: their `node_title` is `null`. No learning store means `[]`.
+- `counts.done` counts passed nodes. Among non-passed nodes without open decisions, `doing` counts running, submitted, or unverified nodes and `waiting` counts the rest. `needs_you` counts open, non-stale decisions, including unbound questions. `returned` counts non-passed nodes with at least one current-basis rejection, including retries; it can overlap `doing` or `waiting`. These counters are integers, not an exclusive partition. `complete` is exactly whether derived `run.status` is `complete`.
+- Without a plan, `nodes` and `edges` are empty and node counters are zero; unbound decisions and project lessons can still be present. Existing fallback ids and artifact names may themselves be technical, so leaders should provide presentation fields for person-facing flows.

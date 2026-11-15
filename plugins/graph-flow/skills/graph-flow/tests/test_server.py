@@ -18,7 +18,7 @@ from urllib.parse import urlencode
 
 SCRIPTS = pathlib.Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
-from graphflow import assign, checks, core, decisions, gate, plan, server, state, store
+from graphflow import assign, checks, core, decisions, gate, learn, plan, server, state, store
 
 ACTOR = {"role": "leader", "node": None, "session": "server-test"}
 REVIEWER = {"role": "reviewer", "node": "review", "session": "review-test"}
@@ -248,12 +248,21 @@ class ServerTests(unittest.TestCase):
     def test_run_shape_and_unknown_id_validation(self):
         status, data = self.json_request("GET", self.api("/api/run"))
         self.assertEqual(status, 200)
-        self.assertEqual(set(data), {"plan", "state", "ready", "trace"})
+        self.assertEqual(set(data), {"plan", "state", "ready", "trace", "view"})
         self.assertEqual(data["plan"], store.read_plan(self.runs[0]))
         self.assertEqual(data["state"], state.derive(data["plan"], store.events(self.runs[0])))
         self.assertEqual(data["ready"], ["build"])
         self.assertEqual(data["trace"]["run"]["nodes"], 2)
         self.assertEqual(data["trace"]["run"]["attempts"], 2)
+        self.assertEqual(data["view"]["title"], "server test")
+        build, review = data["view"]["nodes"]
+        self.assertEqual((build["title"], build["summary"], build["lane"]), ("build", "build", 3))
+        self.assertEqual(build["laps"], ["waiting_for_you"])
+        self.assertTrue(build["reviewed_by_other_family"])
+        self.assertEqual(review["laps"], ["passed"])
+        self.assertFalse(review["reviewed_by_other_family"])
+        self.assertTrue(data["view"]["decisions"][0]["has_evidence"])
+        self.assertEqual(data["view"]["decisions"][0]["context"], {})
         for route in ("/api/run", "/api/evidence"):
             self.assert_error(404, "unknown_project", "GET", route + "?" + urlencode(
                 {"project": str(self.root / "foreign"), "run": self.runs[0].name}))
@@ -273,6 +282,142 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIsNone(data["plan"])
         self.assertEqual(data["ready"], [])
+        self.assertEqual(data["view"], {"title": "", "nodes": [], "edges": [], "decisions": [],
+                                      "lessons": [], "complete": False,
+                                      "counts": {"done": 0, "doing": 0, "waiting": 0,
+                                                 "needs_you": 0, "returned": 0}})
+
+    def test_view_mixed_flow_history_context_edges_and_lessons(self):
+        project = self.projects[0]
+        run = store.init_run(project, "presentation", ACTOR)
+        context = {"why": "Choose the wording", "if_approved": "Use this wording",
+                   "if_rejected": "Revise the wording", "undo": "Restore the earlier wording"}
+        raw = {"schema_version": 1, "title": "A flow for people", "goal": "Assemble the result", "nodes": []}
+        for nid in ("done", "retry", "human", "waiting"):
+            raw["nodes"].append({"id": nid, "kind": "work", "goal": "Produce " + nid,
+                                 "title": nid.capitalize(), "summary": "A result for the reader",
+                                 "owns": [nid + ".txt"], "lane": 1, "grade": "scoped",
+                                 "checks": [dict(CMD, title="The result meets the requirement")]})
+        raw["nodes"][2]["checks"].append({"id": "wording", "type": "human", "title": "The wording fits",
+                                                 "context": context})
+        raw["nodes"][3]["needs"] = [{"from": "retry", "artifact": "retry.txt", "label": "Draft"},
+                                           {"from": "human", "artifact": "human.txt", "label": "Chosen wording"},
+                                           {"from": "done", "artifact": "done.txt", "label": "Finished result"}]
+        raw["nodes"].append({"id": "review-retry", "kind": "review", "goal": "Refute the draft",
+                             "target": "retry", "lens": "correctness", "lane": 1, "grade": "daily",
+                             "checks": [{"id": "cites", "type": "cites"}]})
+        self.assertEqual(plan.validate(raw), [])
+        current, _ = plan.normalize(raw)
+        with store.transaction(run) as tx:
+            revision, sha = tx.write_plan(current)
+            tx.append("plan.set", {"revision": revision, "plan_sha256": sha,
+                      "fingerprints": {n["id"]: state.fingerprint(n) for n in current["nodes"]},
+                      "constraints_applied": []}, ACTOR)
+            def append(event_type, **data):
+                return tx.append(event_type, data, ACTOR)["seq"]
+            for nid in ("done", "retry", "human"):
+                append("node.start", node=nid, attempt=1)
+                sid = append("node.submit", node=nid, attempt=1)
+                if nid == "done":
+                    append("gate.verdict", node=nid, attempt=1, submission=sid, verdict="pass")
+                elif nid == "retry":
+                    append("check.result", node=nid, attempt=1, check="unit", phase="gate", result="failed",
+                           command="SECRET_COMMAND", exit_code=123, log="SECRET_PATH")
+                    append("check.result", node=nid, attempt=1, check="scope", phase="gate", result="failed")
+                    append("node.start", node="review-retry", attempt=1)
+                    rsid = append("review.submit", node="review-retry", attempt=1, target=nid,
+                                  target_submission=sid, verdict="fail",
+                                  findings=[{"file": "SECRET_PATH", "line": 12,
+                                             "severity": "high", "text": "A required case is missing"}])
+                    append("gate.verdict", node="review-retry", attempt=1, submission=rsid, verdict="pass")
+                    append("gate.verdict", node=nid, attempt=1, submission=sid, verdict="reject",
+                           rejection={"reason": "SECRET_COMMAND exited 123", "evidence": "SECRET_PATH"})
+                    append("node.start", node=nid, attempt=2)
+                else:
+                    append("decision.ask", node=nid, submission=sid + 999, kind="review",
+                           question="Stale?", purpose="human_check", check="wording")
+                    ask = append("decision.ask", node=nid, submission=sid, kind="review",
+                                 question="Does this wording fit?", purpose="human_check", check="wording",
+                                 evidence={"command": None, "files": [], "checks": []})
+                    append("gate.verdict", node=nid, attempt=1, submission=sid, verdict="needs_approval")
+        active = learn.add(project, run, "done", "Keep the reader's wording", "When requirements change", [], [], ACTOR)
+        promoted = learn.add(project, run, "done", "A fixed check", "When checks change", [], [], ACTOR)
+        retired = learn.add(project, run, "done", "Old advice", "When scope changes", [], [], ACTOR)
+        learn.promote(project, promoted["id"], "true", ACTOR)
+        learn.retire(project, retired["id"], "No longer applies", ACTOR)
+        # Sources from another run cannot safely be named from this plan, even with a reused id.
+        unknown = dict(active, id="c99", text="Advice from another run",
+                       derived_from={"run": "elsewhere", "node": "done"})
+        with (project / ".graph-flow" / "constraints.jsonl").open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(unknown) + "\n")
+        before = store.events(run)
+        status, data = self.json_request("GET", "/api/run?" + urlencode({"project": str(project), "run": run.name}))
+        self.assertEqual(status, 200)
+        view = data["view"]
+        self.assertEqual(set(view), {"title", "nodes", "edges", "decisions", "lessons", "counts", "complete"})
+        self.assertEqual(view["title"], raw["title"])
+        self.assertFalse(view["complete"])
+        self.assertEqual([n["id"] for n in view["nodes"]], [n["id"] for n in current["nodes"]])
+        done, retry, human, waiting, review = view["nodes"]
+        self.assertEqual(done["laps"], ["passed"])
+        self.assertEqual(retry["laps"], ["returned", "current"])
+        self.assertEqual(retry["returned_reasons"], [["The result meets the requirement", "scope",
+                                                      "A required case is missing"]])
+        self.assertEqual((retry["status"], retry["attempts"], retry["max_attempts"]), ("running", 2, 3))
+        self.assertEqual(human["laps"], ["waiting_for_you"])
+        self.assertEqual(waiting["laps"], [])
+        self.assertEqual(review["laps"], [])
+        self.assertEqual(view["edges"], [
+            {"from": "retry", "to": "waiting", "label": "Draft", "delivered": False, "gate": "returned"},
+            {"from": "human", "to": "waiting", "label": "Chosen wording", "delivered": False, "gate": "waiting_for_you"},
+            {"from": "done", "to": "waiting", "label": "Finished result", "delivered": True, "gate": "open"},
+            {"from": "retry", "to": "review-retry", "label": "", "delivered": False, "gate": "returned"}])
+        self.assertEqual(view["decisions"], [{"id": "d%d" % ask, "node": "human", "node_title": "Human",
+                                            "question": "Does this wording fit?", "kind": "review",
+                                            "context": context, "has_evidence": False}])
+        self.assertEqual(view["lessons"], [{"text": active["text"], "node_title": "Done"},
+                                         {"text": unknown["text"], "node_title": None}])
+        self.assertEqual(view["counts"], {"done": 1, "doing": 1, "waiting": 2, "needs_you": 1, "returned": 1})
+        self.assertNotIn("SECRET_", json.dumps(view))
+        self.assertEqual(store.events(run), before)
+        revised = json.loads(json.dumps(current))
+        revised["nodes"][1]["goal"] = "Produce a different draft"
+        with store.transaction(run) as tx:
+            revision, sha = tx.write_plan(revised)
+            tx.append("plan.set", {"revision": revision, "plan_sha256": sha,
+                      "fingerprints": {n["id"]: state.fingerprint(n) for n in revised["nodes"]},
+                      "constraints_applied": []}, ACTOR)
+        _, data = self.json_request("GET", "/api/run?" + urlencode({"project": str(project), "run": run.name}))
+        self.assertEqual(data["view"]["nodes"][1]["laps"], [])
+        self.assertEqual(data["view"]["nodes"][1]["returned_reasons"], [])
+        self.assertEqual(data["view"]["edges"][0]["gate"], "closed")
+        self.assertEqual(data["view"]["counts"]["returned"], 0)
+
+    def test_view_decision_node_context_free_decisions_and_completion(self):
+        raw = {"schema_version": 1, "goal": "Choose a direction", "nodes": [
+            {"id": "choice", "kind": "decision", "goal": "Pick the direction", "lane": 1,
+             "question": "Proceed?", "decision_kind": "direction", "context": {"why": "The direction matters"}}]}
+        current, _ = plan.normalize(raw)
+        events = [{"seq": 1, "type": "decision.ask", "data": {
+            "node": "choice", "kind": "direction", "question": "Proceed?", "purpose": "node"}},
+                  {"seq": 2, "type": "decision.ask", "data": {
+                      "node": None, "kind": "information", "question": "Which audience?", "purpose": "free"}},
+                  {"seq": 3, "type": "decision.answer", "data": {"id": "d2"}}]
+        derived = state.derive(current, events)
+        view = server._view(current, derived, events, self.projects[0])
+        self.assertEqual(view["decisions"][0]["context"], raw["nodes"][0]["context"])
+        self.assertEqual(view["decisions"][0]["node_title"], "choice")
+        self.assertEqual(view["nodes"][0]["laps"], [])
+        self.assertEqual(view["counts"]["needs_you"], 1)
+        free_events = events[:2]
+        free_view = server._view(current, state.derive(current, free_events), free_events, self.projects[0])
+        self.assertEqual(free_view["decisions"][1]["context"], {})
+        self.assertIsNone(free_view["decisions"][1]["node_title"])
+        complete = [{"seq": 1, "type": "gate.verdict", "data": {"node": "choice", "verdict": "pass"}},
+                    {"seq": 2, "type": "gate.final", "data": {"result": "passed"}}]
+        view = server._view(current, state.derive(current, complete), complete, self.projects[0])
+        self.assertTrue(view["complete"])
+        self.assertEqual(view["counts"], {"done": 1, "doing": 0, "waiting": 0, "needs_you": 0, "returned": 0})
 
     def test_evidence_confinement_text_and_truncation(self):
         run = self.runs[0]
