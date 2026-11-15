@@ -210,6 +210,53 @@ class MergeTests(unittest.TestCase):
         self.assertEqual(len(self.integrate()["merged"]), 1)
         self.assertEqual((self.repo / "untracked.txt").read_text(), "keep\n")
 
+    def _untracked_collision(self, order):
+        alpha = self.submission()
+        self.git("checkout", "-q", "-b", "work-beta", self.base)
+        checks.start(self.run, "beta", None, ACTOR)
+        self.write("beta.txt", "submitted beta\n")
+        self.write("new.txt", "submitted new file\n")
+        commit = self.commit()
+        beta = checks.submit(self.run, "beta", commit, "work-beta", "", [], None, ACTOR)
+        self.git("checkout", "-q", "main")
+        self.write("new.txt", "keep untracked file\n")
+        original = merge._git
+        errors = []
+
+        def capture(*args, **kwargs):
+            result = original(*args, **kwargs)
+            if "merge" in args[1:] and result.returncode:
+                errors.append(result.stderr.decode("utf-8", "replace").strip().splitlines()[0])
+            return result
+
+        with mock.patch.object(merge, "_git", capture):
+            data = self.integrate(*order)
+        self.assertEqual([entry["node"] for entry in data["merged"]], ["alpha"])
+        self.assertEqual(len(data["conflicted"]), 1)
+        conflict = data["conflicted"][0]
+        self.assertEqual((conflict["node"], conflict["commit"], conflict["files"]),
+                         ("beta", beta["commit"], []))
+        self.assertEqual(conflict["reason"], errors[0])
+        self.assert_ancestor(alpha["commit"])
+        self.assertEqual((self.repo / "new.txt").read_text(), "keep untracked file\n")
+        self.assertEqual(self.git("ls-files", "--", "new.txt"), "")
+        self.assert_clean()
+        self.assertEqual(len(self.events("merge.result")), 1)
+        self.assertEqual(self.events("merge.result")[0]["data"], data)
+        self.assertEqual(len(self.events("gate.verdict")), 1)
+        verdict = self.events("gate.verdict")[0]["data"]
+        self.assertEqual((verdict["node"], verdict["rule"], verdict["verdict"]),
+                         ("beta", "M1", "reject"))
+        self.assertEqual(verdict["rejection"]["reason"], "merge failed: " + errors[0])
+        self.assertEqual(self.status("beta")["status"], "rejected")
+        self.assertEqual(self.status("alpha")["status"], "submitted")
+
+    def test_untracked_collision_records_earlier_merge_and_rejects(self):
+        self._untracked_collision(("alpha", "beta"))
+
+    def test_untracked_collision_continues_with_remaining_node(self):
+        self._untracked_collision(("beta", "alpha"))
+
     def test_no_commit_and_unknown_node_preconditions_precede_git(self):
         self.submission()
         for code, nodes in (("unknown_node", ("alpha", "unknown")),

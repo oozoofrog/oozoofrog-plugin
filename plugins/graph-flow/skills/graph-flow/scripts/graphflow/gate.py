@@ -198,6 +198,7 @@ def gate(run_dir, node_id, cwd, actor):
         derived = statemod.derive(plan, tx.events)
         node, st = _preconditions(plan, derived, node_id)
         token = _token(tx.revision, st)
+        started_seq = tx.events[-1]["seq"] if tx.events else 0
     submission = st.get("submission") or {}
     if submission.get("commit"):
         merged = _git(directory, "merge-base", "--is-ancestor", submission["commit"], "HEAD")
@@ -224,8 +225,12 @@ def gate(run_dir, node_id, cwd, actor):
     with store.transaction(run_dir) as tx:
         current = statemod.derive(tx.plan, tx.events)
         current_st = current["nodes"].get(node_id)
-        if current_st is None or _token(tx.revision, current_st) != token:
-            raise core.GFError("stale_result", "node or plan changed during gate", core.EXIT_STATE)
+        if (current_st is None or _token(tx.revision, current_st) != token or
+                (current_st["status"] == "passed" if node["kind"] == "decision"
+                 else not graph.has_current_submission(current_st)) or
+                any(e["seq"] > started_seq and e["type"] == "gate.verdict"
+                    and e["data"].get("node") == node_id for e in tx.events)):
+            raise core.GFError("stale_result", "node, plan or verdict changed during gate", core.EXIT_STATE)
         outcome = evaluate(tx.plan, current, node_id, results, integration_results, rollbacks)
         ask_ids = []
         for request in outcome["asks"]:

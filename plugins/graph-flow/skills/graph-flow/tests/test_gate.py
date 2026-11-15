@@ -2,6 +2,7 @@
 import copy
 import os
 import pathlib
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -14,7 +15,7 @@ sys.path.insert(0, str(SCRIPTS))
 from graphflow import checks, core, decisions, gate, graph, plan, state, store
 
 ACTOR = {"role": "leader", "node": None, "session": "gate-test"}
-HUMAN = {"role": "human", "node": None, "session": "human-test"}
+HUMAN = {"role": "human", "node": None, "session": None}
 CMD = {"id": "unit", "type": "cmd", "run": "true"}
 HOST = {"id": "ide", "type": "host", "tool": "IDE", "expect": "green"}
 
@@ -555,6 +556,88 @@ class ScenarioTests(GateCase):
 
 
 class ExecutionTests(GateCase):
+    def _competing_gate(self, first_passes):
+        ok = self.root / "ok"
+        if not first_passes:
+            ok.touch()
+        self.set_plan([work(checks=[dict(CMD, run="test -f %s" % shlex.quote(str(ok)))]),
+                       work("x", needs=[{"from": "w", "artifact": "w.txt"}])])
+        self.start()
+        self.submit()
+        original = checks.run_scope
+        recorded = []
+
+        def finish_first(*args):
+            outcome = original(*args)
+            if first_passes:
+                ok.touch()
+            else:
+                ok.unlink()
+            with mock.patch.object(checks, "run_scope", original):
+                self.assertEqual(self.gate()["verdict"], "pass" if first_passes else "reject")
+            if first_passes:
+                self.start("x")
+            recorded.extend(store.events(self.run))
+            return outcome
+
+        with mock.patch.object(checks, "run_scope", finish_first):
+            self.error("stale_result", self.gate)
+        self.assertEqual(store.events(self.run), recorded)
+        self.assertEqual(len(self.events("gate.verdict")), 1)
+        self.assertEqual(self.status()["status"], "passed" if first_passes else "rejected")
+        self.assertEqual(self.status("x")["status"], "running" if first_passes else "pending")
+
+    def test_late_rejection_cannot_overwrite_pass_with_dependent_running(self):
+        self._competing_gate(first_passes=True)
+
+    def test_late_pass_cannot_overwrite_rejection(self):
+        self._competing_gate(first_passes=False)
+
+    def test_competing_decision_gate_discards_late_asks_and_verdict(self):
+        self.set_plan([decision()])
+        original = gate._head
+        recorded = []
+
+        def finish_first(*args):
+            head = original(*args)
+            with mock.patch.object(gate, "_head", original):
+                self.assertEqual(self.gate("d")["verdict"], "needs_approval")
+            recorded.extend(store.events(self.run))
+            return head
+
+        with mock.patch.object(gate, "_head", finish_first):
+            self.error("stale_result", self.gate, "d")
+        self.assertEqual(store.events(self.run), recorded)
+        self.assertEqual(len(self.events("decision.ask")), 1)
+        self.assertEqual(len(self.events("gate.verdict")), 1)
+
+    def test_passed_decision_cannot_record_another_verdict(self):
+        self.set_plan([decision()])
+        asked = self.gate("d")["asks"][0]
+        self.answer(asked)
+        self.assertEqual(self.gate("d")["verdict"], "pass")
+        before = store.events(self.run)
+        self.error("stale_result", self.gate, "d")
+        self.assertEqual(store.events(self.run), before)
+
+    def test_final_gate_allows_concurrent_node_verdict(self):
+        self.set_plan([work()], [dict(CMD, id="integration")])
+        self.start()
+        self.submit()
+        original = checks.run_cmd
+
+        def finish_node(*args):
+            outcome = original(*args)
+            with mock.patch.object(checks, "run_cmd", original):
+                self.assertEqual(self.gate()["verdict"], "pass")
+            return outcome
+
+        with mock.patch.object(checks, "run_cmd", finish_node):
+            self.assertEqual(gate.gate_final(self.run, None, ACTOR)["result"], "passed")
+        self.assertEqual([e["type"] for e in store.events(self.run)[-2:]],
+                         ["gate.verdict", "gate.final"])
+        self.assertEqual(self.derived()["run"]["status"], "complete")
+
     def test_normalized_human_check_asks_then_signed_review_approval_passes(self):
         self.set_plan([work(checks=[{"id": "scope", "type": "scope"}]), review()])
         self.assign("w", "openai")

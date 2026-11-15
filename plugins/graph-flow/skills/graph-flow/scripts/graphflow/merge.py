@@ -77,10 +77,11 @@ def merge(run_dir, node_ids, actor):
                                    check=False).returncode == 0
                 if in_progress:
                     _git(project, "merge", "--abort")
+                conflict = {"node": nid, "commit": commit, "files": files}
                 if not files:
-                    raise core.GFError("git_error", result.stderr.decode("utf-8", "replace").strip(),
-                                       core.EXIT_STATE)
-                data["conflicted"].append({"node": nid, "commit": commit, "files": files})
+                    error = (result.stderr or result.stdout).decode("utf-8", "replace").strip().splitlines()
+                    conflict["reason"] = error[0] if error else "git merge exited %d" % result.returncode
+                data["conflicted"].append(conflict)
                 tested_heads[nid] = _git(project, "rev-parse", "HEAD").stdout.decode("ascii").strip()
                 continue
         head = _git(project, "rev-parse", "HEAD").stdout.decode("ascii").strip()
@@ -102,7 +103,8 @@ def merge(run_dir, node_ids, actor):
             verdict = "replan" if st["attempts"] == st["max_attempts"] else "reject"
             rejection = {"unit": nid, "attempt": st["attempts"],
                          "max_attempts": st["max_attempts"], "verdict": "red",
-                         "reason": "merge conflict in %s" % ", ".join(files),
+                         "reason": ("merge conflict in %s" % ", ".join(files) if files else
+                                    "merge failed: %s" % conflict["reason"]),
                          "evidence": {"log": None, "tail": files}, "scope": nodes[nid]["owns"]}
             tx.append("gate.verdict", {"node": nid, "attempt": st["attempts"],
                       "submission": st["submission"]["id"], "verdict": verdict, "rule": "M1",

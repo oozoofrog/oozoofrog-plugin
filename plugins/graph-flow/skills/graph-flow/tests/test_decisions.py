@@ -13,6 +13,7 @@ sys.path.insert(0, str(SCRIPTS))
 from graphflow import core, decisions, plan, state, store
 
 ACTOR = {"role": "leader", "node": None, "session": "test"}
+HUMAN = {"role": "human", "node": None, "session": None}
 
 
 class DecisionsTests(unittest.TestCase):
@@ -55,7 +56,7 @@ class DecisionsTests(unittest.TestCase):
         return decisions.ask(self.run, **args)
 
     def answer(self, did, **kw):
-        args = dict(outcome="approved", answer_text="Yes ✓", source="terminal", actor=ACTOR)
+        args = dict(outcome="approved", answer_text="Yes ✓", source="terminal", actor=HUMAN)
         args.update(kw)
         return decisions.answer(self.run, did, **args)
 
@@ -122,6 +123,28 @@ class DecisionsTests(unittest.TestCase):
         (self.home / "human.key").write_bytes(b'x' * 32)
         self.assertFalse(self.derive()["decisions"][data["id"]]["verified"])
         self.assertFalse(decisions.verify("r1", data["id"], answer))
+
+    def test_nonhuman_actors_cannot_answer_or_create_key(self):
+        data = self.ask()
+        for role in ("leader", "worker", "reviewer"):
+            actor = {"role": role, "node": None if role == "leader" else "a", "session": "agent"}
+            for source in ("terminal", "dashboard"):
+                with self.subTest(role=role, source=source):
+                    self.error("forbidden", core.EXIT_FORBIDDEN, self.answer,
+                               data["id"], source=source, actor=actor)
+                    self.assertFalse((self.home / "human.key").exists())
+
+    def test_nonhuman_actor_is_refused_before_validation_or_io(self):
+        for role in ("leader", "worker", "reviewer"):
+            with self.subTest(role=role):
+                with mock.patch.object(decisions, "ensure_key") as key, \
+                        mock.patch.object(store, "transaction") as transaction:
+                    self.error("forbidden", core.EXIT_FORBIDDEN, decisions.answer,
+                               self.root / "missing-run", "missing", "invalid", "", "invalid",
+                               {"role": role, "node": None, "session": None})
+                key.assert_not_called()
+                transaction.assert_not_called()
+                self.assertFalse((self.home / "human.key").exists())
 
     def test_all_outcomes_and_sources(self):
         for kind in ("review", "authorization", "direction", "information"):

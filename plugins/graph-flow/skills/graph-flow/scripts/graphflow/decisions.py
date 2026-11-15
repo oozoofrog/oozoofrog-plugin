@@ -33,7 +33,9 @@ def ask(run_dir, kind, question, node, check, purpose, evidence, actor):
 
 
 def answer(run_dir, decision_id, outcome, answer_text, source, actor):
-    """Sign an answer; CLI and dashboard enforce caller roles and terminal checks."""
+    """Sign a human answer; the CLI also enforces terminal checks."""
+    if actor.get("role") != "human":
+        raise core.GFError("forbidden", "only a human can answer decisions", core.EXIT_FORBIDDEN)
     ensure_key()
     with store.transaction(run_dir) as tx:
         derived = state.derive(tx.plan, tx.events)
