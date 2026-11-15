@@ -142,7 +142,7 @@ class PageTests(unittest.TestCase):
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const source = readFileSync(process.argv[2], 'utf8');
-const {createDecisionController, decisionQuestion, purposeWording, purposeAction, viewLanguage, attemptPips, innerLoopState, edgeRelationLabel, fitScale, MIN_FIT_SCALE, cometCount, failedBadgeCount, layeredLayout, crossingCount} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+const {createDecisionController, decisionQuestion, purposeWording, purposeAction, viewLanguage, attemptPips, innerLoopState, edgeRelationLabel, fitScale, MIN_FIT_SCALE, edgeChipText, cometCount, failedBadgeCount, layeredLayout, crossingCount} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const first = {project:'/project', run:'first'}, second = {project:'/project', run:'second'};
 const decision = {id:'d7', purpose:'lane3', kind:'authorization', failed:[]};
 const controller = createDecisionController();
@@ -206,7 +206,17 @@ assert.equal(layout.positions.review.layer,layout.positions.work.layer+1);
 assert(layout.routes.some(e=>e.from==='review'&&e.to==='work'&&e.relation==='reviews'));
 assert(layout.order.includes('review'));
 assert.equal(fitScale({width:10000,height:10000},300,300),MIN_FIT_SCALE);
-assert.equal(fitScale({width:100,height:100},1000,1000),1);
+// One thing handed to two places is one label with two lines; a goal line carries no label.
+const fork=layeredLayout([{id:'a',kind:'work'},{id:'b',kind:'work'},{id:'c',kind:'work'}],[{from:'a',to:'b',label:'Parsed record',relation:'hands_over',gate:'open'},{from:'a',to:'c',label:'Parsed record',relation:'hands_over',gate:'open'}],[],true,{language:'en'});
+assert.equal(fork.chips.length,1);
+assert.equal(fork.routes.filter(r=>r.chip===fork.chips[0]).length,2);
+assert(fork.routes.filter(r=>r.to==='__goal').every(r=>r.chip===null&&r.text===''));
+assert.equal(edgeChipText({relation:'hands_over',label:'Parsed record'},'en'),'Parsed record');
+assert.equal(edgeChipText({relation:'hands_over',label:''},'ko'),'넘겨줌');
+assert.equal(edgeChipText({relation:'reviews',label:'x'},'ko'),'검토함');
+// Four columns of work and the goal fit an 860px-wide map without scrolling sideways.
+const chain=layeredLayout(['a','b','c','d'].map(id=>({id,kind:'work'})),[['a','b'],['b','c'],['c','d']].map(([from,to])=>({from,to,relation:'hands_over'})),[],true,{language:'ko'});
+assert(chain.bounds.width*fitScale(chain.bounds,860,2000)<=860);
 """)
 
     def test_relation_labels_and_loop_states(self):

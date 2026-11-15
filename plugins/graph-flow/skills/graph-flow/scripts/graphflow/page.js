@@ -113,8 +113,7 @@ const STRINGS = {
     "fileFailed": "지금은 읽을 수 있는 글 파일이 아니에요. 흐름을 새로 읽고 다시 해 주세요.",
     "noFiles": "이 결정에 적힌 파일이 없어요.",
     "returnTimes": "돌아온 횟수 {n}번",
-    "colourLegend": "색 = 끝남 · 진행 · 내 차례 · 대기.",
-    "cometLegend": "혜성 = 고치러 돌아옴.",
+    "cometLegend": "고치러 돌아온 횟수",
     "goal": "목표",
     "work": "작업",
     "review": "검토",
@@ -133,9 +132,11 @@ const STRINGS = {
     "fails": "미통과 ↓",
     "pastAttempt": "{n}번째 시도",
     "loopDescription": "만들기에서 검사로, 통과하면 다음 일로 넘겨요. 통과하지 못하면 고쳐서 다시 만들어요.",
-    "typeLegend": "★ 목표 · ♄ 작업 · ☾ 검토 · ▣ 결정",
-    "pipLegend": "점 = 시도 횟수",
-    "lineLegend": "선의 글 = 넘기는 것 또는 관계",
+    "pipPassed": "통과한 시도",
+    "pipReturned": "돌아온 시도",
+    "pipCurrent": "지금 시도",
+    "pipUnused": "남은 시도",
+    "lineLegend": "선 위의 글은 넘기는 것이에요",
     "unusedAttempts": "시도 0번 · 최대 {max}번"
   },
   "en": {
@@ -251,8 +252,7 @@ const STRINGS = {
     "fileFailed": "This file is no longer available as readable text. Refresh the flow and try again.",
     "noFiles": "No files are listed for this decision.",
     "returnTimes": "Came back {n} times",
-    "colourLegend": "Colour = done · active · you · waiting.",
-    "cometLegend": "Comet = came back.",
+    "cometLegend": "Times it came back",
     "goal": "Goal",
     "work": "Work",
     "review": "Review",
@@ -271,9 +271,11 @@ const STRINGS = {
     "fails": "fails ↓",
     "pastAttempt": "Attempt {n}",
     "loopDescription": "Make, then check. Passes lead to the next handoff. Failed checks lead to fix, then make again.",
-    "typeLegend": "★ Goal · ♄ Work · ☾ Review · ▣ Decision",
-    "pipLegend": "Pips = attempts",
-    "lineLegend": "Line label = handoff or relation",
+    "pipPassed": "Passed attempt",
+    "pipReturned": "Returned attempt",
+    "pipCurrent": "Current attempt",
+    "pipUnused": "Attempt left",
+    "lineLegend": "Text on a line is what gets handed over",
     "unusedAttempts": "0 attempts · up to {max}"
   }
 };
@@ -366,7 +368,7 @@ export function cometCount(node) { return (node.laps || []).filter(lap => lap ==
 export function failedBadgeCount(node, decisions) {
   return (decisions.find(d => d.node === node.id)?.failed || []).length;
 }
-export const MIN_FIT_SCALE = .8;
+export const MIN_FIT_SCALE = .5;
 export function attemptPips(laps = [], maxAttempts = 3, status = '') {
   return Array.from({length:maxAttempts}, (_, i) => ({state: laps[i] === 'current' && ['awaiting_approval','held'].includes(status) ? 'waiting_for_you' : laps[i] || 'unused'}));
 }
@@ -384,6 +386,13 @@ export function edgeRelationLabel(edge, language = 'en') {
   if (edge.relation === 'waits_for_decision') return words.waitsForDecision;
   return words.handsOver + (edge.label ? ': ' + edge.label : '');
 }
+// The short text drawn on a line. A named handoff shows only its name; the full relation stays in the accessible label.
+export function edgeChipText(edge, language = 'en') {
+  if (edge.relation === 'toward_goal') return '';
+  if ((edge.relation || 'hands_over') === 'hands_over' && edge.label) return edge.label;
+  return edgeRelationLabel(edge, language);
+}
+const textWidth = (text, wide, narrow) => Array.from(text || '').reduce((sum, c) => sum + (c.charCodeAt(0) > 0x2e80 ? wide : narrow), 0);
 export function fitScale(bounds, width, height, mobile = false) {
   const available = mobile ? height / bounds.height : Math.min(width / bounds.width, height / bounds.height);
   return Math.max(MIN_FIT_SCALE, Math.min(1, available));
@@ -398,7 +407,7 @@ export function crossingCount(routes, positions) {
   return count;
 }
 export function layeredLayout(nodes, edges, decisions = [], sort = true, options = {}) {
-  const width=260, gap=196, rowGap=92, byId=new Map(nodes.map(n=>[n.id,n]));
+  const width=232, gap=104, rowGap=64, left=24, top=72, byId=new Map(nodes.map(n=>[n.id,n]));
   // A review's arrow points back to its target; its dependency still points forward.
   const dependencies=edges.filter(e=>e.relation!=='reviews'&&byId.has(e.from)&&byId.has(e.to));
   const parents=new Map(nodes.map(n=>[n.id,dependencies.filter(e=>e.to===n.id).map(e=>e.from)]));
@@ -413,14 +422,14 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
   const layers=[];
   nodes.forEach(n=>(layers[depth(n.id)] ||= []).push(n.id));
   const height=n=>{
-    const lines=Math.max(1,Math.ceil(Array.from(n.title||'').length/17));
-    const base=142+lines*26;
-    const expanded=options.expanded===n.id ? 220+(n.returned_reasons||[]).reduce((sum,rs)=>sum+30+Math.max(1,Math.ceil(rs.join(' · ').length/24))*21,0) : 0;
+    const lines=Math.max(1,Math.ceil(textWidth(n.title,17,9.5)/158));
+    const base=92+lines*24;
+    const expanded=options.expanded===n.id ? 210+(n.returned_reasons||[]).reduce((sum,rs)=>sum+30+Math.max(1,Math.ceil(textWidth(rs.join(' · '),13,7)/170))*21,0) : 0;
     return Math.max(base+expanded,options.heights?.[n.id]||0);
   };
   let positions={};
   const place=()=>{
-    positions={}; layers.forEach((ids,d)=>{let y=92;ids.forEach(id=>{const h=height(byId.get(id));if(byId.get(id).kind==='review'&&positions[byId.get(id).target])y=Math.max(y,positions[byId.get(id).target].y);positions[id]={x:40+d*(width+gap),y,width,height:h,depth:d,layer:d};y+=h+rowGap;});});
+    positions={}; layers.forEach((ids,d)=>{let y=top;ids.forEach(id=>{const h=height(byId.get(id));if(byId.get(id).kind==='review'&&positions[byId.get(id).target])y=Math.max(y,positions[byId.get(id).target].y);positions[id]={x:left+d*(width+gap),y,width,height:h,depth:d,layer:d};y+=h+rowGap;});});
   };
   const cost=()=>crossingCount(dependencies,positions)*1e7+dependencies.reduce((s,e)=>s+Math.abs(positions[e.from].y-positions[e.to].y),0);
   place();
@@ -437,23 +446,30 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
       if(cost()>before){layers[d]=old;place();}
     }
   }
-  const last=Math.max(0,...depths.values()), goal={x:40+(last+1)*(width+gap),y:92,width,height:168,layer:last+1};
+  const last=Math.max(0,...depths.values()), goal={x:left+(last+1)*(width+gap),y:top,width:148,height:116,layer:last+1};
   const terminals=nodes.filter(n=>!dependencies.some(e=>e.from===n.id)).map(n=>n.id);
   const allEdges=[...edges,...terminals.map(id=>({from:id,to:'__goal',label:'',relation:'toward_goal',gate:byId.get(id).status==='passed'?'open':'closed'}))];
-  const chips=[],routes=[];
+  // Edges that hand the same thing from the same node share one label; only the lines fork.
+  const chips=[],routes=[],groups=new Map(),anchor=(id,p)=>p.y+(options.expanded===id?52:p.height/2);
   for(const [index,e] of allEdges.entries()) {
     const a=positions[e.from],b=e.to==='__goal'?goal:positions[e.to];if(!a||!b)continue;
-    const reverse=a.x>b.x, column=reverse?b.layer:a.layer;
-    const text=edgeRelationLabel(e,options.language||'en');
-    const chip={x:40+column*(width+gap)+width+14,y:Math.max(30,(a.y+a.height/2+b.y+b.height/2)/2-32),width:gap-28,height:Math.max(64,30+Math.ceil(Array.from(text).reduce((sum,c)=>sum+(c.charCodeAt(0)>0x2e80?14:8),0)/132)*21)};
-    while(chips.some(c=>chip.x<c.x+c.width+8&&chip.x+chip.width+8>c.x&&chip.y<c.y+c.height+16&&chip.y+chip.height+16>c.y))chip.y+=20;
-    chips.push(chip);
-    const start={x:reverse?a.x:a.x+width,y:a.y+(options.expanded===e.from?253:a.height/2)},end={x:reverse?b.x+width:b.x,y:b.y+b.height/2};
+    const reverse=a.x>b.x,text=edgeChipText(e,options.language||'en');
     const waiting=decisions.find(d=>d.node===e.from)||(e.relation==='waits_for_decision'?decisions.find(d=>d.node===e.to):null);
-    routes.push({...e,index,start,end,chip,gateState:waiting?'waiting_for_you':e.gate||'closed',decision:waiting?.id,skip:Math.abs(a.layer-b.layer)>1,channel:28+(index%4)*12});
+    const route={...e,index,text,reverse,start:{x:reverse?a.x:a.x+a.width,y:anchor(e.from,a)},end:{x:reverse?b.x+b.width:b.x,y:anchor(e.to,b)},chip:null,gateState:waiting?'waiting_for_you':e.gate||'closed',decision:waiting?.id,skip:Math.abs(a.layer-b.layer)>1,channel:20+(index%4)*10};
+    routes.push(route);if(!text)continue;
+    const key=JSON.stringify([e.from,text,reverse,route.gateState,route.decision||'']);
+    if(!groups.has(key))groups.set(key,{column:reverse?b.layer:a.layer,text,routes:[]});
+    groups.get(key).routes.push(route);
+  }
+  for(const group of groups.values()) {
+    const w=Math.min(gap-12,Math.max(34,Math.ceil(textWidth(group.text,12,6.8))+14)),lines=Math.ceil(textWidth(group.text,12,6.8)/(gap-26));
+    const middle=group.routes.reduce((sum,r)=>sum+(r.start.y+r.end.y)/2,0)/group.routes.length;
+    const chip={x:left+group.column*(width+gap)+width+(gap-w)/2,y:Math.max(8,middle-(lines*17+8)/2),width:w,height:lines*17+8,first:group.routes[0].index};
+    while(chips.some(c=>chip.x<c.x+c.width+6&&chip.x+chip.width+6>c.x&&chip.y<c.y+c.height+8&&chip.y+chip.height+8>c.y))chip.y+=12;
+    chips.push(chip);group.routes.forEach(r=>{r.chip=chip;});
   }
   const cardRects=Object.entries(positions).map(([id,p])=>({id,...p}));
-  const bounds={width:goal.x+width+64,height:Math.max(360,goal.y+goal.height+100,...cardRects.map(p=>p.y+p.height+92),...chips.map(c=>c.y+c.height+40))};
+  const bounds={width:goal.x+goal.width+left,height:Math.max(360,goal.y+goal.height+80,...cardRects.map(p=>p.y+p.height+76),...chips.map(c=>c.y+c.height+40))};
   return {positions,layers,order:layers.flat(),routes,chips,cardRects,goal,terminals,bounds};
 }
 
@@ -548,12 +564,14 @@ function panel() {
   view.decisions.forEach(d => p.append(decisionCard(d)));
   if (!view.decisions.length) p.append(el('p',t('nothing')));
   p.append(countCard());
-  const legend=el('div',undefined,'legend');
-  for(const key of ['typeLegend','colourLegend','pipLegend','cometLegend','lineLegend']) {
-    const line=el('p',t(key));
-
-    legend.append(line);
-  }
+  const legend=el('div',undefined,'legend');legend.append(el('p',t('legend'),'eyebrow'));
+  const row=(...items)=>{const line=el('p');items.forEach(([mark,text])=>{const item=el('span',undefined,'legend-item');if(mark)item.append(mark);item.append(el('span',text));line.append(item);});legend.append(line);};
+  const pip=state=>el('span',undefined,'pip '+state),dot=key=>el('span',undefined,'dot '+key);
+  row(...['goal','work','review','decision'].map(kind=>[typeIcon(kind),t(kind)]));
+  row(...['done','doing','needs_you','waiting'].map(key=>[dot(key),t(key)]));
+  row(...[['passed','pipPassed'],['returned','pipReturned'],['current','pipCurrent'],['unused','pipUnused']].map(([state,key])=>[pip(state),t(key)]));
+  row([cometGlyph(),t('cometLegend')]);
+  row([null,t('lineLegend')]);
   p.append(legend);
   if(node) {
     p.append(el('h2',title(node)),card(t('now'),`${status(node)}. ${attempts(node)}. ${node.summary}`,true));
@@ -789,9 +807,9 @@ function nodeCard(n, expanded = false) {
   header.append(typeIcon(n.kind),el('strong',title(n),'node-title'),el('span',`${t(n.kind||'work')} · ${status(n)}`,'node-status'));
   const pips=el('span',undefined,'attempt-pips');pips.setAttribute('aria-label',attempts(n));
   attemptPips(n.laps,n.max_attempts,n.status).forEach(p=>{const pip=el('span',undefined,'pip '+p.state);pip.setAttribute('aria-hidden','true');pips.append(pip);});
-  header.append(pips);
-  if(n.status==='passed'&&n.attempts)header.append(el('span',n.attempts===1?t('firstPass'):t('finishedAttempts',{n:n.attempts}),'attempt-caption'));
-  else header.append(el('span',attempts(n),'attempt-caption'));
+  const tries=el('span',undefined,'attempt-row');
+  tries.append(pips,el('span',n.status==='passed'&&n.attempts?(n.attempts===1?t('firstPass'):t('finishedAttempts',{n:n.attempts})):attempts(n),'attempt-caption'));
+  header.append(tries);
   if(cometCount(n)){const badge=el('span',undefined,'comet-badge');badge.append(cometGlyph(),el('span',String(cometCount(n))));header.append(badge);}
   root.append(header);
   if(expanded)root.append(innerLoop(n));
@@ -847,7 +865,7 @@ function createMap() {
       if(element.dataset.signature!==signature){element.replaceChildren(nodeCard(n,expanded));element.dataset.signature=signature;}
     }
     const heights=Object.fromEntries([...nodes].map(([id,e])=>[id,e.firstElementChild?.offsetHeight||0]));
-    layout=layeredLayout(data.nodes,data.edges,data.decisions,true,{expanded:chosenNode,heights,language});
+    layout=layeredLayout(data.nodes,data.edges.map(e=>({...e,label:e.label?label(e.label):''})),data.decisions,true,{expanded:chosenNode,heights,language});
     // Reorder existing controls without replacing them: tab order follows the drawing.
     for(const id of layout.order){const e=nodes.get(id);setRect(e,layout.positions[id]);stage.append(e);}
     if(drawing)drawing.remove();drawing=svg('svg',{width:layout.bounds.width,height:layout.bounds.height,class:'edge-layer','aria-hidden':'true'});
@@ -858,22 +876,24 @@ function createMap() {
     drawing.append(defs);stage.prepend(drawing);
     for(const element of chips.values())element.remove();chips.clear();
     for(const route of layout.routes) {
-      const {start:a,end:b,chip:c}=route,mx=c.x+c.width/2,my=c.y+c.height/2;
-      const d=route.skip?`M${a.x} ${a.y} C${mx} ${a.y} ${mx} ${my} ${mx} ${my} V${route.channel+12} Q${mx} ${route.channel} ${mx+12} ${route.channel} H${b.x-30} Q${b.x-18} ${route.channel} ${b.x-18} ${route.channel+12} V${b.y-12} Q${b.x-18} ${b.y} ${b.x-6} ${b.y} H${b.x}`:`M${a.x} ${a.y} C${mx} ${a.y} ${mx} ${my} ${mx} ${my} C${mx} ${my} ${mx} ${b.y} ${b.x} ${b.y}`;
+      const {start:a,end:b,chip:c}=route,bend=route.reverse?-1:1,mx=c?c.x+c.width/2:route.skip?a.x+bend*7:(a.x+b.x)/2,my=c?c.y+c.height/2:route.skip?a.y:(a.y+b.y)/2;
+      const d=route.skip?`M${a.x} ${a.y} C${mx} ${a.y} ${mx} ${my} ${mx} ${my} V${route.channel+12} Q${mx} ${route.channel} ${mx+12} ${route.channel} H${b.x-30} Q${b.x-18} ${route.channel} ${b.x-18} ${route.channel+12} V${b.y-12} Q${b.x-18} ${b.y} ${b.x-6} ${b.y} H${b.x}`
+        :c?`M${a.x} ${a.y} Q${mx-bend*14} ${a.y} ${mx} ${my} Q${mx+bend*14} ${b.y} ${b.x} ${b.y}`:`M${a.x} ${a.y} C${mx} ${a.y} ${mx} ${b.y} ${b.x} ${b.y}`;
       drawing.append(svg('path',{d,class:'edge-path '+route.gateState,'marker-end':`url(#arrow-${route.gateState})`}));
+      if(!c||chips.has(c.first))continue;
       const chip=route.decision?button('',()=>openDecision(route.decision),'edge-chip '+route.gateState):el('div',undefined,'edge-chip '+route.gateState);
-      const source=data.nodes.find(n=>n.id===route.from);
-      chip.setAttribute('aria-label',`${relationText(route)}. ${nodeDescription(source)}`);
-      if(route.gateState==='returned')chip.append(cometGlyph());chip.append(el('span',relationText(route)));setRect(chip,c);stage.append(chip);chips.set(route.index,chip);
+      const source=data.nodes.find(n=>n.id===route.from),targets=layout.routes.filter(r=>r.chip===c).map(r=>title(data.nodes.find(n=>n.id===r.to))).join(', ');
+      chip.setAttribute('aria-label',`${edgeRelationLabel(route,language)}. ${title(source)} → ${targets}`);
+      if(route.gateState==='returned')chip.append(cometGlyph());chip.append(el('span',route.text));setRect(chip,c);stage.append(chip);chips.set(c.first,chip);
     }
     // All focusable controls are ordered by column and then vertical position.
     [...nodes.values(),...chips.values()].sort((a,b)=>parseFloat(a.style.left)-parseFloat(b.style.left)||parseFloat(a.style.top)-parseFloat(b.style.top)).forEach(e=>stage.append(e));
     stage.querySelectorAll('.overview-frog,.goal-card').forEach(e=>e.remove());
     const goal=el('article',undefined,'goal-card node-card '+(data.complete?'passed':'unused'));goal.append(typeIcon('goal'),el('strong',data.title||t('goal')),el('span',`${t('goal')} · ${data.complete?t('passed'):t('notStarted')}`));setRect(goal,layout.goal);stage.append(goal);
     for(const n of data.nodes.filter(n=>needs(n)||['held','awaiting_approval'].includes(n.status))) {
-      const p=layout.positions[n.id],report=el('div',undefined,'overview-frog');const frog=el('img');frog.src='/static/assets/frog-report.png';frog.alt='';report.append(frog,el('span',t('waitingBubble'),'speech'));Object.assign(report.style,{left:p.x+'px',top:p.y+p.height+12+'px'});stage.append(report);
+      const p=layout.positions[n.id],report=el('div',undefined,'overview-frog');const frog=el('img');frog.src='/static/assets/frog-report.png';frog.alt='';report.append(frog,el('span',t('waitingBubble'),'speech'));Object.assign(report.style,{left:p.x+'px',top:p.y+p.height+8+'px'});stage.append(report);
     }
-    if(data.complete){const frog=el('img',undefined,'overview-frog waving');frog.src='/static/assets/frog-wave.png';frog.alt=t('complete');Object.assign(frog.style,{left:layout.goal.x+190+'px',top:layout.goal.y+layout.goal.height+10+'px'});stage.append(frog);}
+    if(data.complete){const frog=el('img',undefined,'overview-frog waving');frog.src='/static/assets/frog-wave.png';frog.alt=t('complete');Object.assign(frog.style,{left:layout.goal.x+52+'px',top:layout.goal.y+layout.goal.height+10+'px'});stage.append(frog);}
     size();
     if(reveal&&layout.positions[id]){const p=layout.positions[id],w=viewport.clientWidth||900;
       if(p.x*scale<viewport.scrollLeft+12||(p.x+p.width)*scale>viewport.scrollLeft+w-12)viewport.scrollLeft=Math.max(0,p.x*scale-(w-p.width*scale)/2);
