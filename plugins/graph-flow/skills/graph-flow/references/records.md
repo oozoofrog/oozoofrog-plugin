@@ -60,6 +60,7 @@ Roles prevent accidents; they are not a security boundary (P5, P10). An agent th
 | `init`, `plan set`, `host set`, `ready`, `route`, `assign`, `brief`, `merge`, `gate`, `reopen`, `learn add`, `learn promote`, `learn retire` | yes | no | no | no |
 | `plan validate`, `learn list`, `trace` | yes | yes | yes | yes |
 | `status` | yes | own node only | own node and its target only | yes |
+| `submit --commit` | yes | own node | no | no |
 | `start`, `red`, `check run`, `check record`, `submit` | yes | own node | no | no |
 | `review submit` | no | no | own node | no |
 | `decide ask`, `decide wait`, `decide list` | yes | own node only | own node only | yes |
@@ -147,15 +148,17 @@ Unknown fields are preserved and ignored.
 
 ### Validation
 
-`plan.validate(plan)` returns problems `{"code", "node", "message"}` (`node` is `null` for plan-level problems). Any problem makes `gf plan validate` exit 1 and `gf plan set` refuse the plan.
+`plan.validate(plan)` returns problems `{"code", "node", "message"}` (`node` is `null` for plan-level problems) and never raises on a malformed plan. It checks the **raw** plan for V1 to V8, then normalizes a copy and checks V9 on it. Any problem makes `gf plan validate` exit 1 and `gf plan set` refuse the plan.
+
+Required top-level fields: `schema_version` (must be `1`), `goal` (non-empty string), `nodes` (non-empty list). Optional: `requirements`, `tags`, `integration_checks`.
 
 | Code | Rejects | Principle |
 | --- | --- | --- |
 | `V1` | Missing or mistyped required field, unknown `kind`, bad `schema_version` | |
-| `V2` | Duplicate or malformed node id or check id | |
+| `V2` | Duplicate or malformed node id or check id; more than one `scope` check or more than one `cites` check in a node | |
 | `V3` | A `needs` entry whose `from` does not exist, whose `artifact` is empty, or whose `artifact` is neither equal to or under one of the producer's `owns` nor in its `outputs` | P3 |
 | `V4` | A dependency cycle | P3 |
-| `V5` | A `work` node with no check; a `cmd` check without `run`; a `review` node without `target` and `lens`, or whose `target` is not a `work` node; a `decision` node without `question` and a valid `decision_kind` | P1 |
+| `V5` | A `work` node whose raw `checks` list is empty; a `cmd` check without `run`; a `review` node without `target` and `lens`, whose `target` is not a `work` node, or whose `lane` is not 1; a `decision` node without `question` and a valid `decision_kind`, or with checks | P1 |
 | `V6` | `lane` missing or not 1, 2, 3 | P9 |
 | `V7` | Two nodes with overlapping `owns` and no dependency path between them in either direction (they could run at the same time). Two path lists overlap when any pair is equal or one is under the other | P4 |
 | `V8` | A path that is absolute, contains `..`, or is under `.git` or `.graph-flow` | |
@@ -163,26 +166,28 @@ Unknown fields are preserved and ignored.
 
 ### Normalization
 
-`plan.normalize(plan)` returns `(normalized_plan, notices)` without mutating its argument, and is idempotent. `gf plan set` stores the normalized plan.
+`plan.normalize(plan)` returns `(normalized_plan, notices)` without mutating its argument, and is idempotent. Notices have the shape `{"code", "node", "message"}`. `gf plan set` stores the normalized plan.
 
-1. Every node gets `effective_lane = lane`.
-2. A `work` node with no check of type `cmd` gets `effective_lane = min(3, lane + 1)`, and, unless it already has a check of type `human`, a check `{"id": "human", "type": "human"}` (if the id `human` is taken by a non-human check, the id `human_review` is used). Notice code `no_machine_check`.
-3. Defaults are filled: `needs`, `owns`, `outputs`, `reads`, `checks` as empty lists; `max_attempts` 3.
+1. Defaults are filled: `needs`, `owns`, `outputs`, `reads`, `checks` as empty lists; `max_attempts` 3.
+2. Every node gets `effective_lane = lane`.
+3. A `work` node with no check of type `cmd` gets `effective_lane = min(3, lane + 1)`, and, unless it already has a check of type `human`, an added check `{"id": X, "type": "human"}` where X is the first unused id among `human`, `human_review`, `human_review_2`, `human_review_3`, and so on. Notice code `no_machine_check`.
 
-`scope` and `cites` do not count as a machine check for rule 2: a node needs a check of its own behavior (P1). `V9` is evaluated on the normalized plan.
+`scope`, `cites`, and `host` do not count as a machine check for rule 3: a node needs a deterministic check of its own behavior (P1). The scope comparison is run by the gate for every `work` node whether or not the plan lists a `scope` check (section 6).
 
 ### Revisions
 
-- `gf plan set <file>` validates, normalizes, writes `plans/NNNN.json`, then appends `plan.set` in one transaction (section 5). `store.read_plan` always loads the revision named by the last `plan.set` event; a plan file without its event is ignored.
-- Each node has a fingerprint: SHA-256 of its normalized JSON with sorted keys. `plan.set` records every node's fingerprint.
-- A node's **epoch** starts at the first revision containing it and restarts at every revision that changes its fingerprint. Only events of the current epoch count for that node, so a changed node starts again at `pending` with zero attempts; unchanged nodes keep their state. A node removed from the plan disappears from the state.
+- `gf plan set <file>` validates, normalizes, writes `plans/NNNN.json`, then appends `plan.set`, all in one transaction (section 5). `store.read_plan` loads the revision named by the last `plan.set` event; a plan file without its event is ignored and its number is never reused (the next revision is the highest existing file number plus one, so numbers may have gaps).
+- A plan file is JSON with sorted keys, two-space indent, and a trailing newline; `plan_sha256` is the SHA-256 of exactly those bytes.
+- The `plan.set` event itself, and every later event, carries the new `plan_revision`.
+- A node's fingerprint is the SHA-256 hex of `json.dumps(node, sort_keys=True, separators=(",", ":"), ensure_ascii=False)` encoded as UTF-8, computed on the normalized node. `plan.set` records every node's fingerprint.
+- A changed fingerprint invalidates the node and everything that depends on it (section 5, "Basis"). A node removed from the plan disappears from the state.
 
 ## 4. Checks and evidence grades
 
 | Type | Fields | Judged by | Grade |
 | --- | --- | --- | --- |
 | `cmd` | `run`, optional `timeout_s` (default 600), optional `cwd` (project-relative) | `gf` runs `/bin/sh -c <run>` and reads the exit code; 0 is passed, anything else or a timeout is failed | 1 |
-| `scope` | none | `gf` compares changed files with `owns` | 1 in isolated mode, 2 in shared mode |
+| `scope` | none | `gf` compares the files the node changed with its `owns`; run for every `work` node | 1 |
 | `cites` | none | `gf` verifies every finding of the review has `file` and `line`, the file exists in the tested tree, and the line number is within the file | 1 |
 | `host` | `tool` (free text, e.g. an IDE test tool), `expect` | The agent runs its own tool and submits the outcome with `gf check record` | 2 |
 | `human` | optional `prompt` | A person, through a `review` decision bound to this node, attempt, and check | human |
@@ -199,11 +204,15 @@ Grade 3 is rollback history (section 9).
 
 ### `scope`
 
-`gf start` records the base: `git rev-parse HEAD`, and for every file that is modified or untracked at that moment its `git hash-object` value (`dirty`: map of path to hash).
+`gf start` records the base: `git rev-parse HEAD` in the node's working directory, and `dirty`, a map from path to state for every file that is modified, deleted, or untracked at that moment. The state is the file's `git hash-object` value, or the string `deleted` for a tracked file that is missing.
 
-- **Isolated mode** (the submission carries a `commit`): changed files are `git diff --no-renames --name-only -z <base.rev> <commit>`. Every changed file must be equal to or under one of the node's `owns`. Grade 1, `"attribution": true`.
-- **Shared mode** (no commit): changed files are `git diff --no-renames --name-only -z <base.rev>` plus untracked files (`git ls-files --others --exclude-standard -z`), keeping a base-dirty file only if its current hash differs from the recorded one. A file is a violation when it is under no node's `owns` in the plan. Grade 2, `"attribution": false`, because changes in a shared tree cannot be attributed to one node. A shared-mode result never satisfies a lane 2 or 3 node (section 6, R3).
-- Paths under `.graph-flow/` are excluded in both modes.
+The comparison always asks one question: did this node change a file it does not own?
+
+- **Committed submission** (the submission carries a `commit`): changed files are `git diff --no-renames --name-only -z <base.rev> <commit>`.
+- **Uncommitted submission** (no commit, shared tree): changed files are `git diff --no-renames --name-only -z <base.rev>` plus untracked files (`git ls-files --others --exclude-standard -z`), keeping a path listed in `base.dirty` only if its current state (hash or `deleted`) differs from the recorded one.
+- In both cases every changed file must be equal to or under one of the node's `owns`; the others are `violations`. Paths under `.graph-flow/` are excluded. The result is grade 1.
+
+The uncommitted comparison is exact only when one node at a time works in the shared tree. Therefore `gf start` refuses a node whose isolation is `shared` (or unassigned) while another node with shared isolation is `running` or has a current uncommitted submission that is not yet `passed` (exit 4, `shared_busy`). Parallel work requires `worktree` isolation and committed submissions (P4).
 
 ### `red`
 
@@ -233,21 +242,35 @@ Incomplete tail: readers ignore a final line that does not end in a newline or d
 | `node.assign` | `node`, `executor` (`inline`, `subagent`, `workflow`, `t3`, `background`), `model`, `effort`, `provider`, `family` (`claude`, `openai`, `other`), `isolation` (`shared`, `worktree`) |
 | `node.start` | `node`, `attempt`, `base` `{rev, dirty}`, `cwd` |
 | `check.red` | `node`, `check`, `exit_code`, `failed_first`, `log` |
-| `check.result` | `node`, `check`, `type`, `grade`, `result` (`passed`, `failed`), `attempt`, `phase` (`loop`, `gate`), `exit_code`, `timed_out`, `command`, `cwd`, `duration_ms`, `log`; scope adds `mode`, `attribution`, `violations`; host adds `note`; run-level checks use node `_run` and attempt 0 |
+| `check.result` | `node`, `check`, `type`, `grade`, `result` (`passed`, `failed`), `attempt`, `phase` (`loop`, `gate`), `exit_code`, `timed_out`, `command`, `cwd`, `duration_ms`, `log`; scope adds `violations`; host adds `note`; run-level checks use node `_run` and attempt 0 |
 | `node.submit` | `node`, `attempt`, `commit` (full SHA or `null`), `branch` (or `null`), `changed_files`, `notes`, `low_confidence` |
-| `review.submit` | `node` (the review node), `target`, `target_attempt`, `target_commit`, `verdict` (`pass`, `fail`), `findings` (list of `{severity, file, line, text}`) |
+| `review.submit` | `node` (the review node), `attempt`, `target`, `target_submission`, `verdict` (`pass`, `fail`), `findings` (list of `{severity, file, line, text}`) |
 | `merge.result` | `merged` (list of `{node, commit, head}`), `conflicted` (list of `{node, commit, files}`) |
-| `gate.verdict` | `node`, `attempt`, `verdict`, `rule`, `rejection` (or `null`), `tested_head` |
-| `gate.final` | `result` (`passed`, `failed`), `failed_checks` |
+| `gate.verdict` | `node`, `attempt`, `submission` (or `null`), `verdict`, `rule`, `rejection` (or `null`), `tested_head` |
+| `gate.final` | `result` (`passed`, `failed`), `failed_checks`, `tested_head` |
 | `node.reopen` | `node`, `reason` |
-| `decision.ask` | `id`, `node` (or `null`), `attempt` (or `null`), `check` (or `null`), `purpose` (`node`, `human_check`, `lane3`, `trajectory`, `hold`, `free`), `kind`, `question`, `evidence` `{command, files, checks}` |
+| `decision.ask` | `id`, `node` (or `null`), `submission` (or `null`), `check` (or `null`), `purpose` (`node`, `human_check`, `lane3`, `trajectory`, `hold`, `free`), `kind`, `question`, `evidence` `{command, files, checks}` |
 | `decision.answer` | `id`, `outcome`, `answer`, `source` (`dashboard`, `terminal`), `sig` (section 7) |
 | `constraint.apply`, `constraint.add`, `constraint.promote`, `constraint.retire` | `ids` or `id` (written only when a run is addressed) |
 | `log.recovered` | `dropped_bytes` |
 
+The `seq` of a `node.submit` or `review.submit` event is that submission's **id**. A decision's `id` is `d` followed by the `seq` of its `decision.ask` event.
+
+### Basis: what invalidates a node
+
+For every node the state keeps `basis`: the `seq` of the latest event that invalidated it, or 0. **Events about a node with `seq <= basis` are ignored for that node**, so after an invalidation it is `pending` again with zero attempts, no submission, no check results, and no verdict. Invalidating events:
+
+1. a `plan.set` that changes the fingerprint of the node, or of any node it depends on directly or transitively (through `needs.from`; a review node also depends on its `target`);
+2. a `node.reopen` naming the node or any node it depends on;
+3. for a `review` node only: a `node.start` of its `target` (the target is being reworked, so the review must be redone).
+
+A node's own work is kept on disk; invalidation only means it must be started, submitted, and gated again against the new inputs (P8: nothing is rejected in bulk, and a rejection of one node invalidates no other node).
+
+Decisions are bound, not counted: a decision is **stale** when its node's `basis` is greater than or equal to the decision's ask `seq`, or when it carries a `submission` id that is not the node's current submission id. Stale decisions are never used by the gate and cannot be answered.
+
 ### Derived state
 
-`state.derive(plan, events)` is pure and returns:
+`state.derive(plan, events)` is deterministic for a given plan, event list, and `human.key`, and returns:
 
 ```json
 {
@@ -258,14 +281,55 @@ Incomplete tail: readers ignore a final line that does not end in a newline or d
       "kind": "work",
       "lane": 2,
       "effective_lane": 2,
+      "basis": 0,
       "attempts": 1,
       "max_attempts": 3,
       "assignment": {"executor": "t3", "model": "claude-sonnet-5-5", "effort": "medium", "provider": "claudeAgent", "family": "claude", "isolation": "worktree"},
       "base": {"rev": "0123abc", "dirty": {}},
-      "submission": {"attempt": 1, "commit": "89abcde", "branch": "gf/notes_export/export", "changed_files": ["notes.py"], "notes": "", "low_confidence": []},
+      "submission": {"id": 9, "attempt": 1, "commit": "89abcde", "branch": "gf/notes_export/export", "changed_files": ["notes.py"], "notes": "", "low_confidence": []},
       "checks": {"unit": {"loop": {"result": "passed", "exit_code": 0, "attempt": 1}, "gate": null}},
       "red": {"unit": {"failed_first": true}},
-      "reviews": [{"node": "review-export", "target_attempt": 1, "verdict": "pass", "family": "openai", "findings": []}],
+      "reviews": [{"node": "review-export", "status": "passed", "target_submission": 9, "verdict": "pass", "family": "openai", "findings": []}],
+      "rejections": [],
+      "verdict": null,
+      "merged_head": null,
+      "trajectory_clean": true,
+      "open_decisions": ["d14"]
+    },
+    "review-export": {
+      "status": "passed",
+      "kind": "review",
+      "lane": 1,
+      "effective_lane": 1,
+      "basis": 0,
+      "attempts": 1,
+      "max_attempts": 3,
+      "assignment": {"executor": "t3", "model": "gpt-6.1-sol", "effort": "high", "provider": "codex", "family": "openai", "isolation": "shared"},
+      "base": {"rev": "0123abc", "dirty": {}},
+      "submission": {"id": 11, "attempt": 1, "target": "export", "target_submission": 9, "verdict": "pass", "findings": []},
+      "checks": {"cites": {"loop": null, "gate": {"result": "passed", "attempt": 1}}},
+      "red": {},
+      "reviews": [],
+      "rejections": [],
+      "verdict": {"verdict": "pass", "rule": "R7", "submission": 11, "attempt": 1},
+      "merged_head": null,
+      "trajectory_clean": true,
+      "open_decisions": []
+    },
+    "publish-ok": {
+      "status": "pending",
+      "kind": "decision",
+      "lane": 3,
+      "effective_lane": 3,
+      "basis": 0,
+      "attempts": 0,
+      "max_attempts": 3,
+      "assignment": null,
+      "base": null,
+      "submission": null,
+      "checks": {},
+      "red": {},
+      "reviews": [],
       "rejections": [],
       "verdict": null,
       "merged_head": null,
@@ -274,63 +338,75 @@ Incomplete tail: readers ignore a final line that does not end in a newline or d
     }
   },
   "decisions": {
-    "d3": {"id": "d3", "node": "export", "attempt": 1, "check": null, "purpose": "lane3", "kind": "authorization", "question": "", "evidence": {}, "status": "open", "outcome": null, "answer": null, "source": null, "verified": false, "stale": false}
+    "d14": {"id": "d14", "seq": 14, "node": "export", "submission": 9, "check": null, "purpose": "lane3", "kind": "authorization", "question": "", "evidence": {}, "status": "open", "outcome": null, "answer": null, "source": null, "verified": false, "stale": false}
   }
 }
 ```
 
-In `checks`, each phase holds the latest `check.result` data of the current attempt, or `null`. `reviews` lists only reviews whose `target_attempt` equals the node's current attempt; `family` comes from the review node's assignment. `run.status` is `complete` only when every node is `passed` and the last `gate.final` passed (section 6); otherwise `open`.
+- Every node has every key shown; unset values are `null`, `[]`, or `{}` as in the `publish-ok` example.
+- `checks[<id>]` has `loop` and `gate`, each the latest `check.result` data of the **current attempt** for that phase, or `null`. `verdict` is the latest `gate.verdict` data for the current submission (for a decision node: since its basis), or `null`. `rejections` lists the rejection objects of this node since its basis, in order.
+- `reviews` (work nodes only) lists every review node that targets the node and has a current submission, with that review node's `status`, its `target_submission`, verdict, findings, and its assignment `family` (or `null`).
+- `open_decisions` holds the ids of open, non-stale decisions bound to the node. `decisions` holds every decision; `status` is `open` or `answered`.
+- `run.final` is the last `gate.final` data plus its `seq`, or `null`. `run.status` is `complete` only when the plan has at least one node, every node is `passed`, the last `gate.final` has result `passed`, and its `seq` is greater than the `seq` of every `plan.set`, `node.reopen`, and `gate.verdict` event; otherwise `open`.
 
 | Node status | Reached by |
 | --- | --- |
-| `pending` | No event in the current epoch |
+| `pending` | No event since the basis |
 | `assigned` | `node.assign` |
 | `running` | `node.start` |
 | `submitted` | `node.submit` or `review.submit` |
-| `passed`, `rejected`, `unverified`, `held`, `awaiting_approval`, `replan` | The matching `gate.verdict` |
-| `stale` | `node.reopen` on this node, or on a node it depends on directly or transitively, after it had started |
+| `passed`, `rejected`, `unverified`, `held`, `awaiting_approval`, `replan` | The matching `gate.verdict` (`pass`, `reject`, `unverified`, `hold`, `needs_approval`, `replan`) |
+
+A node **has a current submission** when its status is `submitted`, `unverified`, `held`, or `awaiting_approval`.
 
 `trajectory_clean` is true when, in the current attempt, no check timed out, no loop-phase scope result has violations, and `attempts <= 2`.
 
-A decision is `stale` when it is bound to a node attempt that is no longer the node's current attempt, or was asked in an earlier epoch of its node.
-
 ### Starting and readiness
 
-`gf start <node>` is valid when the node's status is `pending`, `assigned`, `rejected`, `held`, `unverified`, or `stale`; its needs are satisfied; and `attempts < max_attempts`. Otherwise exit 4 (`not_startable`, `needs_unsatisfied`, or `attempts_exhausted`). `decision` nodes are never started.
+`gf start <node>` is valid for a `work` or `review` node when its status is `pending`, `assigned`, `rejected`, `unverified`, `held`, or `awaiting_approval`; its needs are satisfied; `attempts < max_attempts`; and the shared-tree rule of section 4 allows it. Errors (exit 4): `not_startable`, `needs_unsatisfied`, `shared_busy`, `attempts_exhausted`. On `attempts_exhausted` the tool also appends `gate.verdict` with verdict `replan`, rule `R2`, unless the node is already `replan` (P2: one exhaustion rule for every retry path). `decision` nodes are never started.
 
-Needs are satisfied when every `needs.from` node is `passed`; for a `review` node its `target` only needs to be `submitted` (the review happens before the target is accepted).
+Needs are satisfied when every `needs.from` node is `passed`. For a `review` node, its `target` only needs to have a current submission: the review happens before the target is accepted.
 
-`graph.ready(plan, state)` lists nodes that are startable as above and that own no path overlapping the `owns` of a node currently `running` or `submitted`. A `decision` node is ready when its needs are satisfied and it is not `passed` (P12: a verdict changes this list).
+`graph.ready(plan, state)` lists, in plan order, the `work` and `review` nodes that `gf start` would accept, and the `decision` nodes whose needs are satisfied and that are not `passed` (P12: a verdict changes this list).
 
-`gf reopen <node> --reason TEXT` (leader) marks a passed node and everything that depends on it `stale` without rejecting them: their work is kept, they must be started and gated again.
+`gf reopen <node> --reason TEXT` (leader) appends `node.reopen`; the node and everything that depends on it become `pending` through the basis rule.
 
 ## 6. Gate
 
-`gf gate <node> [--cwd PATH]` is a leader command.
+`gf gate <node> [--cwd PATH]` is a leader command. It may be run again on the same submission whenever new evidence or an answer has arrived.
 
-Preconditions (exit 4, no event): the node's needs are satisfied; a `work` or `review` node is `submitted`; if the submission has a `commit`, that commit is an ancestor of `HEAD` in the tested tree (`not_merged` otherwise). The gate records `tested_head`.
+Preconditions (exit 4, no event):
 
-Execution: the gate runs, in phase `gate`, every `cmd`, `scope`, and `cites` check of the node; if `effective_lane >= 2` it also runs the integration checks (the plan's `integration_checks` followed by the project's fixed checks). `host` results are taken from the loop phase of the current attempt.
+- the node's needs are satisfied (`needs_unsatisfied`);
+- a `work` or `review` node has a current submission (`no_submission`);
+- if the submission has a `commit`, that commit is an ancestor of `HEAD` in the tested tree (`not_merged`);
+- for a `review` node, its `target_submission` equals the target's current submission id (`review_outdated`).
 
-Evaluation stops at the first rule that fires (P7: all deterministic evidence before observed evidence before opinion):
+Execution, in phase `gate`, recording `tested_head`:
+
+- `work`: every `cmd` check of the node, then the scope comparison (always, under check id `scope` or the id of the plan's scope check); if `effective_lane >= 2`, also the integration checks (the plan's `integration_checks` followed by the project's fixed checks).
+- `review`: the `cites` check.
+- `host` results are taken from the loop phase of the current attempt.
+
+Evaluation stops at the first rule that fires (P7: all deterministic evidence, then observed evidence, then opinion). Only non-stale, verified decisions count.
 
 | Rule | Condition | Verdict | Status |
 | --- | --- | --- | --- |
-| R1 | A grade 1 result of this gate run failed (node check or integration check) and `attempts < max_attempts` | `reject` | `rejected` |
+| R1 | A grade 1 result of this gate run failed (node check, scope, cites, or integration check) and `attempts < max_attempts` | `reject` | `rejected` |
 | R2 | The same failure and `attempts == max_attempts` | `replan` | `replan` |
-| R3 | Required evidence is missing for this attempt: a `host` check has no loop result; or `effective_lane >= 2` and the scope result is not isolated (`attribution` false); or `effective_lane >= 2` and no review targeting the node has submitted for this attempt; or such a review's `family` equals the node's assignment `family` | `unverified` | `unverified` |
-| R4 | A grade 2 result failed, or a review of this attempt has verdict `fail`, and no verified approved `review` decision with purpose `hold` exists for this attempt | `hold` | `held` |
-| R5 | `effective_lane == 2`, and `trajectory_clean` is false or the node's `rollbacks` (section 9) is greater than 0, and no verified approved `review` decision with purpose `trajectory` exists for this attempt | `needs_approval` | `awaiting_approval` |
-| R6 | A `human` check has no verified approved `review` decision bound to this node, attempt, and check; or `effective_lane == 3` and no verified approved `authorization` decision with purpose `lane3` is bound to this node and attempt | `needs_approval` | `awaiting_approval` |
+| R3 | Required evidence is missing: a `host` check has no loop result for this attempt; or the node is a `work` node with `effective_lane >= 2` and no review node targeting it is `passed` with `target_submission` equal to this submission's id; or such a review exists but either assignment `family` is `null` or the two are equal | `unverified` | `unverified` |
+| R4 | A grade 2 result failed, or a `passed` review of this submission has verdict `fail`, and no approved `review` decision with purpose `hold` is bound to this submission | `hold` | `held` |
+| R5 | `work` node, `effective_lane == 2`, and `trajectory_clean` is false or the node's `rollbacks` (section 9) is greater than 0, and no approved `review` decision with purpose `trajectory` is bound to this submission | `needs_approval` | `awaiting_approval` |
+| R6 | A `human` check has no approved `review` decision with purpose `human_check` bound to this submission and check; or `effective_lane == 3` and no approved `authorization` decision with purpose `lane3` is bound to this submission | `needs_approval` | `awaiting_approval` |
 | R7 | Otherwise | `pass` | `passed` |
 
-- For R5 and R6 the gate appends the missing `decision.ask` (with evidence: the commands about to be allowed, the changed files, the check table) unless an open, non-stale one with the same binding exists.
-- A decision answered `rejected` or `revision_requested` for R5 or R6 yields `hold`.
-- A review verdict can hold a node; it can never produce `pass` and never outranks a grade 1 failure.
-- `decision` nodes: `gf gate <node>` passes (R7) when a verified answer with outcome `answered` or `approved` exists for a decision with purpose `node` bound to this node in its current epoch; `hold` (R4) when the outcome is `rejected` or `revision_requested`; otherwise `needs_approval` (R6) and the ask is appended.
+- For R5 and R6 the gate appends the missing `decision.ask` (with evidence: the commands about to be allowed, the changed files, the check table) unless an open, non-stale one with the same node, submission, check, and purpose exists.
+- A decision answered `rejected` or `revision_requested` for R5 or R6 yields `hold` (rule `R4`).
+- A review can hold a node; it can never produce `pass` and never outranks a grade 1 failure.
+- `decision` nodes have no submission. `gf gate <node>` gives `pass` (R7) when a verified, non-stale answer with outcome `answered` or `approved` exists for a decision with purpose `node` bound to this node; `hold` (R4) when that outcome is `rejected` or `revision_requested`; otherwise `needs_approval` (R6), appending the ask (from the node's `question` and `decision_kind`) if none is open.
 - A rejection never changes another node's status (P8).
 
-`gf gate --final` runs the plan's integration checks and every fixed check once on the current tree and appends `gate.final`. A run is `complete` only after a passed final gate, so fixed checks run on every run even when all nodes are lane 1 (P11).
+`gf gate --final` runs the plan's integration checks and every fixed check once on the current tree and appends `gate.final`. Because completion requires the final gate to be the latest verdict-like event (section 5), fixed checks run on every completed run, including runs whose nodes are all lane 1 (P11).
 
 Exit code of `gf gate`: 0 for `pass` (or a passed final gate), 1 for every other verdict.
 
@@ -348,29 +424,29 @@ SCOPE     notes.py, tests/test_export.py only
 {"unit": "export", "attempt": 2, "max_attempts": 3, "verdict": "red", "reason": "check unit exited 1", "evidence": {"log": "evidence/export/unit/a2-1f3e5a7c.log", "tail": ["AssertionError"]}, "scope": ["notes.py", "tests/test_export.py"]}
 ```
 
-For a scope failure the reason lists the violating files.
+For a scope failure the reason lists the violating files. `gate.evaluate` is pure and returns the failed results; `gate.gate` reads the log tails and builds the rejection.
 
 ### Merge
 
-`gf merge <node> [<node> ...]` (leader) integrates submitted commits into the current branch of the project root:
+`gf merge <node> [<node> ...]` (leader) integrates committed submissions into the current branch of the project root:
 
-- Precondition: the tree has no modified tracked files (exit 4, `dirty_tree`).
-- For each node in the given order: `git merge --no-ff --no-edit <commit>`. On conflict: `git merge --abort`, the node goes to `conflicted` with the conflicting files, and the remaining nodes are still attempted.
-- One `merge.result` event is appended. A conflicted node is not rejected by the merge; the leader gates it (which fails the `not_merged` precondition) or restarts it.
+- Precondition: the tree has no modified tracked files (exit 4, `dirty_tree`). Work done inline in the shared tree is committed by the leader, and submitted with `gf submit --commit <sha>`, before any merge.
+- For each node in the given order: `git merge --no-ff --no-edit <commit>`. On conflict: `git merge --abort`, and the remaining nodes are still attempted.
+- One `merge.result` event is appended. For every conflicted node the merge also appends `gate.verdict` with verdict `reject` (or `replan` at the attempt limit), rule `M1`, and a rejection whose reason names the conflicting files, so the node is restarted like any other rejected node.
 
 ## 7. Decisions
 
-- `gf decide ask --kind K --question Q [--node N] [--check C] [--purpose P] [--command C] [--files F ...]` appends `decision.ask` and prints the id (`d<seq>`). The tool fills `attempt` from the node's current attempt. Kinds: `direction`, `information`, `review`, `authorization`. Default purpose: `free`.
+- `gf decide ask --kind K --question Q [--node N] [--check C] [--purpose P] [--command C] [--files F ...]` appends `decision.ask` and prints the id (`d<seq>`). The tool fills `submission` with the node's current submission id (or `null`). Kinds: `direction`, `information`, `review`, `authorization`. Default purpose: `free`.
 - `gf decide wait <id> [--timeout S]` polls the log (1 second interval) until the decision is answered; exit 0 with the answer, exit 1 on timeout.
 - `gf decide list` returns open decisions (for worker and reviewer roles: only those bound to their node).
 - Valid outcomes: `approved`, `rejected`, `revision_requested` for kinds `review` and `authorization`; `answered` for the other two.
-- An answer to a stale decision is refused (exit 4, `stale_decision`).
+- An answer to a stale decision (section 5, "Basis") is refused (exit 4, `stale_decision`).
 
 Who can answer (P10):
 
 - The dashboard server, started by a person with `gf serve`, appends `decision.answer` with `source: "dashboard"` and `sig`: HMAC-SHA256, hex, keyed with `human.key`, over the UTF-8 string `<run_id>\n<decision id>\n<outcome>\n<answer>`.
 - `gf decide answer` on the command line is refused (exit 3) unless the environment has `GF_HUMAN_TERMINAL=1` and stdin is a TTY. It signs the same way with `source: "terminal"`.
-- `state.derive` sets `verified` by recomputing the signature with `core.human_sig` (constant-time comparison), and `false` when the key is unreadable or the signature differs. Gate rules count only verified answers.
+- `state.derive` sets `verified` by recomputing the signature with `core.human_sig` (constant-time comparison); it is `false` when the key is unreadable or the signature differs. This is the one place where `derive` reads outside its arguments. Gate rules count only verified answers.
 
 ## 8. Constraints and fixed checks (P11)
 
@@ -441,25 +517,25 @@ def human_sig(run_id, decision_id, outcome, answer_text): ...   # HMAC-SHA256 he
 
 # store.py
 def project_root(path=None): ...                # git top level of path or cwd; GFError if not a repository
-def init_run(project_root, run_id, actor): ...  # creates dirs, .gitignore, registry entry; appends run.init; returns run_dir Path; GFError("run_exists") if present
+def init_run(project_root, run_id, actor): ...  # run_id matches the node id pattern ("bad_run_id"); creates dirs, .gitignore, registry entry; appends run.init; returns run_dir Path; GFError("run_exists", exit_code=EXIT_STATE) if present
 def locked(lock_path, timeout_s=30): ...        # context manager, exclusive flock
-def events(run_dir): ...                        # list of event dicts; ignores an incomplete tail
-def read_plan(run_dir): ...                     # normalized plan of the last plan.set, or None
+def events(run_dir): ...                        # list of event dicts; ignores an incomplete or unparseable last line; a damaged earlier line raises GFError("log_corrupt", exit_code=EXIT_IO)
+def read_plan(run_dir): ...                     # the stored plan of the last plan.set (stored plans are already normalized), or None
 def project_of(run_dir): ...                    # project root Path (run_dir/../../..)
-def transaction(run_dir): ...                   # context manager yielding tx
-#   tx.events -> list, tx.plan -> dict or None, tx.revision -> int
+def transaction(run_dir, timeout_s=30): ...     # context manager yielding tx; appends are buffered and written only on clean exit
+#   tx.events -> list (includes events appended earlier in this tx), tx.plan -> dict or None, tx.revision -> int
 #   tx.append(type, data, actor) -> event dict (seq, ts, plan_revision filled in)
-#   tx.write_plan(plan) -> (revision, sha256): writes plans/NNNN.json; caller appends plan.set in the same tx
+#   tx.write_plan(plan) -> (revision, sha256): writes plans/NNNN.json; tx.plan and tx.revision advance at once; caller appends plan.set in the same tx
 def evidence_path(run_dir, node, check, attempt): ...   # creates and returns a new unique log Path (exclusive)
-def atomic_write(path, text): ...               # temp file + fsync + os.replace
+def atomic_write(path, data): ...               # str or bytes; temp file + fsync + os.replace
 def register_project(root): ...                 # locked update of registry.json
 
 # state.py
-def derive(plan, events): ...                   # section 5 shape; plan may be None (then nodes is {})
-def fingerprint(node): ...                      # sha256 hex of normalized node JSON, sorted keys
+def derive(plan, events): ...                   # section 5 shape; plan may be None (then nodes is {}); reads human.key through core.human_sig
+def fingerprint(node): ...                      # section 3 "Revisions"
 
 # plan.py
-def validate(plan): ...                         # list of {"code", "node", "message"}; validates the normalized form
+def validate(plan): ...                         # list of {"code", "node", "message"}; raw plan for V1-V8, normalized copy for V9; never raises
 def normalize(plan): ...                        # (new_plan, notices); pure and idempotent
 def overlaps(paths_a, paths_b): ...             # bool
 def depends(plan, a, b): ...                    # True if a depends on b directly or transitively
@@ -467,18 +543,19 @@ def node_by_id(plan, node_id): ...              # node dict; GFError("unknown_no
 
 # checks.py   (each appends its event and returns that event's data dict)
 def run_cmd(run_dir, node_id, check, phase, cwd, actor): ...     # check is the check dict; node_id "_run" for run-level
-def run_scope(run_dir, node_id, phase, cwd, actor): ...
-def run_cites(run_dir, node_id, phase, cwd, actor): ...
+def run_scope(run_dir, node_id, phase, cwd, actor): ...   # the one scope comparison of a work node
+def run_cites(run_dir, node_id, phase, cwd, actor): ...   # the one cites check of a review node
 def record_host(run_dir, node_id, check_id, result, note, actor): ...   # result "passed" | "failed"
 def red(run_dir, node_id, check_id, cwd, actor): ...             # check_id None runs every cmd check; returns {"results": [...], "notices": [...]}
-def start(run_dir, node_id, cwd, actor): ...                     # appends node.start; returns its data
-def submit(run_dir, node_id, commit, branch, notes, low_confidence, actor): ...   # computes changed_files; appends node.submit
-def review_submit(run_dir, node_id, verdict, findings, actor): ...                 # appends review.submit
+def start(run_dir, node_id, cwd, actor): ...                     # validates per section 5 in one transaction; appends node.start; returns its data
+def submit(run_dir, node_id, commit, branch, notes, low_confidence, cwd, actor): ...   # computes changed_files; appends node.submit; returns its data plus "id"
+def review_submit(run_dir, node_id, verdict, findings, actor): ...   # fills target and target_submission; appends review.submit; returns its data plus "id"
 
 # gate.py
 def evaluate(plan, state, node_id, gate_results, integration_results, rollbacks): ...
 #   pure. gate_results / integration_results: lists of check.result data from this gate run.
-#   returns {"verdict", "rule", "rejection" or None, "asks": [decision.ask data to append]}
+#   returns {"verdict", "rule", "failed": [the failing results], "asks": [decision.ask data without "id"]}
+def build_rejection(node, node_state, failed, tails): ...   # tails: map of log path to list of last lines; returns the rejection object
 def gate(run_dir, node_id, cwd, actor): ...     # preconditions, runs checks, appends asks and gate.verdict; returns the verdict data
 def gate_final(run_dir, cwd, actor): ...        # appends gate.final; returns its data
 def reopen(run_dir, node_id, reason, actor): ...  # appends node.reopen; returns {"node", "stale": [ids]}
@@ -488,7 +565,7 @@ def needs_satisfied(plan, state, node_id): ...  # bool
 def ready(plan, state): ...                     # list of node ids in plan order
 
 # assign.py
-def assign(run_dir, node_id, executor, model, effort, provider, family, isolation, actor): ...   # appends node.assign
+def assign(run_dir, node_id, executor, model, effort, provider, family, isolation, actor): ...   # appends node.assign; returns its data
 def brief(run_dir, node_id): ...                # English brief text for a sub-session; also written to brief/<node>.md
 def plan_brief(project_root, run_dir=None): ... # planning brief for the splitter (section 8)
 
@@ -498,22 +575,22 @@ def load_routing(path=None): ...                # routing.json next to the skill
 def load_usage(cache_dir=None): ...             # provider usage from the host's cache files, {} when absent
 
 # merge.py
-def merge(run_dir, node_ids, actor): ...        # appends merge.result; returns its data
+def merge(run_dir, node_ids, actor): ...        # appends merge.result and the M1 verdicts; returns the merge.result data
 
 # decisions.py
-def ask(run_dir, kind, question, node, check, purpose, evidence, actor): ...   # returns {"id", ...ask data}
-def answer(run_dir, decision_id, outcome, answer_text, source, actor): ...     # signs; GFError on stale or invalid outcome
+def ask(run_dir, kind, question, node, check, purpose, evidence, actor): ...   # returns the ask data including "id"
+def answer(run_dir, decision_id, outcome, answer_text, source, actor): ...     # signs; returns the answer data; GFError on stale or invalid outcome
 def wait(run_dir, decision_id, timeout_s): ...  # decision dict, or GFError(exit_code=EXIT_NEGATIVE) on timeout
 def open_decisions(state, node_id=None): ...    # list
 def verify(run_id, decision_id, answer_data): ...   # bool; compares answer_data["sig"] with core.human_sig
 def ensure_key(): ...                           # creates human.key (mode 0600) if absent; called by `gf serve` and the terminal answer path
 
 # learn.py
-def add(project_root, run_dir, node_id, text, review_when, paths, tags, actor): ...
+def add(project_root, run_dir, node_id, text, review_when, paths, tags, actor): ...   # returns the constraint dict
 def all_constraints(project_root): ...          # list, statuses healed as in section 8
 def applying(project_root, plan): ...           # list of constraint dicts
-def promote(project_root, constraint_id, command, actor, run_dir=None): ...
-def retire(project_root, constraint_id, reason, actor, run_dir=None): ...
+def promote(project_root, constraint_id, command, actor, run_dir=None): ...   # returns {"constraint", "check"}
+def retire(project_root, constraint_id, reason, actor, run_dir=None): ...     # returns {"constraint"}
 def fixed_checks(project_root): ...             # list of cmd check dicts
 
 # trace.py
