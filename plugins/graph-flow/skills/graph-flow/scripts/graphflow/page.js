@@ -246,7 +246,8 @@ export function canApprove(session) {
 }
 export function decisionQuestion(d) {
   const generated = `Approve ${d.record_purpose ?? d.purpose} for ${d.node}?`;
-  return d.node && d.question === generated ? '' : d.question;
+  const made = ['human_check', 'trajectory', 'lane3'].includes(d.record_purpose ?? d.purpose);
+  return made && d.node && d.question === generated ? '' : d.question;
 }
 export function createDecisionController() {
   let session = null, view = null, chosen = null;
@@ -570,7 +571,7 @@ function resetView() { closeInvalidDecision(chosen, []); view = null; selected =
 function schedule() { clearTimeout(timer); if (!document.hidden) timer = setTimeout(refresh, 2000); }
 $('flow-tab').addEventListener('click', () => { if (view) wholeFlow(); });
 $('history-tab').addEventListener('click', () => { if (view) historyView(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && view) wholeFlow(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.isComposing && view) wholeFlow(); });
 document.addEventListener('visibilitychange', () => { clearTimeout(timer); if (renderer) renderer.wake(); if (!document.hidden) refresh(true); });
 reduced.addEventListener('change', () => { if (renderer) renderer.wake(); });
 notice('loading'); refresh();

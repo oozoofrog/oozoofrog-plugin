@@ -242,7 +242,8 @@ for (const language of ['ko','en']) {
   assert.equal(purposeAction('human_check',language,['A failure']), purposeAction('hold',language));
 }
 assert.equal(decisionQuestion({purpose:'lane3',node:'build',question:'Approve lane3 for build?'}),'');
-assert.equal(decisionQuestion({purpose:'review',record_purpose:'free',node:'build',question:'Approve free for build?'}),'');
+assert.equal(decisionQuestion({purpose:'review',record_purpose:'free',node:'build',question:'Approve free for build?'}),'Approve free for build?');
+assert.equal(decisionQuestion({purpose:'direction',record_purpose:'node',node:'pick',question:'Approve node for pick?'}),'Approve node for pick?');
 for (const question of ['Approve deploy for prod?','Approve hold for another?','Approve lane3 for build? ']) {
   assert.equal(decisionQuestion({purpose:'lane3',node:'build',question}),question);
 }
