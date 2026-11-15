@@ -213,7 +213,7 @@ The comparison always asks one question: did this node change a file it does not
 - **Uncommitted submission** (no commit, shared tree): the candidates are `git diff --no-renames --name-only -z <base.rev>`, plus untracked files (`git ls-files --others --exclude-standard -z`), plus **every path in `base.dirty`** (so a file that was dirty at base and has since been restored or deleted is still examined). A candidate listed in `base.dirty` is changed only if its current state (hash, or `deleted` when missing) differs from the recorded one; every other candidate is changed.
 - In both cases every changed file must be equal to or under one of the node's `owns`; the others are `violations`. Paths under `.graph-flow/` are excluded. The result is grade 1.
 
-The uncommitted comparison is exact only when one node at a time works in the shared tree. Therefore `gf start` refuses a node whose isolation is `shared` (or unassigned) while another node with shared isolation is `running` or has a current uncommitted submission that is not yet `passed` (exit 4, `shared_busy`). Parallel work requires `worktree` isolation and committed submissions (P4).
+The uncommitted comparison is exact only when one node at a time works in the shared tree. Therefore `gf start` refuses a `work` node whose isolation is `shared` (or unassigned) while another `work` node with shared isolation is `running` or has a current uncommitted submission (exit 4, `shared_busy`). Review nodes change no files, so they neither block nor are blocked. Parallel work requires `worktree` isolation and committed submissions (P4).
 
 ### `red`
 
@@ -569,7 +569,11 @@ def gate_final(run_dir, cwd, actor): ...        # appends gate.final; returns it
 def reopen(run_dir, node_id, reason, actor): ...  # appends node.reopen; returns {"node", "stale": [ids]}
 
 # graph.py
+def has_current_submission(node_state): ...     # bool
 def needs_satisfied(plan, state, node_id): ...  # bool
+def shared_busy(plan, state, node_id): ...      # bool
+def start_problem(plan, state, node_id): ...    # None, or "not_startable" | "attempts_exhausted" | "needs_unsatisfied" | "shared_busy"
+def check_start(plan, state, node_id): ...      # raises GFError(code, exit_code=EXIT_STATE) when start_problem is not None
 def ready(plan, state): ...                     # list of node ids in plan order
 
 # assign.py
