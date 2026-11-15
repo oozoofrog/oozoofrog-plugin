@@ -11,6 +11,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
 from . import core, decisions, graph, learn, state, store, trace
+from . import plan as planning
 
 PAGE_PATH = pathlib.Path(__file__).with_name("page.html")
 STATIC_TYPES = {name: "text/javascript; charset=utf-8" for name in
@@ -20,6 +21,7 @@ STATIC_TYPES.update({"assets/frog-%s.png" % pose: "image/png" for pose in
 STATIC_ROOT = pathlib.Path(__file__).parent
 MAX_BODY = 64 * 1024
 MAX_EVIDENCE = 200 * 1024
+MAX_FILE_SCAN = 16 * 1024 * 1024
 RUN_ID = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}")
 HUMAN = {"role": "human", "node": None, "session": "dashboard"}
 
@@ -321,7 +323,7 @@ def _view(current, derived, events, project):
                                   "purpose": (_text(decision.get("kind")) if decision.get("purpose") in (None, "node", "free")
                                               else _text(decision.get("purpose"))),
                                   "record_purpose": _text(decision.get("purpose")),
-                                  "files": _decision_files(decision, derived, project),
+                                  "files": _decision_files(decision, derived, project, _strings(_mapping(nodes.get(decision["node"])).get("owns"))),
                                   "context": context, "verified": verified, "unverified": unverified,
                                   "failed": failed, "trajectory_reasons": _trajectory_reasons(st, observations),
                                   "worker_note": _text(submission.get("notes"), None),
@@ -351,8 +353,10 @@ def _file_path(project, relative):
     path = pathlib.PurePosixPath(relative)
     private = {".git", ".graph-flow"}
     secrets = {"human.key", "server.json", "registry.json"}
+    # Names are compared case-folded: the default macOS filesystem ignores case.
+    folded = {part.casefold() for part in path.parts}
     if (not relative or "\x00" in relative or "\\" in relative or path.is_absolute()
-            or ".." in path.parts or private.intersection(path.parts) or path.name in secrets):
+            or ".." in path.parts or private.intersection(folded) or path.name.casefold() in secrets):
         raise _HTTPError(403, "forbidden_path", "this file cannot be opened")
     root = pathlib.Path(project).resolve()
     try:
@@ -360,14 +364,16 @@ def _file_path(project, relative):
         parts = target.relative_to(root).parts
     except (ValueError, OSError, RuntimeError):
         raise _HTTPError(403, "forbidden_path", "this file cannot be opened")
-    if private.intersection(parts) or target.name in secrets:
+    if private.intersection(part.casefold() for part in parts) or target.name.casefold() in secrets:
         raise _HTTPError(403, "forbidden_path", "this file cannot be opened")
     return target
 
 
-def _decision_files(decision, derived, project):
+def _decision_files(decision, derived, project, owns=()):
     st = derived["nodes"].get(decision.get("node")) or {}
-    paths = _strings(_mapping(st.get("submission")).get("changed_files"))
+    # Only the node's own files: in a shared tree its diff can include other nodes' edits.
+    paths = [path for path in _strings(_mapping(st.get("submission")).get("changed_files"))
+             if planning.overlaps([path], owns)]
     paths += _strings(_mapping(decision.get("evidence")).get("files"))
     files = []
     for path in dict.fromkeys(paths):
@@ -382,12 +388,22 @@ def _decision_files(decision, derived, project):
 def _open_project_file(project, target):
     # Walk the resolved path without following replacements between resolve and open.
     parts = target.relative_to(pathlib.Path(project).resolve()).parts
+    root = pathlib.Path(project).resolve()
+    private = []
+    for name in (".git", ".graph-flow"):
+        try:
+            private.append(os.stat(str(root / name)))
+        except OSError:
+            pass
     directory = os.open(str(project), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
         for part in parts[:-1]:
             child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
             os.close(directory)
             directory = child
+            # Identity, not spelling: catches case variants and any other alias of a private directory.
+            if any(os.path.samestat(os.fstat(directory), info) for info in private):
+                raise _HTTPError(403, "forbidden_path", "this file cannot be opened")
         return os.open(parts[-1] if parts else ".", os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW,
                        dir_fd=directory)
     finally:
@@ -404,7 +420,10 @@ def _file(run_dir, decision_id, relative):
         if decision["status"] != "open" or decision["stale"]:
             raise _HTTPError(403, "unavailable_decision", "this decision is no longer open")
         target = _file_path(project, relative)
-        if relative not in [f["path"] for f in _decision_files(decision, derived, project)]:
+        owner = next((n for n in _objects(_mapping(store.read_plan(run_dir)).get("nodes"))
+                      if n.get("id") == decision.get("node")), {})
+        if relative not in [f["path"] for f in _decision_files(decision, derived, project,
+                                                                _strings(owner.get("owns")))]:
             raise _HTTPError(403, "forbidden_path", "this file is not part of this decision")
         try:
             fd = _open_project_file(project, target)
@@ -412,6 +431,9 @@ def _file(run_dir, decision_id, relative):
                 info = os.fstat(stream.fileno())
                 if not stat.S_ISREG(info.st_mode):
                     raise _HTTPError(404, "unknown_file", "this is not a readable text file")
+                if info.st_size > MAX_FILE_SCAN:
+                    # The run lock is held while reading, so the scan must stay short.
+                    raise _HTTPError(404, "unknown_file", "this file is too large to show here")
                 # Also refuse renamed hard links to the dashboard's private records.
                 for name in ("human.key", "server.json", "registry.json"):
                     secret = core.gf_home() / name

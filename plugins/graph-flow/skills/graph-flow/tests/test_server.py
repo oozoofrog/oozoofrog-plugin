@@ -694,6 +694,39 @@ class ServerTests(unittest.TestCase):
         did = self.file_decision(["built.txt"])
         self.assert_error(403, "forbidden_path", "GET", self.api("/api/file", decision=did, path="./built.txt"))
 
+    def test_file_reader_refuses_case_variants_of_private_directories(self):
+        project = self.projects[0]
+        (project / ".git").mkdir(exist_ok=True)
+        (project / ".git" / "config").write_text("[remote]\nurl = secret", encoding="utf-8")
+        (project / "caselink").symlink_to(project / ".git")
+        variants = [".GIT/config", ".Git/config", ".Graph-Flow/runs/run0/events.jsonl", "HUMAN.KEY", "caselink/config"]
+        did = self.file_decision(variants)
+        _, payload = self.json_request("GET", self.api("/api/run"))
+        listed = [f["path"] for d in payload["view"]["decisions"] if d["id"] == did for f in d["files"]]
+        for path in variants:
+            with self.subTest(path=path):
+                self.assertNotEqual(self.request("GET", self.api("/api/file", decision=did, path=path))[0], 200)
+                if path != "caselink/config":
+                    self.assertNotIn(path, listed)
+        # Identity check: an alias directory is refused even though its spelling is harmless.
+        self.assert_error(403, "forbidden_path", "GET", self.api("/api/file", decision=did, path="caselink/config"))
+
+    def test_file_reader_lists_only_the_nodes_own_changed_files_and_caps_the_scan(self):
+        project, run = self.projects[0], self.runs[0]
+        (project / "other.txt").write_text("another node's uncommitted file", encoding="utf-8")
+        with store.transaction(run) as tx:
+            sub = dict(state.derive(tx.plan, tx.events)["nodes"]["build"]["submission"])
+            sub.pop("id", None)
+            sub["changed_files"] = ["built.txt", "other.txt"]
+            tx.append("node.submit", sub, ACTOR)
+        did = self.file_decision([])
+        _, payload = self.json_request("GET", self.api("/api/run"))
+        d = next(d for d in payload["view"]["decisions"] if d["id"] == did)
+        self.assertEqual([f["path"] for f in d["files"]], ["built.txt"])
+        self.assert_error(403, "forbidden_path", "GET", self.api("/api/file", decision=did, path="other.txt"))
+        with mock.patch.object(server, "MAX_FILE_SCAN", 4):
+            self.assert_error(404, "unknown_file", "GET", self.api("/api/file", decision=did, path="built.txt"))
+
     def test_file_reader_requires_current_open_decision_in_selected_run(self):
         did = self.file_decision(["built.txt"])
         self.assert_error(401, "unauthorized", "GET", self.api("/api/file", decision=did, path="built.txt"), token=False)
