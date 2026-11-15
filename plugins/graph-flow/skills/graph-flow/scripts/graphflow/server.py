@@ -248,6 +248,8 @@ def _view(current, derived, events, project):
         view["decisions"].append({"id": decision["id"], "node": decision["node"],
                                   "node_title": title(decision["node"]),
                                   "question": decision["question"], "kind": decision["kind"],
+                                  "purpose": (decision["kind"] if decision.get("purpose") in (None, "node", "free")
+                                              else decision["purpose"]),
                                   "context": context, "verified": verified, "unverified": unverified,
                                   "worker_note": submission.get("notes"),
                                   "has_evidence": any(evidence.get(k) for k in ("command", "files", "checks"))})
@@ -303,7 +305,7 @@ def _handler(token):
         def log_message(self, *args):
             pass  # URLs can contain the token.
 
-        def _send(self, status, body, content_type, nonce=None):
+        def _send(self, status, body, content_type, nonce=None, recovery=False):
             data = body.encode("utf-8") if isinstance(body, str) else body
             self.send_response(status)
             self.send_header("Content-Type", content_type)
@@ -314,6 +316,8 @@ def _handler(token):
             self.send_header("X-Frame-Options", "DENY")
             if nonce is not None:
                 self.send_header("Content-Security-Policy",
+                                 ("default-src 'none'; script-src 'nonce-%s'; base-uri 'none'; form-action 'none'" % nonce)
+                                 if recovery else
                                  "default-src 'none'; script-src 'nonce-%s' 'self'; style-src 'nonce-%s'; "
                                  "connect-src 'self'; img-src 'self' data: blob:; base-uri 'none'; form-action 'none'"
                                  % (nonce, nonce))
@@ -326,6 +330,21 @@ def _handler(token):
 
         def _error(self, status, code, message):
             self._json(status, {"ok": False, "code": code, "message": message})
+
+        def _reload_page(self):
+            nonce = secrets.token_urlsafe(24)
+            page = '''<!doctype html><html lang="en"><meta charset="utf-8">
+<title>Graph flow</title><p id="message">Open the address printed by gf serve.</p>
+<script nonce="__NONCE__">
+if (navigator.language.toLowerCase().startsWith('ko')) {
+  document.getElementById('message').textContent = 'gf serve를 켤 때 나온 주소를 열어 주세요.';
+}
+try {
+  const token = sessionStorage.getItem('graph-flow-token:' + location.port);
+  if (token && !new URL(location.href).searchParams.has('t')) location.replace('/?t=' + encodeURIComponent(token));
+} catch { /* The printed address also works when storage is unavailable. */ }
+</script></html>'''
+            return self._send(401, page.replace("__NONCE__", nonce), "text/html; charset=utf-8", nonce, recovery=True)
 
         def send_error(self, code, message=None, explain=None):
             self._error(code, "bad_request", message or "invalid HTTP request")
@@ -423,7 +442,10 @@ def _handler(token):
             try:
                 self._dispatch()
             except _HTTPError as exc:
-                self._error(exc.status, exc.code, exc.message)
+                if exc.status == 401 and self.command == "GET" and urlsplit(self.path).path == "/":
+                    self._reload_page()
+                else:
+                    self._error(exc.status, exc.code, exc.message)
             except core.GFError as exc:
                 status = 409 if exc.code in ("stale_decision", "already_answered", "unknown_decision") else 400
                 self._error(status, exc.code, exc.message)

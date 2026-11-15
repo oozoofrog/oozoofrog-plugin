@@ -133,9 +133,13 @@ class ServerTests(unittest.TestCase):
             for method in ("GET", "POST"):
                 with self.subTest(path=path, method=method):
                     kw = {"body": self.answer_body()} if method == "POST" else {}
-                    self.assert_error(401, "unauthorized", method, path, token=False, **kw)
-                    self.assert_error(401, "unauthorized", method, path,
-                                      headers={"X-GF-Token": "wrong"}, **kw)
+                    if path == "/" and method == "GET":
+                        self.assertEqual(self.request(method, path, token=False)[0], 401)
+                        self.assertEqual(self.request(method, path, headers={"X-GF-Token": "wrong"})[0], 401)
+                    else:
+                        self.assert_error(401, "unauthorized", method, path, token=False, **kw)
+                        self.assert_error(401, "unauthorized", method, path,
+                                          headers={"X-GF-Token": "wrong"}, **kw)
                     self.assert_error(403, "bad_host", method, path,
                                       headers={"Host": "foreign.example:%s" % self.port}, **kw)
         for kw in ({"token": False}, {"headers": {"X-GF-Token": "wrong"}},
@@ -185,6 +189,46 @@ class ServerTests(unittest.TestCase):
         finally:
             connection.close()
 
+    def test_authentication_regressions(self):
+        status, headers, body = self.request("HEAD", "/static/page.js", token=False)
+        self.assertEqual(status, 401)
+        self.assertEqual(body, b"")
+        self.assertTrue(headers["Content-Type"].startswith("application/json"))
+        self.assertEqual(headers["Cache-Control"], "no-store")
+        for path in ("/?t=" + self.token, "/api/projects?t=" + self.token):
+            status, _, body = self.request("GET", path, headers={"X-GF-Token": "wrong"})
+            self.assertEqual(status, 401, 'header must take precedence over query token')
+            if path.startswith("/api/"):
+                self.assertEqual(json.loads(body)["code"], "unauthorized")
+        self.assert_error(401, "unauthorized", "GET", "http://evil.example/api/projects", token=False,
+                          headers={"Host": "127.0.0.1:%s" % self.port})
+
+    def test_unauthenticated_root_has_only_static_token_recovery(self):
+        with mock.patch.object(server, "_project_list", side_effect=AssertionError('must not read runs')), \
+                mock.patch.object(server, "_snapshot", side_effect=AssertionError('must not read runs')):
+            status, headers, body = self.request("GET", "/", token=False)
+        self.assertEqual(status, 401)
+        self.assertEqual(headers["Content-Type"], "text/html; charset=utf-8")
+        for name, value in (("Cache-Control", "no-store"), ("Referrer-Policy", "no-referrer"),
+                            ("X-Content-Type-Options", "nosniff"), ("X-Frame-Options", "DENY")):
+            self.assertEqual(headers[name], value)
+        csp = headers["Content-Security-Policy"]
+        nonce = csp.split("'nonce-")[1].split("'")[0]
+        self.assertEqual(csp, "default-src 'none'; script-src 'nonce-%s'; base-uri 'none'; form-action 'none'" % nonce)
+        self.assertIn(('script nonce="%s"' % nonce).encode(), body)
+        self.assertEqual(body.count(b'<script'), 1)
+        self.assertNotIn(b'__NONCE__', body)
+        self.assertIn(b'sessionStorage.getItem', body)
+        self.assertIn(b"'graph-flow-token:' + location.port", body)
+        self.assertIn(b"location.replace('/?t=' + encodeURIComponent(token))", body)
+        self.assertIn(b"searchParams.has('t')", body)  # expired tokens must not loop
+        self.assertIn(b'Open the address printed by gf serve.', body)
+        for secret in (self.token, str(self.home), 'server test', 'built.txt', 'api/projects',
+                       *map(str, self.projects), *map(str, self.runs), *self.asks):
+            self.assertNotIn(secret.encode(), body)
+        second = self.request("GET", "/", token=False)
+        self.assertNotEqual(second[1]["Content-Security-Policy"], csp)
+
     def test_demo_view_additions_and_current_attempt_only(self):
         from test_page import build_demo_run
         project = self.root / "demo-project"
@@ -192,6 +236,7 @@ class ServerTests(unittest.TestCase):
         status, data = self.json_request("GET", "/api/run?" + urlencode({"project": str(project), "run": run.name}))
         self.assertEqual(status, 200)
         decision = data["view"]["decisions"][0]
+        self.assertEqual(decision["purpose"], "human_check")
         self.assertEqual(decision["verified"], ["약속한 결과가 빠짐없이 있어요"])
         self.assertEqual(len(decision["unverified"]), 2)
         self.assertTrue(decision["worker_note"])
@@ -320,6 +365,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(review["laps"], ["passed"])
         self.assertFalse(review["reviewed_by_other_family"])
         self.assertTrue(data["view"]["decisions"][0]["has_evidence"])
+        self.assertEqual(data["view"]["decisions"][0]["purpose"], "lane3")
         self.assertEqual(data["view"]["decisions"][0]["context"], {})
         for route in ("/api/run", "/api/evidence"):
             self.assert_error(404, "unknown_project", "GET", route + "?" + urlencode(
@@ -432,6 +478,7 @@ class ServerTests(unittest.TestCase):
             {"from": "retry", "to": "review-retry", "label": "", "delivered": False, "gate": "returned"}])
         self.assertEqual(view["decisions"], [{"id": "d%d" % ask, "node": "human", "node_title": "Human",
                                             "question": "Does this wording fit?", "kind": "review",
+                                        "purpose": "human_check",
                                             "context": context, "has_evidence": False,
                                             "verified": [], "unverified": ["The wording fits"], "worker_note": None}])
         self.assertEqual(view["lessons"], [{"text": active["text"], "node_title": "Done"},
@@ -466,12 +513,21 @@ class ServerTests(unittest.TestCase):
         view = server._view(current, derived, events, self.projects[0])
         self.assertEqual(view["decisions"][0]["context"], raw["nodes"][0]["context"])
         self.assertEqual(view["decisions"][0]["node_title"], "choice")
+        self.assertEqual(view["decisions"][0]["purpose"], "direction")
         self.assertEqual(view["nodes"][0]["laps"], [])
         self.assertEqual(view["counts"]["needs_you"], 1)
         free_events = events[:2]
         free_view = server._view(current, state.derive(current, free_events), free_events, self.projects[0])
         self.assertEqual(free_view["decisions"][1]["context"], {})
         self.assertIsNone(free_view["decisions"][1]["node_title"])
+        self.assertEqual(free_view["decisions"][1]["purpose"], "information")
+        for purpose, kind, expected in (("trajectory", "review", "trajectory"),
+                                        ("hold", "review", "hold"),
+                                        ("free", "authorization", "authorization"),
+                                        ("node", "review", "review"),
+                                        ("future-purpose", "review", "future-purpose")):
+            derived["decisions"]["d1"].update(purpose=purpose, kind=kind)
+            self.assertEqual(server._view(current, derived, events, self.projects[0])["decisions"][0]["purpose"], expected)
         complete = [{"seq": 1, "type": "gate.verdict", "data": {"node": "choice", "verdict": "pass"}},
                     {"seq": 2, "type": "gate.final", "data": {"result": "passed"}}]
         view = server._view(current, state.derive(current, complete), complete, self.projects[0])
@@ -505,6 +561,16 @@ class ServerTests(unittest.TestCase):
         path.write_bytes(b"x" * server.MAX_EVIDENCE)
         body = self.request("GET", self.api("/api/evidence", path="evidence/note.log"))[2]
         self.assertEqual(body, b"x" * server.MAX_EVIDENCE)
+
+    def test_evidence_directory_symlink_outside_run_is_refused(self):
+        run = self.runs[0]
+        outside = self.root / "outside-evidence"
+        outside.mkdir()
+        (outside / "secret.log").write_text("outside run secret", encoding="utf-8")
+        shutil.rmtree(run / "evidence")
+        (run / "evidence").symlink_to(outside, target_is_directory=True)
+        self.assert_error(403, "forbidden_path", "GET",
+                          self.api("/api/evidence", path="evidence/secret.log"))
 
     def test_answer_is_verified_and_next_lane3_gate_passes(self):
         status, data = self.json_request("POST", "/api/answer", body=self.answer_body())

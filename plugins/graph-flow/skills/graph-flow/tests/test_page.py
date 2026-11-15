@@ -126,6 +126,66 @@ class PageTests(unittest.TestCase):
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.assertEqual(result.returncode, 0, result.stderr.decode())
 
+    @unittest.skipUnless(shutil.which('node'), 'node is not on PATH; dashboard decision behavior tests skipped')
+    def test_decision_behavior(self):
+        script = r'''
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const source = readFileSync(process.argv[2], 'utf8');
+const {captureDecision, answerTarget, draftKey, reconcileDecision, decisionIsCurrent, canApprove, purposeWording, purposeAction} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+const first = {project:'/project', run:'first'}, second = {project:'/project', run:'second'};
+const decision = {id:'d7', purpose:'lane3', kind:'authorization'};
+let chosen = {...first};
+const open = captureDecision(chosen, decision);
+chosen.run = second.run;
+assert.deepEqual(answerTarget(open), {...first, id:'d7'}, 'POST must use the captured target');
+assert(Object.isFrozen(open.target));
+const other = captureDecision(chosen, decision);
+const key = draftKey(open.target), otherKey = draftKey(other.target);
+assert.notEqual(key, otherKey, 'same id in different runs must have separate drafts');
+assert.notEqual(key, draftKey({...open.target, project:'/other'}));
+assert.notEqual(draftKey({project:'a,b',run:'c',id:'d'}), draftKey({project:'a',run:'b,c',id:'d'}));
+const drafts = {[key]:'first draft', [otherKey]:'second draft'};
+const changed = reconcileDecision(open, chosen, [decision], drafts);
+assert.equal(changed.open, null);
+assert.equal(changed.reason, 'runChanged');
+assert.equal(changed.drafts[key], undefined, 'run change must discard the old draft');
+assert.equal(changed.drafts[otherKey], 'second draft');
+assert.equal(drafts[key], 'first draft', 'reconciliation must be pure');
+const missing = reconcileDecision(open, first, [], drafts);
+assert.equal(missing.open, null);
+assert.equal(missing.reason, 'decisionClosed');
+assert.equal(missing.drafts[key], undefined);
+assert.equal(reconcileDecision(open, first, [decision], drafts).open, open);
+assert.equal(reconcileDecision(open, null, [decision], drafts).open, null);
+assert.equal(reconcileDecision(open, {...first, project:'/other'}, [decision], drafts).open, null);
+assert.equal(decisionIsCurrent(open, open, first, [decision]), true);
+assert.equal(decisionIsCurrent(open, open, chosen, [decision]), false);
+assert.equal(decisionIsCurrent(open, null, first, [decision]), false, 'late POST must not revive a closed view');
+assert.equal(decisionIsCurrent(open, captureDecision(first, decision), first, [decision]), false, 'late POST must not affect a reopened view');
+assert.equal(canApprove(open), false);
+assert.equal(canApprove({...open, detailsOpened:true}), true);
+assert.equal(canApprove(captureDecision(first, {...decision, purpose:'authorization'})), false);
+assert.equal(canApprove(captureDecision(first, {...decision, purpose:'future-purpose'})), false, 'authorization kind retains the details gate');
+assert.equal(canApprove(captureDecision(first, {...decision, purpose:'human_check', kind:'review'})), true);
+assert.equal(canApprove(null), false);
+for (const language of ['ko','en']) {
+  const meanings = ['human_check','lane3','trajectory','hold','direction','information'].map(p => purposeWording(p, language));
+  assert.equal(new Set(meanings).size, meanings.length, 'decision purposes must remain distinct');
+  assert.equal(purposeWording('authorization', language), purposeWording('lane3', language));
+  assert.equal(purposeWording('review', language), purposeWording('human_check', language));
+  for (const purpose of ['future-purpose','node','free',undefined,'toString','__proto__']) {
+    assert.equal(typeof purposeWording(purpose, language), 'string');
+    assert(!/approv|통과|승인|허락/i.test(purposeWording(purpose, language)), 'unknown purpose must use neutral wording');
+    assert(!/approv|통과|승인|허락/i.test(purposeAction(purpose, language)), 'unknown purpose must use a neutral action');
+  }
+}
+'''
+        result = subprocess.run([shutil.which('node'), '--input-type=module', '-',
+                                 str(S / 'scripts/graphflow/page.js')], input=script,
+                                text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_real_demo_and_decision_view(self):
         with tempfile.TemporaryDirectory() as directory, mock.patch.dict(os.environ):
             root = pathlib.Path(directory)
@@ -135,6 +195,7 @@ class PageTests(unittest.TestCase):
             self.assertEqual(view['counts'], {'done': 2, 'doing': 1, 'waiting': 2, 'needs_you': 1, 'returned': 1})
             self.assertEqual([n['laps'] for n in view['nodes']], [['passed'], ['passed'], ['returned', 'current'], ['waiting_for_you'], [], []])
             decision = view['decisions'][0]
+            self.assertEqual(decision['purpose'], 'human_check')
             self.assertEqual(decision['verified'], ['약속한 결과가 빠짐없이 있어요'])
             self.assertEqual(decision['unverified'], ['처음 읽는 분도 따라 할 수 있어요', '설치 순서가 처음 쓰는 분께 자연스러운지는 확인하지 못했어요.'])
             self.assertEqual(decision['worker_note'], '설치 순서 부분은 자신이 없어요.')

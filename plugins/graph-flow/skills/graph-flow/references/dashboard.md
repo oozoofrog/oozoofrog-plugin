@@ -12,7 +12,7 @@ A person starts the independent process with `gf serve`. `serve(host="127.0.0.1"
 
 Stdout contains one JSON line, `{"ok": true, "url": "http://127.0.0.1:12345/?t=TOKEN", "port": 12345}`. The process serves until interrupted, closes its listener on shutdown, and removes `server.json` under the same lock only if the record still names its PID. It does not follow an agent session's lifetime. `make_server(port=0)` returns `(httpd, token)` without blocking or publishing a record; its caller owns serving, shutdown and close.
 
-Every route, including the page and unknown routes, requires the Host check below. Only GET `/static/<name>` skips token authentication; all other routes require a token:
+Every route, including the page and unknown routes, requires the Host check below. Only GET `/static/<name>` skips token authentication. An unauthenticated GET `/` returns the static 401 recovery page described below; all run data and other routes require a token:
 
 - Exactly one `Host` header, either `127.0.0.1:<bound port>` or `localhost:<bound port>`. A missing, duplicate or foreign Host returns HTTP 403, code `bad_host`.
 - For GET, `X-GF-Token: <token>` or query parameter `t=<token>`. An existing header takes precedence over the query. The token is checked with `hmac.compare_digest`.
@@ -38,7 +38,9 @@ Every response creates a fresh random nonce, replaces every literal `__NONCE__` 
 default-src 'none'; script-src 'nonce-<nonce>' 'self'; style-src 'nonce-<nonce>'; connect-src 'self'; img-src 'self' data: blob:; base-uri 'none'; form-action 'none'
 ```
 
-The page puts `nonce="__NONCE__"` on its `<style>` and its single `<script type="module" src="/static/page.js">`. It reads the startup query token, removes `t` with `history.replaceState`, and sends `X-GF-Token` on every API request. All record text uses `textContent`. There are no external origins, inline style attributes, eval, or unsafe CSP allowances. CSSOM/element.style changes support three.js and CSS2DRenderer.
+The page puts `nonce="__NONCE__"` on its `<style>` and its single `<script type="module" src="/static/page.js">`. It stores the startup query token in this tab's `sessionStorage`, under `graph-flow-token:<port>`, removes `t` with `history.replaceState`, and sends `X-GF-Token` on every API request. When `t` is absent it reads the stored token. Storage is scoped by origin and the key by port; another tab does not share this tab's storage. All record text uses `textContent`. There are no external origins, inline style attributes, eval, or unsafe CSP allowances. CSSOM/element.style changes support three.js and CSS2DRenderer.
+
+An unauthenticated GET `/` returns HTTP 401 with `text/html; charset=utf-8`, `no-store`, and the same referrer, content-type and frame security headers. This small static page contains no token or run data and does not read projects or runs. Its fresh-nonce CSP is `default-src 'none'; script-src 'nonce-<nonce>'; base-uri 'none'; form-action 'none'`. Its only script reads the same session storage key and navigates to `/?t=<encoded token>` if a stored token exists and the URL has no `t`. Otherwise it says to open the address printed by `gf serve` (Korean or English). Checking for an existing `t` prevents an expired token from causing a redirect loop. If storage is unavailable, reopen the printed address. Unauthenticated requests to every other route remain JSON 401 responses; a bad Host still returns 403 before recovery.
 
 ## GET /static/<name>
 
@@ -99,7 +101,7 @@ Kinds `review` and `authorization` accept `approved`, `rejected`, `revision_requ
 
 ## Errors
 
-Errors are JSON objects: `{"ok": false, "code": "<slug>", "message": "<description>"}` with `Cache-Control: no-store`.
+Errors are JSON objects: `{"ok": false, "code": "<slug>", "message": "<description>"}` with `Cache-Control: no-store`, except the unauthenticated GET `/` recovery page above.
 
 | HTTP status | Codes / meaning |
 | --- | --- |
@@ -116,7 +118,13 @@ When an answer returns 409, reload the queue and current run before offering ano
 
 ## Dashboard and demo
 
-The page defaults to the most recently active readable open run, offers a picker for multiple runs, and polls about every two seconds while visible. Flow and selected-node views share the same orthographic three.js scene. A real HTML list remains available, and becomes the primary view if WebGL is unavailable. Reduced motion disables walking and camera animation. Korean and English copy is selected from `navigator.language`. History uses plan order because `view` does not contain enough information to interleave different nodes' attempts in global time order. Direction/information decisions use their API-supported `answered` action and require text; review/authorization decisions offer approve or send back (required reason).
+The page defaults to the most recently active readable open run, offers a picker for multiple runs, and polls about every two seconds while visible. Flow and selected-node views share the same orthographic three.js scene. A real HTML list remains available, and becomes the primary view if WebGL is unavailable. Reduced motion disables walking and camera animation. Korean and English copy is selected from `navigator.language`. History uses plan order because `view` does not contain enough information to interleave different nodes' attempts in global time order. Direction/information decisions use their API-supported `answered` action and require text; review/authorization decisions offer a purpose-specific affirmative action or send back (required reason).
+
+An open decision captures `(project, run, decision id)` and every answer and evidence request uses that target. Drafts use all three fields as their key. Any run change, including automatic replacement when a run disappears, closes the decision and discards its draft. A refresh that removes the decision does the same. A plain notice explains the closure, and callbacks from an earlier view cannot act on a new or reopened decision.
+
+Every decision card, reading view and HTML list entry shows the node title and a plain description of its `purpose` (allowed values and normalization are in [records.md section 12](records.md#12-dashboard-presentation-view)). Generated technical questions are replaced by that description. Unknown purposes use neutral wording and a neutral decision action. When `has_evidence` is true, the reading view shows a visible reminder and a button opening the details. Authorizations (`lane3` or `authorization` purpose, or `authorization` kind) disable the affirmative action until that decision's details have been opened once. Opening details does not execute commands. This UI reading gate supplements the signed-answer API; it is not an additional server authorization rule.
+
+`page.js` exports the pure target, reconciliation, draft-key, purpose-wording/action and details-gate helpers. Importing it without a DOM does not start the UI. `tests/test_page.py` exercises those helpers with Node when available and reports a clear skip when Node is absent; the existing static scans remain in place.
 
 From the repository root, this one line creates a fresh isolated demo project and starts its server (choose fresh paths if these already exist):
 

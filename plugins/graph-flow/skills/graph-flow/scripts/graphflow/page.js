@@ -49,7 +49,7 @@ const STRINGS = {
     "unverified": "아직 확인 안 된 것",
     "workerNote": "쓴 쪽의 메모",
     "notRecorded": "따로 기록되지 않았어요.",
-    "ifApproved": "통과시키면",
+    "ifApproved": "이대로 하면",
     "ifRejected": "돌려보내면",
     "undo": "나중에 바꾸려면",
     "approve": "통과",
@@ -91,7 +91,20 @@ const STRINGS = {
     "overview": "일 {total}곳 · 끝남 {done}곳 · 내 결정 {needs}개",
     "reviewed": "다른 눈으로 검토했어요",
     "runOption": "{project} · 흐름 {n}",
-    "approvalQuestion": "이 결과를 통과시킬까요?",
+    "purposeReview": "사람이 직접 살펴봐야 하는 결과를 받아들일지 정해 주세요.",
+    "purposeAuthorization": "되돌리기 어려운 일을 허락할지 정해 주세요.",
+    "purposeTrajectory": "시도를 모두 쓰거나, 정해진 시간을 넘기거나, 맡은 범위를 벗어난 일을 받아들일지 정해 주세요.",
+    "purposeHold": "멈춰 둔 일을 어떻게 이어 갈지 정해 주세요.",
+    "purposeDirection": "다음에 어느 방향으로 갈지 알려 주세요.",
+    "purposeInformation": "계속하는 데 필요한 정보를 알려 주세요.",
+    "purposeNeutral": "내용을 읽고 어떻게 할지 정해 주세요.",
+    "allow": "허락하기",
+    "accept": "받아들이기",
+    "continue": "계속하기",
+    "confirmChoice": "결정 보내기",
+    "evidenceReminder": "결정하기 전에 읽어야 할 근거가 기록되어 있어요.",
+    "decisionClosed": "이 결정은 더 이상 열려 있지 않아요. 적던 답은 지웠어요.",
+    "runChanged": "흐름이 바뀌어서 결정을 닫고 적던 답을 지웠어요.",
     "brand": "Graph flow"
   },
   "en": {
@@ -143,7 +156,7 @@ const STRINGS = {
     "unverified": "Not yet verified",
     "workerNote": "The worker’s note",
     "notRecorded": "Not recorded.",
-    "ifApproved": "If approved",
+    "ifApproved": "If you proceed",
     "ifRejected": "If sent back",
     "undo": "How to undo",
     "approve": "Approve",
@@ -185,12 +198,54 @@ const STRINGS = {
     "overview": "{total} tasks · {done} done · {needs} waiting for you",
     "reviewed": "Reviewed with another pair of eyes",
     "runOption": "{project} · flow {n}",
-    "approvalQuestion": "Approve this result?",
+    "purposeReview": "Decide whether to accept a result that needs a human look.",
+    "purposeAuthorization": "Decide whether to allow work that is hard to undo.",
+    "purposeTrajectory": "Decide whether to accept work that used every attempt, timed out, or went beyond its assigned files.",
+    "purposeHold": "Decide how to continue work that was put on hold.",
+    "purposeDirection": "Tell us which direction to take next.",
+    "purposeInformation": "Provide the information needed to continue.",
+    "purposeNeutral": "Read the details and decide what to do.",
+    "allow": "Allow",
+    "accept": "Accept",
+    "continue": "Continue",
+    "confirmChoice": "Send decision",
+    "evidenceReminder": "There is recorded evidence to read before deciding.",
+    "decisionClosed": "This decision is no longer open. Your draft was discarded.",
+    "runChanged": "The flow changed, so the decision was closed and your draft discarded.",
     "brand": "Graph flow"
   }
 };
 // UI_STRINGS_END
 
+export function sameRun(a, b) { return a?.project === b?.project && a?.run === b?.run; }
+export function captureDecision(run, decision) {
+  return {target:Object.freeze({project:run.project, run:run.run, id:decision.id}), purpose:decision.purpose, kind:decision.kind, detailsOpened:false};
+}
+export function answerTarget(open) { return {...open.target}; }
+export function draftKey(target) { return JSON.stringify([target.project, target.run, target.id]); }
+export function reconcileDecision(open, run, decisions, drafts) {
+  const reason = open && (!sameRun(open.target, run) ? 'runChanged' : !decisions.some(d => d.id === open.target.id) ? 'decisionClosed' : '');
+  if (!reason) return {open, drafts, reason:''};
+  const remaining = {...drafts}; delete remaining[draftKey(open.target)];
+  return {open:null, drafts:remaining, reason};
+}
+export function decisionIsCurrent(open, active, run, decisions) {
+  return !!open && active === open && !reconcileDecision(open, run, decisions, {}).reason;
+}
+export function purposeWording(purpose, language = 'en') {
+  const keys = {human_check:'purposeReview', review:'purposeReview', lane3:'purposeAuthorization', authorization:'purposeAuthorization', trajectory:'purposeTrajectory', hold:'purposeHold', direction:'purposeDirection', information:'purposeInformation'};
+  const key = Object.hasOwn(keys, purpose) ? keys[purpose] : 'purposeNeutral';
+  return STRINGS[language][key];
+}
+export function purposeAction(purpose, language = 'en') {
+  const keys = {lane3:'allow', authorization:'allow', human_check:'accept', review:'accept', trajectory:'accept', hold:'continue'};
+  return STRINGS[language][Object.hasOwn(keys, purpose) ? keys[purpose] : 'confirmChoice'];
+}
+export function canApprove(open) {
+  return !!open && (!(open.purpose === 'lane3' || open.purpose === 'authorization' || open.kind === 'authorization') || open.detailsOpened);
+}
+
+if (typeof document !== 'undefined') {
 const language = navigator.language.toLowerCase().startsWith('ko') ? 'ko' : 'en';
 const t = (key, values = {}) => Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, String(value)), STRINGS[language][key]);
 const $ = id => document.getElementById(id);
@@ -199,7 +254,12 @@ const button = (text, action, cls) => { const b = el('button', text, cls); b.typ
 const clear = e => e.replaceChildren();
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 const startup = new URL(location.href);
-const token = startup.searchParams.get('t') || '';
+const tokenKey = 'graph-flow-token:' + location.port;
+let token = startup.searchParams.get('t') || '';
+try {
+  if (!startup.searchParams.has('t')) token = sessionStorage.getItem(tokenKey) || '';
+  if (token) sessionStorage.setItem(tokenKey, token);
+} catch { /* Storage may be unavailable; the printed address still works. */ }
 startup.searchParams.delete('t');
 history.replaceState(null, '', startup.pathname + startup.search + startup.hash);
 document.documentElement.lang = language;
@@ -209,19 +269,25 @@ $('map').setAttribute('aria-label', t('flow'));
 let chosen = null, projects = [], view = null, fingerprint = '', mode = 'flow', selected = null, activeDecision = null;
 let mapFailed = false, queuedRefresh = false;
 let busy = false, timer = 0, loading = false, generation = 0, renderer = null;
+let drafts = {}, decisionNotice = '';
 
 async function api(path, body, text = false) {
   const response = await fetch(path, {method: body ? 'POST' : 'GET', headers: {'X-GF-Token': token, ...(body ? {'Content-Type':'application/json'} : {})}, ...(body ? {body:JSON.stringify(body)} : {})});
   if (!response.ok) { const err = new Error('request'); err.status = response.status; throw err; }
   return text ? response.text() : response.json();
 }
-function query(route, extra = {}) { return route + '?' + new URLSearchParams({project:chosen.project, run:chosen.run, ...extra}); }
+function query(route, extra = {}, target = chosen) { return route + '?' + new URLSearchParams({project:target.project, run:target.run, ...extra}); }
 function notice(key, retry = false) { const box = $('notice'); clear(box); box.hidden = !key; if (key) box.append(el('span', t(key))); if (retry) box.append(button(t('retry'), () => refresh(true))); }
 function title(node) { return node && node.title && node.title !== node.id ? node.title : t('unnamed'); }
 function otherTitle(value) { return view.nodes.some(n => n.id === value && n.title === value) ? t('unnamed') : value || t('unnamed'); }
 // Legacy plans may have only an artifact path; keep that technical fallback out of normal views.
 function label(value) { return !value || /[\/\\]|\.[a-z0-9]{1,8}$/.test(value) || view.nodes.some(n => n.id === value) ? t('handoff') : value; }
-function question(d) { return /^Approve (lane3|trajectory|human_check|hold) for .+\?$/.test(d.question) ? t('approvalQuestion') : d.question; }
+function question(d) { return /^Approve \S+ for .+\?$/.test(d.question) ? '' : d.question; }
+function decisionTitle(d) { return title(view.nodes.find(n => n.id === d.node)); }
+function decisionHeading(parent, d, tag) {
+  parent.append(el(tag, decisionTitle(d)), el('p', purposeWording(d.purpose, language)));
+  if (question(d)) parent.append(el('p', question(d)));
+}
 function needs(node) { return view.decisions.some(d => d.node === node.id); }
 function status(node) {
   if (needs(node)) return t('awaiting');
@@ -242,7 +308,7 @@ function countCard() {
   c.append(list); return c;
 }
 function decisionCard(d) {
-  const c = card(t('yourTurn'), null, true); c.append(el('h3', question(d))); if (d.context.why) c.append(el('p', d.context.why));
+  const c = card(t('yourTurn'), null, true); decisionHeading(c, d, 'h3'); if (d.context.why) c.append(el('p', d.context.why));
   for (const key of ['if_approved','if_rejected','undo']) { if (d.context[key]) { c.append(el('small', t({if_approved:'ifApproved',if_rejected:'ifRejected',undo:'undo'}[key])), el('p', d.context[key])); } }
   c.append(button(t('read'), () => openDecision(d.id), 'amber')); return c;
 }
@@ -273,23 +339,39 @@ function accessible() {
   clear($('node-list')); clear($('edge-list')); clear($('decision-list'));
   view.nodes.forEach(n => { const item = el('li', undefined, 'card'); item.append(button(title(n), () => selectNode(n.id)), el('p', status(n)), el('p', attempts(n), 'muted'), el('p', n.summary)); if (n.returned_reasons.length) textList(item, n.returned_reasons.flat(), 'noReason'); $('node-list').append(item); });
   view.edges.forEach(e => { const a = view.nodes.find(n => n.id === e.from), b = view.nodes.find(n => n.id === e.to); $('edge-list').append(el('li', `${title(a)} → ${title(b)} · ${label(e.label)} · ${t(e.delivered ? 'delivered' : 'notDelivered')}`)); });
-  view.decisions.forEach(d => { const item = el('li'); item.append(button(question(d), () => openDecision(d.id))); if (d.context.why) item.append(el('p', d.context.why)); $('decision-list').append(item); });
+  view.decisions.forEach(d => { const item = el('li'); item.append(button(decisionTitle(d), () => openDecision(d.id)), el('p', purposeWording(d.purpose, language))); if (question(d)) item.append(el('p', question(d))); if (d.context.why) item.append(el('p', d.context.why)); $('decision-list').append(item); });
   if (!view.decisions.length) $('decision-list').append(el('li', t('nothing')));
 }
 function showMode(next) {
+  if (next !== 'decision') discardDecision();
   mode = next; $('flow').hidden = next !== 'flow'; $('decision').hidden = next !== 'decision'; $('history').hidden = next !== 'history';
   $('flow-tab').setAttribute('aria-pressed', String(next === 'flow')); $('history-tab').setAttribute('aria-pressed', String(next === 'history'));
   if (renderer) renderer.wake();
 }
-function wholeFlow() { selected = null; activeDecision = null; showMode('flow'); if (view) panel(); if (renderer) renderer.select(null); }
-function selectNode(id) { selected = id; activeDecision = null; showMode('flow'); panel(); if (renderer) renderer.select(id); }
+function discardDecision() {
+  if (activeDecision) delete drafts[draftKey(activeDecision.target)];
+  activeDecision = null; busy = false; clear($('decision'));
+}
+function closeInvalidDecision(run, decisions) {
+  const next = reconcileDecision(activeDecision, run, decisions, drafts);
+  if (!next.reason) return false;
+  drafts = next.drafts; wholeFlow(); decisionNotice = next.reason; notice(decisionNotice); return true;
+}
+function wholeFlow() { selected = null; showMode('flow'); if (view) panel(); if (renderer) renderer.select(null); }
+function selectNode(id) { selected = id; showMode('flow'); panel(); if (renderer) renderer.select(id); }
 function focusHeading(heading) { heading.tabIndex = -1; heading.focus(); }
 function openDecision(id, focus = true) {
-  const d = view.decisions.find(item => item.id === id); if (!d) { wholeFlow(); return; }
-  const draft = activeDecision === id && $('answer-text') ? $('answer-text').value : '';
-  activeDecision = id; showMode('decision'); const box = $('decision'); clear(box);
-  const reading = card(t('yourTurn'), null, true); reading.classList.add('reading'); const heading = el('h2', question(d)); heading.id = 'decision-title'; reading.append(heading);
-  const node = view.nodes.find(n => n.id === d.node); if (node) reading.append(el('h3', title(node)), el('p', node.summary));
+  const d = view?.decisions.find(item => item.id === id); if (!d || !chosen) { wholeFlow(); return; }
+  if (!activeDecision || !sameRun(activeDecision.target, chosen) || activeDecision.target.id !== id) {
+    discardDecision(); activeDecision = captureDecision(chosen, d);
+  }
+  const session = activeDecision, openedGeneration = generation;
+  session.purpose = d.purpose; session.kind = d.kind;
+  const current = () => generation === openedGeneration && decisionIsCurrent(session, activeDecision, chosen, view?.decisions || []);
+  decisionNotice = ''; notice('');
+  showMode('decision'); const box = $('decision'); clear(box);
+  const reading = card(t('yourTurn'), null, true); reading.classList.add('reading'); decisionHeading(reading, d, 'h2'); const heading = reading.querySelector('h2'); heading.id = 'decision-title';
+  const node = view.nodes.find(n => n.id === d.node); if (node) reading.append(el('p', node.summary));
   const report = el('div', undefined, 'worker-report');
   const mascot = el('img'); mascot.src = '/static/assets/frog-report.png'; mascot.alt = ''; report.append(mascot, el('div', d.worker_note || t('notRecorded'), 'speech')); reading.append(report); box.append(reading);
   const right = el('div'); right.append(card(t('why'), d.context.why || t('notRecorded')));
@@ -297,38 +379,55 @@ function openDecision(id, focus = true) {
   const unverified = card(t('unverified')); textList(unverified, d.unverified); right.append(unverified);
   const outcomes = card(t('choiceEffects'), null, true); for (const [key, name] of [['if_approved','ifApproved'],['if_rejected','ifRejected'],['undo','undo']]) { outcomes.append(el('small', t(name)), el('p', d.context[key] || t('notRecorded'))); } reading.append(outcomes);
   const isQuestion = ['direction','information'].includes(d.kind);
-  const answerLabel = el('label', t(isQuestion ? 'answerLabel' : 'backReason')); answerLabel.htmlFor = 'answer-text'; const input = el('textarea'); input.id = 'answer-text'; input.required = true; input.value = draft; reading.append(answerLabel, input);
+  const answerLabel = el('label', t(isQuestion ? 'answerLabel' : 'backReason')); answerLabel.htmlFor = 'answer-text'; const input = el('textarea'); input.id = 'answer-text'; input.required = true; input.value = drafts[draftKey(session.target)] || ''; input.addEventListener('input', () => { if (current()) drafts[draftKey(session.target)] = input.value; }); reading.append(answerLabel, input);
   const message = el('p'); message.id = 'answer-message'; message.setAttribute('role','status'); reading.append(message);
   const actions = el('div'); actions.id = 'answer-actions';
+  let approveButton;
+  const updateActions = () => { actions.querySelectorAll('button').forEach(b => { b.disabled = !current() || busy === session; }); if (approveButton) approveButton.disabled = !current() || busy === session || !canApprove(session); input.disabled = !current() || busy === session; };
   const send = async outcome => {
-    if (busy) return;
+    if (!current() || busy === session || (outcome === 'approved' && !canApprove(session))) return;
     if ((outcome !== 'approved') && !input.value.trim()) { message.textContent = t('required'); input.focus(); return; }
-    busy = true; actions.querySelectorAll('button').forEach(b => { b.disabled = true; }); input.disabled = true; message.textContent = t('sending');
+    busy = session; updateActions(); message.textContent = t('sending');
     try {
-      await api('/api/answer', {project:chosen.project, run:chosen.run, id:d.id, outcome, answer:input.value.trim()});
-      activeDecision = null; wholeFlow(); await refresh(true); notice('answered');
+      await api('/api/answer', {...answerTarget(session), outcome, answer:input.value.trim()});
+      if (!current()) return;
+      wholeFlow(); decisionNotice = 'answered'; notice(decisionNotice); refresh(true);
     } catch (error) {
-      if (error.status === 409) { activeDecision = null; wholeFlow(); await refresh(true); notice('stale'); }
+      if (!current()) return;
+      if (error.status === 409) { wholeFlow(); decisionNotice = 'stale'; notice(decisionNotice); refresh(true); }
       else message.textContent = t('answerFailed');
-    } finally { busy = false; actions.querySelectorAll('button').forEach(b => { b.disabled = false; }); input.disabled = false; }
+    } finally { if (busy === session) busy = false; updateActions(); }
   };
   if (isQuestion) actions.append(button(t('answer'), () => send('answered'), 'primary'));
-  else actions.append(button(t('approve'), () => send('approved'), 'primary'), button(t('sendBack'), () => send('revision_requested')));
+  else {
+    approveButton = button(purposeAction(d.purpose, language), () => send('approved'), 'primary'); actions.append(approveButton, button(t('sendBack'), () => send('revision_requested')));
+  }
   actions.append(button(t('flow'), wholeFlow)); reading.append(actions);
   const details = el('details', undefined, 'evidence'); details.append(el('summary', t('details'))); const raw = el('pre');
+  details.open = session.detailsOpened;
+  const markDetailsOpened = () => { if (current() && details.open) { session.detailsOpened = true; updateActions(); } };
+  details.addEventListener('toggle', markDetailsOpened);
+  if (d.has_evidence) {
+    const reminder = el('p', t('evidenceReminder'));
+    reminder.append(button(t('details'), () => { if (current()) { details.open = true; markDetailsOpened(); details.querySelector('summary').focus(); } }));
+    reading.append(reminder);
+  }
   details.append(button(t('loadEvidence'), async () => {
+    if (!current()) return;
     raw.textContent = t('loading');
     try {
-      const payload = await api(query('/api/run'));
+      const payload = await api(query('/api/run', {}, session.target));
+      if (!current()) return;
       const decision = payload.state.decisions[d.id];
       // Raw records stay inside this deliberately opened disclosure.
       const evidence = decision ? decision.evidence : null; const paths = new Set();
       const collect = value => { if (Array.isArray(value)) value.forEach(collect); else if (value && typeof value === 'object') { if (typeof value.log === 'string') paths.add(value.log); Object.values(value).forEach(collect); } };
       collect(evidence);
-      const logs = await Promise.all([...paths].map(path => api(query('/api/evidence', {path}), null, true)));
+      const logs = await Promise.all([...paths].map(path => api(query('/api/evidence', {path}, session.target), null, true)));
+      if (!current()) return;
       raw.textContent = (evidence ? JSON.stringify(evidence, null, 2) : t('noEvidence')) + (logs.length ? '\n\n' + logs.join('\n\n') : '\n' + t('noEvidence'));
-    } catch { raw.textContent = t('evidenceFailed'); }
-  }), raw); right.append(details); box.append(right); if (focus) focusHeading(heading);
+    } catch { if (current()) raw.textContent = t('evidenceFailed'); }
+  }), raw); right.append(details); box.append(right); updateActions(); if (focus) focusHeading(heading);
 }
 function historyView() {
   showMode('history'); const box = $('history'); clear(box); box.append(el('p', t('planOrder'), 'muted'));
@@ -344,22 +443,27 @@ function historyView() {
   const counts = el('div'); counts.append(countCard(), button(t('flow'), wholeFlow, 'primary')); grid.append(returns, lessons, counts); box.append(grid);
 }
 function applyView(next) {
+  closeInvalidDecision(chosen, next.decisions);
   const nextFingerprint = JSON.stringify(next); if (nextFingerprint === fingerprint) return;
   view = next; fingerprint = nextFingerprint; showMode(mode); if (!view.nodes.some(n => n.id === selected)) selected = null;
   $('title').textContent = view.title || t('brand'); $('subtitle').textContent = view.complete ? t('complete') : t('overview', {total:view.nodes.length, done:view.counts.done, needs:view.counts.needs_you});
   accessible(); panel(); if (renderer) renderer.update(view, selected);
   if (mode === 'history') historyView();
-  if (mode === 'decision') { if (view.decisions.some(d => d.id === activeDecision)) { if (!busy) openDecision(activeDecision, false); } else wholeFlow(); }
+  if (mode === 'decision' && activeDecision && busy !== activeDecision) openDecision(activeDecision.target.id, false);
+}
+function setChosen(next) {
+  if (sameRun(chosen, next)) return;
+  closeInvalidDecision(next, []); chosen = next; generation++; resetView(); showMode('flow');
 }
 function chooseRuns(data) {
   projects = data.projects;
   const runs = projects.flatMap(p => (p.runs || []).map((r, i) => ({...r, project:p.root, projectName:p.name, number:i + 1})));
   runs.sort((a,b) => Number(b.status === 'open') - Number(a.status === 'open') || (b.last_event || '').localeCompare(a.last_event || ''));
-  if (!chosen || !runs.some(r => r.project === chosen.project && r.id === chosen.run)) { const first = runs.find(r => !r.error) || runs[0]; chosen = first ? {project:first.project,run:first.id} : null; }
+  if (!chosen || !runs.some(r => r.project === chosen.project && r.id === chosen.run)) { const first = runs.find(r => !r.error) || runs[0]; setChosen(first ? {project:first.project,run:first.id} : null); }
   const picker = $('picker'); clear(picker);
   runs.forEach((r, i) => { const option = el('option', t('runOption', {project:r.projectName,n:r.number})); option.value = String(i); option.selected = !!chosen && r.project === chosen.project && r.id === chosen.run; picker.append(option); });
   $('picker-label').hidden = runs.length < 2;
-  picker.onchange = () => { const r = runs[Number(picker.value)]; chosen = {project:r.project,run:r.id}; generation++; fingerprint = ''; view = null; selected = null; activeDecision = null; wholeFlow(); refresh(true); };
+  picker.onchange = () => { const r = runs[Number(picker.value)]; setChosen({project:r.project,run:r.id}); refresh(true); };
   return runs.find(r => chosen && r.project === chosen.project && r.id === chosen.run);
 }
 async function refresh(force = false) {
@@ -367,17 +471,19 @@ async function refresh(force = false) {
   if (loading) { queuedRefresh = queuedRefresh || force; return; }
   loading = true; const currentGeneration = generation;
   try {
-    const available = chooseRuns(await api('/api/projects'));
+    const projectData = await api('/api/projects');
     if (currentGeneration !== generation || document.hidden) return;
-    if (!projects.length) { resetView(); notice('noProjects'); return; }
-    if (!chosen) { resetView(); notice(projects.some(p => p.error) ? 'unreadable' : 'noRun'); return; }
-    if (available && available.error) { resetView(); notice('unreadable', true); return; }
+    const available = chooseRuns(projectData);
+    if (currentGeneration !== generation) { queuedRefresh = true; return; }
+    if (!projects.length) { resetView(); notice(decisionNotice || 'noProjects'); return; }
+    if (!chosen) { resetView(); notice(decisionNotice || (projects.some(p => p.error) ? 'unreadable' : 'noRun')); return; }
+    if (available && available.error) { resetView(); notice(decisionNotice || 'unreadable', true); return; }
     const data = await api(query('/api/run')); if (currentGeneration !== generation || document.hidden) return;
-    notice(!data.plan ? 'noPlan' : mapFailed ? 'fallback' : ''); applyView(data.view);
-  } catch (error) { notice(error.status === 401 ? 'unauthorized' : error.status === 400 || error.status === 404 || error.status === 500 ? 'unreadable' : 'lost', true); }
+    notice(decisionNotice || (!data.plan ? 'noPlan' : mapFailed ? 'fallback' : '')); applyView(data.view);
+  } catch (error) { if (currentGeneration === generation) notice(error.status === 401 ? 'unauthorized' : error.status === 400 || error.status === 404 || error.status === 500 ? 'unreadable' : 'lost', true); }
   finally { loading = false; if (queuedRefresh) { queuedRefresh = false; refresh(true); } else schedule(); }
 }
-function resetView() { view = null; fingerprint = ''; ['node-list','edge-list','decision-list','panel'].forEach(id => clear($(id))); if (renderer) renderer.update({nodes:[],edges:[],decisions:[],complete:false}, null); $('flow').hidden = true; $('history').hidden = true; $('decision').hidden = true; $('subtitle').textContent = ''; }
+function resetView() { closeInvalidDecision(chosen, []); view = null; selected = null; fingerprint = ''; ['node-list','edge-list','decision-list','panel'].forEach(id => clear($(id))); if (renderer) renderer.update({nodes:[],edges:[],decisions:[],complete:false}, null); $('flow').hidden = true; $('history').hidden = true; $('decision').hidden = true; $('subtitle').textContent = ''; }
 function schedule() { clearTimeout(timer); if (!document.hidden) timer = setTimeout(refresh, 2000); }
 $('flow-tab').addEventListener('click', () => { if (view) wholeFlow(); });
 $('history-tab').addEventListener('click', () => { if (view) historyView(); });
@@ -558,3 +664,4 @@ async function createMap() {
 }
 function fallback() { mapFailed = true; document.body.classList.add('list-fallback'); $('accessible').open=true; if(!view||!$('notice').hidden)return; notice('fallback'); }
 try { renderer = await createMap(); if(view)renderer.update(view,selected); } catch { fallback(); }
+}
