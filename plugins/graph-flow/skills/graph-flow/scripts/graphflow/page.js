@@ -9,6 +9,7 @@ const STRINGS = {
     "nodes": "하는 일",
     "handoffs": "주고받는 것",
     "yourTurn": "내가 할 일",
+    "choiceEffects": "고르면 생기는 일",
     "nothing": "지금은 결정할 일이 없어요. 필요해지면 알려 드릴게요.",
     "needsYou": "읽고 결정해 주세요",
     "counts": "지금 흐름",
@@ -22,7 +23,7 @@ const STRINGS = {
     "gateLegend": "문은 검사나 내 승인이에요. 노란 문은 나를 기다려요.",
     "socketLegend": "받는 쪽의 작은 동그라미는 채워지면 전달된 거예요.",
     "now": "지금",
-    "whyReturned": "돌아온 까닭",
+    "whyReturned": "통과하지 못한 확인",
     "received": "받는 것",
     "outputs": "넘기는 것",
     "noHandoffs": "기록된 주고받기가 없어요.",
@@ -77,7 +78,7 @@ const STRINGS = {
     "lessons": "배운 것",
     "noLessons": "아직 기록된 배움이 없어요.",
     "planOrder": "전체 시간 순서는 기록에서 알 수 없어 계획 순서로 보여 드려요. 각 일의 시도는 일어난 순서예요.",
-    "returns": "돌아온 곳과 까닭",
+    "returns": "통과하지 못한 확인",
     "complete": "모든 흐름이 끝났어요!",
     "waitingBubble": "읽어 주세요!",
     "attemptBubble": "{n}번째 시도예요",
@@ -102,6 +103,7 @@ const STRINGS = {
     "nodes": "The work",
     "handoffs": "What is handed over",
     "yourTurn": "Your turn",
+    "choiceEffects": "What each choice does",
     "nothing": "Nothing needs you right now. We’ll let you know when it does.",
     "needsYou": "Ready for you to read",
     "counts": "At a glance",
@@ -115,7 +117,7 @@ const STRINGS = {
     "gateLegend": "A gate is a check or approval. Amber waits for you.",
     "socketLegend": "A filled socket means the handoff has arrived.",
     "now": "Now",
-    "whyReturned": "Why it came back",
+    "whyReturned": "Checks that did not pass",
     "received": "Receives",
     "outputs": "Hands over",
     "noHandoffs": "No handoff is recorded.",
@@ -170,7 +172,7 @@ const STRINGS = {
     "lessons": "What we learned",
     "noLessons": "No lessons recorded yet.",
     "planOrder": "The overall time order is unknown, so this follows plan order. Each task’s attempts are in their recorded order.",
-    "returns": "What came back and why",
+    "returns": "Checks that did not pass",
     "complete": "The whole flow is complete!",
     "waitingBubble": "Please read this.",
     "attemptBubble": "On attempt {n}.",
@@ -287,17 +289,16 @@ function openDecision(id, focus = true) {
   const draft = activeDecision === id && $('answer-text') ? $('answer-text').value : '';
   activeDecision = id; showMode('decision'); const box = $('decision'); clear(box);
   const reading = card(t('yourTurn'), null, true); reading.classList.add('reading'); const heading = el('h2', question(d)); heading.id = 'decision-title'; reading.append(heading);
-  const node = view.nodes.find(n => n.id === d.node); if (node) reading.append(el('h3', title(node)), el('p', node.summary), el('p', status(node), 'muted'));
-  reading.append(el('p', d.worker_note || t('notRecorded')));
-  const mascot = el('img'); mascot.src = '/static/assets/frog-report.png'; mascot.alt = ''; reading.append(mascot, el('div', t('waitingBubble'), 'speech')); box.append(reading);
+  const node = view.nodes.find(n => n.id === d.node); if (node) reading.append(el('h3', title(node)), el('p', node.summary));
+  const report = el('div', undefined, 'worker-report');
+  const mascot = el('img'); mascot.src = '/static/assets/frog-report.png'; mascot.alt = ''; report.append(mascot, el('div', d.worker_note || t('notRecorded'), 'speech')); reading.append(report); box.append(reading);
   const right = el('div'); right.append(card(t('why'), d.context.why || t('notRecorded')));
   const verified = card(t('verified')); textList(verified, d.verified); right.append(verified);
   const unverified = card(t('unverified')); textList(unverified, d.unverified); right.append(unverified);
-  right.append(card(t('workerNote'), d.worker_note || t('notRecorded')));
-  const outcomes = card(t('yourTurn'), null, true); for (const [key, name] of [['if_approved','ifApproved'],['if_rejected','ifRejected'],['undo','undo']]) { outcomes.append(el('small', t(name)), el('p', d.context[key] || t('notRecorded'))); } right.append(outcomes);
+  const outcomes = card(t('choiceEffects'), null, true); for (const [key, name] of [['if_approved','ifApproved'],['if_rejected','ifRejected'],['undo','undo']]) { outcomes.append(el('small', t(name)), el('p', d.context[key] || t('notRecorded'))); } reading.append(outcomes);
   const isQuestion = ['direction','information'].includes(d.kind);
-  const answerLabel = el('label', t(isQuestion ? 'answerLabel' : 'backReason')); answerLabel.htmlFor = 'answer-text'; const input = el('textarea'); input.id = 'answer-text'; input.required = true; input.value = draft; right.append(answerLabel, input);
-  const message = el('p'); message.id = 'answer-message'; message.setAttribute('role','status'); right.append(message);
+  const answerLabel = el('label', t(isQuestion ? 'answerLabel' : 'backReason')); answerLabel.htmlFor = 'answer-text'; const input = el('textarea'); input.id = 'answer-text'; input.required = true; input.value = draft; reading.append(answerLabel, input);
+  const message = el('p'); message.id = 'answer-message'; message.setAttribute('role','status'); reading.append(message);
   const actions = el('div'); actions.id = 'answer-actions';
   const send = async outcome => {
     if (busy) return;
@@ -313,7 +314,7 @@ function openDecision(id, focus = true) {
   };
   if (isQuestion) actions.append(button(t('answer'), () => send('answered'), 'primary'));
   else actions.append(button(t('approve'), () => send('approved'), 'primary'), button(t('sendBack'), () => send('revision_requested')));
-  actions.append(button(t('flow'), wholeFlow)); right.append(actions);
+  actions.append(button(t('flow'), wholeFlow)); reading.append(actions);
   const details = el('details', undefined, 'evidence'); details.append(el('summary', t('details'))); const raw = el('pre');
   details.append(button(t('loadEvidence'), async () => {
     raw.textContent = t('loading');
@@ -407,17 +408,17 @@ async function createMap() {
   }
   let data = {nodes:[],edges:[],decisions:[]}, chosenNode = null, items = [], routes = [], frogs = [], picks = [];
   let compactMap = false;
-  let bounds = {cx:0,cy:0,width:1000,height:700}, frame = 0, dirty = true, tilt = 0, startTilt = 0, targetTilt = 0, transitionStart = null, anchor = null;
-  const center = new THREE.Vector3(), anchorPoint = new THREE.Vector3(), right = new THREE.Vector3(), up = new THREE.Vector3();
+  let bounds = {cx:0,cy:0,width:1000,height:700}, frame = 0, dirty = true, tilt = 0, startTilt = 0, targetTilt = 0, transitionStart = null;
+  const center = new THREE.Vector3(), anchorPoint = new THREE.Vector3();
   function cssObject(element, position, parent = group) { const object = new CSS2DObject(element); object.position.copy(position); parent.add(object); return object; }
   function mesh(geometry, colour, parent = group, outline = false) { const m = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({color:colour, side:outline ? THREE.BackSide : THREE.DoubleSide, transparent:true})); parent.add(m); return m; }
   function disk(radius, colour, x, y, z, parent = group) { const d = mesh(new THREE.CircleGeometry(radius,24),colour,parent); d.position.set(x,y,z); return d; }
   function tube(points, colour, radius = 2.4, parent = group) { return mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), Math.max(8,points.length * 6), radius, 6, false), colour,parent); }
-  function arc(radius, from, length, colour, parent = group) { const m = mesh(new THREE.TorusGeometry(radius,3.5,6,64,length),colour,parent); m.rotation.z = from; return m; }
+  function arc(radius, from, length, colour, parent = group, thickness = 3.5) { const m = mesh(new THREE.TorusGeometry(radius,thickness,6,64,length),colour,parent); m.rotation.z = from; return m; }
   function frog(position, pose, sentence, walkingNode = null) {
     if (frogs.length >= 6) return;
     const material = new THREE.SpriteMaterial({map:textures[pose],transparent:true,depthTest:false});
-    const sprite = new THREE.Sprite(material); sprite.scale.set(64,64,1); sprite.center.set(.5,0); sprite.position.copy(position); sprite.renderOrder = 10; group.add(sprite);
+    const sprite = new THREE.Sprite(material); sprite.scale.set(82,82,1); sprite.center.set(.5,0); sprite.position.copy(position); sprite.renderOrder = 10; group.add(sprite);
     const bubble = cssObject(el('div', sentence, 'speech'), position.clone().add(new THREE.Vector3(25,88,0)));
     frogs.push({sprite,bubble,walkingNode,pose,base:position.clone()});
   }
@@ -455,8 +456,9 @@ async function createMap() {
       const labelButton = button('', () => selectNode(n.id), 'planet-label'); labelButton.append(el('strong',title(n)),el('small',status(n))); labelButton.setAttribute('aria-label',`${title(n)}. ${status(n)}. ${attempts(n)}`);
       const caption = cssObject(labelButton,new THREE.Vector3(0,-91,0),root);
       const orbit = new THREE.Group(); root.add(orbit); orbit.visible = false;
-      for(let a=0;a<n.returned_reasons.length;a++) { const o=arc(112+a*8,0,Math.PI*2,colours.returned,orbit); o.position.z=-8-a*6; o.material.opacity=.3; }
-      const stations=[]; for(const [index,key] of ['make','check','fix'].entries()) { const angle=Math.PI/2-index*2*Math.PI/3; const p=new THREE.Vector3(Math.cos(angle)*117,Math.sin(angle)*117,8); disk(5.5,'#fff6ea',p.x,p.y,p.z,orbit); stations.push(cssObject(el('span',t(key),'station'),p.clone().multiplyScalar(1.30),orbit)); }
+      const currentOrbit=arc(117,0,Math.PI*2,colours.current,orbit,.8); currentOrbit.scale.z=.35; currentOrbit.userData.currentOrbit=true;
+      for(let a=0;a<n.returned_reasons.length;a++) { const o=arc(117,0,Math.PI*2,colours.returned,orbit,.8); o.position.y=-10-a*8; o.position.z=-8-a*6; o.scale.z=.35; o.material.opacity=.3; }
+      const stations=[]; for(const [index,key] of ['make','check','fix'].entries()) { const angle=Math.PI/2-index*2*Math.PI/3; const p=new THREE.Vector3(Math.cos(angle)*117,Math.sin(angle)*117,8); disk(5.5,'#fff6ea',p.x,p.y,p.z,orbit); stations.push(cssObject(el('span',t(key),'station'),p.clone().multiplyScalar(1.50),orbit)); }
       items.push({n,root,ring,orbit,stations,caption,planet,outline});
     });
     data.edges.forEach(e => {
@@ -471,12 +473,12 @@ async function createMap() {
       if(e.gate === 'waiting_for_you') { gate.scale.setScalar(1.35); const fill=mesh(new THREE.PlaneGeometry(13,19),'#62452f',gate); fill.position.set(0,2,2); disk(1.8,'#fff6ea',4,1,4,gate); const d=data.decisions.find(d=>d.node===e.from); if(d) { const hit=mesh(new THREE.PlaneGeometry(44,48),ink,gate); hit.position.set(0,4,12); hit.material.opacity=0; hit.material.depthWrite=false; hit.userData.decision=d.id; picks.push(hit); } }
       const socket=end.clone(); socket.z=18; if(e.delivered) { disk(8,ink,socket.x,socket.y,socket.z,lineGroup); disk(5.5,'#fff6ea',socket.x,socket.y,socket.z+1,lineGroup); }
       else for(let i=0;i<8;i++) { const angle=i*Math.PI/4; disk(1.5,'#6a5a8e',socket.x+Math.cos(angle)*6,socket.y+Math.sin(angle)*6,socket.z,lineGroup); }
-      const caption=cssObject(el('span',label(e.label),'route-label'),middle.clone().add(new THREE.Vector3(0,-30,5))); caption.visible=false;
+      const caption=cssObject(el('span',label(e.label),'route-label'),start.clone().lerp(end,.5).add(new THREE.Vector3(-direction.y*95,direction.x*95,5))); caption.visible=false;
       routes.push({e,group:lineGroup,caption,middle});
     });
     // Questions take priority in the six-mascot budget.
     const shown=new Set();
-    for(const route of routes) { if(route.e.gate==='waiting_for_you'&&!shown.has(route.e.from)) { frog(route.middle.clone().add(new THREE.Vector3(-45,8,15)),'report',t('waitingBubble')); shown.add(route.e.from); } }
+    for(const route of routes) { if(route.e.gate==='waiting_for_you'&&!shown.has(route.e.from)) { frog(route.middle.clone().add(new THREE.Vector3(42,20,15)),'report',t('waitingBubble')); shown.add(route.e.from); } }
     for(const item of items) { if(needs(item.n)&&!shown.has(item.n.id)) { frog(item.root.position.clone().add(new THREE.Vector3(65,25,12)),'report',t('waitingBubble')); shown.add(item.n.id); } }
     for(const item of items) { if(['running','submitted','unverified'].includes(item.n.status)&&!needs(item.n)) frog(item.root.position.clone().add(new THREE.Vector3(60,20,12)),'walk-a',t('attemptBubble',{n:item.n.attempts}),item); }
     if(data.complete&&items.length) frog(items[items.length-1].root.position.clone().add(new THREE.Vector3(80,20,12)),'wave',t('complete'));
@@ -484,28 +486,27 @@ async function createMap() {
   }
   function selectionAppearance() {
     const related=new Set([chosenNode]); data.edges.forEach(e=>{if(e.from===chosenNode)related.add(e.to);if(e.to===chosenNode)related.add(e.from);});
-    for(const item of items) { const active=item.n.id===chosenNode; item.orbit.visible=active; item.caption.element.classList.toggle('dim',!!chosenNode&&!related.has(item.n.id)&&!needs(item.n));
+    for(const item of items) { const active=item.n.id===chosenNode; item.orbit.visible=active; item.caption.element.classList.toggle('selected-label',active); item.caption.element.classList.toggle('dim',!!chosenNode&&!related.has(item.n.id)&&!needs(item.n));
       const opacity=chosenNode&&!related.has(item.n.id)&&!needs(item.n) ? .3 : 1;
-      item.root.traverse(o=>{if(o.material)o.material.opacity=opacity*(o.parent === item.orbit ? .3 : 1);});
-      item.ring.scale.setScalar(active?1.92:1);
+      item.root.traverse(o=>{if(o.material)o.material.opacity=opacity*(o.parent === item.orbit && !o.userData.currentOrbit ? .3 : 1);});
+      item.ring.visible=!active;
     }
     routes.forEach(route=>{route.caption.visible=!!chosenNode&&(route.e.from===chosenNode||route.e.to===chosenNode);});
   }
   function setCamera(progress) {
     const angle=progress*55*Math.PI/180, direction=new THREE.Vector3(Math.sin(angle)*.22,-Math.sin(angle)*.975,Math.cos(angle)).normalize();
+    const aspect=(host.clientWidth||1)/(host.clientHeight||1);
+    const fitHeight=Math.max(bounds.height,bounds.width/aspect);
+    const height=fitHeight+(585/aspect-fitHeight)*progress;
+    camera.left=-height*aspect/2;camera.right=height*aspect/2;camera.top=height/2;camera.bottom=-height/2;camera.updateProjectionMatrix();
     center.set(bounds.cx,bounds.cy,0);
+    if(chosenNode) center.lerp(anchorPoint,progress);
     camera.position.copy(center).addScaledVector(direction,1000); camera.up.set(0,1,0); camera.lookAt(center);
-    if(anchor&&chosenNode) {
-      right.set(1,0,0).applyQuaternion(camera.quaternion); up.set(0,1,0).applyQuaternion(camera.quaternion);
-      center.copy(anchorPoint).addScaledVector(right,-anchor.x*(camera.right-camera.left)/2).addScaledVector(up,-anchor.y*(camera.top-camera.bottom)/2);
-      camera.position.copy(center).addScaledVector(direction,1000); camera.lookAt(center);
-    }
     camera.updateMatrixWorld();
   }
   function select(id) {
     const item=items.find(i=>i.n.id===id);
-    if(item) { anchorPoint.copy(item.root.position); camera.updateMatrixWorld(); const projected=anchorPoint.clone().project(camera); anchor={x:projected.x,y:projected.y}; }
-    else anchor=null;
+    if(item) { anchorPoint.copy(item.root.position); }
     chosenNode=id; startTilt=tilt; targetTilt=id?1:0; transitionStart=performance.now(); selectionAppearance(); wake();
   }
   function resize() {
@@ -532,14 +533,19 @@ async function createMap() {
     let animating=false;
     if(tilt!==targetTilt) { const amount=reduced.matches?1:Math.min(1,(now-transitionStart)/450); const ease=amount*amount*(3-2*amount);tilt=startTilt+(targetTilt-startTilt)*ease; if(amount===1)tilt=targetTilt;setCamera(tilt);animating=amount<1;dirty=true; }
     for(const f of frogs) {
-      if(!f.walkingNode)continue;
+      const selectedFrog=f.walkingNode&&f.walkingNode.n.id===chosenNode;
+      const worldPixel=(host.clientWidth||1)/(camera.right-camera.left);
+      const size=Math.max(selectedFrog?82:70,32/worldPixel);
+      f.sprite.scale.set(size,size,1);
+      if(!f.walkingNode) { f.bubble.position.copy(f.sprite.position).addScaledVector(new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion),size+26/worldPixel); continue; }
       const item=f.walkingNode, active=item.n.id===chosenNode, checking=['submitted','unverified'].includes(item.n.status);
       let angle=checking ? -Math.PI/6 : item.n.attempts>1 ? Math.PI*7/6 : Math.PI/2;
-      if(!reduced.matches) { angle += active ? Math.sin(now/1800)*.13 : now/2300; animating=true; }
-      const radius=active?115:65;
+      if(!reduced.matches) { angle += 0; animating=true; }
+      if(!active) angle=Math.PI/2;
+      const radius=active?117:64;
       f.sprite.position.copy(item.root.position).add(new THREE.Vector3(Math.cos(angle)*radius,Math.sin(angle)*radius,15));
       f.sprite.material.map=textures[checking||reduced.matches?'report':Math.floor(now/180)%2?'walk-a':'walk-b'];
-      f.bubble.position.copy(f.sprite.position).add(new THREE.Vector3(18,compactMap ? 230 : 85,0));dirty=true;
+      f.bubble.position.copy(f.sprite.position).addScaledVector(new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion),size+24/worldPixel);dirty=true;
     }
     if(dirty||animating) { webgl.render(scene,camera);labels.render(scene,camera);dirty=false; }
     if(animating)frame=requestAnimationFrame(draw);

@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
 <title>Graph flow</title>
 <style nonce="__NONCE__">
 :root{color-scheme:dark;--night:#221a38;--ink:#1a1330;--panel:#2e2448;--soft:#3a2e5a;--line:#6a5a8e;--cream:#fff3e4;--muted:#cdbfe0;--paper:#fff6ea;--mint:#8fe6c0;--violet:#c3b1ff;--amber:#ffd166;--coral:#ff9479}
@@ -18,7 +19,7 @@ button:active{transform:translateY(2px);box-shadow:0 2px 0 var(--ink)}
 button:disabled{opacity:.55;cursor:wait}
 button.primary,button[aria-pressed=true]{background:var(--mint)}
 button.amber{background:var(--amber)}
-:focus-visible{outline:3px solid var(--amber);outline-offset:5px}
+button:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--amber);outline-offset:5px}
 h1,h2,h3{font-family:ui-rounded,"Apple SD Gothic Neo",system-ui,sans-serif;line-height:1.35}
 h1{font-size:25px;margin:4px 0 8px}
 h2{font-size:23px;margin:8px 0 16px}
@@ -35,7 +36,7 @@ main{padding:0 30px 30px}
 #notice{margin:12px 8px;padding:20px;background:var(--soft);border:3px solid var(--ink);border-radius:18px}
 #notice button{margin-left:16px}
 #flow{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:16px}
-#map{position:relative;min-height:660px;height:calc(100vh - 200px);max-height:940px;overflow:hidden;border-radius:22px}
+#map{position:relative;min-height:0;height:calc(100dvh - 180px);max-height:940px;overflow:hidden;border-radius:22px}
 #map canvas,#map .labels{position:absolute;inset:0}
 #map canvas{touch-action:pan-y}
 .labels{pointer-events:none}
@@ -51,7 +52,7 @@ main{padding:0 30px 30px}
 .route-label,.station{padding:3px 10px;border:2px solid var(--line);border-radius:20px;background:var(--soft);font-size:12px;color:var(--cream)}
 .station{background:#4c3d77}
 .dim{opacity:.35}
-aside{padding:24px;background:var(--panel);border:3px solid var(--ink);border-radius:26px;box-shadow:0 6px 0 var(--ink);align-self:start;min-height:650px}
+aside{padding:24px;background:var(--panel);border:3px solid var(--ink);border-radius:26px;box-shadow:0 6px 0 var(--ink);align-self:start;min-height:0;max-height:calc(100dvh - 180px);overflow:auto}
 .card{padding:18px;border:3px solid var(--ink);border-radius:19px;background:var(--soft);box-shadow:0 4px 0 var(--ink);margin:0 0 16px}
 .paper{background:var(--paper);color:var(--ink)}
 .paper .muted,.paper small{color:#78668f}
@@ -80,12 +81,22 @@ ul{padding-left:22px}
 #edge-list li{margin:8px 0}
 .list-fallback #map{display:none}
 .list-fallback #flow{display:block}
-.list-fallback aside{min-height:0}
+.list-fallback aside{min-height:0;max-height:none}
 .list-fallback #accessible{max-width:none}
 #decision{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,1fr);gap:24px;padding:18px 8px}
-#decision .reading{min-height:580px;position:relative;padding:32px;padding-bottom:170px}
-#decision .reading img{position:absolute;bottom:18px;right:24px;width:125px}
-#decision .reading .speech{position:absolute;bottom:125px;right:150px}
+#decision .reading{position:relative;padding:22px;min-height:0}
+#decision h2{outline:none}
+#decision .worker-report{display:flex;align-items:center;gap:18px;margin:12px 0}
+#decision .worker-report img{width:96px;height:96px;object-fit:contain;flex:none}
+#decision .worker-report .speech{max-width:none;text-align:left;position:relative}
+#decision .reading .card{padding:12px 16px;margin-bottom:12px;background:transparent;box-shadow:none;border-color:#cdbfe0}
+#decision .reading .card p{margin:3px 0;font-size:13px}
+#decision .reading .card small{font-size:12px}
+#decision .reading textarea{min-height:60px;height:60px;padding:8px 12px}
+#decision .reading>p{margin:5px 0}
+.speech{position:relative}
+.speech:after{content:"";position:absolute;left:50%;bottom:-8px;width:10px;height:10px;background:var(--paper);border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:rotate(45deg)}
+.selected-label small{display:none}
 textarea{width:100%;resize:vertical;min-height:90px;background:var(--night);color:var(--cream);padding:14px;border-color:var(--line)}
 label{display:block}
 #answer-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
@@ -112,18 +123,27 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 ui-monospace,monos
 aside{padding:18px}
 header{padding:24px}
 main{padding:0 16px 24px}
-#map{min-height:560px}
+#map{min-height:0}
 }
 @media(max-width:760px){header{display:block;padding:22px 18px}
 nav{margin-top:18px}
 #flow,#decision,.history-grid{grid-template-columns:1fr}
 #map{height:340px;min-height:300px}
-aside{min-height:0}
+aside{min-height:0;max-height:none}
 #decision{padding:10px 0}
-#decision .reading{min-height:360px;padding:24px;padding-bottom:150px}
+#decision .reading{min-height:0;padding:18px}
+.planet-label small{display:none}
 body:before{right:-130px;opacity:.5}
 #picker-label{margin-top:12px}
 h1{font-size:22px}
+}
+@media(min-width:761px) and (max-height:850px){
+header{padding-top:16px;padding-bottom:8px}
+#decision{padding-top:4px}
+#decision .reading{padding:16px}
+#decision .reading .card{display:grid;grid-template-columns:110px 1fr;gap:4px 12px}
+#decision .reading .card .eyebrow{grid-column:1/-1}
+#decision .worker-report{margin:4px 0}
 }
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}
 button:hover{transform:none}
