@@ -438,7 +438,7 @@ For a scope failure the reason lists the violating files. `gate.evaluate` is pur
 
 `gf merge <node> [<node> ...]` (leader) integrates committed submissions into the current branch of the project root:
 
-- Precondition: the tree has no modified tracked files (exit 4, `dirty_tree`). Work done inline in the shared tree is committed by the leader, and submitted with `gf submit --commit <sha>`, before any merge.
+- Preconditions (exit 4, nothing appended): every node has a current committed submission (`no_commit`); no merge is already in progress (`merge_in_progress`); the tree has no modified tracked files (`dirty_tree`; untracked files do not block). Work done inline in the shared tree is committed by the leader, and submitted with `gf submit --commit <sha>`, before any merge.
 - For each node in the given order: `git merge --no-ff --no-edit <commit>`. On conflict: `git merge --abort`, and the remaining nodes are still attempted.
 - One `merge.result` event is appended. For every conflicted node the merge also appends `gate.verdict` with verdict `reject` (or `replan` at the attempt limit), rule `M1`, and a rejection whose reason names the conflicting files, so the node is restarted like any other rejected node.
 
@@ -533,7 +533,7 @@ def project_of(run_dir): ...                    # project root Path (run_dir/../
 def transaction(run_dir, timeout_s=30): ...     # context manager yielding tx; appends are buffered and written only on clean exit
 #   tx.events -> list (includes events appended earlier in this tx), tx.plan -> dict or None, tx.revision -> int
 #   tx.append(type, data, actor) -> event dict (seq, ts, plan_revision filled in)
-#   tx.write_plan(plan) -> (revision, sha256): writes plans/NNNN.json; tx.plan and tx.revision advance at once; caller appends plan.set in the same tx
+#   tx.write_plan(plan) -> (revision, sha256): writes plans/NNNN.json; the caller appends plan.set in the same tx, and tx.plan / tx.revision advance when that event is appended
 def evidence_path(run_dir, node, check, attempt): ...   # creates and returns a new unique log Path (exclusive)
 def atomic_write(path, data): ...               # str or bytes; temp file + fsync + os.replace
 def register_project(root): ...                 # locked update of registry.json
