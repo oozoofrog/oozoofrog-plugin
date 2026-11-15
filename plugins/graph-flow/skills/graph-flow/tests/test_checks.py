@@ -1,6 +1,7 @@
 """Checks contract tests; every git tree and GF_HOME is temporary."""
 import io
 import json
+import multiprocessing
 import os
 import pathlib
 import subprocess
@@ -30,6 +31,22 @@ def review():
     return {"id": "review", "kind": "review", "goal": "review", "lane": 1,
             "grade": "daily", "target": "work", "lens": "correctness", "owns": [],
             "checks": [{"id": "citations", "type": "cites"}]}
+
+
+def race_start(run_dir, barrier, results):
+    dirty = checks._dirty
+
+    def snapshot(cwd):
+        result = dirty(cwd)
+        barrier.wait()
+        return result
+
+    try:
+        with mock.patch.object(checks, "_dirty", snapshot):
+            checks.start(run_dir, "work", None, ACTOR)
+        results.put("started")
+    except core.GFError as exc:
+        results.put(exc.code)
 
 
 class ChecksCase(unittest.TestCase):
@@ -117,8 +134,8 @@ class StartTests(ChecksCase):
         self.assertEqual(data["cwd"], str(self.repo))
         self.assertEqual(data["base"]["rev"], before)
         self.assertEqual(data["base"]["dirty"], {
-            "other.txt": self.git("hash-object", "--", "other.txt"),
-            "new space\nfile.txt": self.git("hash-object", "--", "new space\nfile.txt"),
+            "other.txt": "644:" + self.git("hash-object", "--", "other.txt"),
+            "new space\nfile.txt": "644:" + self.git("hash-object", "--", "new space\nfile.txt"),
             "deleted.txt": "deleted"})
 
     def test_start_while_running_refused(self):
@@ -126,13 +143,79 @@ class StartTests(ChecksCase):
         self.error("not_startable", self.start)
         self.assertEqual(len(self.results("node.start")), 1)
 
+    def test_last_attempt_live_status_not_startable(self):
+        for attempt in (1, 2):
+            self.start()
+            sub = self.submit()
+            self.append("gate.verdict", {"node": "work", "attempt": attempt,
+                        "submission": sub["id"], "verdict": "reject", "rule": "R1"})
+        self.start()
+        self.assertEqual((self.status()["status"], self.status()["attempts"]), ("running", 3))
+        for status in ("running", "submitted", "passed"):
+            if status == "submitted":
+                sub = self.submit()
+            elif status == "passed":
+                self.append("gate.verdict", {"node": "work", "attempt": 3,
+                            "submission": sub["id"], "verdict": "pass", "rule": "R7"})
+            with self.subTest(status=status):
+                before = store.events(self.run)
+                self.error("not_startable", self.start)
+                self.assertEqual(self.status()["status"], status)
+                self.assertEqual(store.events(self.run), before)
+
+    def test_start_with_untracked_nested_repository(self):
+        self.write("nested/file.txt", "nested")
+        self.git("init", "-q", "nested")
+        data = self.start()
+        self.assertEqual(data["base"]["dirty"], {"nested/": "dir"})
+        self.assertEqual(self.status()["status"], "running")
+
+    def test_start_with_directory_symlink(self):
+        (self.repo / "directory-link").symlink_to("owned", target_is_directory=True)
+        data = self.start()
+        self.assertEqual(data["base"]["dirty"], {"directory-link": "link:owned"})
+
+    def test_start_with_dangling_symlink(self):
+        (self.repo / "dangling").symlink_to("missing")
+        data = self.start()
+        self.assertEqual(data["base"]["dirty"], {"dangling": "link:missing"})
+
+    def test_unusual_file_state_is_unreadable(self):
+        os.mkfifo(self.repo / "pipe")
+        with mock.patch.object(checks, "_git", side_effect=core.GFError("git_error", "unreadable")):
+            self.assertEqual(checks._file_state(self.repo, "pipe"), "unreadable")
+            self.assertEqual(checks._file_state(self.repo, "owned.txt"), "unreadable")
+
+    def test_four_concurrent_starts(self):
+        context = multiprocessing.get_context("fork")
+        barrier = context.Barrier(4, timeout=10)
+        results = context.Queue()
+        processes = [context.Process(target=race_start, args=(self.run, barrier, results))
+                     for _ in range(4)]
+        try:
+            for process in processes:
+                process.start()
+            for process in processes:
+                process.join(15)
+                self.assertEqual(process.exitcode, 0)
+            self.assertCountEqual([results.get(timeout=2) for _ in processes],
+                                  ["started"] + ["not_startable"] * 3)
+            self.assertEqual(len(self.results("node.start")), 1)
+        finally:
+            for process in processes:
+                if process.is_alive():
+                    process.terminate()
+                    process.join()
+            results.close()
+            results.join_thread()
+
     def test_staged_dirty_with_working_copy_matching_head(self):
         self.write("other.txt", "staged change")
         self.git("add", "other.txt")
         self.write("other.txt", "first\nsecond\n")
         data = self.start()
         self.assertEqual(data["base"]["dirty"]["other.txt"],
-                         self.git("hash-object", "--", "other.txt"))
+                         "644:" + self.git("hash-object", "--", "other.txt"))
 
     def test_unsatisfied_needs(self):
         self.set_plan([work("producer"), work("consumer", owns=["consumer.txt"],
@@ -247,6 +330,20 @@ class CmdTests(ChecksCase):
         data = self.run_cmd(fixed, node="_run", phase="gate")
         self.assertEqual(data["result"], "passed")
 
+    def test_fixed_command_cwd_cannot_escape_tree(self):
+        (self.repo / "escape").symlink_to(self.root, target_is_directory=True)
+        marker = self.root / "executed"
+        for cwd in ("../..", "/", "escape"):
+            with self.subTest(cwd=cwd):
+                fixed = dict(CMD, id="fixed", run="touch '%s'" % marker, cwd=cwd)
+                (self.repo / ".graph-flow" / "checks.json").write_text(
+                    json.dumps({"checks": [fixed]}))
+                exc = self.error("bad_cwd", self.run_cmd, fixed, "gate", "_run")
+                self.assertEqual(exc.exit_code, core.EXIT_USAGE)
+                self.assertFalse(marker.exists())
+                self.assertEqual(self.results(), [])
+                self.assertEqual(list((self.run / "evidence").rglob("*.log")), [])
+
     def test_stale_result_after_restart(self):
         self.start()
         execute = checks._execute
@@ -291,6 +388,21 @@ class CmdTests(ChecksCase):
 
 
 class ScopeTests(ChecksCase):
+    def test_dirty_symlink_retargeted_to_identical_content_fails(self):
+        link = self.repo / "unowned-link"
+        link.symlink_to("owned.txt")
+        self.start()
+        link.unlink()
+        link.symlink_to("other.txt")
+        self.assertEqual(self.scope()["violations"], ["unowned-link"])
+
+    def test_dirty_file_mode_changed_fails(self):
+        self.write("other.txt", "dirty")
+        (self.repo / "other.txt").chmod(0o644)
+        self.start()
+        (self.repo / "other.txt").chmod(0o755)
+        self.assertEqual(self.scope()["violations"], ["other.txt"])
+
     def test_owned_changed_passes(self):
         self.start()
         self.write("owned.txt", "changed")
@@ -401,6 +513,20 @@ class CitesTests(ChecksCase):
         self.prepare([{"file": "missing.txt", "line": 1}])
         self.assertEqual(self.cites()["result"], "failed")
 
+    def test_citations_confined_to_project_files(self):
+        outside = self.root / "outside.txt"
+        outside.write_text("outside\n")
+        (self.repo / "outside-link").symlink_to(outside)
+        (self.repo / "metadata-link").symlink_to(".git/HEAD")
+        self.write(".graph-flow/metadata.txt", "metadata\n")
+        self.prepare([{"file": file, "line": 1} for file in (
+            str(self.repo / "owned.txt"), "../outside.txt", "owned/../owned.txt",
+            ".git/HEAD", ".graph-flow/metadata.txt", "outside-link", "metadata-link",
+            "owned", "owned/child.txt")])
+        data = self.cites()
+        self.assertEqual(data["result"], "failed")
+        self.assertEqual([v["finding"] for v in data["violations"]], list(range(1, 9)))
+
     def test_line_out_of_range(self):
         self.prepare([{"file": "owned.txt", "line": 3}])
         self.assertEqual(self.cites()["result"], "failed")
@@ -496,6 +622,15 @@ class HostRedSubmitTests(ChecksCase):
     def test_submit_bad_sha(self):
         self.start()
         self.error("bad_commit", self.submit, "does-not-resolve")
+        self.assertEqual(self.results("node.submit"), [])
+        self.assertEqual(self.status()["status"], "running")
+
+    def test_submit_commit_must_descend_from_base(self):
+        self.write("owned.txt", "second commit")
+        self.commit()
+        self.start()
+        exc = self.error("bad_commit", self.submit, "HEAD~1")
+        self.assertEqual(exc.exit_code, core.EXIT_USAGE)
         self.assertEqual(self.results("node.submit"), [])
         self.assertEqual(self.status()["status"], "running")
 

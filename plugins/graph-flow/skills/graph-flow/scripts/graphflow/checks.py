@@ -3,6 +3,7 @@ import json as _json
 import os as _os
 import pathlib as _pathlib
 import signal as _signal
+import stat as _stat
 import subprocess as _subprocess
 import sys as _sys
 import time as _time
@@ -39,9 +40,20 @@ def _paths(cwd, *args):
 
 def _file_state(cwd, path):
     file = cwd / path
-    if not file.exists() and not file.is_symlink():
+    try:
+        mode = file.lstat().st_mode
+        if _stat.S_ISLNK(mode):
+            return "link:" + _os.readlink(file)
+        if _stat.S_ISDIR(mode):
+            return "dir"
+        if not _stat.S_ISREG(mode):
+            return "unreadable"
+        return "%o:%s" % (_stat.S_IMODE(mode),
+                          _git(cwd, "hash-object", "--", path).decode("ascii").strip())
+    except FileNotFoundError:
         return "deleted"
-    return _git(cwd, "hash-object", "--", path).decode("ascii").strip()
+    except (OSError, ValueError, _core.GFError):
+        return "unreadable"
 
 
 def _dirty(cwd):
@@ -137,7 +149,12 @@ def _result(node_id, check_id, kind, attempt, phase, cwd):
 
 
 def _execute(run_dir, node_id, check, attempt, phase, cwd):
-    directory = cwd / check.get("cwd", "")
+    try:
+        directory = (cwd / check.get("cwd", "")).resolve()
+        directory.relative_to(cwd)
+    except (OSError, ValueError, RuntimeError):
+        raise _error("bad_cwd", "check working directory must stay inside the tested tree",
+                     _core.EXIT_USAGE)
     data = _result(node_id, check["id"], "cmd", attempt, phase, directory)
     data["command"] = check["run"]
     print("/bin/sh -c %s" % check["run"], file=_sys.stderr, flush=True)
@@ -212,7 +229,18 @@ def run_cites(run_dir, node_id, phase, cwd, actor):
             reason = "line must be an integer >= 1"
         else:
             try:
-                count = len((directory / file).read_bytes().splitlines())
+                path = _pathlib.Path(file)
+                if path.is_absolute() or ".." in path.parts:
+                    raise ValueError("file must be project-relative without '..'")
+                resolved = (directory / path).resolve()
+                relative = resolved.relative_to(directory)
+                if any(part in (".git", ".graph-flow") for part in path.parts + relative.parts):
+                    raise ValueError("file must be outside .git and .graph-flow")
+                if not resolved.is_file():
+                    raise ValueError("file must resolve to a regular file")
+                count = len(resolved.read_bytes().splitlines())
+            except (ValueError, RuntimeError) as exc:
+                reason = str(exc)
             except OSError:
                 reason = "file does not exist or cannot be read"
             else:
@@ -263,33 +291,25 @@ def red(run_dir, node_id, check_id, cwd, actor):
 
 def _start_problem(tx, node_id, actor):
     derived = _state.derive(tx.plan, tx.events)
-    try:
-        _graph.check_start(tx.plan, derived, node_id)
-    except _core.GFError as exc:
+    code = _graph.start_problem(tx.plan, derived, node_id)
+    if code is not None:
         st = derived["nodes"].get(node_id) or {}
-        if exc.code == "attempts_exhausted" and st.get("status") != "replan":
+        if code == "attempts_exhausted" and st.get("status") != "replan":
             tx.append("gate.verdict", {"node": node_id, "attempt": st["attempts"],
                       "submission": None, "verdict": "replan", "rule": "R2",
                       "rejection": None, "tested_head": None}, actor)
-        return exc
+        return _error(code, "node %s cannot start: %s" % (node_id, code))
     return None
 
 
 def start(run_dir, node_id, cwd, actor):
-    with _store.transaction(run_dir) as tx:
-        problem = _start_problem(tx, node_id, actor)
-        if problem is None:
-            _, st = _node(tx, node_id)
-            token = _token(tx, st, "loop")
-    if problem is not None:
-        raise problem
     directory = _cwd(run_dir, cwd)
     base = {"rev": _git(directory, "rev-parse", "HEAD").decode("ascii").strip(),
             "dirty": _dirty(directory)}
     with _store.transaction(run_dir) as tx:
-        _, st = _recheck(tx, node_id, "start", token)
         problem = _start_problem(tx, node_id, actor)
         if problem is None:
+            _, st = _node(tx, node_id)
             data = {"node": node_id, "attempt": st["attempts"] + 1,
                     "base": base, "cwd": str(directory)}
             tx.append("node.start", data, actor)
@@ -308,7 +328,13 @@ def submit(run_dir, node_id, commit, branch, notes, low_confidence, cwd, actor):
         except _core.GFError as exc:
             if exc.code != "git_error":
                 raise
-            raise _error("bad_commit", "commit does not resolve: %s" % commit)
+            raise _error("bad_commit", "commit does not resolve: %s" % commit, _core.EXIT_USAGE)
+        try:
+            _git(directory, "merge-base", "--is-ancestor", st["base"]["rev"], commit)
+        except _core.GFError as exc:
+            if exc.code != "git_error":
+                raise
+            raise _error("bad_commit", "commit must descend from base.rev", _core.EXIT_USAGE)
     data = {"node": node_id, "attempt": st["attempts"], "commit": commit,
             "branch": branch, "changed_files": _changed(directory, st["base"], commit),
             "notes": notes, "low_confidence": low_confidence}
