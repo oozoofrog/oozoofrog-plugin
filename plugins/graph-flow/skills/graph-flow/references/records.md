@@ -413,6 +413,7 @@ Evaluation stops at the first rule that fires (P7: all deterministic evidence, t
 - A review can hold a node; it can never produce `pass` and never outranks a grade 1 failure.
 - `decision` nodes have no submission. `gf gate <node>` gives `pass` (R7) when a verified, non-stale answer with outcome `answered` or `approved` exists for a decision with purpose `node` bound to this node; `hold` (R4) when that outcome is `rejected` or `revision_requested`; otherwise `needs_approval` (R6), appending the ask (from the node's `question` and `decision_kind`) if none is open.
 - A rejection never changes another node's status (P8).
+- The verdict is appended in one transaction that first re-derives the state and discards the result (exit 4, `stale_result`) unless all of these still hold: the plan revision, the node's `basis`, attempt, and submission id are unchanged; the node still has a current submission (for a decision node: it is not `passed`); and no `gate.verdict` for this node was appended since the gate started. Two gates on the same node therefore cannot both record a verdict, and a late gate can never overwrite a `passed` node.
 
 `gf gate --final` runs the plan's integration checks and every fixed check once on the current tree and appends `gate.final`. Because completion requires the final gate to be the latest verdict-like event (section 5), fixed checks run on every completed run, including runs whose nodes are all lane 1 (P11).
 
@@ -439,7 +440,7 @@ For a scope failure the reason lists the violating files. When several checks fa
 `gf merge <node> [<node> ...]` (leader) integrates committed submissions into the current branch of the project root:
 
 - Preconditions (exit 4, nothing appended): every node has a current committed submission (`no_commit`); no merge is already in progress (`merge_in_progress`); the tree has no modified tracked files (`dirty_tree`; untracked files do not block). Work done inline in the shared tree is committed by the leader, and submitted with `gf submit --commit <sha>`, before any merge.
-- For each node in the given order: `git merge --no-ff --no-edit <commit>`. On conflict: `git merge --abort`, and the remaining nodes are still attempted.
+- For each node in the given order: `git merge --no-ff --no-edit <commit>`. On conflict, or on any other failure of the merge command (for example an untracked file that would be overwritten): `git merge --abort` if a merge is in progress, the node is recorded as conflicted (with the conflicting files, or an empty list and the first line of git's error as the reason), and the remaining nodes are still attempted. The merge never stops halfway: every listed node is attempted and exactly one `merge.result` is appended, so git and the log always agree.
 - One `merge.result` event is appended. For every conflicted node the merge also appends `gate.verdict` with verdict `reject` (or `replan` at the attempt limit), rule `M1`, and a rejection whose reason names the conflicting files, so the node is restarted like any other rejected node.
 
 ## 7. Decisions
@@ -454,6 +455,7 @@ Who can answer (P10):
 
 - The dashboard server, started by a person with `gf serve`, appends `decision.answer` with `source: "dashboard"` and `sig`: HMAC-SHA256, hex, keyed with `human.key`, over the UTF-8 string `<run_id>\n<decision id>\n<outcome>\n<answer>`.
 - `gf decide answer` on the command line is refused (exit 3) unless the environment has `GF_HUMAN_TERMINAL=1` and stdin is a TTY. It signs the same way with `source: "terminal"`.
+- `decisions.answer` itself refuses any actor whose role is not `human` (exit 3, `forbidden`), so no other entry point (the MCP server, a script) can produce a signed answer for an agent role. The dashboard server and the terminal path call it with a `human` actor.
 - `state.derive` sets `verified` by recomputing the signature with `core.human_sig` (constant-time comparison); it is `false` when the key is unreadable or the signature differs. This is the one place where `derive` reads outside its arguments. Gate rules count only verified answers.
 
 ## 8. Constraints and fixed checks (P11)
@@ -592,7 +594,7 @@ def merge(run_dir, node_ids, actor): ...        # appends merge.result and the M
 
 # decisions.py
 def ask(run_dir, kind, question, node, check, purpose, evidence, actor): ...   # returns the ask data including "id"
-def answer(run_dir, decision_id, outcome, answer_text, source, actor): ...     # signs; returns the answer data; GFError on stale or invalid outcome
+def answer(run_dir, decision_id, outcome, answer_text, source, actor): ...     # actor role must be human; signs; returns the answer data; GFError on stale or invalid outcome
 def wait(run_dir, decision_id, timeout_s): ...  # decision dict, or GFError(exit_code=EXIT_NEGATIVE) on timeout
 def open_decisions(state, node_id=None): ...    # list
 def verify(run_id, decision_id, answer_data): ...   # bool; compares answer_data["sig"] with core.human_sig
