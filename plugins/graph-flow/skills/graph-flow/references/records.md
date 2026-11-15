@@ -61,7 +61,8 @@ Roles prevent accidents; they are not a security boundary (P5, P10). An agent th
 | `plan validate`, `learn list`, `trace` | yes | yes | yes | yes |
 | `status` | yes | own node only | own node and its target only | yes |
 | `submit --commit` | yes | own node | no | no |
-| `start`, `red`, `check run`, `check record`, `submit` | yes | own node | no | no |
+| `start` | yes | own node | own node | no |
+| `red`, `check run`, `check record`, `submit` | yes | own node | no | no |
 | `review submit` | no | no | own node | no |
 | `decide ask`, `decide wait`, `decide list` | yes | own node only | own node only | yes |
 | `decide answer` | no | no | no | yes, see section 7 |
@@ -200,7 +201,7 @@ Grade 3 is rollback history (section 9).
 - Only commands written in the plan or in `checks.json` are executed. `gf` prints the command line to stderr before running it.
 - Working directory: `--cwd` if given (a worktree), else the project root, joined with the check's `cwd`.
 - Output (stdout and stderr interleaved) goes to `evidence/<node>/<check>/a<attempt>-<8 hex>.log`, created with exclusive open; run-level checks use node `_run`. The 8 hex characters are random.
-- The command runs **outside** the run lock. Before running, `gf` notes the node's attempt and the plan revision; when committing the result it re-checks both under the lock and, if either changed, discards the result with exit 4 (code `stale_result`).
+- The command runs **outside** the run lock. Before running, `gf` notes the node's `basis`, attempt, and the plan revision (and, for gate and merge operations, the submission id); when committing the result it re-checks all of them under the lock and, if any changed, discards the result with exit 4 (code `stale_result`).
 
 ### `scope`
 
@@ -209,7 +210,7 @@ Grade 3 is rollback history (section 9).
 The comparison always asks one question: did this node change a file it does not own?
 
 - **Committed submission** (the submission carries a `commit`): changed files are `git diff --no-renames --name-only -z <base.rev> <commit>`.
-- **Uncommitted submission** (no commit, shared tree): changed files are `git diff --no-renames --name-only -z <base.rev>` plus untracked files (`git ls-files --others --exclude-standard -z`), keeping a path listed in `base.dirty` only if its current state (hash or `deleted`) differs from the recorded one.
+- **Uncommitted submission** (no commit, shared tree): the candidates are `git diff --no-renames --name-only -z <base.rev>`, plus untracked files (`git ls-files --others --exclude-standard -z`), plus **every path in `base.dirty`** (so a file that was dirty at base and has since been restored or deleted is still examined). A candidate listed in `base.dirty` is changed only if its current state (hash, or `deleted` when missing) differs from the recorded one; every other candidate is changed.
 - In both cases every changed file must be equal to or under one of the node's `owns`; the others are `violations`. Paths under `.graph-flow/` are excluded. The result is grade 1.
 
 The uncommitted comparison is exact only when one node at a time works in the shared tree. Therefore `gf start` refuses a node whose isolation is `shared` (or unassigned) while another node with shared isolation is `running` or has a current uncommitted submission that is not yet `passed` (exit 4, `shared_busy`). Parallel work requires `worktree` isolation and committed submissions (P4).
@@ -344,8 +345,8 @@ Decisions are bound, not counted: a decision is **stale** when its node's `basis
 ```
 
 - Every node has every key shown; unset values are `null`, `[]`, or `{}` as in the `publish-ok` example.
-- `checks[<id>]` has `loop` and `gate`, each the latest `check.result` data of the **current attempt** for that phase, or `null`. `verdict` is the latest `gate.verdict` data for the current submission (for a decision node: since its basis), or `null`. `rejections` lists the rejection objects of this node since its basis, in order.
-- `reviews` (work nodes only) lists every review node that targets the node and has a current submission, with that review node's `status`, its `target_submission`, verdict, findings, and its assignment `family` (or `null`).
+- `checks[<id>]` has `loop` and `gate`, each the latest `check.result` data of the **current attempt** for that phase, or `null`. `verdict` is the latest `gate.verdict` data for the current submission (for a decision node: since its basis), or `null`. `rejections` lists the rejection objects of this node's `reject` and `replan` verdicts since its basis, in order. `merged_head` is the `head` of the latest `merge.result` entry for the current submission's commit, or `null`; `submission`, `verdict`, and `merged_head` are cleared by `node.start`.
+- `reviews` (work nodes only) lists every review node that targets the node and has submitted since its own basis (its status is `submitted`, `unverified`, `held`, `awaiting_approval`, or `passed`), with that review node's `status`, its `target_submission`, verdict, findings, and its assignment `family` (or `null`). The gate, not the list, decides which entries match the current submission.
 - `open_decisions` holds the ids of open, non-stale decisions bound to the node. `decisions` holds every decision; `status` is `open` or `answered`.
 - `run.final` is the last `gate.final` data plus its `seq`, or `null`. `run.status` is `complete` only when the plan has at least one node, every node is `passed`, the last `gate.final` has result `passed`, and its `seq` is greater than the `seq` of every `plan.set`, `node.reopen`, and `gate.verdict` event; otherwise `open`.
 
@@ -366,6 +367,13 @@ A node **has a current submission** when its status is `submitted`, `unverified`
 `gf start <node>` is valid for a `work` or `review` node when its status is `pending`, `assigned`, `rejected`, `unverified`, `held`, or `awaiting_approval`; its needs are satisfied; `attempts < max_attempts`; and the shared-tree rule of section 4 allows it. Errors (exit 4): `not_startable`, `needs_unsatisfied`, `shared_busy`, `attempts_exhausted`. On `attempts_exhausted` the tool also appends `gate.verdict` with verdict `replan`, rule `R2`, unless the node is already `replan` (P2: one exhaustion rule for every retry path). `decision` nodes are never started.
 
 Needs are satisfied when every `needs.from` node is `passed`. For a `review` node, its `target` only needs to have a current submission: the review happens before the target is accepted.
+
+Other transitions are validated in the same way (exit 4, `wrong_status`):
+
+- `gf assign` is valid when the node's status is `pending`, `assigned`, `rejected`, `unverified`, `held`, or `awaiting_approval`. In the derived state `node.assign` sets the status to `assigned` only when it was `pending`; otherwise it only replaces `assignment`.
+- `gf submit` and `gf review submit` are valid only when the node is `running`; the event carries the attempt of that start.
+- `gf check run`, `gf check record`, and `gf red` are valid only when the node is `running`.
+- A node that is `passed` changes only through `gf reopen` or a plan change.
 
 `graph.ready(plan, state)` lists, in plan order, the `work` and `review` nodes that `gf start` would accept, and the `decision` nodes whose needs are satisfied and that are not `passed` (P12: a verdict changes this list).
 
@@ -394,8 +402,8 @@ Evaluation stops at the first rule that fires (P7: all deterministic evidence, t
 | --- | --- | --- | --- |
 | R1 | A grade 1 result of this gate run failed (node check, scope, cites, or integration check) and `attempts < max_attempts` | `reject` | `rejected` |
 | R2 | The same failure and `attempts == max_attempts` | `replan` | `replan` |
-| R3 | Required evidence is missing: a `host` check has no loop result for this attempt; or the node is a `work` node with `effective_lane >= 2` and no review node targeting it is `passed` with `target_submission` equal to this submission's id; or such a review exists but either assignment `family` is `null` or the two are equal | `unverified` | `unverified` |
-| R4 | A grade 2 result failed, or a `passed` review of this submission has verdict `fail`, and no approved `review` decision with purpose `hold` is bound to this submission | `hold` | `held` |
+| R3 | Required evidence is missing: a `host` check has no loop result for this attempt; or the node is a `work` node with `effective_lane >= 2` and there is no entry in `reviews` that is `passed`, has `target_submission` equal to this submission's id, and whose `family` and the node's assignment `family` are both known and different | `unverified` | `unverified` |
+| R4 | A grade 2 result failed, or a `passed` review whose `target_submission` is this submission has verdict `fail`, and no approved `review` decision with purpose `hold` is bound to this submission | `hold` | `held` |
 | R5 | `work` node, `effective_lane == 2`, and `trajectory_clean` is false or the node's `rollbacks` (section 9) is greater than 0, and no approved `review` decision with purpose `trajectory` is bound to this submission | `needs_approval` | `awaiting_approval` |
 | R6 | A `human` check has no approved `review` decision with purpose `human_check` bound to this submission and check; or `effective_lane == 3` and no approved `authorization` decision with purpose `lane3` is bound to this submission | `needs_approval` | `awaiting_approval` |
 | R7 | Otherwise | `pass` | `passed` |
@@ -440,7 +448,7 @@ For a scope failure the reason lists the violating files. `gate.evaluate` is pur
 - `gf decide wait <id> [--timeout S]` polls the log (1 second interval) until the decision is answered; exit 0 with the answer, exit 1 on timeout.
 - `gf decide list` returns open decisions (for worker and reviewer roles: only those bound to their node).
 - Valid outcomes: `approved`, `rejected`, `revision_requested` for kinds `review` and `authorization`; `answered` for the other two.
-- An answer to a stale decision (section 5, "Basis") is refused (exit 4, `stale_decision`).
+- An answer to a stale decision (section 5, "Basis") is refused (exit 4, `stale_decision`). A decision is answered once: a second answer is refused (exit 4, `already_answered`), and `derive` uses the first answer.
 
 Who can answer (P10):
 
