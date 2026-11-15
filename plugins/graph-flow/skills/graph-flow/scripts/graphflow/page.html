@@ -10,10 +10,10 @@
 
 *{box-sizing:border-box}
 body{margin:0;background:var(--night);color:var(--cream);font:15px/1.65 "Apple SD Gothic Neo","Pretendard",system-ui,sans-serif}
-body:before{content:"";position:fixed;right:19%;top:-173px;width:280px;height:280px;border:3px solid var(--ink);border-radius:50%;background:#ffb38d;z-index:-1}
+
 button,input,textarea,select{font:inherit}
 button,select,textarea{border:3px solid var(--ink);border-radius:14px}
-button,select{padding:9px 16px;background:var(--paper);color:var(--ink);box-shadow:0 4px 0 var(--ink);cursor:pointer}
+button,select{min-height:40px;min-width:40px;padding:9px 16px;background:var(--paper);color:var(--ink);box-shadow:0 4px 0 var(--ink);cursor:pointer}
 button:hover{transform:translateY(-1px)}
 button:active{transform:translateY(2px);box-shadow:0 2px 0 var(--ink)}
 button:disabled{opacity:.55;cursor:wait}
@@ -37,19 +37,26 @@ main{padding:0 30px 30px}
 #notice button{margin-left:16px}
 #flow{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:16px}
 #map{position:relative;min-height:0;height:calc(100dvh - 180px);max-height:940px;overflow:hidden;border-radius:22px}
+.map-scene{position:relative;width:100%;height:100%;min-width:760px}
+#map{overflow:auto}
 #map canvas,#map .labels{position:absolute;inset:0}
 #map canvas{touch-action:pan-y}
 .labels{pointer-events:none}
-.labels button,.labels .route-label{pointer-events:auto}
-.planet-label{border:0;background:transparent;color:var(--cream);box-shadow:none;text-align:center;padding:0;width:180px;line-height:1.45}
-.planet-label strong{display:block;font-size:15px}
+.labels button{pointer-events:auto}
+.planet-label{position:relative;border:0;border-radius:50%;background:transparent;color:var(--cream);box-shadow:none;text-align:center;padding:0;width:180px;height:44px;min-height:44px;line-height:1.45}
+.node-caption{position:absolute;top:calc(22px + var(--title-offset,60px));left:0;width:100%;display:block}
+.planet-label strong{display:block;font-size:15px;white-space:normal;overflow-wrap:anywhere}
 .planet-label small{display:block;margin-top:5px;font-size:12px}
-.compact-label strong{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.compact-label small{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.planet-label:before{content:"";position:absolute;inset:0;left:calc(50% - 22px);width:44px;border-radius:50%;border:2px solid transparent}
+.planet-label:hover:before,.planet-label:focus-visible:before{border-color:var(--amber);background:#ffd16622}
+.planet-label:focus-visible{outline:none}
+.planet-label:focus-visible .node-caption{outline:2px solid var(--amber);outline-offset:4px;border-radius:5px}
+.compact-label strong{font-size:13px}
+.compact-label small{display:none}
 .speech.compact-speech{font-size:10px;padding:4px 7px;max-width:110px}
 .planet-label:hover{transform:none;color:var(--amber)}
 .speech{padding:6px 11px;background:var(--paper);color:var(--ink);border:2.5px solid var(--ink);border-radius:13px;box-shadow:0 4px 0 var(--ink);font-size:12px;max-width:210px;text-align:center;white-space:normal}
-.route-label,.station{padding:3px 10px;border:2px solid var(--line);border-radius:20px;background:var(--soft);font-size:12px;color:var(--cream)}
+.station{padding:3px 10px;border:2px solid var(--line);border-radius:20px;background:var(--soft);font-size:12px;color:var(--cream)}
 .station{background:#4c3d77}
 .dim{opacity:.35}
 aside{padding:24px;background:var(--panel);border:3px solid var(--ink);border-radius:26px;box-shadow:0 6px 0 var(--ink);align-self:start;min-height:0;max-height:calc(100dvh - 180px);overflow:auto}
@@ -74,10 +81,11 @@ aside .count-list li{margin:4px 0;font-size:13px}
 .dot.doing{background:var(--violet)}
 .dot.needs_you{background:var(--amber)}
 .dot.returned{background:var(--coral)}
-.legend p{font-size:12px;color:var(--muted);margin:12px 0}
+.legend p{font-size:11px;color:var(--muted);margin:8px 0;white-space:nowrap}
+.legend .dot{width:8px;height:8px;border-width:1px;margin:0 0 0 3px}
 ul{padding-left:22px}
 #accessible{margin:26px 8px;max-width:1100px}
-#accessible summary{cursor:pointer;color:var(--muted)}
+#accessible summary{cursor:pointer;color:var(--muted);min-height:44px;padding:10px 0}
 #node-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;padding:14px 0;list-style:none}
 #node-list li{margin:0}
 #edge-list li{margin:8px 0}
@@ -98,24 +106,27 @@ ul{padding-left:22px}
 #decision .reading>p{margin:5px 0}
 .speech{position:relative}
 .speech:after{content:"";position:absolute;left:50%;bottom:-8px;width:10px;height:10px;background:var(--paper);border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:rotate(45deg)}
-.selected-label small{display:none}
+.selected-label .node-caption{color:var(--amber)}
 textarea{width:100%;resize:vertical;min-height:90px;background:var(--night);color:var(--cream);padding:14px;border-color:var(--line)}
 label{display:block}
 #answer-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
 #answer-message{color:var(--amber)}
 pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 ui-monospace,monospace;max-height:350px;overflow:auto}
 .evidence{margin-top:20px}
-.evidence summary{cursor:pointer}
+.evidence summary{cursor:pointer;min-height:44px;padding:10px 0}
 #history{padding:20px 8px}
 .timeline{display:flex;gap:30px;overflow:auto;list-style:none;padding:55px 15px 38px;position:relative}
 .timeline li{min-width:170px;text-align:center;position:relative}
 .timeline li:after{content:"";position:absolute;top:24px;left:110px;width:100%;border-top:4px dotted var(--line);z-index:-1}
 .timeline li:last-child:after{display:none}
-.mini-planet{display:block;width:50px;height:50px;margin:0 auto 18px;border:3px solid var(--ink);border-radius:50%;background:var(--line);box-shadow:0 4px 0 var(--ink)}
-.mini-planet.passed{background:var(--mint)}
-.mini-planet.current{background:var(--violet)}
-.mini-planet.returned{background:var(--coral)}
-.mini-planet.waiting_for_you{background:var(--amber)}
+.mini-planet{display:block;width:50px;height:50px;margin:0 auto 18px;border:3px solid var(--ink);border-radius:50%;background:#332a46;box-shadow:0 4px 0 var(--ink);font-size:36px;line-height:44px;color:var(--paper)}
+.mini-planet.passed{background:var(--mint);color:var(--ink)}
+.mini-planet.waiting_for_you{background:var(--amber);color:var(--ink)}
+.mini-planet.current{background:var(--violet);color:var(--ink)}
+.mini-planet.returned{border:0;background:transparent;box-shadow:none;position:relative}
+.mini-planet.returned:before{content:"";position:absolute;left:9px;top:4px;width:40px;height:17px;background:var(--coral);clip-path:polygon(0 40%,100% 0,60% 100%,0 90%);transform:rotate(-34deg)}
+.mini-planet.returned:after{content:"";position:absolute;left:7px;top:25px;width:12px;height:12px;border:3px solid var(--ink);border-radius:50%;background:var(--paper)}
+.mini-planet.waiting_for_you{outline:3px solid var(--amber);outline-offset:4px}
 .history-grid{display:grid;grid-template-columns:1.2fr 1.2fr 1fr;gap:24px}
 .empty{padding:25px 0}
 .skip{position:absolute;left:12px;top:-80px;background:var(--paper);color:var(--ink);padding:10px;z-index:10}
@@ -151,6 +162,25 @@ header{padding-top:16px;padding-bottom:8px}
 button:hover{transform:none}
 }
 
+
+.goal-label{display:block;text-align:center;width:100px;color:var(--muted);font-size:14px}
+.moon-label .node-caption{display:none;top:50%;bottom:auto;left:56px;transform:translateY(-50%);width:180px;background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:7px;z-index:30}
+.moon-label:hover .node-caption,.moon-label:focus .node-caption,.moon-label.show-moon .node-caption{display:block}
+.moon-label strong{font-size:12px}
+.moon-label small{font-size:11px}
+.gate-hit{position:relative;width:44px;height:44px;padding:0;border:2px solid transparent;background:transparent;box-shadow:none;border-radius:12px;color:var(--ink)}
+.gate-hit:hover,.gate-hit:focus-visible{transform:none;border-color:var(--amber);background:#ffd16622;box-shadow:none}
+.failed-badge,.comet-count{position:absolute;top:-9px;right:-10px;min-width:22px;height:22px;padding:0 4px;background:var(--coral);border:2px solid var(--ink);border-radius:50%;color:var(--ink);font-size:12px;font-weight:800;line-height:18px;text-align:center}
+.comet-count{position:static;display:block}
+.constellation .lesson{position:relative;margin-left:25px;box-shadow:none}
+.constellation .lesson:before{content:"✦";position:absolute;left:-32px;top:18px;color:var(--amber);font-size:23px;z-index:1}
+.constellation .lesson:not(:last-child):after{content:"";position:absolute;left:-22px;top:30px;bottom:-46px;width:1px;background:var(--line)}
+.file-choices{display:flex;gap:12px;flex-wrap:wrap}
+.file-choices>div{min-width:0;max-width:100%}
+.file-path{display:block;overflow-wrap:anywhere;margin:8px 0;color:#78668f}
+.file-reader{background:var(--paper);color:var(--ink);border:2px solid #cdbfe0;border-radius:12px;padding:20px;max-height:480px;max-width:100%;font:14px/1.8 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;tab-size:4}
+#decision .file-reader{max-width:78ch}
+@media(max-width:760px){.map-scene{min-width:900px}.file-reader{padding:12px;font-size:13px}}
 </style>
 <script type="module" nonce="__NONCE__" src="/static/page.js"></script>
 </head>

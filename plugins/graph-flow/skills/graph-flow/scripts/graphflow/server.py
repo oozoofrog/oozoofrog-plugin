@@ -1,4 +1,5 @@
 """Loopback human decision surface (references/dashboard.md)."""
+import codecs
 import hmac
 import json
 import os
@@ -225,8 +226,11 @@ def _view(current, derived, events, project):
     nodes = {n["id"]: n for n in current.get("nodes", [])}
     opened = decisions.open_decisions(derived)
     view = {"title": _text(current.get("title"), _text(current.get("goal"))), "nodes": [],
+            "language": "ko" if re.search(r"[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]",
+                " ".join([_text(current.get("title"))] +
+                         [_text(n.get(k)) for n in nodes.values() for k in ("title", "summary")])) else "en",
             "edges": [], "decisions": [], "lessons": [],
-            "counts": dict.fromkeys(("done", "doing", "waiting", "needs_you", "returned"), 0),
+            "counts": dict.fromkeys(("done", "doing", "waiting", "needs_you", "returned", "returns_total"), 0),
             "complete": derived["run"]["status"] == "complete"}
 
     def title(nid):
@@ -247,7 +251,10 @@ def _view(current, derived, events, project):
                        and r.get("target_submission") == submission for r in _objects(st["reviews"]))
         view["nodes"].append({"id": nid, "title": title(nid),
                               "summary": _text(node.get("summary"), _text(node.get("goal"))),
-                              "kind": node["kind"], "status": st["status"],
+                              "kind": node["kind"], "target": node.get("target"), "status": st["status"],
+                              "answered": node["kind"] == "decision" and any(
+                                  d.get("node") == nid and d.get("status") == "answered" and not d.get("stale")
+                                  for d in derived["decisions"].values()),
                               "attempts": st["attempts"], "max_attempts": st["max_attempts"],
                               "lane": st["effective_lane"], "laps": laps,
                               "returned_reasons": reasons, "reviewed_by_other_family": bool(reviewed),
@@ -258,6 +265,7 @@ def _view(current, derived, events, project):
             bucket = "doing" if st["status"] in ("running", "submitted", "unverified") else "waiting"
             view["counts"][bucket] += 1
         view["counts"]["returned"] += int(bool(reasons) and not passed)
+        view["counts"]["returns_total"] += laps.count("returned")
 
     for nid, node in nodes.items():
         edges = [(need["from"], _text(need.get("label"), _text(need.get("artifact"))))
@@ -313,6 +321,7 @@ def _view(current, derived, events, project):
                                   "purpose": (_text(decision.get("kind")) if decision.get("purpose") in (None, "node", "free")
                                               else _text(decision.get("purpose"))),
                                   "record_purpose": _text(decision.get("purpose")),
+                                  "files": _decision_files(decision, derived, project),
                                   "context": context, "verified": verified, "unverified": unverified,
                                   "failed": failed, "trajectory_reasons": _trajectory_reasons(st, observations),
                                   "worker_note": _text(submission.get("notes"), None),
@@ -335,6 +344,97 @@ def _view(current, derived, events, project):
                 node_title = title(source["node"])
             view["lessons"].append({"text": constraint["text"], "node_title": node_title})
     return view
+
+
+def _file_path(project, relative):
+    # Validate the recorded spelling as well as the resolved destination.
+    path = pathlib.PurePosixPath(relative)
+    private = {".git", ".graph-flow"}
+    secrets = {"human.key", "server.json", "registry.json"}
+    if (not relative or "\x00" in relative or "\\" in relative or path.is_absolute()
+            or ".." in path.parts or private.intersection(path.parts) or path.name in secrets):
+        raise _HTTPError(403, "forbidden_path", "this file cannot be opened")
+    root = pathlib.Path(project).resolve()
+    try:
+        target = (root / relative).resolve()
+        parts = target.relative_to(root).parts
+    except (ValueError, OSError, RuntimeError):
+        raise _HTTPError(403, "forbidden_path", "this file cannot be opened")
+    if private.intersection(parts) or target.name in secrets:
+        raise _HTTPError(403, "forbidden_path", "this file cannot be opened")
+    return target
+
+
+def _decision_files(decision, derived, project):
+    st = derived["nodes"].get(decision.get("node")) or {}
+    paths = _strings(_mapping(st.get("submission")).get("changed_files"))
+    paths += _strings(_mapping(decision.get("evidence")).get("files"))
+    files = []
+    for path in dict.fromkeys(paths):
+        try:
+            _file_path(project, path)
+        except _HTTPError:
+            continue
+        files.append({"name": pathlib.PurePosixPath(path).name, "path": path})
+    return files
+
+
+def _open_project_file(project, target):
+    # Walk the resolved path without following replacements between resolve and open.
+    parts = target.relative_to(pathlib.Path(project).resolve()).parts
+    directory = os.open(str(project), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        for part in parts[:-1]:
+            child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
+            os.close(directory)
+            directory = child
+        return os.open(parts[-1] if parts else ".", os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW,
+                       dir_fd=directory)
+    finally:
+        os.close(directory)
+
+
+def _file(run_dir, decision_id, relative):
+    project = store.project_of(run_dir)
+    with store.locked(run_dir / ".lock"):
+        derived = state.derive(store.read_plan(run_dir), store.events(run_dir))
+        decision = derived["decisions"].get(decision_id)
+        if decision is None:
+            raise _HTTPError(404, "unknown_decision", "this decision is unavailable")
+        if decision["status"] != "open" or decision["stale"]:
+            raise _HTTPError(403, "unavailable_decision", "this decision is no longer open")
+        target = _file_path(project, relative)
+        if relative not in [f["path"] for f in _decision_files(decision, derived, project)]:
+            raise _HTTPError(403, "forbidden_path", "this file is not part of this decision")
+        try:
+            fd = _open_project_file(project, target)
+            with os.fdopen(fd, "rb") as stream:
+                info = os.fstat(stream.fileno())
+                if not stat.S_ISREG(info.st_mode):
+                    raise _HTTPError(404, "unknown_file", "this is not a readable text file")
+                # Also refuse renamed hard links to the dashboard's private records.
+                for name in ("human.key", "server.json", "registry.json"):
+                    secret = core.gf_home() / name
+                    if secret.exists() and os.path.samestat(info, secret.stat()):
+                        raise _HTTPError(403, "forbidden_path", "this file cannot be opened")
+                decoder = codecs.getincrementaldecoder("utf-8")("strict")
+                raw, size = bytearray(), 0
+                while True:
+                    chunk = stream.read(64 * 1024)
+                    if not chunk:
+                        decoder.decode(b"", final=True)
+                        break
+                    if b"\x00" in chunk:
+                        raise UnicodeError("binary")
+                    decoder.decode(chunk)
+                    size += len(chunk)
+                    raw.extend(chunk[:max(0, MAX_EVIDENCE - len(raw))])
+        except (OSError, UnicodeError):
+            raise _HTTPError(404, "unknown_file", "this is not a readable UTF-8 text file")
+        if size > MAX_EVIDENCE:
+            marker = b"\n[truncated]\n"
+            return bytes(raw[:MAX_EVIDENCE - len(marker)]).decode("utf-8", errors="ignore").encode("utf-8") + marker
+        return bytes(raw)
 
 
 def _evidence(run_dir, relative):
@@ -493,8 +593,11 @@ try {
                 return self._json(200, _project_list())
             if path == "/api/queue":
                 return self._json(200, _queue())
-            if path in ("/api/run", "/api/evidence"):
+            if path in ("/api/run", "/api/evidence", "/api/file"):
                 run = _run(query.get("project", [None])[0], query.get("run", [None])[0])
+                if path == "/api/file":
+                    return self._send(200, _file(run, query.get("decision", [""])[0],
+                                      query.get("path", [""])[0]), "text/plain; charset=utf-8")
                 if path == "/api/evidence":
                     return self._send(200, _evidence(run, query.get("path", [""])[0]), "text/plain; charset=utf-8")
                 with store.locked(run / ".lock"):

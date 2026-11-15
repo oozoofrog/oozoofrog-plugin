@@ -128,7 +128,8 @@ class ServerTests(unittest.TestCase):
 
     def test_host_and_token_for_every_route(self):
         routes = ["/", "/api/projects", "/api/queue", self.api("/api/run"),
-                  self.api("/api/evidence", path="evidence/missing"), "/not-found"]
+                  self.api("/api/evidence", path="evidence/missing"),
+                  self.api("/api/file", decision=self.asks[0], path="built.txt"), "/not-found"]
         for path in routes:
             for method in ("GET", "POST"):
                 with self.subTest(path=path, method=method):
@@ -474,10 +475,10 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIsNone(data["plan"])
         self.assertEqual(data["ready"], [])
-        self.assertEqual(data["view"], {"title": "", "nodes": [], "edges": [], "decisions": [],
+        self.assertEqual(data["view"], {"title": "", "language": "en", "nodes": [], "edges": [], "decisions": [],
                                       "lessons": [], "complete": False,
                                       "counts": {"done": 0, "doing": 0, "waiting": 0,
-                                                 "needs_you": 0, "returned": 0}})
+                                                 "needs_you": 0, "returned": 0, "returns_total": 0}})
 
     def test_view_mixed_flow_history_context_edges_and_lessons(self):
         project = self.projects[0]
@@ -546,7 +547,7 @@ class ServerTests(unittest.TestCase):
         status, data = self.json_request("GET", "/api/run?" + urlencode({"project": str(project), "run": run.name}))
         self.assertEqual(status, 200)
         view = data["view"]
-        self.assertEqual(set(view), {"title", "nodes", "edges", "decisions", "lessons", "counts", "complete"})
+        self.assertEqual(set(view), {"title", "language", "nodes", "edges", "decisions", "lessons", "counts", "complete"})
         self.assertEqual(view["title"], raw["title"])
         self.assertFalse(view["complete"])
         self.assertEqual([n["id"] for n in view["nodes"]], [n["id"] for n in current["nodes"]])
@@ -569,10 +570,10 @@ class ServerTests(unittest.TestCase):
                                         "purpose": "human_check",
                                             "context": context, "has_evidence": False,
                                             "verified": [], "unverified": ["The wording fits"], "worker_note": None,
-                                        "record_purpose": "human_check", "failed": [], "trajectory_reasons": []}])
+                                        "record_purpose": "human_check", "files": [], "failed": [], "trajectory_reasons": []}])
         self.assertEqual(view["lessons"], [{"text": active["text"], "node_title": "Done"},
                                          {"text": unknown["text"], "node_title": None}])
-        self.assertEqual(view["counts"], {"done": 1, "doing": 1, "waiting": 2, "needs_you": 1, "returned": 1})
+        self.assertEqual(view["counts"], {"done": 1, "doing": 1, "waiting": 2, "needs_you": 1, "returned": 1, "returns_total": 1})
         self.assertNotIn("SECRET_", json.dumps(view))
         self.assertEqual(store.events(run), before)
         revised = json.loads(json.dumps(current))
@@ -604,6 +605,10 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(view["decisions"][0]["node_title"], "choice")
         self.assertEqual(view["decisions"][0]["purpose"], "direction")
         self.assertEqual(view["nodes"][0]["laps"], [])
+        self.assertFalse(view["nodes"][0]["answered"])
+        answered_events = events + [{"seq": 4, "type": "decision.answer", "data": {"id": "d1"}}]
+        self.assertTrue(server._view(current, state.derive(current, answered_events), answered_events,
+                                    self.projects[0])["nodes"][0]["answered"])
         self.assertEqual(view["counts"]["needs_you"], 1)
         free_events = events[:2]
         free_view = server._view(current, state.derive(current, free_events), free_events, self.projects[0])
@@ -621,7 +626,124 @@ class ServerTests(unittest.TestCase):
                     {"seq": 2, "type": "gate.final", "data": {"result": "passed"}}]
         view = server._view(current, state.derive(current, complete), complete, self.projects[0])
         self.assertTrue(view["complete"])
-        self.assertEqual(view["counts"], {"done": 1, "doing": 0, "waiting": 0, "needs_you": 0, "returned": 0})
+        self.assertEqual(view["counts"], {"done": 1, "doing": 0, "waiting": 0, "needs_you": 0, "returned": 0, "returns_total": 0})
+
+    def file_decision(self, paths):
+        return decisions.ask(self.runs[0], "review", "Read the files", "build", None,
+                             "free", {"files": paths}, ACTOR)["id"]
+
+    def test_file_reader_happy_path_and_view_list(self):
+        project, run = self.projects[0], self.runs[0]
+        (project / "guide.md").write_text("# Read me\n안녕하세요 <script>plain text</script>\n", encoding="utf-8")
+        # A current submission and evidence contribute to the same allowlist.
+        with store.transaction(run) as tx:
+            sub = dict(state.derive(tx.plan, tx.events)["nodes"]["build"]["submission"])
+            sub.pop("id", None)
+            sub["changed_files"] = ["built.txt"]
+            tx.append("node.submit", sub, ACTOR)
+        did = self.file_decision(["guide.md", "guide.md", ".graph-flow/secret", "../secret", "human.key"])
+        status, headers, body = self.request("GET", self.api("/api/file", decision=did, path="guide.md"))
+        self.assertEqual((status, body.decode()), (200, (project / "guide.md").read_text()))
+        self.assertEqual(headers["Content-Type"], "text/plain; charset=utf-8")
+        self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
+        self.assertEqual(headers["Cache-Control"], "no-store")
+        _, payload = self.json_request("GET", self.api("/api/run"))
+        d = next(d for d in payload["view"]["decisions"] if d["id"] == did)
+        self.assertEqual(d["files"], [{"name": "built.txt", "path": "built.txt"},
+                                     {"name": "guide.md", "path": "guide.md"}])
+        self.assertEqual(self.request("GET", self.api("/api/file", decision=did, path="built.txt"))[0], 200)
+
+    def test_file_reader_host_internal_symlink_and_replacement(self):
+        project = self.projects[0]
+        (project / "docs").mkdir()
+        (project / "docs" / "guide.txt").write_text("Read inside the project", encoding="utf-8")
+        (project / "guide-link.txt").symlink_to(project / "docs" / "guide.txt")
+        did = self.file_decision(["guide-link.txt"])
+        route = self.api("/api/file", decision=did, path="guide-link.txt")
+        self.assertEqual(self.request("GET", route)[2], b"Read inside the project")
+        self.assert_error(403, "bad_host", "GET", route, headers={"Host": "evil.example"})
+        # The resolved directory can be swapped after validation; open must refuse it.
+        outside = self.root / "outside"
+        outside.mkdir()
+        (outside / "guide.txt").write_text("Outside secret", encoding="utf-8")
+        original_open = server._open_project_file
+        def replace_directory(project_root, target):
+            (project / "docs").rename(project / "old-docs")
+            (project / "docs").symlink_to(outside, target_is_directory=True)
+            return original_open(project_root, target)
+        with mock.patch.object(server, "_open_project_file", side_effect=replace_directory):
+            self.assert_error(404, "unknown_file", "GET", route)
+
+    def test_file_reader_refuses_unsafe_paths_even_when_listed(self):
+        project = self.projects[0]
+        outside = self.root / "outside.txt"
+        outside.write_text("private")
+        (project / "escape.txt").symlink_to(outside)
+        (project / "private-alias").symlink_to(project / ".graph-flow" / "runs")
+        os.link(self.home / "human.key", project / "renamed-key")
+        bad = ["../outside.txt", "docs/../built.txt", str(project / "built.txt"), "bad\x00name", "docs\\file",
+               ".git/config", ".graph-flow/runs/run0/events.jsonl", "nested/.graph-flow/secret",
+               "human.key", "server.json", "registry.json", "escape.txt", "private-alias/run0/events.jsonl", "renamed-key"]
+        did = self.file_decision(bad)
+        for path in bad:
+            with self.subTest(path=path):
+                self.assert_error(403, "forbidden_path", "GET", self.api("/api/file", decision=did, path=path))
+        (project / "not-listed.txt").write_text("unlisted")
+        self.assert_error(403, "forbidden_path", "GET", self.api("/api/file", decision=did, path="not-listed.txt"))
+        # Exact spelling matters; equivalent spellings are not authorized.
+        did = self.file_decision(["built.txt"])
+        self.assert_error(403, "forbidden_path", "GET", self.api("/api/file", decision=did, path="./built.txt"))
+
+    def test_file_reader_requires_current_open_decision_in_selected_run(self):
+        did = self.file_decision(["built.txt"])
+        self.assert_error(401, "unauthorized", "GET", self.api("/api/file", decision=did, path="built.txt"), token=False)
+        self.assert_error(404, "unknown_decision", "GET", self.api("/api/file", decision="d99999", path="built.txt"))
+        self.assert_error(404, "unknown_decision", "GET", self.api("/api/file", index=1, decision=did, path="built.txt"))
+        decisions.answer(self.runs[0], did, "approved", "Read", "dashboard", server.HUMAN)
+        self.assert_error(403, "unavailable_decision", "GET", self.api("/api/file", decision=did, path="built.txt"))
+        stale = self.file_decision(["built.txt"])
+        checks.start(self.runs[0], "build", None, ACTOR)
+        self.assert_error(403, "unavailable_decision", "GET", self.api("/api/file", decision=stale, path="built.txt"))
+
+    def test_file_reader_regular_utf8_and_bounded_output(self):
+        project = self.projects[0]
+        (project / "directory").mkdir()
+        os.mkfifo(project / "fifo")
+        did = self.file_decision(["built.txt", "missing", "directory", "fifo"])
+        for path in ("missing", "directory", "fifo"):
+            self.assert_error(404, "unknown_file", "GET", self.api("/api/file", decision=did, path=path))
+        for raw in (b"\xffbinary", b"text\x00binary", b"x" * (server.MAX_EVIDENCE + 30) + b"\x00", b"x" * server.MAX_EVIDENCE + b"\xff"):
+            (project / "built.txt").write_bytes(raw)
+            self.assert_error(404, "unknown_file", "GET", self.api("/api/file", decision=did, path="built.txt"))
+        (project / "built.txt").write_text("한" * server.MAX_EVIDENCE, encoding="utf-8")
+        status, _, body = self.request("GET", self.api("/api/file", decision=did, path="built.txt"))
+        self.assertEqual(status, 200)
+        self.assertLessEqual(len(body), server.MAX_EVIDENCE)
+        self.assertTrue(body.endswith(b"\n[truncated]\n"))
+        body.decode("utf-8")
+        (project / "built.txt").write_bytes(b"x" * server.MAX_EVIDENCE)
+        self.assertEqual(self.request("GET", self.api("/api/file", decision=did, path="built.txt"))[2], b"x" * server.MAX_EVIDENCE)
+
+    def test_view_language_and_total_returns_survive_later_passes(self):
+        current = {"title": "English", "nodes": [{"id": "work", "kind": "work", "title": "Task", "summary": "Summary", "checks": []},
+                    {"id": "other", "kind": "work", "title": "Other", "summary": "Summary", "checks": []}]}
+        events = []
+        for nid in ("work", "other"):
+            for attempt, verdict in ((1, "reject"), (2, "pass")):
+                events.append({"seq":len(events)+1,"type":"node.start","data":{"node":nid,"attempt":attempt}})
+                events.append({"seq":len(events)+1,"type":"gate.verdict","data":{"node":nid,"attempt":attempt,"verdict":verdict}})
+        normalized, _ = plan.normalize(dict(current, schema_version=1, goal="English"))
+        derived = state.derive(normalized, events)
+        def view():
+            return server._view(normalized, derived, events, self.projects[0])
+        self.assertEqual(view()["counts"]["returns_total"], 2)
+        self.assertEqual(view()["counts"]["returned"], 0)
+        self.assertEqual(view()["language"], "en")
+        for container, key in ((normalized,"title"),(normalized["nodes"][0],"title"),(normalized["nodes"][1],"summary")):
+            original = container[key]
+            container[key] = "한국어"
+            self.assertEqual(view()["language"], "ko")
+            container[key] = original
 
     def test_evidence_confinement_text_and_truncation(self):
         run = self.runs[0]
@@ -706,7 +828,8 @@ class ServerTests(unittest.TestCase):
                     for root in (self.home,) + tuple(self.projects)
                     for p in root.rglob("*") if p.is_file()}
         before = digest()
-        for route in ("/api/projects", "/api/queue", self.api("/api/run")):
+        for route in ("/api/projects", "/api/queue", self.api("/api/run"),
+                      self.api("/api/file", decision=self.asks[0], path="built.txt")):
             self.assertEqual(self.request("GET", route)[0], 200)
         self.assertEqual(digest(), before)
         self.assertFalse((self.home / "server.json").exists())

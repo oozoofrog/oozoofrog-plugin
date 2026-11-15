@@ -19,8 +19,8 @@ const STRINGS = {
     "needs_you": "내 결정을 기다림",
     "returned": "고치러 돌아옴",
     "legend": "읽는 법",
-    "ringLegend": "고리 한 칸은 한 번의 시도예요. 세 번까지 해 봐요.",
-    "gateLegend": "문은 검사나 내 승인이에요. 노란 문은 나를 기다려요.",
+    "ringLegend": "고리 = 시도. 실선은 썼고 점선은 아직이에요.",
+    "gateLegend": "문 = 검사나 승인.",
     "socketLegend": "받는 쪽의 작은 동그라미는 채워지면 전달된 거예요.",
     "now": "지금",
     "whyReturned": "통과하지 못한 확인",
@@ -75,10 +75,10 @@ const STRINGS = {
     "retry": "다시 연결",
     "loading": "흐름을 읽고 있어요…",
     "fallback": "그림을 그릴 수 없어 목록으로 보여 드려요. 모든 결정은 여기서 할 수 있어요.",
-    "lessons": "배운 것",
+    "lessons": "별자리 · 배운 것",
     "noLessons": "아직 기록된 배움이 없어요.",
     "planOrder": "전체 시간 순서는 기록에서 알 수 없어 계획 순서로 보여 드려요. 각 일의 시도는 일어난 순서예요.",
-    "returns": "통과하지 못한 확인",
+    "returns": "혜성 · 돌아온 일",
     "complete": "모든 흐름이 끝났어요!",
     "waitingBubble": "읽어 주세요!",
     "attemptBubble": "{n}번째 시도예요",
@@ -111,7 +111,16 @@ const STRINGS = {
     "used_all_attempts": "세 번의 시도를 모두 썼어요.",
     "timed_out": "정해진 시간을 넘겼어요.",
     "left_its_files": "맡은 파일의 범위를 벗어났어요.",
-    "untitledFailure": "설명이 없는 확인 하나가 통과하지 못했어요."
+    "untitledFailure": "설명이 없는 확인 하나가 통과하지 못했어요.",
+    "readThis": "이 파일을 읽어 주세요",
+    "openFile": "파일 읽기",
+    "fileFailed": "지금은 읽을 수 있는 글 파일이 아니에요. 흐름을 새로 읽고 다시 해 주세요.",
+    "noFiles": "이 결정에 적힌 파일이 없어요.",
+    "returnTimes": "돌아온 횟수 {n}번",
+    "colourLegend": "색 = 끝남 · 진행 · 내 차례 · 대기.",
+    "moonLegend": "달 = 검토.",
+    "cometLegend": "혜성 = 고치러 돌아옴.",
+    "goal": "목표"
   },
   "en": {
     "flow": "Whole flow",
@@ -132,8 +141,8 @@ const STRINGS = {
     "needs_you": "Waiting for you",
     "returned": "Came back",
     "legend": "How to read it",
-    "ringLegend": "Each ring segment is one attempt, up to three.",
-    "gateLegend": "A gate is a check or approval. Amber waits for you.",
+    "ringLegend": "Ring = attempts: solid used, dashed unused.",
+    "gateLegend": "Gate = check or approval.",
     "socketLegend": "A filled socket means the handoff has arrived.",
     "now": "Now",
     "whyReturned": "Checks that did not pass",
@@ -188,10 +197,10 @@ const STRINGS = {
     "retry": "Reconnect",
     "loading": "Reading the flow…",
     "fallback": "The map is unavailable, so here is the list. All decisions still work.",
-    "lessons": "What we learned",
+    "lessons": "Constellation · what we learned",
     "noLessons": "No lessons recorded yet.",
     "planOrder": "The overall time order is unknown, so this follows plan order. Each task’s attempts are in their recorded order.",
-    "returns": "Checks that did not pass",
+    "returns": "Comets · what came back",
     "complete": "The whole flow is complete!",
     "waitingBubble": "Please read this.",
     "attemptBubble": "On attempt {n}.",
@@ -224,7 +233,16 @@ const STRINGS = {
     "used_all_attempts": "All three attempts were used.",
     "timed_out": "A check exceeded its time limit.",
     "left_its_files": "Work went beyond its assigned files.",
-    "untitledFailure": "A check without a description did not pass."
+    "untitledFailure": "A check without a description did not pass.",
+    "readThis": "Read this",
+    "openFile": "Open file",
+    "fileFailed": "This file is no longer available as readable text. Refresh the flow and try again.",
+    "noFiles": "No files are listed for this decision.",
+    "returnTimes": "Came back {n} times",
+    "colourLegend": "Colour = done · active · you · waiting.",
+    "moonLegend": "Moon = review.",
+    "cometLegend": "Comet = came back.",
+    "goal": "Goal"
   }
 };
 // UI_STRINGS_END
@@ -308,8 +326,108 @@ export function createDecisionController() {
   return controller;
 }
 
+export function viewLanguage(view, browser = 'en') {
+  return view ? view.language === 'ko' ? 'ko' : 'en' : browser.toLowerCase().startsWith('ko') ? 'ko' : 'en';
+}
+export function cometCount(node) { return (node.laps || []).filter(lap => lap === 'returned').length; }
+export function failedBadgeCount(node, decisions) {
+  return (decisions.find(d => d.node === node.id)?.failed || []).length;
+}
+export function attemptSegments(laps, maxAttempts = 3, status = '') {
+  return Array.from({length:maxAttempts}, (_,i) => ({state:laps[i] || 'unused', used:!!laps[i],
+    thickness:laps[i] ? 3.2 : .7, opacity:laps[i] ? 1 : status === 'passed' ? .12 : .6}));
+}
+export function transferPoint(route, t) {
+  const u = 1 - t;
+  return {x:u*u*route.start.x + 2*u*t*route.control.x + t*t*route.end.x,
+          y:u*u*route.start.y + 2*u*t*route.control.y + t*t*route.end.y};
+}
+export function crossingCount(routes, positions) {
+  const cross = (a,b,c) => (b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+  let count=0;
+  routes.forEach((e,i) => routes.slice(i+1).forEach(f => {
+    const a=positions[e.from],b=positions[e.to],c=positions[f.from],d=positions[f.to];
+    if(a&&b&&c&&d&&new Set([e.from,e.to,f.from,f.to]).size===4&&cross(a,b,c)*cross(a,b,d)<0&&cross(c,d,a)*cross(c,d,b)<0)count++;
+  }));
+  return count;
+}
+export function layeredLayout(nodes, edges, decisions = [], sort = true) {
+  const byId=new Map(nodes.map(n=>[n.id,n])), parents=new Map(nodes.map(n=>[n.id,[]]));
+  edges.forEach(e=>{if(byId.has(e.from))parents.get(e.to)?.push(e.from);});
+  const depths=new Map();
+  function depth(id, seen = new Set()) {
+    if(depths.has(id))return depths.get(id);
+    if(seen.has(id))return 0;
+    const next=new Set(seen);next.add(id);
+    const d=Math.max(0,...parents.get(id).map(p=>depth(p,next)+1));depths.set(id,d);return d;
+  }
+  nodes.forEach(n=>depth(n.id));
+  const layers=[];
+  for(const n of nodes.filter(n=>n.kind!=='review'))(layers[depths.get(n.id)] ||= []).push(n.id);
+  const workEdges=edges.filter(e=>byId.get(e.from)?.kind!=='review'&&byId.get(e.to)?.kind!=='review');
+  const titleLines=n=>Math.max(1,Math.ceil(Array.from(n.title||'').length/12));
+  const moonCounts=nodes.filter(n=>n.kind==='review').map(n=>nodes.filter(m=>m.kind==='review'&&m.target===n.target).length);
+  const rowGap=Math.max(290,...nodes.map(n=>titleLines(n)*44+150),...moonCounts.map(n=>n*150+200));
+  let positions={};
+  function place() {
+    positions={};layers.forEach((ids,d)=>ids.forEach((id,i)=>{positions[id]={x:d*300,y:((ids.length-1)/2-i)*rowGap,depth:d,layer:d};}));
+  }
+  function cost() {
+    return crossingCount(workEdges,positions)*1e7+workEdges.reduce((sum,e)=>sum+Math.abs((positions[e.from]?.y||0)-(positions[e.to]?.y||0)),0);
+  }
+  place();
+  if(sort)for(let sweep=0;sweep<6;sweep++) {
+    const order=layers.map((_,d)=>d);if(sweep%2)order.reverse();
+    for(const d of order) {
+      const ids=layers[d];if(!ids)continue;
+      const bary=id=>{const neighbours=workEdges.filter(e=>sweep%2?e.from===id:e.to===id).map(e=>positions[sweep%2?e.to:e.from]?.y).filter(y=>y!==undefined);return neighbours.length?neighbours.reduce((a,b)=>a+b,0)/neighbours.length:positions[id].y;};
+      const before=cost(),old=[...ids];ids.sort((a,b)=>bary(b)-bary(a));place();
+      if(cost()>before){layers[d]=old;place();}
+    }
+  }
+  const moons=new Map();
+  for(const n of nodes.filter(n=>n.kind==='review')) {
+    const target=n.target||parents.get(n.id)[0];if(!moons.has(target))moons.set(target,[]);moons.get(target).push(n);
+  }
+  for(const [target,children]of moons) {
+    const p=positions[target]||{x:0,y:0};
+    children.forEach((n,i)=>{positions[n.id]={x:p.x+190,y:p.y+110+i*150,depth:depths.get(n.id),satelliteOf:target};});
+  }
+  const labels=Object.entries(positions).filter(([id])=>byId.get(id).kind!=='review').map(([id,p])=>{
+    const lines=titleLines(byId.get(id));
+    return {node:id,left:p.x-110,right:p.x+110,top:p.y-68,bottom:p.y-100-lines*44};
+  });
+  const gates=[],routes=[];
+  const free=p=>gates.every(g=>Math.hypot(g.x-p.x,g.y-p.y)>=100)&&Object.values(positions).every(n=>Math.hypot(n.x-p.x,n.y-p.y)>=88)&&labels.every(l=>p.x<l.left-28||p.x>l.right+28||p.y>l.top+28||p.y<l.bottom-28);
+  for(const e of workEdges) {
+    const a=positions[e.from],b=positions[e.to];if(!a||!b)continue;
+    const route={...e,gateState:decisions.some(d=>d.node===e.from)?'waiting_for_you':e.gate,start:{x:a.x+66,y:a.y},end:{x:b.x-66,y:b.y}};
+    let found=false;
+    for(let bend=0;!found;bend++) {
+      const offset=bend===0?20:Math.ceil(bend/2)*44*(bend%2?1:-1);
+      route.control={x:(a.x+b.x)/2,y:(a.y+b.y)/2+offset};
+      for(const t of [.5,.35,.65,.23,.77]){const p=transferPoint(route,t);if(free(p)){route.gate={...p,t};gates.push(p);found=true;break;}}
+    }
+    routes.push(route);
+  }
+  const nodeGates=[];
+  for(const n of nodes) {
+    if(n.kind==='review'||n.kind==='decision'||routes.some(r=>r.from===n.id)||(!cometCount(n)&&!decisions.some(d=>d.node===n.id)))continue;
+    const p=positions[n.id];let gate={x:p.x+120,y:p.y};
+    while(!free(gate))gate.y+=75;
+    const state=decisions.some(d=>d.node===n.id)?'waiting_for_you':n.status==='passed'?'open':'returned';
+    nodeGates.push({...gate,node:n.id,state});gates.push(gate);
+  }
+  const goal={x:Math.max(0,...Object.values(positions).map(p=>p.x))+270,y:0};
+  const terminals=nodes.filter(n=>n.kind!=='review'&&!workEdges.some(e=>e.from===n.id)).map(n=>n.id);
+  const points=[goal,...Object.values(positions),...routes.flatMap(r=>[r.control,r.gate]),...nodeGates];
+  const minX=Math.min(0,...points.map(p=>p.x))-125,maxX=Math.max(...points.map(p=>p.x))+125,minY=Math.min(0,...points.map(p=>p.y),...labels.map(l=>l.bottom))-70,maxY=Math.max(0,...points.map(p=>p.y))+200;
+  const order=layers.flatMap(ids=>ids.flatMap(id=>[id,...(moons.get(id)||[]).map(n=>n.id)]));
+  return {positions,layers,order,labels,routes,nodeGates,goal,terminals,bounds:{cx:(minX+maxX)/2,cy:(minY+maxY)/2,width:maxX-minX,height:maxY-minY}};
+}
+
 if (typeof document !== 'undefined') {
-const language = navigator.language.toLowerCase().startsWith('ko') ? 'ko' : 'en';
+let language = viewLanguage(null, navigator.language);
 const t = (key, values = {}) => Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, String(value)), STRINGS[language][key]);
 const $ = id => document.getElementById(id);
 const el = (tag, text, cls) => { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return e; };
@@ -325,10 +443,13 @@ try {
 } catch { /* Storage may be unavailable; the printed address still works. */ }
 startup.searchParams.delete('t');
 history.replaceState(null, '', startup.pathname + startup.search + startup.hash);
-document.documentElement.lang = language;
-document.querySelectorAll('[data-i18n]').forEach(e => { e.textContent = t(e.dataset.i18n); });
-document.querySelector('nav').setAttribute('aria-label', t('flow'));
-$('map').setAttribute('aria-label', t('flow'));
+function translate() {
+  document.documentElement.lang = language;
+  document.querySelectorAll('[data-i18n]').forEach(e => { e.textContent = t(e.dataset.i18n); });
+  document.querySelector('nav').setAttribute('aria-label', t('flow'));
+  $('map').setAttribute('aria-label', t('flow'));
+}
+translate();
 let chosen = null, projects = [], view = null, fingerprint = '', mode = 'flow', selected = null;
 let mapFailed = false, queuedRefresh = false;
 let timer = 0, loading = false, generation = 0, renderer = null;
@@ -369,7 +490,7 @@ function card(heading, body, paper = false) { const c = el('div', undefined, 'ca
 function textList(parent, items, empty = 'notRecorded') { const list = el('ul'); if (!items.length) list.append(el('li', t(empty))); else items.forEach(text => list.append(el('li', text))); parent.append(list); }
 function countCard() {
   const c = card(t('counts')); const list = el('ul', undefined, 'count-list');
-  for (const key of ['done','doing','needs_you','waiting','returned']) { const item = el('li'); item.append(el('span', undefined, 'dot ' + key), el('span', `${t(key)} ${view.counts[key]}`)); list.append(item); }
+  for (const key of ['done','doing','needs_you','waiting','returned']) { const item = el('li'); item.append(el('span', undefined, 'dot ' + key), el('span', key === 'returned' ? t('returnTimes', {n:view.counts.returns_total ?? 0}) : `${t(key)} ${view.counts[key]}`)); list.append(item); }
   c.append(list); return c;
 }
 function failedBlock(parent, d) {
@@ -379,7 +500,6 @@ function failedBlock(parent, d) {
 }
 function decisionCard(d) {
   const c = card(t('yourTurn'), null, true); decisionHeading(c, d, 'h3'); failedBlock(c, d); if (d.context.why) c.append(el('p', d.context.why));
-  for (const key of ['if_approved','if_rejected','undo']) { if (d.context[key]) { c.append(el('small', t({if_approved:'ifApproved',if_rejected:'ifRejected',undo:'undo'}[key])), el('p', d.context[key])); } }
   c.append(button(t('read'), () => openDecision(d.id), 'amber')); return c;
 }
 function handoffsCard(key, rows, direction) {
@@ -391,23 +511,27 @@ function handoffsCard(key, rows, direction) {
 function panel() {
   const p = $('panel'); clear(p);
   const node = view.nodes.find(n => n.id === selected);
-  p.append(el('p', t(node ? 'now' : 'yourTurn'), 'eyebrow'), el('h2', node ? title(node) : t(view.decisions.length ? 'needsYou' : 'counts')));
-  if (node) {
-    p.append(card(t('now'), `${status(node)}. ${attempts(node)}. ${node.summary}`, true));
-    const reasons = card(t('whyReturned'), null, true); textList(reasons, node.returned_reasons.flat(), node.returned_reasons.length ? 'noReason' : 'noReturns'); p.append(reasons);
-    p.append(handoffsCard('received', node.inputs, 'from'), handoffsCard('outputs', node.outputs, 'to'));
-    const ds = view.decisions.filter(d => d.node === node.id); ds.forEach(d => p.append(decisionCard(d)));
-    if (!ds.length) p.append(card(t('yourTurn'), t('noAction')));
-    p.append(button(t('flow'), wholeFlow, 'primary'));
-  } else {
-    view.decisions.forEach(d => p.append(decisionCard(d)));
-    if (!view.decisions.length) p.append(el('p', t('nothing')));
-    p.append(countCard()); const legend = el('div', undefined, 'legend'); legend.append(el('p', t('legend'), 'eyebrow')); for (const key of ['ringLegend','gateLegend','socketLegend']) legend.append(el('p', t(key))); p.append(legend);
+  p.append(el('p', t('yourTurn'), 'eyebrow'), el('h2',t(view.decisions.length ? 'needsYou' : 'counts')));
+  view.decisions.forEach(d => p.append(decisionCard(d)));
+  if (!view.decisions.length) p.append(el('p',t('nothing')));
+  p.append(countCard());
+  const legend=el('div',undefined,'legend');
+  for(const key of ['colourLegend','ringLegend','moonLegend','cometLegend','gateLegend']) {
+    const line=el('p',t(key));
+    if(key==='colourLegend')for(const state of ['done','doing','needs_you','waiting'])line.append(el('span',undefined,'dot '+state));
+    legend.append(line);
+  }
+  p.append(legend);
+  if(node) {
+    p.append(el('h2',title(node)),card(t('now'),`${status(node)}. ${attempts(node)}. ${node.summary}`,true));
+    const reasons=card(t('whyReturned'),null,true);textList(reasons,node.returned_reasons.flat(),node.returned_reasons.length?'noReason':'noReturns');p.append(reasons);
+    p.append(handoffsCard('received',node.inputs,'from'),handoffsCard('outputs',node.outputs,'to'),button(t('flow'),wholeFlow,'primary'));
   }
 }
 function accessible() {
   clear($('node-list')); clear($('edge-list')); clear($('decision-list'));
-  view.nodes.forEach(n => { const item = el('li', undefined, 'card'); item.append(button(title(n), () => selectNode(n.id)), el('p', status(n)), el('p', attempts(n), 'muted'), el('p', n.summary)); if (n.returned_reasons.length) textList(item, n.returned_reasons.flat(), 'noReason'); $('node-list').append(item); });
+  const order = layeredLayout(view.nodes,view.edges,view.decisions).order;
+  [...view.nodes].sort((a,b)=>order.indexOf(a.id)-order.indexOf(b.id)).forEach(n => { const item = el('li', undefined, 'card'); item.append(button(title(n), () => selectNode(n.id)), el('p', status(n)), el('p', attempts(n), 'muted'), el('p', n.summary)); if (n.returned_reasons.length) textList(item, n.returned_reasons.flat(), 'noReason'); $('node-list').append(item); });
   view.edges.forEach(e => { const a = view.nodes.find(n => n.id === e.from), b = view.nodes.find(n => n.id === e.to); $('edge-list').append(el('li', `${title(a)} → ${title(b)} · ${label(e.label)} · ${t(e.delivered ? 'delivered' : 'notDelivered')}`)); });
   view.decisions.forEach(d => { const item = el('li'); item.append(button(t('read'), () => openDecision(d.id))); decisionHeading(item, d, 'h3'); failedBlock(item, d); if (d.context.why) item.append(el('p', d.context.why)); $('decision-list').append(item); });
   if (!view.decisions.length) $('decision-list').append(el('li', t('nothing')));
@@ -473,6 +597,28 @@ function openDecision(id, focus = true) {
   else { approveButton = actionButton('approved', '', 'primary'); actions.append(approveButton, actionButton('revision_requested', t('sendBack'))); }
   const backButton = button(t('flow'), wholeFlow); actions.append(backButton); reading.append(actions);
   const right = el('div'), surrounding = el('div'); right.append(surrounding);
+  const files = card(t('readThis'), null, true), fileChoices = el('div', undefined, 'file-choices'), reader = el('pre', undefined, 'file-reader');
+  reader.hidden = true; reader.tabIndex = 0; reader.setAttribute('aria-label',t('readThis'));
+  const fileStatus = el('p'); fileStatus.setAttribute('role','status');
+  files.append(fileChoices, fileStatus, reader); right.append(files);
+  let fileFingerprint = '', fileRequest = 0;
+  const updateFiles = decision => {
+    const signature = JSON.stringify(decision.files || []); if (signature === fileFingerprint) return;
+    fileFingerprint = signature; fileRequest++; clear(fileChoices); reader.hidden = true;
+    fileStatus.textContent = decision.files?.length ? '' : t('noFiles');
+    for (const file of decision.files || []) {
+      const entry = el('div'); entry.append(button(file.name, async () => {
+        if (!current()) return;
+        const request = ++fileRequest; fileStatus.textContent = t('loading'); reader.hidden = true;
+        try {
+          const text = await api(query('/api/file', {decision:session.target.id,path:file.path}, session.target), null, true);
+          if (!current() || request !== fileRequest) return;
+          reader.textContent = text; reader.hidden = false; fileStatus.textContent = ''; reader.setAttribute('aria-label',file.name);
+          decisionController.openDetails(); updateActions();
+        } catch { if (current() && request === fileRequest) fileStatus.textContent = t('fileFailed'); }
+      }), el('small',file.path,'file-path')); fileChoices.append(entry);
+    }
+  };
   const details = el('details', undefined, 'evidence'); details.append(el('summary', t('details'))); const raw = el('pre');
   details.open = session.detailsOpened;
   const markDetailsOpened = () => { if (current() && details.open) { decisionController.openDetails(); updateActions(); } };
@@ -499,6 +645,7 @@ function openDecision(id, focus = true) {
     const decision = session.decision;
     clear(introduction); decisionHeading(introduction, decision, 'h2'); const heading = introduction.querySelector('h2'); heading.id = 'decision-title';
     const node = view.nodes.find(n => n.id === decision.node); if (node) introduction.append(el('p', node.summary));
+    updateFiles(decision);
     note.textContent = decision.worker_note || t('notRecorded');
     clear(outcomes); outcomes.append(el('p', t('choiceEffects'), 'eyebrow'));
     for (const [key, name] of [['if_approved','ifApproved'],['if_rejected','ifRejected'],['undo','undo']]) outcomes.append(el('small', t(name)), el('p', decision.context[key] || t('notRecorded')));
@@ -516,18 +663,19 @@ function historyView() {
   const strip = el('ol', undefined, 'timeline');
   view.nodes.forEach(n => {
     const laps = n.laps.length ? n.laps : [needs(n) ? 'waiting_for_you' : 'unused'];
-    laps.forEach((lap, i) => { const item = el('li'); item.append(el('span', undefined, 'mini-planet ' + lap), button(title(n), () => selectNode(n.id)), el('p', lap === 'returned' ? t('returned') : lap === 'passed' ? t('passed') : status(n), 'muted')); if (n.laps.length) item.append(el('small', t('attempt', {n:i + 1, max:n.max_attempts}))); strip.append(item); });
+    laps.forEach((lap, i) => { const item = el('li'); item.append(el('span', lap === 'returned' ? '' : n.kind === 'review' ? '☾' : n.kind === 'decision' ? '▣' : '', 'mini-planet ' + lap), button(title(n), () => selectNode(n.id)), el('p', lap === 'returned' ? t('returned') : lap === 'passed' ? t('passed') : status(n), 'muted')); if (n.laps.length) item.append(el('small', t('attempt', {n:i + 1, max:n.max_attempts}))); strip.append(item); });
   }); box.append(strip);
   const grid = el('div', undefined, 'history-grid'); const returns = el('div'); returns.append(el('h3', t('returns')));
   view.nodes.filter(n => n.returned_reasons.length).forEach(n => { const c = card(title(n), null, true); textList(c, n.returned_reasons.flat(), 'noReason'); returns.append(c); });
   if (!view.nodes.some(n => n.returned_reasons.length)) returns.append(el('p', t('noReturns')));
-  const lessons = el('div'); lessons.append(el('h3', t('lessons'))); view.lessons.forEach(l => { lessons.append(card(l.node_title ? otherTitle(l.node_title) : t('lessons'), l.text)); }); if (!view.lessons.length) lessons.append(el('p', t('noLessons')));
+  const lessons = el('div', undefined, 'constellation'); lessons.append(el('h3', t('lessons'))); view.lessons.forEach(l => { const lesson=card(l.node_title ? otherTitle(l.node_title) : t('lessons'), l.text); lesson.classList.add('lesson'); lessons.append(lesson); }); if (!view.lessons.length) lessons.append(el('p', t('noLessons')));
   const counts = el('div'); counts.append(countCard(), button(t('flow'), wholeFlow, 'primary')); grid.append(returns, lessons, counts); box.append(grid);
 }
 function applyView(next) {
   if (decisionController.session?.busy) return;
   closeInvalidDecision(chosen, next.decisions);
   const nextFingerprint = JSON.stringify(next); if (nextFingerprint === fingerprint) return;
+  language = viewLanguage(next, navigator.language); translate();
   view = next; fingerprint = nextFingerprint; showMode(mode); if (!view.nodes.some(n => n.id === selected)) selected = null;
   $('title').textContent = view.title || t('brand'); $('subtitle').textContent = view.complete ? t('complete') : t('overview', {total:view.nodes.length, done:view.counts.done, needs:view.counts.needs_you});
   accessible(); panel(); if (renderer) renderer.update(view, selected);
@@ -567,7 +715,7 @@ async function refresh(force = false) {
   } catch (error) { if (currentGeneration === generation) notice(error.status === 401 ? 'unauthorized' : error.status === 400 || error.status === 404 || error.status === 500 ? 'unreadable' : 'lost', true); }
   finally { loading = false; if (queuedRefresh) { queuedRefresh = false; refresh(true); } else schedule(); }
 }
-function resetView() { closeInvalidDecision(chosen, []); view = null; selected = null; fingerprint = ''; ['node-list','edge-list','decision-list','panel'].forEach(id => clear($(id))); if (renderer) renderer.update({nodes:[],edges:[],decisions:[],complete:false}, null); $('flow').hidden = true; $('history').hidden = true; $('decision').hidden = true; $('subtitle').textContent = ''; }
+function resetView() { language = viewLanguage(null, navigator.language); translate(); closeInvalidDecision(chosen, []); view = null; selected = null; fingerprint = ''; ['node-list','edge-list','decision-list','panel'].forEach(id => clear($(id))); if (renderer) renderer.update({nodes:[],edges:[],decisions:[],complete:false}, null); $('flow').hidden = true; $('history').hidden = true; $('decision').hidden = true; $('subtitle').textContent = ''; }
 function schedule() { clearTimeout(timer); if (!document.hidden) timer = setTimeout(refresh, 2000); }
 $('flow-tab').addEventListener('click', () => { if (view) wholeFlow(); });
 $('history-tab').addEventListener('click', () => { if (view) historyView(); });
@@ -579,7 +727,7 @@ notice('loading'); refresh();
 async function createMap() {
   const THREE = await import('/static/vendor/three.module.min.js');
   const {CSS2DRenderer, CSS2DObject} = await import('/static/vendor/CSS2DRenderer.js');
-  const host = $('map');
+  const host = el('div', undefined, 'map-scene'); $('map').append(host);
   const webgl = new THREE.WebGLRenderer({antialias:true, alpha:false});
   webgl.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); webgl.setClearColor('#221a38');
   webgl.domElement.setAttribute('aria-hidden','true');
@@ -610,89 +758,133 @@ async function createMap() {
     const material = new THREE.SpriteMaterial({map:textures[pose],transparent:true,depthTest:false});
     const sprite = new THREE.Sprite(material); sprite.scale.set(82,82,1); sprite.center.set(.5,0); sprite.position.copy(position); sprite.renderOrder = 10; group.add(sprite);
     const bubble = cssObject(el('div', sentence, 'speech'), position.clone().add(new THREE.Vector3(25,88,0)));
-    frogs.push({sprite,bubble,walkingNode,pose,base:position.clone()});
+    const entry={sprite,bubble,walkingNode,pose,base:position.clone()};frogs.push(entry);return entry;
   }
-  function layout() {
-    const parents = new Map(data.nodes.map(n => [n.id,[]])); data.edges.forEach(e => parents.get(e.to)?.push(e.from));
-    const depths = new Map();
-    function depth(id, visiting = new Set()) { if (depths.has(id)) return depths.get(id); if (visiting.has(id)) return 0; const seen = new Set(visiting); seen.add(id); const value = Math.max(0,...(parents.get(id) || []).map(p => depth(p,seen) + 1)); depths.set(id,value); return value; }
-    const layers = new Map(); data.nodes.forEach(n => { const d = depth(n.id); if (!layers.has(d)) layers.set(d,[]); layers.get(d).push(n); });
-    const positions = new Map();
-    layers.forEach((nodes,d) => nodes.forEach((n,i) => positions.set(n.id,new THREE.Vector3(d * 300,((nodes.length-1)/2-i)*450,0))));
-    const positionsArray = [...positions.values()]; const xs = positionsArray.map(p => p.x), ys = positionsArray.map(p => p.y);
-    const minX = Math.min(0,...xs), maxX = Math.max(0,...xs), minY = Math.min(0,...ys), maxY = Math.max(0,...ys);
-    bounds = {cx:(minX+maxX)/2,cy:(minY+maxY)/2,width:maxX-minX+350,height:maxY-minY+350}; return positions;
+  function comet(parent,x,y,scale=1) {
+    const object=new THREE.Group();object.position.set(x,y,20);object.scale.setScalar(scale);parent.add(object);
+    const tail=new THREE.Shape();tail.moveTo(-5,3);tail.lineTo(-38,19);tail.lineTo(-21,-4);tail.lineTo(-5,-6);tail.closePath();mesh(new THREE.ShapeGeometry(tail),'#ff9479',object);
+    tube([new THREE.Vector3(-29,11,1),new THREE.Vector3(-10,2,1)],'#ffc2a4',1.5,object);
+    disk(6,ink,0,0,2,object);disk(3.8,'#fff0d6',0,0,3,object);return object;
+  }
+  function dashedRing(radius,from,length,colour,parent,thickness=.8) {
+    for(let i=0;i<9;i++)arc(radius,from+length*i/9,length/16,colour,parent,thickness);
   }
   function dispose() {
-    group.traverse(object => { if (object.isCSS2DObject) object.element.remove(); if (object.geometry) object.geometry.dispose(); if (object.material) object.material.dispose(); });
+    group.traverse(object => { if (object.isCSS2DObject) object.element.remove(); if (object.geometry) object.geometry.dispose(); if (object.material) { if (object.material.map?.isCanvasTexture) object.material.map.dispose(); object.material.dispose(); } });
     scene.remove(group); group = new THREE.Group(); scene.add(group); items = []; routes = []; frogs = []; picks = [];
   }
+  function gateControl(gate,nodeId,state,x) {
+    const n=data.nodes.find(n=>n.id===nodeId),decision=data.decisions.find(d=>d.node===nodeId);
+    const hit=button('',()=>decision?openDecision(decision.id):selectNode(nodeId),'gate-hit');
+    const description=`${title(n)}. ${t(state==='open'?'passed':state==='returned'?'returned':state==='waiting_for_you'?'awaiting':'waiting')}`;
+    hit.title=description;hit.setAttribute('aria-label',description);hit.dataset.flowOrder=String(x);
+    const count=state==='waiting_for_you'?failedBadgeCount(n,data.decisions):0;
+    if(count)hit.append(el('span',String(count),'failed-badge'));
+    cssObject(hit,new THREE.Vector3(0,5,25),gate);
+  }
   function update(next, id) {
-    data = next; chosenNode = id; dispose(); const positions = layout();
-    // Fixed stars are decoration, never event markers.
-    for (let i=0;i<40;i++) { const x = bounds.cx + (Math.sin(i * 9.71) * .5) * bounds.width, y = bounds.cy + Math.cos(i * 7.31) * bounds.height * .47; disk(i%3 ? .8 : 1.6,'#cdbfe0',x,y,-40); }
-    data.nodes.forEach(n => {
-      const pos = positions.get(n.id), root = new THREE.Group(); root.position.copy(pos); group.add(root);
-      const waiting = data.decisions.some(d => d.node === n.id), colour = waiting ? colours.waiting_for_you : n.status === 'passed' ? colours.passed : ['running','submitted','unverified'].includes(n.status) ? colours.current : n.returned_reasons.length ? colours.returned : '#3a2e5a';
-      const outline = mesh(new THREE.SphereGeometry(43.7,32,20),colour === '#3a2e5a' ? '#6a5a8e' : ink,root,true);
-      const planet = new THREE.Mesh(new THREE.SphereGeometry(41,32,20),new THREE.MeshToonMaterial({color:colour,emissive:colour,emissiveIntensity:.5,transparent:true})); root.add(planet); planet.userData.node = n.id; picks.push(planet);
-      // A little face gives the map the same quiet cartoon character as the references.
-      disk(11,'#fff6ea',-14,14,40,root).scale.y=.65;
-      disk(4,ink,-9,-10,41,root); disk(7,ink,16,-7,40,root).scale.y=.75;
-      if(n.status === 'passed') tube([new THREE.Vector3(-13,3,42),new THREE.Vector3(-5,-4,43),new THREE.Vector3(9,12,42)],ink,2.3,root);
-      const ring = new THREE.Group(); root.add(ring);
-      const total = Math.max(1,n.max_attempts || 3);
-      for (let a=0;a<total;a++) arc(59,a*Math.PI*2/total + .14,Math.PI*2/total-.30,colours[n.laps[a] || 'unused'],ring);
-      const labelButton = button('', () => selectNode(n.id), 'planet-label'); labelButton.append(el('strong',title(n)),el('small',status(n))); labelButton.setAttribute('aria-label',`${title(n)}. ${status(n)}. ${attempts(n)}`);
-      const caption = cssObject(labelButton,new THREE.Vector3(0,-91,0),root);
-      const orbit = new THREE.Group(); root.add(orbit); orbit.visible = false;
-      const currentOrbit=arc(117,0,Math.PI*2,colours.current,orbit,.8); currentOrbit.scale.z=.35; currentOrbit.userData.currentOrbit=true;
-      for(let a=0;a<n.returned_reasons.length;a++) { const o=arc(117,0,Math.PI*2,colours.returned,orbit,.8); o.position.y=-10-a*8; o.position.z=-8-a*6; o.scale.z=.35; o.material.opacity=.3; }
-      const stations=[]; for(const [index,key] of ['make','check','fix'].entries()) { const angle=Math.PI/2-index*2*Math.PI/3; const p=new THREE.Vector3(Math.cos(angle)*117,Math.sin(angle)*117,8); disk(5.5,'#fff6ea',p.x,p.y,p.z,orbit); stations.push(cssObject(el('span',t(key),'station'),p.clone().multiplyScalar(1.50),orbit)); }
-      items.push({n,root,ring,orbit,stations,caption,planet,outline});
-    });
-    data.edges.forEach(e => {
-      const a=positions.get(e.from), b=positions.get(e.to); if(!a||!b)return;
-      const direction=b.clone().sub(a).normalize(), start=a.clone().addScaledVector(direction,47), end=b.clone().addScaledVector(direction,-47); const middle=start.clone().lerp(end,.55); const lineGroup=new THREE.Group(); group.add(lineGroup);
-      const distance=start.distanceTo(end), count=Math.max(2,Math.floor(distance/11));
-      for(let i=0;i<=count;i++) { const p=start.clone().lerp(end,i/count); disk(1.8,colours[e.gate],p.x,p.y,-5,lineGroup); }
-      const gate=new THREE.Group(); gate.position.copy(middle); lineGroup.add(gate); const gateColour=colours[e.gate];
-      const door=mesh(new THREE.PlaneGeometry(17,20),ink,gate); door.position.set(0,3,1);
+    data=next;chosenNode=id;dispose();const layout=layeredLayout(data.nodes,data.edges,data.decisions);bounds=layout.bounds;
+    const positions=new Map(Object.entries(layout.positions).map(([key,p])=>[key,new THREE.Vector3(p.x,p.y,0)]));
+    for(let i=0;i<65;i++) { const x=bounds.cx+Math.sin(i*9.71)*bounds.width*.5,y=bounds.cy+Math.cos(i*7.31)*bounds.height*.47;const star=disk(i%4?.7:1.3,'#756887',x,y,-40);star.material.opacity=.45; }
+    const goal=new THREE.Group();goal.position.set(layout.goal.x,layout.goal.y,0);group.add(goal);
+    const shape=new THREE.Shape();
+    for(let i=0;i<10;i++){const a=Math.PI/2+i*Math.PI/5,r=i%2?16:36;const x=Math.cos(a)*r,y=Math.sin(a)*r;i?shape.lineTo(x,y):shape.moveTo(x,y);}shape.closePath();
+    const shadow=mesh(new THREE.ShapeGeometry(shape),ink,goal);shadow.scale.setScalar(1.13);shadow.position.y=-4;
+    mesh(new THREE.ShapeGeometry(shape),data.complete?'#ffd166':'#6a5a8e',goal).position.z=2;
+    cssObject(el('strong',t('goal'),'goal-label'),new THREE.Vector3(0,-65,0),goal);
+    for(const id of layout.terminals){const a=positions.get(id),b=layout.goal;for(let i=0;i<32;i++){const t=i/32,p=disk(1.1,'#6a5a8e',a.x+65+(b.x-a.x-95)*t,a.y*(1-t),-20);p.material.opacity=.35;}}
+    for(const id of layout.order){
+      const n=data.nodes.find(n=>n.id===id);
+      const pos=positions.get(n.id),root=new THREE.Group();root.position.copy(pos);group.add(root);
+      const waiting=data.decisions.some(d=>d.node===n.id),active=['running','submitted','unverified'].includes(n.status);
+      const colour=waiting?colours.waiting_for_you:n.status==='passed'||n.answered?colours.passed:active?colours.current:'#3a2e5a';
+      const radius=n.kind==='review'?17:n.kind==='decision'?20:38,ringRadius=radius+15;
+      const outline=disk(radius+3,colour==='#3a2e5a'?'#6a5a8e':ink,0,-3,0,root);
+      const body=disk(radius,colour,0,0,4,root);body.userData.node=n.id;picks.push(body);
+      if(n.kind==='decision'){
+        const station=mesh(new THREE.BoxGeometry(25,22,5),ink,root);station.position.z=6;
+        disk(7,colour,0,0,11,root);
+        for(const x of [-30,30]){const panel=mesh(new THREE.PlaneGeometry(18,27),'#88adb5',root);panel.position.set(x,0,5);tube([new THREE.Vector3(x,-12,7),new THREE.Vector3(x,12,7)],ink,1.4,root);}
+        tube([new THREE.Vector3(0,12,7),new THREE.Vector3(0,35,7)],ink,2,root);disk(4,colour,0,35,8,root);
+      }else{
+        const shade=disk(radius*.86,ink,4,-5,5,root);shade.material.opacity=.12;
+        disk(radius*.83,colour,-4,4,6,root);
+        const shine=disk(radius*.23,'#fff6ea',-radius*.32,radius*.34,7,root);shine.scale.y=.65;
+        if(n.status==='passed')tube([new THREE.Vector3(-11,0,9),new THREE.Vector3(-3,-8,9),new THREE.Vector3(13,11,9)],ink,2.8,root);
+      }
+      let halo=null;if(waiting){halo=disk(ringRadius+9,colours.waiting_for_you,0,0,-2,root);halo.material.opacity=.12;}
+      if(n.kind==='review'){
+        const target=positions.get(n.target);if(target){const line=tube([target.clone(),pos.clone()],'#6a5a8e',.7);line.position.z=-15;line.material.opacity=.4;}
+      }
+      const ring=new THREE.Group();root.add(ring);
+      if(n.kind==='work')attemptSegments(n.laps,n.max_attempts,n.status).forEach((segment,a)=>{
+        const from=a*Math.PI*2/n.max_attempts+.14,length=Math.PI*2/n.max_attempts-.28;
+        if(segment.used){const part=arc(ringRadius,from,length,colours[segment.state]||colours.current,ring,segment.thickness);part.material.opacity=segment.opacity;}
+        else{const unused=new THREE.Group();ring.add(unused);dashedRing(ringRadius,from,length,'#6a5a8e',unused,segment.thickness);unused.children.forEach(p=>p.material.opacity=segment.opacity);}
+      });
+      const count=cometCount(n);if(count){comet(root,-radius-5,radius+20,.65);if(count>1)cssObject(el('span',String(count),'comet-count'),new THREE.Vector3(-radius-25,radius+22,22),root);}
+      const labelButton=button('',()=>selectNode(n.id),'planet-label');const captionText=el('span',undefined,'node-caption');captionText.append(el('strong',title(n)),el('small',status(n)));labelButton.append(captionText);
+      const description=`${title(n)}. ${status(n)}. ${attempts(n)}. ${t('returnTimes',{n:count})}`;
+      labelButton.setAttribute('aria-label',description);labelButton.title=description;
+      if(n.kind==='review')labelButton.classList.add('moon-label');
+      const caption=cssObject(labelButton,new THREE.Vector3(0,0,20),root);
+      caption.renderOrder=30;labelButton.dataset.flowOrder=String(pos.x);
+      const orbit=new THREE.Group();root.add(orbit);orbit.visible=false;
+      const currentOrbit=arc(125,0,Math.PI*2,colours.current,orbit,.8);currentOrbit.userData.currentOrbit=true;
+      for(let i=0;i<count;i++){const old=arc(125+i*8,0,Math.PI*2,colours.returned,orbit,.7);old.position.z=-12-i*5;old.material.opacity=.3;}
+      const stations=[];for(const [i,key]of ['make','check','fix'].entries()){const a=Math.PI/2-i*2*Math.PI/3,p=new THREE.Vector3(Math.cos(a)*125,Math.sin(a)*125,8);disk(5.5,'#fff6ea',p.x,p.y,p.z,orbit);stations.push(cssObject(el('span',t(key),'station'),p.clone().multiplyScalar(1.4),orbit));}
+      items.push({n,root,ring,ringRadius,orbit,stations,caption,planet:body,outline,halo,radius});
+    }
+    for(const route of layout.routes){
+      const e={...route,gate:route.gateState},a=positions.get(e.from),b=positions.get(e.to),lineGroup=new THREE.Group();group.add(lineGroup);
+      const point=t=>{const p=transferPoint(route,t);return new THREE.Vector3(p.x,p.y,-5);};
+      const count=Math.max(12,Math.floor(a.distanceTo(b)/10));for(let i=0;i<=count;i++){const p=point(i/count);disk(1.6,colours[e.gate]||colours.closed,p.x,p.y,p.z,lineGroup);}
+      const middle=new THREE.Vector3(route.gate.x,route.gate.y,10),gate=new THREE.Group();gate.position.copy(middle);lineGroup.add(gate);
       const points=[new THREE.Vector3(-9,-7,3),new THREE.Vector3(-9,6,3),new THREE.Vector3(-7,13,3),new THREE.Vector3(0,16,3),new THREE.Vector3(7,13,3),new THREE.Vector3(9,6,3),new THREE.Vector3(9,-7,3)];
-      tube(points,ink,4.6,gate); const arch = tube(points,gateColour,2.6,gate); arch.position.z=4;
-      if(e.gate === 'waiting_for_you') { gate.scale.setScalar(1.35); const fill=mesh(new THREE.PlaneGeometry(13,19),'#62452f',gate); fill.position.set(0,2,2); disk(1.8,'#fff6ea',4,1,4,gate); const d=data.decisions.find(d=>d.node===e.from); if(d) { const hit=mesh(new THREE.PlaneGeometry(44,48),ink,gate); hit.position.set(0,4,12); hit.material.opacity=0; hit.material.depthWrite=false; hit.userData.decision=d.id; picks.push(hit); } }
-      const socket=end.clone(); socket.z=18; if(e.delivered) { disk(8,ink,socket.x,socket.y,socket.z,lineGroup); disk(5.5,'#fff6ea',socket.x,socket.y,socket.z+1,lineGroup); }
-      else for(let i=0;i<8;i++) { const angle=i*Math.PI/4; disk(1.5,'#6a5a8e',socket.x+Math.cos(angle)*6,socket.y+Math.sin(angle)*6,socket.z,lineGroup); }
-      const caption=cssObject(el('span',label(e.label),'route-label'),start.clone().lerp(end,.5).add(new THREE.Vector3(-direction.y*95,direction.x*95,5))); caption.visible=false;
-      routes.push({e,group:lineGroup,caption,middle});
-    });
-    // Questions take priority in the six-mascot budget.
-    const shown=new Set();
-    for(const route of routes) { if(route.e.gate==='waiting_for_you'&&!shown.has(route.e.from)) { frog(route.middle.clone().add(new THREE.Vector3(42,20,15)),'report',t('waitingBubble')); shown.add(route.e.from); } }
-    for(const item of items) { if(needs(item.n)&&!shown.has(item.n.id)) { frog(item.root.position.clone().add(new THREE.Vector3(65,25,12)),'report',t('waitingBubble')); shown.add(item.n.id); } }
-    for(const item of items) { if(['running','submitted','unverified'].includes(item.n.status)&&!needs(item.n)) frog(item.root.position.clone().add(new THREE.Vector3(60,20,12)),'walk-a',t('attemptBubble',{n:item.n.attempts}),item); }
-    if(data.complete&&items.length) frog(items[items.length-1].root.position.clone().add(new THREE.Vector3(80,20,12)),'wave',t('complete'));
-    resize(); selectionAppearance(); wake();
+      const door=mesh(new THREE.PlaneGeometry(17,20),ink,gate);door.position.set(0,3,1);tube(points,ink,4.6,gate);const arch=tube(points,colours[e.gate]||colours.closed,2.6,gate);arch.position.z=4;
+      if(e.gate==='waiting_for_you')gate.scale.setScalar(1.2);
+      gateControl(gate,e.from,e.gate,middle.x);
+      const socket=point(1);socket.z=18;if(e.delivered){disk(8,ink,socket.x,socket.y,socket.z,lineGroup);disk(5.5,'#fff6ea',socket.x,socket.y,socket.z+1,lineGroup);}else for(let i=0;i<8;i++){const a=i*Math.PI/4;disk(1.4,'#6a5a8e',socket.x+Math.cos(a)*6,socket.y+Math.sin(a)*6,socket.z,lineGroup);}
+      routes.push({e,group:lineGroup,middle});
+    }
+    for(const entry of layout.nodeGates){
+      const middle=new THREE.Vector3(entry.x,entry.y,10),gate=new THREE.Group();gate.position.copy(middle);group.add(gate);
+      const points=[new THREE.Vector3(-9,-7,3),new THREE.Vector3(-9,6,3),new THREE.Vector3(-7,13,3),new THREE.Vector3(0,16,3),new THREE.Vector3(7,13,3),new THREE.Vector3(9,6,3),new THREE.Vector3(9,-7,3)];
+      const door=mesh(new THREE.PlaneGeometry(17,20),ink,gate);door.position.set(0,3,1);tube(points,ink,4.6,gate);const arch=tube(points,colours[entry.state],2.6,gate);arch.position.z=4;
+      if(entry.state==='waiting_for_you')gate.scale.setScalar(1.2);
+      gateControl(gate,entry.node,entry.state,middle.x);
+      routes.push({e:{from:entry.node,to:entry.node,gate:entry.state},group:gate,middle,terminal:true});
+    }
+    const shown=new Set();for(const route of routes)if(route.e.gate==='waiting_for_you'&&!shown.has(route.e.from)){frog(route.middle.clone().add(new THREE.Vector3(36,15,15)),'report',t('waitingBubble'));shown.add(route.e.from);}
+    for(const item of items)if(needs(item.n)&&!shown.has(item.n.id)){frog(item.root.position.clone().add(new THREE.Vector3(65,25,12)),'report',t('waitingBubble'));shown.add(item.n.id);}
+    for(const item of items)if(item.n.kind==='work'&&['running','submitted','unverified'].includes(item.n.status)&&!needs(item.n))frog(item.root.position.clone().add(new THREE.Vector3(60,20,12)),'walk-a',t('attemptBubble',{n:item.n.attempts}),item);
+    if(data.complete){const wave=frog(new THREE.Vector3(layout.goal.x+55,layout.goal.y+25,12),'wave',t('complete'));if(wave)wave.bubble.visible=false;}
+    if(chosenNode){const item=items.find(i=>i.n.id===chosenNode);if(item)anchorPoint.copy(item.root.position);}
+    resize();selectionAppearance();wake();
   }
   function selectionAppearance() {
-    const related=new Set([chosenNode]); data.edges.forEach(e=>{if(e.from===chosenNode)related.add(e.to);if(e.to===chosenNode)related.add(e.from);});
-    for(const item of items) { const active=item.n.id===chosenNode; item.orbit.visible=active; item.caption.element.classList.toggle('selected-label',active); item.caption.element.classList.toggle('dim',!!chosenNode&&!related.has(item.n.id)&&!needs(item.n));
+    const selectedNode=data.nodes.find(n=>n.id===chosenNode);
+    const related=new Set([chosenNode,selectedNode?.target]); data.nodes.filter(n=>n.target===chosenNode).forEach(n=>related.add(n.id)); data.edges.forEach(e=>{if(e.from===chosenNode)related.add(e.to);if(e.to===chosenNode)related.add(e.from);});
+    for(const item of items) { const active=item.n.id===chosenNode; item.orbit.visible=active&&item.n.kind==='work'; item.caption.element.classList.toggle('selected-label',active); item.caption.element.classList.toggle('show-moon',related.has(item.n.id)&&!!chosenNode); item.caption.element.classList.toggle('dim',!!chosenNode&&!related.has(item.n.id)&&!needs(item.n));
       const opacity=chosenNode&&!related.has(item.n.id)&&!needs(item.n) ? .3 : 1;
-      item.root.traverse(o=>{if(o.material)o.material.opacity=opacity*(o.parent === item.orbit && !o.userData.currentOrbit ? .3 : 1);});
-      item.ring.visible=!active;
+      item.root.traverse(o=>{if(o.material){o.userData.baseOpacity ??= o.material.opacity;o.material.opacity=opacity*o.userData.baseOpacity;}});
+      item.ring.visible=true;
     }
-    routes.forEach(route=>{route.caption.visible=!!chosenNode&&(route.e.from===chosenNode||route.e.to===chosenNode);});
   }
   function setCamera(progress) {
     const angle=progress*55*Math.PI/180, direction=new THREE.Vector3(Math.sin(angle)*.22,-Math.sin(angle)*.975,Math.cos(angle)).normalize();
     const aspect=(host.clientWidth||1)/(host.clientHeight||1);
     const fitHeight=Math.max(bounds.height,bounds.width/aspect);
-    const height=fitHeight+(585/aspect-fitHeight)*progress;
+    const satelliteExtent=Math.max(0,...items.filter(i=>i.n.target===chosenNode).map(i=>i.root.position.distanceTo(anchorPoint)));
+    const selectedHeight=Math.max(430,600/aspect,satelliteExtent*2+200);
+    const height=fitHeight+(selectedHeight-fitHeight)*progress;
     camera.left=-height*aspect/2;camera.right=height*aspect/2;camera.top=height/2;camera.bottom=-height/2;camera.updateProjectionMatrix();
     center.set(bounds.cx,bounds.cy,0);
     if(chosenNode) center.lerp(anchorPoint,progress);
     camera.position.copy(center).addScaledVector(direction,1000); camera.up.set(0,1,0); camera.lookAt(center);
     camera.updateMatrixWorld();
+    const worldPixel=(host.clientWidth||1)/(camera.right-camera.left);
+    for(const item of items)item.caption.element.style.setProperty('--title-offset',(item.ringRadius*worldPixel+14)+'px');
   }
   function select(id) {
     const item=items.find(i=>i.n.id===id);
@@ -705,18 +897,19 @@ async function createMap() {
     camera.left=-fitHeight*aspect/2;camera.right=fitHeight*aspect/2;camera.top=fitHeight/2;camera.bottom=-fitHeight/2;camera.updateProjectionMatrix();
     compactMap = width < 600;
     const worldPixel = width / (camera.right-camera.left);
-    const captionWidth = Math.max(46,Math.min(180,300 * width / (camera.right-camera.left) * .9));
+    const captionWidth = Math.max(76,Math.min(210,240*worldPixel));
     for (const item of items) {
       item.caption.element.style.width = captionWidth + 'px';
-      item.caption.element.classList.toggle('compact-label',captionWidth < 110);
-      item.caption.position.y = -65 - (captionWidth < 110 ? 26 : 30) / worldPixel;
+      item.caption.element.classList.toggle('compact-label',compactMap);
+      item.caption.element.style.setProperty('--title-offset', (item.ringRadius*worldPixel+22)+'px');
+      if(item.n.kind==='review')item.caption.element.style.width='44px';
     }
     for (const f of frogs) {
       const compact = width < 600;
       f.bubble.element.classList.toggle('compact-speech',compact);
       if (!f.walkingNode) f.bubble.position.copy(f.sprite.position).add(new THREE.Vector3(compact ? 230 : 25,compact ? 230 : 88,0));
     }
-    webgl.setSize(width,height);labels.setSize(width,height);setCamera(tilt);wake();
+    webgl.setSize(width,height);labels.setSize(width,height);setCamera(tilt);selectionAppearance();wake();
   }
   function draw(now) {
     frame=0; if(document.hidden||mode!=='flow'||mapFailed)return;
@@ -730,14 +923,18 @@ async function createMap() {
       if(!f.walkingNode) { f.bubble.position.copy(f.sprite.position).addScaledVector(new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion),size+26/worldPixel); continue; }
       const item=f.walkingNode, active=item.n.id===chosenNode, checking=['submitted','unverified'].includes(item.n.status);
       let angle=checking ? -Math.PI/6 : item.n.attempts>1 ? Math.PI*7/6 : Math.PI/2;
-      if(!reduced.matches) { angle += 0; animating=true; }
-      if(!active) angle=Math.PI/2;
-      const radius=active?117:64;
+      if(!reduced.matches) { angle += now/2600; animating=true; }
+      if(!active) angle=Math.PI*1.05+(reduced.matches?.4:(1+Math.sin(now/2600))*.4);
+      f.bubble.visible=false;
+      const radius=active?125:item.ringRadius+5;
       f.sprite.position.copy(item.root.position).add(new THREE.Vector3(Math.cos(angle)*radius,Math.sin(angle)*radius,15));
       f.sprite.material.map=textures[checking||reduced.matches?'report':Math.floor(now/180)%2?'walk-a':'walk-b'];
       f.bubble.position.copy(f.sprite.position).addScaledVector(new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion),size+24/worldPixel);dirty=true;
     }
-    if(dirty||animating) { webgl.render(scene,camera);labels.render(scene,camera);dirty=false; }
+    if(dirty||animating) { webgl.render(scene,camera);labels.render(scene,camera);
+      const ordered=[...labels.domElement.children].sort((a,b)=>Number(a.dataset.flowOrder||0)-Number(b.dataset.flowOrder||0));
+      if(ordered.some((e,i)=>labels.domElement.children[i]!==e))ordered.forEach(e=>labels.domElement.append(e));
+      dirty=false; }
     if(animating)frame=requestAnimationFrame(draw);
   }
   function wake() { dirty=true; if(!frame&&!document.hidden&&mode==='flow'&&!mapFailed)frame=requestAnimationFrame(draw); }

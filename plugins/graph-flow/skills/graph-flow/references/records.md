@@ -207,12 +207,16 @@ Grade 3 is rollback history (section 9).
 
 ### `cmd`
 
-- Only commands written in the plan or in `checks.json` are executed. `gf` prints the command line to stderr before running it.
+- Only commands written in the plan or in `checks.json` are executed. `gf` records the command in the check result without echoing it to stdout or stderr.
 - Working directory: `--cwd` if given (a worktree), else the project root, joined with the check's `cwd`. The resolved directory must stay inside that tree (exit 2, `bad_cwd`); this applies to checks from `checks.json` too.
 - Output (stdout and stderr interleaved) goes to `evidence/<node>/<check>/a<attempt>-<8 hex>.log`, created with exclusive open; run-level checks use node `_run`. The 8 hex characters are random.
 - The command runs **outside** the run lock. Before running, `gf` notes the node's `basis`, attempt, and the plan revision (and, for gate and merge operations, the submission id); when committing the result it re-checks all of them under the lock and, if any changed, discards the result with exit 4 (code `stale_result`).
 
 ### `scope`
+
+`node.submit.changed_files` compares against the base of the node's FIRST attempt after its current basis, using the same snapshot comparison below. Retries with no new edits retain the node's changed files; reverting to that original snapshot removes a file. Scope comparisons continue to use each attempt's own base, so new out-of-scope edits in any attempt are detected. Committed submissions use the first base revision for changed_files and the current attempt base for commit ancestry and scope.
+
+`gf brief` and the planning brief state the absolute project directory near the top and instruct running every command there; their tool invocation uses an absolute entry-script path. Check execution writes command output to evidence logs without echoing commands to stdout or stderr, so `gf --json gate` emits exactly one JSON document.
 
 `gf start` records the base: `git rev-parse HEAD` in the node's working directory, and `dirty`, a map from path to state for every path that is modified, deleted, or untracked at that moment. The state of a path is: `deleted` for a tracked file that is missing; `link:<target>` for a symbolic link (the link text, not followed); `dir` for a directory (for example an untracked nested repository); otherwise `<mode>:<hash>`, the file's permission bits in octal and its `git hash-object` value. Computing the state never fails on an unusual path.
 
@@ -254,7 +258,7 @@ Incomplete tail: readers ignore a final line that does not end in a newline or d
 | `check.red` | `node`, `check`, `exit_code`, `failed_first`, `log` |
 | `check.result` | `node`, `check`, `type`, `grade`, `result` (`passed`, `failed`), `attempt`, `phase` (`loop`, `gate`), `exit_code`, `timed_out`, `command`, `cwd`, `duration_ms`, `log`; scope adds `violations`; host adds `note`; run-level checks use node `_run` and attempt 0 |
 | `node.submit` | `node`, `attempt`, `commit` (full SHA or `null`), `branch` (or `null`), `changed_files`, `notes` (string or `null`), `low_confidence` (list of strings) |
-| `review.submit` | `node` (the review node), `attempt`, `target`, `target_submission`, `verdict` (`pass`, `fail`), `findings` (list of `{severity, file, line, text}`) |
+| `review.submit` | `node` (the review node), `attempt`, `target`, `target_submission`, `verdict` (`pass`, `fail`), `findings` (list of `{severity, file, line, text}` with optional free-form `evidence`; `text` is one plain sentence a person will read on the dashboard, with paths, commands, ids and exit codes in `evidence`) |
 | `merge.result` | `merged` (list of `{node, commit, head}`), `conflicted` (list of `{node, commit, files}`) |
 | `gate.verdict` | `node`, `attempt`, `submission` (or `null`), `verdict`, `rule`, `rejection` (or `null`), `tested_head` |
 | `gate.final` | `result` (`passed`, `failed`), `failed_checks`, `tested_head` |
@@ -373,6 +377,8 @@ Decisions are bound, not counted: a decision is **stale** when its node's `basis
 
 A node **has a current submission** when its status is `submitted`, `unverified`, `held`, or `awaiting_approval`. The `submission` field itself is kept until the next `node.start`, so verdicts and decisions bound to a submission id stay matched to it after the node is `passed` or `rejected`.
 
+A scope violation in an earlier, rejected attempt does not by itself require human approval.
+
 `trajectory_clean` is true when, in the current attempt, no check timed out, no loop-phase scope result has violations, and `attempts <= 2`.
 
 ### Starting and readiness
@@ -455,6 +461,8 @@ For a scope failure the reason lists the violating files. When several checks fa
 - Preconditions (exit 4, nothing appended): every node has a current committed submission (`no_commit`); no merge is already in progress (`merge_in_progress`); the tree has no modified tracked files (`dirty_tree`; untracked files do not block). Work done inline in the shared tree is committed by the leader, and submitted with `gf submit --commit <sha>`, before any merge.
 - For each node in the given order: `git merge --no-ff --no-edit <commit>`. On conflict, or on any other failure of the merge command (for example an untracked file that would be overwritten): `git merge --abort` if a merge is in progress, the node is recorded as conflicted (with the conflicting files, or an empty list and the first line of git's error as the reason), and the remaining nodes are still attempted. The merge never stops halfway: every listed node is attempted and exactly one `merge.result` is appended, so git and the log always agree.
 - One `merge.result` event is appended. For every conflicted node the merge also appends `gate.verdict` with verdict `reject` (or `replan` at the attempt limit), rule `M1`, and a rejection whose reason names the conflicting files, so the node is restarted like any other rejected node.
+
+When a rejection has no log, EVIDENCE names offending paths or citation details, falling back to its reason (including missing reviews and failed review verdicts), never `None`. Such evidence may carry `details` (a list of strings). Scope rejections also carry `restore_paths` and render `RESTORE   Leader restores these paths before reassigning: <paths>`. The leader preserves other nodes' accepted and in-flight work during restoration.
 
 ## 7. Decisions
 
@@ -583,7 +591,7 @@ def build_rejection(node, node_state, failed, tails): ...   # tails: map of log 
 def gate(run_dir, node_id, cwd, actor): ...     # preconditions, runs checks, appends asks and gate.verdict; returns the verdict data
 def gate_final(run_dir, cwd, actor): ...        # appends gate.final; returns its data
 def reopen(run_dir, node_id, reason, actor): ...  # node must be passed; appends node.reopen; returns {"node", "invalidated": [ids in plan order]}
-def render_rejection(rejection): ...            # the five-line UNIT/VERDICT/REASON/EVIDENCE/SCOPE text
+def render_rejection(rejection): ...            # UNIT/VERDICT/REASON/EVIDENCE/SCOPE, plus RESTORE for scope violations
 
 # graph.py
 def has_current_submission(node_state): ...     # bool
@@ -644,11 +652,11 @@ The MCP tool list and the dashboard's HTTP API are specified by the units that o
 
 ```json
 {
-  "title": "Export your notes",
+  "title": "Export your notes", "language": "en",
   "nodes": [{
     "id": "export", "title": "Create the export",
     "summary": "Produce a JSON copy of every note for the person requesting the export.",
-    "kind": "work", "status": "running", "attempts": 2, "max_attempts": 3,
+    "kind": "work", "target": null, "answered": false, "status": "running", "attempts": 2, "max_attempts": 3,
     "lane": 2, "laps": ["returned", "current"],
     "returned_reasons": [["Every note is exported", "An empty note was omitted"]],
     "reviewed_by_other_family": false,
@@ -664,15 +672,20 @@ The MCP tool list and the dashboard's HTTP API are specified by the units that o
     "verified": ["Every note is exported"],
     "failed": [], "trajectory_reasons": [],
     "unverified": ["A new reader can follow the instructions", "Installation order needs a second look"],
-    "worker_note": "Please read the installation section."
+    "worker_note": "Please read the installation section.",
+    "files": [{"name": "guide.md", "path": "docs/guide.md"}]
   }],
   "lessons": [{"text": "Keep the original notes unchanged", "node_title": "Create the export"}],
-  "counts": {"done": 0, "doing": 1, "waiting": 0, "needs_you": 1, "returned": 1},
+  "counts": {"done": 0, "doing": 1, "waiting": 0, "needs_you": 1, "returned": 1, "returns_total": 1},
   "complete": false
 }
 ```
 
 - `title` falls back to the plan's `goal` (empty string without a plan). `nodes` follows plan order; each title falls back to its id and each summary to its goal. Node `kind`, `status`, `attempts`, and `max_attempts` come from the plan/state; `lane` is the effective lane.
+- `language` is `"ko"` when the plan title or any node title/summary contains Hangul (Jamo, compatibility Jamo or syllables), else `"en"`. This is independent of browser language; the page uses the browser only when there is no run.
+- Node `target` is the recorded review target id for review nodes, otherwise `null`. It binds the review moon to its planet; it is never display copy. Review nodes are excluded from flow layers and all drawn handoff routes; their titles remain in the list.
+- Node `answered` is true only for a decision node with a current, non-stale answered decision in derived state. Its station beacon can turn mint immediately after an answer, before a later gate accepts it. Work and review colours otherwise reflect their own status; an open decision makes its bound node amber. It is false on work and review nodes.
+- Decision `files` is the deduplicated list of `{name, path}` from the node’s current submission `changed_files`, then decision evidence `files`, preserving order. `name` is the basename, `path` the exact project-relative request parameter. Unsafe paths and destinations escaping the project or entering `.git`/`.graph-flow` or private dashboard records are omitted. File existence and UTF-8 readability are checked when opened through `/api/file`; a listed file may have disappeared. Only this explicitly requested reader shows filenames and a small secondary path.
 - `laps` has one entry for every `node.start` after the node's current basis. A rejection (`reject` or budget-exhausted `replan`) makes that attempt `returned`; a pass makes it `passed`; otherwise it is `current`. A current submitted attempt with an open, non-stale decision is `waiting_for_you`. Decision nodes normally have no attempts and an empty list.
 - `returned_reasons` has one list per rejection after the current basis, in event order, including earlier attempts while a retry runs. Strings come only from failed gate-phase node checks' current plan titles (untitled checks are omitted) and matching reviewer finding `text` for the rejected submission. It never copies a rejection's technical reason, command, exit code, log, file or line. Duplicate strings within one rejection are collapsed. When no such human-readable evidence is recorded (for example a merge rejection), that rejection's list is empty. Run-level `_run` check results have no rejecting-node/submission binding, so the view does not attribute them to a particular rejection.
 - Node `inputs` and `outputs` contain `{label, other_title, delivered}` entries copied from incoming/outgoing `edges`, in edge order. `other_title` is the title (legacy fallback: id) of the producer/receiver respectively. No matching edges means `[]`; labels follow the edge fallback below, and implicit review-edge labels remain empty.
@@ -686,7 +699,7 @@ The MCP tool list and the dashboard's HTTP API are specified by the units that o
 - Decision `record_purpose` is the original record purpose as a string (empty when absent); `purpose` remains the normalized presentation purpose. The page suppresses a question only when it exactly equals `Approve <record_purpose> for <node id>?`, the default form generated by the gate for that record. Other authored questions are shown unchanged.
 - Presentation readers discard non-string notes, titles, prompts, context values and finding text. Legacy low-confidence lists keep only strings; a single legacy string is retained as one note, other shapes are ignored. Malformed finding collections are ignored. A corrupt learning store yields no lessons rather than hiding the run.
 - `lessons` contains all project learning constraints whose healed status is `active`, in store order (not promoted or retired constraints). Each entry has `text` and `node_title`. A source recorded in `derived_from` gets its current title (fallback: id) only when its source run matches this run and its node exists in this plan. No title snapshot is stored for other runs or removed nodes: their `node_title` is `null`. No learning store means `[]`.
-- `counts.done` counts passed nodes. Among non-passed nodes without open decisions, `doing` counts running, submitted, or unverified nodes and `waiting` counts the rest. `needs_you` counts open, non-stale decisions, including unbound questions. `returned` counts non-passed nodes with at least one current-basis rejection, including retries; it can overlap `doing` or `waiting`. These counters are integers, not an exclusive partition. `complete` is exactly whether derived `run.status` is `complete`.
+- `counts.done` counts passed nodes. Among non-passed nodes without open decisions, `doing` counts running, submitted, or unverified nodes and `waiting` counts the rest. `needs_you` counts open, non-stale decisions, including unbound questions. `returned` counts non-passed nodes with at least one current-basis rejection, including retries; it can overlap `doing` or `waiting`. `returns_total` sums the number of `"returned"` laps across all current-plan nodes, including nodes that subsequently passed (current-basis history, like `laps`). The UI uses this total and says “times”; the existing `returned` key retains its meaning. These counters are integers, not an exclusive partition. `complete` is exactly whether derived `run.status` is `complete`.
 - Without a plan, `nodes` and `edges` are empty and node counters are zero; unbound decisions and project lessons can still be present. Existing fallback ids and artifact names may themselves be technical, so leaders should provide presentation fields for person-facing flows.
 
 The dashboard HTTP contract and fixed public static allowlist are in [dashboard.md](dashboard.md#get-staticname). Only those GET static requests skip token authentication; every request still needs the loopback Host check, and all APIs still require the token.

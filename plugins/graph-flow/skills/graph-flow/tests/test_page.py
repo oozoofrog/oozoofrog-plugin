@@ -86,7 +86,12 @@ def build_demo_run(gf_home, project_dir):
         checks.submit(run, 'checks', head, None, '빠진 경우를 확인해 주세요.', [], None, ACTOR)
         assert gate.gate(run, 'checks', None, ACTOR)['verdict'] == 'reject'
         checks.start(run, 'guide', None, ACTOR)
-        checks.submit(run, 'guide', head, None, '설치 순서 부분은 자신이 없어요.',
+        (project / 'guide.txt').write_text('사용 설명서\n\n1. 흐름을 열고 지금 하는 일을 살펴보세요.\n2. 파일을 읽고 통과할지 정해 주세요.\n3. 고칠 곳이 있다면 이유를 적어 돌려보내세요.\n', encoding='utf-8')
+        git('add', 'guide.txt')
+        git('-c', 'user.name=Dashboard demo', '-c', 'user.email=demo@example.invalid',
+            '-c', 'commit.gpgsign=false', 'commit', '-q', '-m', 'Readable demo guide')
+        guide_head = git('rev-parse', 'HEAD').decode().strip()
+        checks.submit(run, 'guide', guide_head, None, '설치 순서 부분은 자신이 없어요.',
                       ['설치 순서가 처음 쓰는 분께 자연스러운지는 확인하지 못했어요.'], None, ACTOR)
         assert gate.gate(run, 'guide', None, ACTOR)['verdict'] == 'needs_approval'
         checks.start(run, 'checks', None, ACTOR)
@@ -133,7 +138,7 @@ class PageTests(unittest.TestCase):
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const source = readFileSync(process.argv[2], 'utf8');
-const {createDecisionController, decisionQuestion, purposeWording, purposeAction} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+const {createDecisionController, decisionQuestion, purposeWording, purposeAction, viewLanguage, attemptSegments, cometCount, failedBadgeCount, layeredLayout, crossingCount, transferPoint} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const first = {project:'/project', run:'first'}, second = {project:'/project', run:'second'};
 const decision = {id:'d7', purpose:'lane3', kind:'authorization', failed:[]};
 const controller = createDecisionController();
@@ -144,6 +149,62 @@ show();
                                  str(S / 'scripts/graphflow/page.js')], input=script,
                                 text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_language_attempt_segments_and_record_counts(self):
+        self.run_controller(r"""
+assert.equal(viewLanguage({language:'ko'}, 'en-US'),'ko');
+assert.equal(viewLanguage({language:'en'}, 'ko-KR'),'en');
+assert.equal(viewLanguage({}, 'ko-KR'),'en');
+assert.equal(viewLanguage(null,'ko-KR'),'ko');
+for(const [laps,max,status] of [[[],3,'pending'],[['current'],3,'running'],[['waiting_for_you'],3,'submitted'],[['returned','current'],3,'running'],[['passed'],3,'passed'],[['returned','returned','passed'],3,'passed'],[['current'],2,'running']]) {
+  const segments=attemptSegments(laps,max,status);
+  assert.equal(segments.length,max);
+  assert.deepEqual(segments.map(s=>s.state),Array.from({length:max},(_,i)=>laps[i]||'unused'));
+  segments.forEach((s,i)=>{assert.equal(s.used,!!laps[i]);assert.equal(s.thickness,laps[i]?3.2:.7);if(status==='passed'&&!s.used)assert(s.opacity<.2);});
+}
+assert.equal(cometCount({laps:['returned','returned','passed'],returned_reasons:[[],[],[]]}),2);
+assert.equal(cometCount({laps:[],returned_reasons:[[]]}),0);
+assert.equal(failedBadgeCount({id:'a'},[{node:'a',failed:['first']},{node:'a',failed:['other','question']}]),1,'the badge matches the decision that gate opens');
+for(let n=0;n<9;n++) assert.equal(failedBadgeCount({id:'a'},[{node:'a',failed:Array(n).fill('fail')},{node:'b',failed:['other']}]),n);
+""")
+
+    def test_layered_depth_order_and_gates_on_demo_and_twelve_node_graph(self):
+        with tempfile.TemporaryDirectory() as directory, mock.patch.dict(os.environ):
+            root=pathlib.Path(directory)
+            run=build_demo_run(root/'home',root/'project')
+            current,events,derived=server._snapshot(run)
+            demo=server._view(current,derived,events,root/'project')
+        self.run_controller('const demo = '+json.dumps(demo)+r';'+r"""
+const nodes=Array.from({length:12},(_,i)=>({id:'n'+i,kind:'work',title:'Work item '+i}));
+const edges=[];
+for(let i=3;i<12;i++) { const layer=Math.floor(i/3); for(const p of [(i%3),(i+1)%3]) edges.push({from:'n'+((layer-1)*3+p),to:'n'+i,gate:'closed'}); }
+const crossed={nodes:nodes.slice(0,6),edges:[{from:'n0',to:'n5'},{from:'n1',to:'n4'},{from:'n2',to:'n3'}]};
+for(const data of [demo,{nodes,edges},crossed]) {
+  const layout=layeredLayout(data.nodes,data.edges,data.decisions);
+  const depth=id=>Math.max(0,...data.edges.filter(e=>e.to===id).map(e=>depth(e.from)+1));
+  for(const node of data.nodes) {
+    const p=layout.positions[node.id];assert.equal(p.depth,depth(node.id));
+    assert.equal(p.layer,depth(node.id));assert(layout.layers[p.depth].includes(node.id));
+  }
+  for(const route of layout.routes) {const p=transferPoint(route,route.gate.t);assert(Math.hypot(p.x-route.gate.x,p.y-route.gate.y)<.0001);}
+  const gates=[...layout.routes.map(r=>r.gate),...layout.nodeGates];
+  gates.forEach((a,i)=>gates.slice(i+1).forEach(b=>assert(Math.hypot(a.x-b.x,a.y-b.y)>=70,'gates must never overlap')));
+  gates.forEach(g=>layout.labels.forEach(l=>assert(g.x<l.left-28||g.x>l.right+28||g.y>l.top+28||g.y<l.bottom-28,'gate must clear titles')));
+  layout.labels.forEach((a,i)=>layout.labels.slice(i+1).forEach(b=>assert(a.right<=b.left||a.left>=b.right||a.top<=b.bottom||a.bottom>=b.top,'titles must not overlap')));
+  const unsorted=layeredLayout(data.nodes,data.edges,data.decisions,false);
+  assert(crossingCount(data.edges,layout.positions)<=crossingCount(data.edges,unsorted.positions));
+  assert.deepEqual(layout,layeredLayout(data.nodes,data.edges,data.decisions));
+  assert(layout.goal.x>Math.max(...Object.values(layout.positions).map(p=>p.x)));
+}
+const reviewed={nodes:[{id:'planet',kind:'work'},{id:'moon',kind:'review',target:'planet'},{id:'next',kind:'work'}],edges:[{from:'planet',to:'moon'},{from:'moon',to:'next'}]};
+const layout=layeredLayout(reviewed.nodes,reviewed.edges);
+assert.equal(layout.routes.length,0);assert.equal(layout.positions.moon.satelliteOf,'planet');
+assert(!layout.layers.flat().includes('moon'));assert(layout.order.indexOf('moon')===layout.order.indexOf('planet')+1);
+const terminal=layeredLayout([{id:'last',kind:'work',laps:['returned','current'],status:'running'}],[],[{node:'last',failed:['Recorded failure']}]);
+assert.equal(terminal.nodeGates.length,1);
+assert.equal(terminal.nodeGates[0].state,'waiting_for_you','an open decision takes priority over old returns');
+assert.equal(layeredLayout([{id:'last',kind:'work',laps:['returned'],status:'rejected'}],[]).nodeGates[0].state,'returned');
+""")
 
     def test_controller_bound_request(self):
         self.run_controller(r"""
@@ -278,22 +339,24 @@ body.append(new Element('nav'));
 for (const id of ['map','notice','picker','picker-label','flow','history','decision','flow-tab','history-tab','title','subtitle','node-list','edge-list','decision-list','panel','accessible']) {
   const e=new Element(id==='picker'?'select':'div'); e.id=id; body.append(e);
 }
-Object.defineProperty(globalThis,'navigator',{value:{language:'en'},configurable:true});
+Object.defineProperty(globalThis,'navigator',{value:{language:'ko-KR'},configurable:true});
 globalThis.location={href:'http://localhost:5000/?t=demo',port:'5000'};
 globalThis.history={replaceState(){}}; globalThis.sessionStorage={getItem(){return 'demo'},setItem(){}};
 globalThis.matchMedia=()=>({matches:true,addEventListener(){}});
 globalThis.setTimeout=()=>0; globalThis.clearTimeout=()=>{};
 const d={...decision,purpose:'hold',kind:'review',node:'work',question:'Approve hold for work?',record_purpose:'hold',
-  context:{},verified:['A verified fact'],unverified:[],worker_note:'Read me',has_evidence:false,failed:['Missing case'],trajectory_reasons:[]};
-let live={title:'Flow',nodes:[{id:'work',title:'Work',summary:'Summary',status:'submitted',attempts:1,max_attempts:3,laps:[],returned_reasons:[],inputs:[],outputs:[]}],edges:[],decisions:[d],lessons:[],counts:{done:0,doing:0,waiting:0,needs_you:1,returned:0},complete:false};
+  files:[{name:'guide.md',path:'docs/guide.md'}],context:{},verified:['A verified fact'],unverified:[],worker_note:'Read me',has_evidence:false,failed:['Missing case'],trajectory_reasons:[]};
+let live={title:'Flow',language:'en',nodes:[{id:'work',title:'Work',summary:'Summary',status:'submitted',attempts:1,max_attempts:3,laps:[],returned_reasons:[],inputs:[],outputs:[]}],edges:[],decisions:[d],lessons:[],counts:{done:0,doing:0,waiting:0,needs_you:1,returned:0},complete:false};
 const posts=[]; let resolvePost;
 globalThis.fetch=async (path,options)=>{
   if (options.method==='POST') { posts.push(JSON.parse(options.body)); return new Promise(resolve=>{resolvePost=()=>resolve({ok:true,json:async()=>({ok:true})});}); }
+  if(path.startsWith('/api/file?')) return {ok:true,text:async()=>'<script>literal Markdown</script>\n# Guide'};
   return {ok:true,json:async()=>path==='/api/projects'?{projects:[{root:first.project,name:'Project',runs:[{id:first.run,status:'open'}]}]}:{plan:{},view:structuredClone(live),state:{decisions:{}}}};
 };
 const settle=async()=>{ for(let i=0;i<12;i++) await new Promise(setImmediate); };
 await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64')+'#dom'); await settle();
 const get=id=>document.getElementById(id);
+assert.equal(document.documentElement.lang,'en','plan language must override Korean browser');
 // Open through the HTML fallback; map and panel route to the same openDecision.
 get('decision-list').querySelector('button').click();
 const input=get('answer-text'), actions=get('answer-actions'), buttons=[...actions.children];
@@ -312,6 +375,10 @@ assert.deepEqual(actions.children,buttons,'refresh must preserve every action bu
 assert.equal(document.activeElement,input); assert.equal(input.value,'고쳐 주세요');
 assert.equal(input.selectionStart,2); assert.equal(input.selectionEnd,4);
 input.dispatchEvent({type:'compositionend'});
+const fileButton=get('decision').querySelectorAll('button').find(b=>b.textContent==='guide.md');
+assert(fileButton);fileButton.click();await settle();
+assert.match(get('decision').querySelectorAll('pre').find(p=>!p.hidden).textContent,/<script>literal Markdown<\/script>/);
+assert.equal(buttons[0].disabled,false,'successfully reading a file must open the details gate');
 get('decision').querySelector('details').open=true;
 get('decision').querySelector('details').dispatchEvent({type:'toggle'});
 assert.equal(buttons[0].disabled,false);
@@ -332,7 +399,7 @@ assert.equal(get('answer-text'),null);
             run = build_demo_run(root / 'home', root / 'project')
             current, events, derived = server._snapshot(run)
             view = server._view(current, derived, events, root / 'project')
-            self.assertEqual(view['counts'], {'done': 2, 'doing': 1, 'waiting': 2, 'needs_you': 1, 'returned': 1})
+            self.assertEqual(view['counts'], {'done': 2, 'doing': 1, 'waiting': 2, 'needs_you': 1, 'returned': 1, 'returns_total': 1})
             self.assertEqual([n['laps'] for n in view['nodes']], [['passed'], ['passed'], ['returned', 'current'], ['waiting_for_you'], [], []])
             decision = view['decisions'][0]
             self.assertEqual(decision['purpose'], 'human_check')
@@ -340,6 +407,8 @@ assert.equal(get('answer-text'),null);
             self.assertEqual(decision['unverified'], ['처음 읽는 분도 따라 할 수 있어요', '설치 순서가 처음 쓰는 분께 자연스러운지는 확인하지 못했어요.'])
             self.assertEqual(decision['worker_note'], '설치 순서 부분은 자신이 없어요.')
             self.assertTrue(decision['context']['why'])
+            self.assertEqual(decision['files'], [{'name':'guide.txt','path':'guide.txt'}])
+            self.assertEqual(view['language'],'ko')
             self.assertEqual(view['nodes'][3]['inputs'], [{'label': '기록 사용법', 'other_title': '기록 저장', 'delivered': True}])
             self.assertEqual(view['nodes'][3]['outputs'], [{'label': '읽기 쉬운 설명', 'other_title': '현황판 화면', 'delivered': False}])
             self.assertTrue(view['lessons'])
