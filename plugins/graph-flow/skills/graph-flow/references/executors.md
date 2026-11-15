@@ -26,13 +26,15 @@ Before launch, run `gf assign <node> --executor <executor> --model <model> --eff
 | --- | --- | --- | --- |
 | Leader itself | `inline` | `shared` | Execute the node's steps in the leader, retaining the leader role; effective lane 1 work only. |
 | Native subagent | `subagent` | `shared`, or supported `worktree` | Give one generated brief to Claude Code's Agent tool or Codex's `spawn_agent`. |
-| Claude Code Workflow | `workflow` | Match the actual checkout | Give each workflow agent one brief; each reports its own start/check/submission through `gf`. |
+| Claude Code Workflow | `workflow` | `worktree` for work, `shared` for review | Run [workflow.js](../workflow.js) with `{project, run, nodes: [{id, brief, model, effort, kind}], gf}`; each agent records its own start and submission. |
 | T3 Code | `t3` | `worktree` for parallel work; `shared` for read-only review | Put one generated brief in `delegate_task`'s task. |
 | Background session | `background` | Match the actual checkout | Start a supported persistent host session with one brief and its environment. |
 
 For native agents, supply the routed model and effort through the host's supported fields or configuration; Claude Code uses Agent, Codex uses `spawn_agent`. If a setting cannot be selected, use a supported executor or report the limitation, and record the settings actually used. Do not pretend a prompt changes the model. Keep the new session's context limited to the brief and required inputs. Wait for its completion using the host's agent-completion facility.
 
-For Workflow, the fan-out script is a separate integration unit. Do not invent a script path or arguments. When available, each agent receives exactly one brief and reports through `gf`; collect completions and run the leader's merge/gate procedure.
+For Workflow, launch [workflow.js](../workflow.js) from the project checkout with `args = {project, run, nodes: [{id, brief, model, effort, kind}], gf}`. `project` is the absolute leader project path, `run` the absolute run directory, and `gf` the absolute `scripts/gf` entry path. Supply a nonempty list of already-ready, assigned nodes; `brief` is the complete generated brief text, `kind` is `work` or `review`, and `model`/`effort` are the actual routed settings. Record work assignments with worktree isolation and review assignments with shared isolation. The script requests a host worktree for each work agent and the `graph-flow:gf-reviewer` plugin agent for reviews; every node runs in parallel. Required inputs must be committed and available to the host's worktree base before dispatch. If the host cannot supply the selected model, effort, review family, or checkout, report that limitation rather than substituting.
+
+The result is an array of `{id, reported, summary}`. `reported` is the child's acknowledgement of successful submission, not proof of acceptance; a recorded failing review is still reported. Missing, skipped, malformed, or failed agent completions return `reported: false`. Inspect the actual recorded submissions, then run the leader's merge/gate procedure. The script neither routes models nor decides gate verdicts.
 
 ## T3 Code delegation
 
