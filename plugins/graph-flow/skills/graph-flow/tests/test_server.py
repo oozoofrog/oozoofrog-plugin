@@ -490,7 +490,7 @@ class ServerTests(unittest.TestCase):
         (run / "evidence" / "escape").symlink_to(outside)
         for bad in ("../secret.log", str(path), "evidence/escape", "events.jsonl"):
             self.assert_error(403, "forbidden_path", "GET", self.api("/api/evidence", path=bad))
-        for bad in ("evidence", "evidence/missing"):
+        for bad in ("evidence", "evidence/missing", "evidence/a\x00b"):
             self.assert_error(404, "unknown_evidence", "GET", self.api("/api/evidence", path=bad))
         fifo = run / "evidence" / "fifo"
         os.mkfifo(str(fifo))
@@ -613,6 +613,32 @@ class ServerTests(unittest.TestCase):
                 contextlib.redirect_stdout(io.StringIO()):
             server.serve()
         self.assertEqual(json.loads((self.home / "server.json").read_text()), {"pid": os.getpid() + 1})
+
+
+class ReviewRegressionTest(unittest.TestCase):
+    """Defects found by the cross-family review of the server."""
+
+    def test_history_ignores_findings_that_are_not_objects(self):
+        node = {"id": "work", "checks": []}
+        state = {"basis": 0, "submission": None, "open_decisions": []}
+        events = [
+            {"seq": 1, "type": "node.start", "data": {"node": "work"}},
+            {"seq": 2, "type": "review.submit",
+             "data": {"node": "review", "target": "work", "target_submission": 5,
+                      "findings": ["bare text", 7, None, {"text": "A case is missing"}, {"text": 3}]}},
+            {"seq": 3, "type": "gate.verdict",
+             "data": {"node": "work", "verdict": "reject", "attempt": 1, "submission": 5}},
+        ]
+        laps, returned = server._history(node, state, events)[:2]
+        self.assertEqual(laps, ["returned"])
+        self.assertEqual(returned, [["A case is missing"]])
+
+    def test_requests_have_a_socket_timeout(self):
+        httpd, token = server.make_server()
+        try:
+            self.assertEqual(httpd.RequestHandlerClass.timeout, 30)
+        finally:
+            httpd.server_close()
 
 
 if __name__ == "__main__":

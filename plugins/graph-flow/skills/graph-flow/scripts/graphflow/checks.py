@@ -351,6 +351,8 @@ def review_submit(run_dir, node_id, verdict, findings, actor):
             raise _error("bad_verdict", "verdict must be pass or fail", _core.EXIT_USAGE)
         if not isinstance(findings, list):
             raise _error("bad_findings", "findings must be a list", _core.EXIT_USAGE)
+        if any(not isinstance(finding, dict) for finding in findings):
+            raise _error("bad_findings", "each finding must be an object", _core.EXIT_USAGE)
         _, target = _node(tx, node["target"], "work")
         if not _graph.has_current_submission(target):
             raise _error("wrong_status", "target must have a current submission")

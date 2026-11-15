@@ -159,7 +159,7 @@ def _history(node, st, events):
                 for review in reviews.values():
                     if review.get("target_submission") == data.get("submission"):
                         reasons.extend(f["text"] for f in review.get("findings") or []
-                                       if isinstance(f.get("text"), str))
+                                       if isinstance(f, dict) and isinstance(f.get("text"), str))
                 returned.append(list(dict.fromkeys(reasons)))
             results = {}
     if laps and st["submission"] and st["open_decisions"] and laps[-1] == "current":
@@ -267,6 +267,8 @@ def _view(current, derived, events, project):
 
 
 def _evidence(run_dir, relative):
+    if "\x00" in relative:
+        raise _HTTPError(404, "unknown_evidence", "evidence file is unavailable")
     path = pathlib.Path(relative)
     evidence = (run_dir / "evidence").resolve()
     target = (run_dir / path).resolve()
@@ -296,6 +298,7 @@ def _handler(token):
     class Handler(BaseHTTPRequestHandler):
         server_version = "graph-flow"
         sys_version = ""
+        timeout = 30  # an unfinished request must not hold a thread forever
 
         def log_message(self, *args):
             pass  # URLs can contain the token.

@@ -662,6 +662,8 @@ class HostRedSubmitTests(ChecksCase):
         self.submit()
         self.start("review")
         self.error("bad_verdict", checks.review_submit, self.run, "review", "maybe", [], ACTOR)
+        for bad in ("text", ["bare text"], [{"text": "ok"}, None]):
+            self.error("bad_findings", checks.review_submit, self.run, "review", "fail", bad, ACTOR)
 
 
 if __name__ == "__main__":
