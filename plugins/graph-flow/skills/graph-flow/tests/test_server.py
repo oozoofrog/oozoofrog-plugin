@@ -1,0 +1,415 @@
+"""Dashboard contract against real runs, checks, gates and signed human answers."""
+import contextlib
+import hashlib
+import http.client
+import io
+import json
+import os
+import pathlib
+import shutil
+import stat
+import subprocess
+import sys
+import tempfile
+import threading
+import unittest
+from unittest import mock
+from urllib.parse import urlencode
+
+SCRIPTS = pathlib.Path(__file__).resolve().parents[1] / "scripts"
+sys.path.insert(0, str(SCRIPTS))
+from graphflow import assign, checks, core, decisions, gate, plan, server, state, store
+
+ACTOR = {"role": "leader", "node": None, "session": "server-test"}
+REVIEWER = {"role": "reviewer", "node": "review", "session": "review-test"}
+CMD = {"id": "unit", "type": "cmd", "run": "printf checked"}
+
+
+class ServerTests(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = pathlib.Path(temporary.name).resolve()
+        self.home = self.root / "home"
+        env = mock.patch.dict(os.environ, {"GF_HOME": str(self.home)})
+        env.start()
+        self.addCleanup(env.stop)
+        decisions.ensure_key()
+        self.projects, self.runs, self.asks = [], [], []
+        for index in range(2):
+            root = self.root / ("project%d" % index)
+            root.mkdir()
+            self.git(root, "init", "-q")
+            self.git(root, "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+                     "-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "-m", "initial")
+            run = store.init_run(root, "run%d" % index, ACTOR)
+            raw = {"schema_version": 1, "goal": "server test", "nodes": [
+                {"id": "build", "kind": "work", "goal": "build", "owns": ["built.txt"],
+                 "lane": 3, "grade": "scoped", "checks": [dict(CMD)]},
+                {"id": "review", "kind": "review", "goal": "review", "target": "build",
+                 "lens": "correctness", "lane": 1, "grade": "daily", "owns": [],
+                 "needs": [{"from": "build", "artifact": "built.txt"}],
+                 "checks": [{"id": "cites", "type": "cites"}]}]}
+            self.assertEqual(plan.validate(raw), [])
+            normalized, _ = plan.normalize(raw)
+            with store.transaction(run) as tx:
+                revision, sha = tx.write_plan(normalized)
+                tx.append("plan.set", {"revision": revision, "plan_sha256": sha,
+                          "fingerprints": {n["id"]: state.fingerprint(n) for n in normalized["nodes"]},
+                          "constraints_applied": []}, ACTOR)
+            assign.assign(run, "build", "subagent", "test", "high", "test", "openai", "shared", ACTOR)
+            assign.assign(run, "review", "subagent", "test", "high", "test", "claude", "shared", ACTOR)
+            with contextlib.redirect_stderr(io.StringIO()):
+                checks.start(run, "build", None, ACTOR)
+                (root / "built.txt").write_text("built\n", encoding="utf-8")
+                checks.run_cmd(run, "build", CMD, "loop", None, ACTOR)
+                checks.submit(run, "build", None, None, "done", [], None, ACTOR)
+                checks.start(run, "review", None, REVIEWER)
+                checks.review_submit(run, "review", "pass", [], REVIEWER)
+                self.assertEqual(gate.gate(run, "review", None, ACTOR)["verdict"], "pass")
+                # Deliberately reverse chronological order across the registry's projects.
+                with mock.patch.object(store, "now", return_value="2026-01-0%dT00:00:00Z" % (2 - index)):
+                    outcome = gate.gate(run, "build", None, ACTOR)
+            self.assertEqual(outcome["verdict"], "needs_approval")
+            self.projects.append(root)
+            self.runs.append(run)
+            self.asks.append(outcome["asks"][0])
+        self.httpd, self.token = server.make_server()
+        self.port = self.httpd.server_address[1]
+        self.thread = threading.Thread(target=self.httpd.serve_forever,
+                                       kwargs={"poll_interval": 0.01}, daemon=True)
+        self.thread.start()
+        self.addCleanup(self.stop_server)
+
+    def stop_server(self):
+        self.httpd.shutdown()
+        self.httpd.server_close()
+        self.thread.join(5)
+        self.assertFalse(self.thread.is_alive())
+
+    def git(self, root, *args):
+        return subprocess.run(["git", "-C", str(root)] + list(args), check=True,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    def request(self, method, path, body=None, headers=None, token=True):
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        merged = {"X-GF-Token": self.token} if token else {}
+        merged.update(headers or {})
+        if body is not None and not isinstance(body, bytes):
+            body = json.dumps(body).encode("utf-8")
+        try:
+            connection.request(method, path, body=body, headers=merged)
+            response = connection.getresponse()
+            return response.status, dict(response.getheaders()), response.read()
+        finally:
+            connection.close()
+
+    def api(self, route, index=0, **query):
+        return route + "?" + urlencode(dict(project=str(self.projects[index]),
+                                           run=self.runs[index].name, **query))
+
+    def answer_body(self, index=0, **changes):
+        body = {"project": str(self.projects[index]), "run": self.runs[index].name,
+                "id": self.asks[index], "outcome": "approved", "answer": "Yes ✓"}
+        body.update(changes)
+        return body
+
+    def json_request(self, method, path, **kwargs):
+        status, headers, payload = self.request(method, path, **kwargs)
+        self.assertEqual(headers["Cache-Control"], "no-store")
+        self.assertTrue(headers["Content-Type"].startswith("application/json"))
+        return status, json.loads(payload)
+
+    def assert_error(self, status, code, method, path, **kwargs):
+        actual, body = self.json_request(method, path, **kwargs)
+        self.assertEqual(actual, status, body)
+        self.assertEqual(set(body), {"ok", "code", "message"})
+        self.assertEqual((body["ok"], body["code"]), (False, code))
+
+    def test_host_and_token_for_every_route(self):
+        routes = ["/", "/api/projects", "/api/queue", self.api("/api/run"),
+                  self.api("/api/evidence", path="evidence/missing"), "/not-found"]
+        for path in routes:
+            for method in ("GET", "POST"):
+                with self.subTest(path=path, method=method):
+                    kw = {"body": self.answer_body()} if method == "POST" else {}
+                    self.assert_error(401, "unauthorized", method, path, token=False, **kw)
+                    self.assert_error(401, "unauthorized", method, path,
+                                      headers={"X-GF-Token": "wrong"}, **kw)
+                    self.assert_error(403, "bad_host", method, path,
+                                      headers={"Host": "foreign.example:%s" % self.port}, **kw)
+        for kw in ({"token": False}, {"headers": {"X-GF-Token": "wrong"}},
+                   {"token": False, "path_suffix": "?t=" + self.token}):
+            suffix = kw.pop("path_suffix", "")
+            self.assert_error(401, "unauthorized", "POST", "/api/answer" + suffix,
+                              body=self.answer_body(), **kw)
+        self.assert_error(403, "bad_host", "POST", "/api/answer", body=self.answer_body(),
+                          headers={"Host": "example.invalid"})
+        self.assertEqual(self.request("GET", "/?t=" + self.token, token=False)[0], 200)
+        self.assertEqual(self.request("GET", "/api/projects",
+                                     headers={"Host": "localhost:%s" % self.port})[0], 200)
+        for host in ("0.0.0.0", "::1", "example.invalid", "127.0.0.2", None):
+            with self.subTest(host=host), self.assertRaises(core.GFError) as caught:
+                server.serve(host=host)
+            self.assertEqual((caught.exception.code, caught.exception.exit_code), ("bad_host", 2))
+        self.assertEqual(self.httpd.server_address[0], "127.0.0.1")
+
+    def test_unsupported_methods(self):
+        for method in ("PUT", "DELETE", "PATCH", "OPTIONS", "HEAD", "TRACE", "BREW"):
+            with self.subTest(method=method):
+                status, headers, body = self.request(method, "/api/projects")
+                self.assertEqual(status, 405)
+                self.assertEqual(headers["Cache-Control"], "no-store")
+                if method != "HEAD":
+                    self.assertEqual(json.loads(body)["code"], "method_not_allowed")
+
+    def test_body_limit_and_malformed_input(self):
+        self.assert_error(413, "body_too_large", "POST", "/api/answer", body=b" " * (64 * 1024 + 1))
+        for raw in (b"{", b"\xff", b"[]", b"null", b""):
+            self.assert_error(400, "bad_body", "POST", "/api/answer", body=raw)
+        self.assert_error(400, "bad_body", "POST", "/api/answer", body=b"{}",
+                          headers={"Content-Length": "-1"})
+        self.assert_error(400, "bad_body", "POST", "/api/answer", body=b"{}",
+                          headers={"Content-Length": "nonsense"})
+        self.assert_error(400, "bad_body", "POST", "/api/answer", body=b"{}",
+                          headers={"Transfer-Encoding": "chunked"})
+        for key in ("project", "run", "id", "outcome", "answer"):
+            self.assert_error(400, "bad_input", "POST", "/api/answer",
+                              body=self.answer_body(**{key: []}))
+            self.assert_error(400, "bad_input", "POST", "/api/answer",
+                              body=self.answer_body(**{key: "\ud800"}))
+        # The limit is inclusive; a small JSON object followed by whitespace still parses.
+        body = json.dumps(self.answer_body(outcome="bad")).encode()
+        self.assert_error(400, "bad_outcome", "POST", "/api/answer",
+                          body=body + b" " * (64 * 1024 - len(body)))
+
+    def test_projects_missing_project_and_unreadable_run(self):
+        status, data = self.json_request("GET", "/api/projects")
+        self.assertEqual(status, 200)
+        self.assertEqual([p["root"] for p in data["projects"]], list(map(str, self.projects)))
+        for index, project in enumerate(data["projects"]):
+            self.assertEqual(project["name"], self.projects[index].name)
+            run = project["runs"][0]
+            self.assertEqual(set(run), {"id", "status", "nodes", "passed", "open_decisions", "last_event"})
+            self.assertEqual((run["id"], run["status"], run["nodes"], run["passed"], run["open_decisions"]),
+                             (self.runs[index].name, "open", 2, 1, 1))
+            self.assertEqual(run["last_event"], store.events(self.runs[index])[-1]["ts"])
+        shutil.rmtree(str(self.projects[1]))
+        (self.runs[0] / "plans" / "0001.json").write_text("broken", encoding="utf-8")
+        status, data = self.json_request("GET", "/api/projects")
+        self.assertEqual(status, 200)
+        self.assertIn("error", data["projects"][1])
+        self.assertIn("error", data["projects"][0]["runs"][0])
+        self.assertEqual(self.json_request("GET", "/api/queue"), (200, {"queue": []}))
+
+    def test_queue_evidence_checks_files_order_and_freshness(self):
+        status, data = self.json_request("GET", "/api/queue")
+        self.assertEqual(status, 200)
+        queue = data["queue"]
+        self.assertEqual([item["project"] for item in queue], list(map(str, reversed(self.projects))))
+        for item in queue:
+            self.assertEqual(set(item), {"project", "run", "id", "node", "kind", "purpose", "question",
+                                         "asked", "evidence", "node_state", "checks", "changed_files"})
+            self.assertEqual((item["node"], item["purpose"], item["kind"]),
+                             ("build", "lane3", "authorization"))
+            self.assertEqual(item["evidence"]["command"], [CMD["run"]])
+            self.assertEqual(item["changed_files"], ["built.txt"])
+            self.assertEqual(item["node_state"], {"status": "awaiting_approval", "attempts": 1,
+                                                  "lane": 3, "effective_lane": 3})
+            rows = {(row["check"], row["phase"]): row for row in item["checks"]}
+            self.assertEqual(set(rows), {("unit", "gate"), ("unit", "loop"), ("scope", "gate")})
+            for phase in ("gate", "loop"):
+                row = rows[("unit", phase)]
+                self.assertEqual(set(row), {"check", "phase", "result", "exit_code", "command", "log"})
+                self.assertEqual((row["result"], row["exit_code"], row["command"]), ("passed", 0, CMD["run"]))
+                index = self.projects.index(pathlib.Path(item["project"]))
+                self.assertEqual((self.runs[index] / row["log"]).read_text(), "checked")
+        self.assertEqual(self.json_request("POST", "/api/answer", body=self.answer_body())[0], 200)
+        # A restart gives the old submission's decision a stale binding.
+        checks.start(self.runs[1], "build", None, ACTOR)
+        self.assertEqual(self.json_request("GET", "/api/queue"), (200, {"queue": []}))
+        fresh = decisions.ask(self.runs[1], "information", "Which direction?", None, None, "free", None, ACTOR)
+        item = self.json_request("GET", "/api/queue")[1]["queue"][0]
+        self.assertEqual(item["id"], fresh["id"])
+        self.assertEqual(item["node_state"], dict.fromkeys(("status", "attempts", "lane", "effective_lane")))
+        self.assertEqual((item["checks"], item["changed_files"]), ([], []))
+
+    def test_queue_uses_only_current_attempt(self):
+        run = self.runs[0]
+        checks.start(run, "build", None, ACTOR)
+        checks.submit(run, "build", None, None, "again", [], None, ACTOR)
+        fresh = decisions.ask(run, "review", "Second attempt?", "build", None, "free", None, ACTOR)
+        queue = self.json_request("GET", "/api/queue")[1]["queue"]
+        item = next(item for item in queue if item["project"] == str(self.projects[0]))
+        self.assertEqual(item["id"], fresh["id"])
+        self.assertEqual(item["node_state"]["attempts"], 2)
+        self.assertEqual(item["checks"], [])
+
+    def test_run_shape_and_unknown_id_validation(self):
+        status, data = self.json_request("GET", self.api("/api/run"))
+        self.assertEqual(status, 200)
+        self.assertEqual(set(data), {"plan", "state", "ready", "trace"})
+        self.assertEqual(data["plan"], store.read_plan(self.runs[0]))
+        self.assertEqual(data["state"], state.derive(data["plan"], store.events(self.runs[0])))
+        self.assertEqual(data["ready"], ["build"])
+        self.assertEqual(data["trace"]["run"]["nodes"], 2)
+        self.assertEqual(data["trace"]["run"]["attempts"], 2)
+        for route in ("/api/run", "/api/evidence"):
+            self.assert_error(404, "unknown_project", "GET", route + "?" + urlencode(
+                {"project": str(self.root / "foreign"), "run": self.runs[0].name}))
+            for bad in ("missing", "../run0", "/tmp", "Bad", "run0\n", "", "."):
+                self.assert_error(404, "unknown_run", "GET", route + "?" + urlencode(
+                    {"project": str(self.projects[0]), "run": bad}))
+        self.assert_error(404, "unknown_project", "POST", "/api/answer",
+                          body=self.answer_body(project=str(self.root)))
+        self.assert_error(404, "unknown_run", "POST", "/api/answer", body=self.answer_body(run="../run0"))
+        self.assert_error(404, "not_found", "GET", "/missing")
+        self.assert_error(404, "not_found", "POST", "/missing", body={})
+
+    def test_run_without_plan(self):
+        run = store.init_run(self.projects[0], "empty", ACTOR)
+        status, data = self.json_request("GET", "/api/run?" + urlencode(
+            {"project": str(self.projects[0]), "run": run.name}))
+        self.assertEqual(status, 200)
+        self.assertIsNone(data["plan"])
+        self.assertEqual(data["ready"], [])
+
+    def test_evidence_confinement_text_and_truncation(self):
+        run = self.runs[0]
+        path = run / "evidence" / "note.log"
+        path.write_text("evidence ✓", encoding="utf-8")
+        status, headers, body = self.request("GET", self.api("/api/evidence", path="evidence/note.log"))
+        self.assertEqual((status, body.decode()), (200, "evidence ✓"))
+        self.assertEqual(headers["Content-Type"], "text/plain; charset=utf-8")
+        outside = self.root / "secret.log"
+        outside.write_text("secret", encoding="utf-8")
+        (run / "evidence" / "escape").symlink_to(outside)
+        for bad in ("../secret.log", str(path), "evidence/escape", "events.jsonl"):
+            self.assert_error(403, "forbidden_path", "GET", self.api("/api/evidence", path=bad))
+        for bad in ("evidence", "evidence/missing"):
+            self.assert_error(404, "unknown_evidence", "GET", self.api("/api/evidence", path=bad))
+        fifo = run / "evidence" / "fifo"
+        os.mkfifo(str(fifo))
+        self.assert_error(404, "unknown_evidence", "GET", self.api("/api/evidence", path="evidence/fifo"))
+        for raw in (b"x" * (server.MAX_EVIDENCE + 100), b"\xff" * server.MAX_EVIDENCE):
+            path.write_bytes(raw)
+            status, _, body = self.request("GET", self.api("/api/evidence", path="evidence/note.log"))
+            self.assertEqual(status, 200)
+            self.assertLessEqual(len(body), server.MAX_EVIDENCE)
+            self.assertTrue(body.endswith(b"\n[truncated]\n"))
+            body.decode("utf-8")
+        path.write_bytes(b"x" * server.MAX_EVIDENCE)
+        body = self.request("GET", self.api("/api/evidence", path="evidence/note.log"))[2]
+        self.assertEqual(body, b"x" * server.MAX_EVIDENCE)
+
+    def test_answer_is_verified_and_next_lane3_gate_passes(self):
+        status, data = self.json_request("POST", "/api/answer", body=self.answer_body())
+        self.assertEqual(status, 200)
+        self.assertTrue(data["ok"])
+        event = store.events(self.runs[0])[-1]
+        self.assertEqual(event["type"], "decision.answer")
+        self.assertEqual(event["actor"], {"role": "human", "node": None, "session": "dashboard"})
+        self.assertEqual(event["data"], data["decision"])
+        self.assertEqual(event["data"]["source"], "dashboard")
+        derived = state.derive(store.read_plan(self.runs[0]), store.events(self.runs[0]))
+        self.assertTrue(derived["decisions"][self.asks[0]]["verified"])
+        self.assertEqual(derived["nodes"]["build"]["status"], "awaiting_approval")
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(gate.gate(self.runs[0], "build", None, ACTOR)["verdict"], "pass")
+        self.assert_error(409, "already_answered", "POST", "/api/answer", body=self.answer_body())
+
+    def test_answer_state_errors_and_bad_outcome(self):
+        self.assert_error(400, "bad_outcome", "POST", "/api/answer", body=self.answer_body(outcome="answered"))
+        self.assert_error(409, "unknown_decision", "POST", "/api/answer", body=self.answer_body(id="d999999"))
+        checks.start(self.runs[0], "build", None, ACTOR)
+        self.assert_error(409, "stale_decision", "POST", "/api/answer", body=self.answer_body())
+
+    def test_concurrent_answers_only_one_wins(self):
+        barrier = threading.Barrier(2)
+        results = []
+        def answer():
+            barrier.wait(5)
+            results.append(self.json_request("POST", "/api/answer", body=self.answer_body()))
+        threads = [threading.Thread(target=answer) for _ in range(2)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(10)
+            self.assertFalse(thread.is_alive())
+        self.assertEqual(sorted(code for code, _ in results), [200, 409])
+        self.assertEqual(sum(e["type"] == "decision.answer" for e in store.events(self.runs[0])), 1)
+
+    def test_reads_do_not_write_or_recover_logs(self):
+        with (self.runs[0] / "events.jsonl").open("ab") as stream:
+            stream.write(b'{"partial":')
+        def digest():
+            return {str(p): hashlib.sha256(p.read_bytes()).hexdigest()
+                    for root in (self.home,) + tuple(self.projects)
+                    for p in root.rglob("*") if p.is_file()}
+        before = digest()
+        for route in ("/api/projects", "/api/queue", self.api("/api/run")):
+            self.assertEqual(self.request("GET", route)[0], 200)
+        self.assertEqual(digest(), before)
+        self.assertFalse((self.home / "server.json").exists())
+
+    def test_page_placeholder_and_nonce_replacement(self):
+        path = self.root / "patched-module" / "page.html"
+        with mock.patch.object(server, "PAGE_PATH", path):
+            status, headers, body = self.request("GET", "/")
+            self.assertEqual(status, 200)
+            self.assertIn(b"page is not installed", body)
+            csp = headers["Content-Security-Policy"]
+            nonce = csp.split("'nonce-")[1].split("'")[0]
+            self.assertEqual(csp, "default-src 'none'; script-src 'nonce-%s'; style-src 'nonce-%s'; "
+                             "connect-src 'self'; img-src data:; base-uri 'none'; form-action 'none'" % (nonce, nonce))
+            path.parent.mkdir()
+            path.write_text('<style nonce="__NONCE__"></style><script nonce="__NONCE__"></script>', encoding="utf-8")
+            status, headers, body = self.request("GET", "/")
+            self.assertEqual(status, 200)
+            second_nonce = headers["Content-Security-Policy"].split("'nonce-")[1].split("'")[0]
+            self.assertNotEqual(nonce, second_nonce)
+            self.assertNotIn(b"__NONCE__", body)
+            self.assertEqual(body.decode().count('nonce="%s"' % second_nonce), 2)
+
+    def test_internal_error_does_not_leak_exception(self):
+        with mock.patch.object(server, "_project_list", side_effect=RuntimeError("SECRET traceback")):
+            self.assert_error(500, "internal", "GET", "/api/projects")
+            body = self.request("GET", "/api/projects")[2]
+            self.assertNotIn(b"SECRET", body)
+            self.assertNotIn(b"Traceback", body)
+
+    def test_serve_publishes_private_record_and_removes_it_on_shutdown(self):
+        for host in ("127.0.0.1", "localhost"):
+            out = io.StringIO()
+            captured = {}
+            def interrupt(httpd):
+                record = json.loads((self.home / "server.json").read_text())
+                self.assertEqual(set(record), {"url", "port", "token", "pid", "started"})
+                self.assertEqual(stat.S_IMODE((self.home / "server.json").stat().st_mode), 0o600)
+                self.assertEqual(record["pid"], os.getpid())
+                self.assertEqual(record["port"], httpd.server_address[1])
+                self.assertEqual(record["url"], "http://127.0.0.1:%s/?t=%s" % (record["port"], record["token"]))
+                captured.update(record)
+                raise KeyboardInterrupt
+            with mock.patch.object(server.ThreadingHTTPServer, "serve_forever", interrupt), \
+                    contextlib.redirect_stdout(out):
+                server.serve(host=host)
+            lines = out.getvalue().splitlines()
+            self.assertEqual(len(lines), 1)
+            self.assertEqual(json.loads(lines[0]), {"ok": True, "url": captured["url"], "port": captured["port"]})
+            self.assertFalse((self.home / "server.json").exists())
+            self.assertEqual(stat.S_IMODE((self.home / "human.key").stat().st_mode), 0o600)
+
+    def test_shutdown_preserves_record_for_another_pid(self):
+        def replace(httpd):
+            with store.locked(self.home / ".lock"):
+                store.atomic_write(self.home / "server.json", json.dumps({"pid": os.getpid() + 1}))
+            raise KeyboardInterrupt
+        with mock.patch.object(server.ThreadingHTTPServer, "serve_forever", replace), \
+                contextlib.redirect_stdout(io.StringIO()):
+            server.serve()
+        self.assertEqual(json.loads((self.home / "server.json").read_text()), {"pid": os.getpid() + 1})
+
+
+if __name__ == "__main__":
+    unittest.main()
