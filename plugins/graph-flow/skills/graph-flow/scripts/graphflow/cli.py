@@ -105,6 +105,16 @@ def _lazy_import(name):
         raise core.GFError("not_implemented", name + " is not implemented yet")
 
 
+def _mcp(args, actor):
+    _lazy_import("mcp").serve(sys.stdin, sys.stdout)
+    return 0
+
+
+def _serve(args, actor):
+    _lazy_import("server").serve(port=args.port)
+    return {}
+
+
 def _require_human_terminal(actor):
     if actor["role"] != "human":
         raise core.GFError("forbidden", "decide answer requires role human", core.EXIT_FORBIDDEN)
@@ -231,7 +241,8 @@ _register("serve", "leader human", needs_run=False)
 for _path in ("init", "plan validate", "learn list", "learn promote", "learn retire"):
     COMMANDS[tuple(_path.split())]["needs_run"] = False
 for _path, _handler in (("init", _init), ("plan validate", _validate),
-                        ("plan set", _set_plan), ("status", _status), ("host set", _host_set)):
+                        ("plan set", _set_plan), ("status", _status), ("host set", _host_set),
+                        ("mcp", _mcp), ("serve", _serve)):
     COMMANDS[tuple(_path.split())]["handler"] = _handler
 for _path, _entry in COMMANDS.items():
     if _entry["handler"] is None and _path not in (("mcp",), ("serve",)):
@@ -304,8 +315,8 @@ def _parser(authorize_only=False):
                 sub.add_argument("--run", dest="run_command", required=True)
             else:
                 sub.add_argument("--reason", required=True)
-        elif path in (("mcp",), ("serve",)):
-            sub.add_argument("arguments", nargs=argparse.REMAINDER)
+        elif path == ("serve",):
+            sub.add_argument("--port", type=int, default=0)
         if authorize_only:
             continue
         if path in (("start",), ("red",), ("check", "run"), ("submit",), ("gate",)):
@@ -364,6 +375,8 @@ def main(argv=None):
                 and not (args.command_path == ("brief",) and args.plan_brief)):
             raise core.GFError("run_required", "--run or GF_RUN is required")
         result = entry["handler"](args, actor)
+        if args.command_path == ("mcp",):
+            return result
         payload, code = result if isinstance(result, tuple) else (result, 0)
         output = dict(ok=True, **payload)
         if code and args.command_path == ("plan", "validate"):

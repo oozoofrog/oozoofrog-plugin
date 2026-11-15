@@ -21,5 +21,6 @@
     "defaultPrompt": [
       "$graph-flow Plan this work as a graph with checks, and track progress."
     ]
-  }
+  },
+  "mcpServers": "./.mcp.json"
 }

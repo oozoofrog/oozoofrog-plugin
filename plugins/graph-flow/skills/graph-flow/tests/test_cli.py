@@ -349,8 +349,24 @@ class CLITests(unittest.TestCase):
             missing = ModuleNotFoundError(name='graphflow.' + name)
             with mock.patch.object(cli.importlib, 'import_module', side_effect=missing):
                 self.assertEqual(self.call(*(['learn', 'list'] if name == 'learn' else ['trace']), code=2)['code'], 'not_implemented')
-        for command in ('mcp', 'serve'):
-            self.assertEqual(self.call(command, code=2)['code'], 'not_implemented')
+
+    def test_serve_absence_and_lazy_dispatch(self):
+        missing = ModuleNotFoundError(name='graphflow.server')
+        with mock.patch.object(cli.importlib, 'import_module', side_effect=missing):
+            self.assertEqual(self.call('serve', code=2)['code'], 'not_implemented')
+        server = types.SimpleNamespace(serve=mock.Mock())
+        with mock.patch.object(cli, '_lazy_import', return_value=server):
+            self.call('serve', '--port', '12345')
+            server.serve.assert_called_once_with(port=12345)
+            server.serve.reset_mock()
+            self.call('serve')
+            server.serve.assert_called_once_with(port=0)
+
+    def test_mcp_eof_has_no_cli_envelope(self):
+        out = io.StringIO()
+        with mock.patch.object(sys, 'stdin', io.StringIO('')), contextlib.redirect_stdout(out):
+            self.assertEqual(cli.main(['--json', 'mcp']), 0)
+        self.assertEqual(out.getvalue(), '')
 
     def test_lazy_learn_and_trace_dispatch(self):
         actor = core.actor_from_env()
