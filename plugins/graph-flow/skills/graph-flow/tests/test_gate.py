@@ -667,12 +667,11 @@ class ExecutionTests(GateCase):
             self.answer(first["asks"][0])
             self.assertEqual(self.gate()["verdict"], "pass")
 
-    def test_non_command_integration_is_accepted_by_plan_but_cannot_execute(self):
-        # records section 6 executes integration checks as commands, but V1-V9 allow scope here.
-        self.set_plan([work()], [{"id": "not-cmd", "type": "scope"}])
-        before = store.events(self.run)
-        self.error("unknown_check", gate.gate_final, self.run, None, ACTOR)
-        self.assertEqual(store.events(self.run), before)
+    def test_non_command_integration_check_is_rejected_by_plan_validation(self):
+        # The gate executes integration checks as commands, so the plan refuses anything else (V5).
+        document = {"schema_version": 1, "goal": "g", "nodes": [work()],
+                    "integration_checks": [{"id": "not-cmd", "type": "scope"}]}
+        self.assertIn(("V5", None), [(p["code"], p["node"]) for p in plan.validate(document)])
 
     def test_final_failed_checks_and_tested_tree(self):
         self.set_plan([work()], [dict(CMD, id="bad", run="false"), dict(CMD, id="good")])
