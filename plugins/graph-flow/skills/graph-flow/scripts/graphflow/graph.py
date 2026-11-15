@@ -58,10 +58,15 @@ def start_problem(plan, state, node_id):
     st = state.get("nodes", {}).get(node_id) or {}
     if node.get("kind") == "decision":
         return "not_startable"
-    if st.get("status") == "replan" or st.get("attempts", 0) >= st.get("max_attempts", 3):
+    status = st.get("status")
+    if status == "replan":
         return "attempts_exhausted"
-    if st.get("status") not in STARTABLE:
+    # Status first: a node that is running, submitted or passed is simply not startable,
+    # even on its last attempt. Exhaustion only applies to a node that could otherwise start.
+    if status not in STARTABLE:
         return "not_startable"
+    if st.get("attempts", 0) >= st.get("max_attempts", 3):
+        return "attempts_exhausted"
     if not needs_satisfied(plan, state, node_id):
         return "needs_unsatisfied"
     if shared_busy(plan, state, node_id):

@@ -71,6 +71,19 @@ class StartTests(unittest.TestCase):
         self.assertEqual("attempts_exhausted",
                          graph.start_problem(plan, state(a=st("replan", attempts=1)), "a"))
 
+    def test_live_work_on_the_last_attempt_is_not_exhausted(self):
+        plan = {"nodes": [node("a")]}
+        for status in ("running", "submitted", "passed"):
+            self.assertEqual(
+                "not_startable",
+                graph.start_problem(plan, state(a=st(status, attempts=3, isolation="worktree")), "a"),
+                status)
+        for status in ("rejected", "held", "unverified", "awaiting_approval"):
+            self.assertEqual(
+                "attempts_exhausted",
+                graph.start_problem(plan, state(a=st(status, attempts=3, isolation="worktree")), "a"),
+                status)
+
     def test_decision_never_starts(self):
         plan = {"nodes": [node("d", "decision")]}
         self.assertEqual("not_startable", graph.start_problem(plan, state(d=st()), "d"))

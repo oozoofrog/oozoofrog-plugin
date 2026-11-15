@@ -189,7 +189,7 @@ Required top-level fields: `schema_version` (must be `1`), `goal` (non-empty str
 | --- | --- | --- | --- |
 | `cmd` | `run`, optional `timeout_s` (default 600), optional `cwd` (project-relative) | `gf` runs `/bin/sh -c <run>` and reads the exit code; 0 is passed, anything else or a timeout is failed | 1 |
 | `scope` | none | `gf` compares the files the node changed with its `owns`; run for every `work` node | 1 |
-| `cites` | none | `gf` verifies every finding of the review has `file` and `line`, the file exists in the tested tree, and the line number is within the file | 1 |
+| `cites` | none | `gf` verifies every finding of the review has `file` and `line`, the file is a project-relative path that resolves to a regular file inside the tested tree and outside `.git` and `.graph-flow`, and the line number is within the file | 1 |
 | `host` | `tool` (free text, e.g. an IDE test tool), `expect` | The agent runs its own tool and submits the outcome with `gf check record` | 2 |
 | `human` | optional `prompt` | A person, through a `review` decision bound to this node, attempt, and check | human |
 | (review verdict) | | The reviewer's `pass` or `fail` | 4 |
@@ -199,17 +199,17 @@ Grade 3 is rollback history (section 9).
 ### `cmd`
 
 - Only commands written in the plan or in `checks.json` are executed. `gf` prints the command line to stderr before running it.
-- Working directory: `--cwd` if given (a worktree), else the project root, joined with the check's `cwd`.
+- Working directory: `--cwd` if given (a worktree), else the project root, joined with the check's `cwd`. The resolved directory must stay inside that tree (exit 2, `bad_cwd`); this applies to checks from `checks.json` too.
 - Output (stdout and stderr interleaved) goes to `evidence/<node>/<check>/a<attempt>-<8 hex>.log`, created with exclusive open; run-level checks use node `_run`. The 8 hex characters are random.
 - The command runs **outside** the run lock. Before running, `gf` notes the node's `basis`, attempt, and the plan revision (and, for gate and merge operations, the submission id); when committing the result it re-checks all of them under the lock and, if any changed, discards the result with exit 4 (code `stale_result`).
 
 ### `scope`
 
-`gf start` records the base: `git rev-parse HEAD` in the node's working directory, and `dirty`, a map from path to state for every file that is modified, deleted, or untracked at that moment. The state is the file's `git hash-object` value, or the string `deleted` for a tracked file that is missing.
+`gf start` records the base: `git rev-parse HEAD` in the node's working directory, and `dirty`, a map from path to state for every path that is modified, deleted, or untracked at that moment. The state of a path is: `deleted` for a tracked file that is missing; `link:<target>` for a symbolic link (the link text, not followed); `dir` for a directory (for example an untracked nested repository); otherwise `<mode>:<hash>`, the file's permission bits in octal and its `git hash-object` value. Computing the state never fails on an unusual path.
 
 The comparison always asks one question: did this node change a file it does not own?
 
-- **Committed submission** (the submission carries a `commit`): changed files are `git diff --no-renames --name-only -z <base.rev> <commit>`.
+- **Committed submission** (the submission carries a `commit`): the commit must descend from `base.rev` (`gf submit` refuses it otherwise with `bad_commit`); changed files are `git diff --no-renames --name-only -z <base.rev> <commit>`.
 - **Uncommitted submission** (no commit, shared tree): the candidates are `git diff --no-renames --name-only -z <base.rev>`, plus untracked files (`git ls-files --others --exclude-standard -z`), plus **every path in `base.dirty`** (so a file that was dirty at base and has since been restored or deleted is still examined). A candidate listed in `base.dirty` is changed only if its current state (hash, or `deleted` when missing) differs from the recorded one; every other candidate is changed.
 - In both cases every changed file must be equal to or under one of the node's `owns`; the others are `violations`. Paths under `.graph-flow/` are excluded. The result is grade 1.
 
@@ -364,7 +364,7 @@ A node **has a current submission** when its status is `submitted`, `unverified`
 
 ### Starting and readiness
 
-`gf start <node>` is valid for a `work` or `review` node when its status is `pending`, `assigned`, `rejected`, `unverified`, `held`, or `awaiting_approval`; its needs are satisfied; `attempts < max_attempts`; and the shared-tree rule of section 4 allows it. Errors (exit 4): `not_startable`, `needs_unsatisfied`, `shared_busy`, `attempts_exhausted`. On `attempts_exhausted` the tool also appends `gate.verdict` with verdict `replan`, rule `R2`, unless the node is already `replan` (P2: one exhaustion rule for every retry path). `decision` nodes are never started.
+`gf start <node>` is valid for a `work` or `review` node when its status is `pending`, `assigned`, `rejected`, `unverified`, `held`, or `awaiting_approval`; its needs are satisfied; `attempts < max_attempts`; and the shared-tree rule of section 4 allows it. Errors (exit 4): `not_startable`, `needs_unsatisfied`, `shared_busy`, `attempts_exhausted`. Status is checked first: a node that is `running`, `submitted`, or `passed` is `not_startable` even on its last attempt, and nothing is appended for it. `attempts_exhausted` applies only to a node that could otherwise start. On `attempts_exhausted` the tool also appends `gate.verdict` with verdict `replan`, rule `R2`, unless the node is already `replan` (P2: one exhaustion rule for every retry path). `decision` nodes are never started.
 
 Needs are satisfied when every `needs.from` node is `passed`. For a `review` node, its `target` only needs to have a current submission: the review happens before the target is accepted.
 
