@@ -5,13 +5,38 @@ description: Use when a user asks to plan, split, delegate, verify, or track mul
 
 # graph-flow
 
-graph-flow turns multi-step work into a graph of nodes. Each node has an owner, checks that can fail, and a gate verdict. Progress is derived from an append-only event log, and decisions that need a person are recorded as decision nodes.
+Turn multi-step work into bounded nodes with explicit dependencies, owned files, and checks that can fail. Run a produce/check/correct loop inside each node and use gate evidence to choose what runs next. Keep decisions, attempts, and acceptance in durable records so another session can resume the run.
 
-The `gf` tool (`scripts/gf`) reads and writes these records; the skill text decides when to use it.
+## Find the tool and your role
 
-## References
+Invoke `python3 <skill-dir>/scripts/gf`; `<skill-dir>` is the base directory the host prints when it loads this skill. Below, `gf` abbreviates that invocation; it does not require a command on PATH. With MCP available, the same commands exist as tools; see [MCP](references/mcp.md).
 
-- [references/principles.md](references/principles.md): the principles (P1 to P12) behind the design.
-- [references/records.md](references/records.md): file layout, roles, `plan.json`, events, gate rules, command line, and module contract.
+If a brief sets `GF_ROLE=worker` or `GF_ROLE=reviewer`, read [worker.md](references/worker.md) only, skip the other references, and follow your brief. Otherwise, this session is the leader: read [leader.md](references/leader.md).
 
-The step-by-step procedure is not written yet.
+## Run the loop
+
+1. Inspect the project and existing runs with `gf status`; initialize a new run with `gf init` only when needed, then record observed capabilities with `gf host set`.
+2. Resolve consequential human choices with `gf decide ask`; use `gf decide wait` without blocking unrelated nodes.
+3. Read `gf brief --plan`; write checks before work, split by blast radius, and use `gf plan validate` followed by `gf plan set`.
+4. Select `gf ready` nodes, inspect `gf route`, record `gf assign`, and deliver each `gf brief` to its executor.
+5. Inside a work node, use `gf start`, optionally `gf red`, then produce, run `gf check run`, correct, and `gf submit`.
+6. Integrate committed work with `gf merge`; receive `gf review submit` from independent reviewers and run `gf gate` on the review and its target.
+7. On rejection, read its scope, use `gf assign` and a fresh `gf brief` for that node only; on `replan`, change the plan with `gf plan set`.
+8. Close with `gf gate --final` and `gf trace`; report checks, attempts, open decisions, and unverified work.
+9. Derive a few constraints with `gf learn add`, promote executable ones with `gf learn promote`, and retire stale ones with `gf learn retire`.
+
+## Three overriding rules
+
+- A check is something a program can evaluate and that can fail.
+- Nothing reaches a person except a decision or an approval, and only a person answers.
+- A rejection returns one node with its scope, never the batch.
+
+## Read only what the role needs
+
+- [Principles](references/principles.md): resolve a design question by P1–P12.
+- [Records](references/records.md): plan fields, role permissions, evidence, and state transitions.
+- [Leader](references/leader.md): inspect, plan, dispatch, gate, and learn.
+- [Worker](references/worker.md): execute or review one brief.
+- [Executors](references/executors.md): choose a host, model, account, and isolation.
+- [MCP](references/mcp.md): invoke commands through tool access.
+- [Dashboard](references/dashboard.md): show recorded progress and let a person answer decisions.
