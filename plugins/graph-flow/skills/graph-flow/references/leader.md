@@ -69,7 +69,7 @@ Read the submission and actual evidence. For committed work, run `gf merge <node
 
 Dispatch and gate required review nodes before gating their targets: `gf gate <review-node>`, then `gf gate <work-node>`. A review gate validates citations; its pass does not erase a reviewer's fail verdict. Let deterministic results outrank observations, trajectory/history, and opinion.
 
-On `reject`, read all five fields: UNIT, VERDICT, REASON, EVIDENCE, SCOPE. Read the named log. Reassign **only** that node and regenerate its brief so the rejection travels with the task. Preserve every unrelated accepted node. The target's next start makes its old review stale, so review the new submission again.
+On `reject`, read all five fields: UNIT, VERDICT, REASON, EVIDENCE, SCOPE. Read the named log when present. After a scope rejection, the leader restores the out-of-scope paths before reassigning, never by discarding another node's accepted or in-flight work; coordinate recovery of only the offending edits. Reassign **only** that node and regenerate its brief so the rejection travels with the task. Preserve every unrelated accepted node. The target's next start makes its old review stale, so review the new submission again.
 
 On the second attempt, escalate once: raise effort for an incomplete or defective implementation; raise the model when the approach was wrong. Use `gf route <node>` again and record the actual choice with `gf assign`. Routing recognizes an `approach:` rejection prefix, but the CLI has no failure-classification command; if the evidence proves an approach failure, choose the higher model explicitly in the assignment and explain it in the report. Do not edit rejection records or escalate repeatedly without new evidence.
 

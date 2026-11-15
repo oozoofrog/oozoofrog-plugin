@@ -43,7 +43,9 @@ def _rejection_text(rejection):
         "UNIT      %s (attempt %s of %s)" % (rejection.get("unit"), rejection.get("attempt"), rejection.get("max_attempts")),
         "VERDICT   " + str(rejection.get("verdict", "red")),
         "REASON    " + str(rejection.get("reason", "")),
-        "EVIDENCE  %s: %s" % (evidence.get("log", ""), " | ".join(evidence.get("tail") or [])),
+        "EVIDENCE  " + (("%s: %s" % (evidence["log"], " | ".join(evidence.get("tail") or [])))
+                         if evidence.get("log") else
+                         "; ".join(evidence.get("details") or []) or rejection.get("reason") or "No log recorded"),
         "SCOPE     " + ", ".join(rejection.get("scope") or []) + " only"])
 
 
@@ -60,6 +62,7 @@ def brief(run_dir, node_id):
     gf = pathlib.Path(__file__).resolve().parent.parent / "gf"
     invocation = "python3 %s --json " % shlex.quote(str(gf))
     lines = ["# %s: %s" % (node_id, node["goal"]), "",
+             "Project directory: `%s`. Run every command from this directory." % store.project_of(run_dir).resolve(), "",
              "You are a sub-session. The leader owns the plan and the user conversation. "
              "Work and report in English. Do not start sub-sessions. Do not ask the user anything.", "",
              "## Environment", "", "```sh",
@@ -108,7 +111,9 @@ def brief(run_dir, node_id):
     if reviewer:
         lines += ["```", "Read the target's changes.", "```sh",
                   invocation + "review submit " + node_id + " --verdict pass|fail --findings <json file>",
-                  "```", "Each finding is {severity, file, line, text}."]
+                  "```", "Each finding is {severity, file, line, text}, with optional free-form evidence. "
+                  "The text is one plain sentence a person will read on the dashboard; "
+                  "put paths, commands, ids and exit codes in the separate evidence field."]
     else:
         lines += ["# Optional, before any work:", invocation + "red " + node_id, "```",
                   "Do the work. Run each command check until it passes.", "```sh"]
@@ -138,7 +143,10 @@ def brief(run_dir, node_id):
 
 
 def plan_brief(project_root, run_dir=None):
-    lines = ["# Planning brief", "", "## Principles", "",
+    project_root = (store.project_of(run_dir) if run_dir is not None else pathlib.Path(project_root)).resolve()
+    lines = ["# Planning brief", "",
+             "Project directory: `%s`. Run every command from this directory." % project_root, "",
+             "## Principles", "",
              "- Every work node has a check that can fail.",
              "- Every edge names the artifact that crosses.",
              "- Split by blast radius with owns and lane.",

@@ -269,7 +269,7 @@ class CmdTests(ChecksCase):
         self.start()
         with mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
             data = self.run_cmd()
-        self.assertIn(CMD["run"], stderr.getvalue())
+        self.assertEqual(stderr.getvalue(), "")
         self.assertEqual(data["result"], "passed")
         self.assertEqual(data["exit_code"], 0)
         self.assertFalse(data["timed_out"])
@@ -637,6 +637,54 @@ class HostRedSubmitTests(ChecksCase):
         self.assertEqual(data["commit"], commit)
         self.assertEqual(data["changed_files"], ["owned.txt"])
 
+    def retry(self):
+        sub = self.submit()
+        self.append("gate.verdict", {"node": "work", "attempt": 1,
+                    "submission": sub["id"], "verdict": "reject", "rule": "R1"})
+        self.start()
+
+    def test_retry_keeps_first_attempt_files(self):
+        self.start()
+        self.write("owned.txt", "work")
+        self.retry()
+        self.assertEqual(self.submit()["changed_files"], ["owned.txt"])
+
+    def test_retry_revert_drops_file(self):
+        self.start()
+        self.write("owned.txt", "work")
+        self.retry()
+        self.git("restore", "owned.txt")
+        self.assertEqual(self.submit()["changed_files"], [])
+
+    def test_retry_scope_detects_new_outside_edit(self):
+        self.start()
+        self.write("owned.txt", "work")
+        self.retry()
+        self.write("other.txt", "stray")
+        self.assertEqual(self.scope()["violations"], ["other.txt"])
+
+    def test_retry_committed_submission(self):
+        self.start()
+        self.write("owned.txt", "work")
+        commit = self.commit()
+        sub = self.submit(commit)
+        self.append("gate.verdict", {"node": "work", "attempt": 1,
+                    "submission": sub["id"], "verdict": "reject", "rule": "R1"})
+        self.start()
+        self.assertEqual(self.submit(commit)["changed_files"], ["owned.txt"])
+
+    def test_json_gate_subprocess_is_silent(self):
+        self.set_plan([work(checks=[CMD])])
+        self.start()
+        self.write("owned.txt", "work")
+        self.submit()
+        result = subprocess.run([sys.executable, "-I", "-S", "-B", str(SCRIPTS / "gf"),
+                                 "--json", "--run", str(self.run), "gate", "work"],
+                                cwd=self.repo, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        self.assertEqual(json.loads(result.stdout)["verdict"], "pass")
+        self.assertEqual(result.stderr, "")
+
     def test_submit_bad_sha(self):
         self.start()
         self.error("bad_commit", self.submit, "does-not-resolve")
@@ -660,7 +708,8 @@ class HostRedSubmitTests(ChecksCase):
         self.start()
         target = self.submit()
         self.start("review")
-        findings = [{"severity": "high", "file": "owned.txt", "line": 1, "text": "finding"}]
+        findings = [{"severity": "high", "file": "owned.txt", "line": 1, "text": "The result loses data.",
+                     "evidence": {"command": "reader", "exit_code": 1}}]
         data = checks.review_submit(self.run, "review", "fail", findings, ACTOR)
         self.assertEqual((data["target"], data["target_submission"]), ("work", target["id"]))
         self.assertEqual(data["findings"], findings)

@@ -275,6 +275,29 @@ class RejectionTests(unittest.TestCase):
             "UNIT      w (attempt 2 of 3)", "VERDICT   red", "REASON    check unit exited 1",
             "EVIDENCE  evidence/w/unit/a1-test.log: AssertionError", "SCOPE     w.txt only"])
 
+    def test_scope_without_log_names_paths_and_leader_recovery(self):
+        rejection = gate.build_rejection(work(), {"attempts": 1},
+            [result("scope", failed=True, violations=["stray.txt"], log=None)], {})
+        self.assertEqual(gate.render_rejection(rejection),
+            "UNIT      w (attempt 1 of 3)\nVERDICT   red\n"
+            "REASON    scope: stray.txt outside owned paths\n"
+            "EVIDENCE  stray.txt\nSCOPE     w.txt only\n"
+            "RESTORE   Leader restores these paths before reassigning: stray.txt")
+
+    def test_logless_citations_and_review_reasons_never_render_none(self):
+        rejection = gate.build_rejection(work(), {"attempts": 1},
+            [result("cites", failed=True, violations=[{"file": "bad.txt", "reason": "missing"},
+                                                       {"file": None, "finding": 2}],
+                    log=None)], {})
+        self.assertIn("bad.txt", gate.render_rejection(rejection))
+        self.assertNotIn("None", gate.render_rejection(rejection))
+        for reason in ("missing review", "review verdict fail"):
+            rejection["reason"] = reason
+            rejection["evidence"] = {"log": None, "tail": []}
+            rendered = gate.render_rejection(rejection)
+            self.assertIn("EVIDENCE  " + reason, rendered)
+            self.assertNotIn("None", rendered)
+
     def test_all_failure_reasons_are_joined(self):
         failed = [result(failed=True, timed_out=True),
                   result("scope", failed=True, violations=["x.txt", "y.txt"], log=None),

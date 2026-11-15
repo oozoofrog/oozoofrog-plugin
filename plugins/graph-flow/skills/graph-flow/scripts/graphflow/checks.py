@@ -5,7 +5,6 @@ import pathlib as _pathlib
 import signal as _signal
 import stat as _stat
 import subprocess as _subprocess
-import sys as _sys
 import time as _time
 
 from . import core as _core, graph as _graph, plan as _plan, state as _state, store as _store
@@ -103,6 +102,10 @@ def _capture(run_dir, node_id, phase, kind=None, check=None):
             node, st = _node(tx, node_id, kind, running=phase == "loop")
         if check is not None:
             _allowed_cmd(run_dir, tx, node, check)
+        st = dict(st)
+        st["submission_base"] = next((e["data"]["base"] for e in tx.events
+            if e["seq"] > st.get("basis", 0) and e["type"] == "node.start"
+            and e["data"].get("node") == node_id and e["data"].get("base")), st.get("base"))
         return node, st, _token(tx, st, phase)
 
 
@@ -157,7 +160,6 @@ def _execute(run_dir, node_id, check, attempt, phase, cwd):
                      _core.EXIT_USAGE)
     data = _result(node_id, check["id"], "cmd", attempt, phase, directory)
     data["command"] = check["run"]
-    print("/bin/sh -c %s" % check["run"], file=_sys.stderr, flush=True)
     started = _time.monotonic()
     try:
         log = _store.evidence_path(run_dir, node_id, check["id"], attempt)
@@ -340,7 +342,7 @@ def submit(run_dir, node_id, commit, branch, notes, low_confidence, cwd, actor):
                 raise
             raise _error("bad_commit", "commit must descend from base.rev", _core.EXIT_USAGE)
     data = {"node": node_id, "attempt": st["attempts"], "commit": commit,
-            "branch": branch, "changed_files": _changed(directory, st["base"], commit),
+            "branch": branch, "changed_files": _changed(directory, st["submission_base"], commit),
             "notes": notes, "low_confidence": low_confidence}
     with _store.transaction(run_dir) as tx:
         _recheck(tx, node_id, "loop", token, "work")

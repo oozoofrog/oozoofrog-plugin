@@ -121,7 +121,8 @@ class AssignTests(unittest.TestCase):
         headings = ["## Environment", "## Goal", "## Inputs", "## Files you own", "## Read",
                     "## Checks", "## Steps", "## If you are blocked", "## Report"]
         self.assertEqual([text.index(h) for h in headings], sorted(text.index(h) for h in headings))
-        for value in ("# work: Implement the unit", "export GF_RUN=" + str(self.run),
+        for value in ("# work: Implement the unit",
+                      "Project directory: `%s`. Run every command from this directory." % self.repo, "export GF_RUN=" + str(self.run),
                       "export GF_ROLE=worker", "export GF_NODE=work", str(SCRIPTS / "gf"),
                       "python3 -B unit.py", "work.py", "IDE", "green", "check run work unit",
                       "check record work ide --result passed|failed --note ...", "red work",
@@ -147,7 +148,8 @@ class AssignTests(unittest.TestCase):
                         "checks": [{"id": "cites", "type": "cites"}]}])
         self.submit()
         text = assign.brief(self.run, "review")
-        for value in ("export GF_ROLE=reviewer", "data loss", "abcdef1234", "work.py",
+        for value in ("export GF_ROLE=reviewer", "Project directory: `%s`" % self.repo,
+                      "one plain sentence", "separate evidence field", "data loss", "abcdef1234", "work.py",
                       "You change no files.", "review submit review --verdict pass|fail --findings <json file>"):
             self.assertIn(value, text)
         self.assertNotIn("SECRET_TARGET_GOAL", text)
@@ -185,6 +187,7 @@ class AssignTests(unittest.TestCase):
         with mock.patch.object(assign, "_optional_module", return_value=None):
             text = assign.plan_brief(self.repo)
             self.assertIn("Every work node has a check that can fail", text)
+            self.assertIn("Project directory: `%s`" % self.repo, text)
             self.assertNotIn("## Host capabilities", text)
             text = assign.plan_brief(self.repo, self.run)
             self.assertIn("t3_delegate", text)

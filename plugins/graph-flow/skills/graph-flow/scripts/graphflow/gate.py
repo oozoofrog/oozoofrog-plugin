@@ -125,26 +125,44 @@ def build_rejection(node, node_state, failed, tails):
             reason = "cites: %d invalid findings" % len(result.get("violations") or [])
         elif result.get("timed_out"):
             reason = "check %s timed out" % result["check"]
+        elif result.get("exit_code") is not None:
+            reason = "check %s exited %s" % (result["check"], result["exit_code"])
         else:
-            reason = "check %s exited %s" % (result["check"], result.get("exit_code"))
+            reason = result.get("reason") or "check %s failed" % result.get("check", kind or "unknown")
         reasons.append(reason)
-    # The contract has one evidence slot: retain the first failure's log and tail.
+    # Retain the first failure's log and tail, or details for failures without logs.
     log = failed[0].get("log") if failed else None
-    return {"unit": node["id"], "attempt": node_state["attempts"],
+    rejection = {"unit": node["id"], "attempt": node_state["attempts"],
             "max_attempts": node_state.get("max_attempts", node.get("max_attempts", 3)),
             "verdict": "red", "reason": "; ".join(reasons),
             "evidence": {"log": log, "tail": list(tails.get(log, []))},
             "scope": list(node.get("owns", []))}
+    if not log:
+        rejection["evidence"]["details"] = [
+            ("%s: %s" % (v.get("file") or "finding %s" % v.get("finding", "?"),
+                           v.get("reason") or "invalid citation") if isinstance(v, dict) else str(v))
+            for result in failed for v in (result.get("violations") or [])]
+    paths = [p for result in failed if result.get("type") == "scope"
+             for p in result.get("violations") or []]
+    if paths:
+        rejection["restore_paths"] = paths
+    return rejection
 
 
 def render_rejection(rejection):
     evidence = rejection["evidence"]
-    return "\n".join([
+    lines = [
         "UNIT      %s (attempt %s of %s)" % (rejection["unit"], rejection["attempt"], rejection["max_attempts"]),
         "VERDICT   %s" % rejection["verdict"],
         "REASON    %s" % rejection["reason"],
-        "EVIDENCE  %s: %s" % (evidence["log"], " | ".join(evidence["tail"])),
-        "SCOPE     %s only" % ", ".join(rejection["scope"])])
+        "EVIDENCE  " + ("%s: %s" % (evidence["log"], " | ".join(evidence["tail"]))
+                         if evidence.get("log") else
+                         "; ".join(evidence.get("details") or []) or rejection["reason"] or "No log recorded"),
+        "SCOPE     %s only" % ", ".join(rejection["scope"])]
+    if rejection.get("restore_paths"):
+        lines.append("RESTORE   Leader restores these paths before reassigning: " +
+                     ", ".join(rejection["restore_paths"]))
+    return "\n".join(lines)
 
 
 def _git(cwd, *args):
