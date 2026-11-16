@@ -53,7 +53,7 @@ All tools accept optional `run`. In the table, brackets mark optional arguments,
 
 `executor` is `inline`, `subagent`, `workflow`, `t3`, or `background`; `family` is `claude`, `openai`, or `other`; `isolation` is `shared` or `worktree`. `result` is `passed` or `failed`; a review `verdict` is `pass` or `fail`. The CLI validates these values. Optional arrays, when supplied, contain at least one string; `findings` may be empty. The `inputSchema` returned by `tools/list` describes each argument.
 
-Answers to decisions are **not available through MCP (P10)**. Agents can ask, list, and wait; a person answers through the dashboard or the verified human terminal path described in [records.md section 7](records.md#7-decisions). There is no decision-answer, dashboard-start, or MCP-start tool.
+Answers to decisions are **not available through MCP (P10)**. Agents can ask, list, and wait; a person answers through the dashboard or the verified human terminal path described in [records.md section 7](records.md#7-decisions). There is no decision-answer, dashboard-start, or MCP-start tool. A host that reaches graph-flow only through MCP asks the person to run `graph-flow open` in their terminal to see the dashboard.
 
 ## Example JSON-line session
 
@@ -69,7 +69,7 @@ With `GF_ROLE=leader` and `/work/notes` an existing git repository, send these c
 The first and last server responses have this shape; the intervening `tools/list` response contains the leader's tools and their schemas:
 
 ```jsonl
-{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","serverInfo":{"name":"graph-flow","version":"0.2.0"},"capabilities":{"tools":{}}}}
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","serverInfo":{"name":"graph-flow","version":"0.2.1"},"capabilities":{"tools":{}}}}
 {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\"ok\": true, \"run\": \"/work/notes/.graph-flow/runs/notes-export\"}"}],"isError":false}}
 ```
 
