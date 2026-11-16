@@ -49,7 +49,7 @@ All locks are exclusive `fcntl.flock` locks on the named `.lock` file, blocking 
 | `--run` or `GF_RUN` | Absolute path of the run directory |
 | `--role` or `GF_ROLE` | `leader` (default), `worker`, `reviewer`, `human` |
 | `--node` or `GF_NODE` | The node a worker or reviewer is bound to. Required for those two roles |
-| `GF_SESSION` | Free text naming the session (model, thread title); recorded in every event |
+| `GF_SESSION` | Free text naming the session (model, thread title); recorded in every event. When unset, `T3CODE_THREAD_ID` is recorded as `t3:<id>`, else `CLAUDE_CODE_SESSION_ID` as `claude:<id>`, else null |
 
 An unset `node` or `session` is JSON `null`. An unknown role raises `GFError("bad_role", ..., EXIT_USAGE)`.
 
@@ -655,11 +655,17 @@ The MCP tool list and the dashboard's HTTP API are specified by the units that o
 
 ## 12. Dashboard presentation view
 
-`GET /api/run` retains `plan`, `state`, `ready`, and `trace` and adds `view`. Build the view from the same current plan, events, and derived state loaded under the run lock, plus the learning store; no new events are written. The page can use this object without interpreting commands, evidence paths, exit codes, or technical rejection records. IDs remain addressing keys rather than display copy. Shape (arrays below show one representative entry):
+`GET /api/run` retains `plan`, `state`, `ready`, and `trace` and adds `view`. Build the view from the same current plan, events, and derived state loaded under the run lock, plus the learning store; no new events are written. Nodes, edges and decisions carry readable wording only; commands, exit codes, log paths and rejection reasons appear only in `timeline`, the record of what happened. Decision and node IDs are shown, because agent sessions say them. Shape (arrays below show one representative entry):
 
 ```json
 {
-  "title": "Export your notes", "language": "en",
+  "title": "Export your notes", "language": "en", "run": "export-1", "project": "notes",
+  "timeline": [{"id": "e6", "seq": 12, "ts": "2026-11-15T14:16:55Z", "kind": "attempt", "by": {"role": "leader", "session": "t3:6f0c"},
+    "node": "export", "node_title": "Create the export", "attempt": 1, "state": "returned",
+    "worker": {"executor": "t3", "model": "claude-sonnet-5-5", "effort": "medium", "provider": "claudeAgent"},
+    "checks": [{"id": "unit", "title": "Every note is exported", "result": "failed", "phase": "gate", "command": "python3 -m unittest",
+      "exit_code": 1, "timed_out": false, "duration_ms": 93, "log": "evidence/export/unit/a1-a8b952fc.log", "violations": []}],
+    "notes": "Two notes still fail", "files": ["export.py"], "unsure": [], "reason": "check unit exited 1", "findings": []}],
   "nodes": [{
     "id": "export", "title": "Create the export",
     "summary": "Produce a JSON copy of every note for the person requesting the export.",
@@ -688,6 +694,8 @@ The MCP tool list and the dashboard's HTTP API are specified by the units that o
 }
 ```
 
+- `run` is the run id and `project` the project directory's name, for the header.
+- `timeline` lists what happened in event order, built from every event of the run. Each row has `id` (`e` plus the `seq` of the event that created it, stable for the row's life), `seq` and `ts` of its latest event, `kind`, and `by` (`role` and `session` of the actor of the event that created the row; for an attempt, whoever started it). Kinds: `started` (`run.init`); `planned` (`plan.set`, with `revision` and node `count`); `attempt` (one per `node.start`); `reopened` (`node.reopen`, with `node`, `node_title`, `reason`); `asked` (`decision.ask`, with `decision`, `node`, `node_title`, `question`); `answered` (`decision.answer`, with `decision`, the asked `node`, `node_title`, `question`, and `outcome`, `answer`); `final` (`gate.final`, with `result` and `failed` check ids); `learned` (`constraint.add`, with the constraint `text`; omitted when the text cannot be read). An `attempt` row gathers that attempt's later `check.result`, `node.submit`, `review.submit` and `gate.verdict` events and moves to the position of the latest one. Its `state` is `running`, `submitted`, or from the gate verdict `passed` (pass), `returned` (reject), `replan`, `needs_you` (needs_approval) or `held` (hold). `checks` holds the latest result per check id, a gate-phase run replacing the worker's loop-phase run, each with `id`, plan `title` (empty when the plan gives none), `result`, `phase`, `command`, `exit_code`, `timed_out`, `duration_ms`, `log` (a path for `/api/evidence`, or null) and scope `violations`. `worker` is the latest `node.assign` before the start; `notes`, `files` and `unsure` come from `node.submit`; `reason` is the rejection's reason; `findings` are the finding texts of a `review.submit` by this review node, which also makes the row `submitted`. A verdict without a rejection keeps an earlier reason. `learned` uses the constraint's text whatever its current status. `node.assign`, `host.set`, `constraint.apply` and `check.red` create no row.
 - `title` falls back to the plan's `goal` (empty string without a plan). `nodes` follows plan order; each title falls back to its id and each summary to its goal. Node `kind`, `status`, `attempts`, and `max_attempts` come from the plan/state; `lane` is the effective lane.
 - `language` is `"ko"` when the plan title or any node title/summary contains Hangul (Jamo, compatibility Jamo or syllables), else `"en"`. This is independent of browser language; the page uses the browser only when there is no run.
 - Node `target` is the recorded review target id for review nodes, otherwise `null`. It binds a full review card to its target; it is never display copy. Review cards occupy the dependency layer immediately after their target, with a `reviews` arrow from the review card back to its target. They participate in the graph and the HTML list.

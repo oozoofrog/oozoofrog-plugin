@@ -14,7 +14,7 @@ from graphflow import core  # noqa: E402
 
 
 class EnvCase(unittest.TestCase):
-    KEYS = ("GF_ROLE", "GF_NODE", "GF_SESSION", "GF_HOME")
+    KEYS = ("GF_ROLE", "GF_NODE", "GF_SESSION", "GF_HOME", "T3CODE_THREAD_ID", "CLAUDE_CODE_SESSION_ID")
 
     def setUp(self):
         self._saved = {k: os.environ.pop(k, None) for k in self.KEYS}
@@ -57,6 +57,11 @@ class CoreTests(EnvCase):
                          {"role": "leader", "node": None, "session": None})
 
     def test_actor_env_and_args(self):
+        # The host's own chat id is recorded when the person named no session.
+        os.environ["CLAUDE_CODE_SESSION_ID"] = "abc"
+        self.assertEqual(core.actor_from_env()["session"], "claude:abc")
+        os.environ["T3CODE_THREAD_ID"] = "t-1"
+        self.assertEqual(core.actor_from_env()["session"], "t3:t-1")
         os.environ.update(GF_ROLE="worker", GF_NODE="n1", GF_SESSION="s")
         self.assertEqual(core.actor_from_env(),
                          {"role": "worker", "node": "n1", "session": "s"})

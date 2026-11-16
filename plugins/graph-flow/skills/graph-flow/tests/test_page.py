@@ -160,7 +160,7 @@ class PageTests(unittest.TestCase):
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const source = readFileSync(process.argv[2], 'utf8');
-const {createDecisionController, decisionQuestion, purposeWording, purposeAction, viewLanguage, attemptPips, innerLoopState, edgeRelationLabel, fitScale, MIN_FIT_SCALE, edgeChipText, cometCount, failedBadgeCount, layeredLayout, crossingCount} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+const {createDecisionController, decisionQuestion, purposeWording, purposeAction, viewLanguage, attemptPips, edgeRelationLabel, fitScale, MIN_FIT_SCALE, edgeChipText, cometCount, failedBadgeCount, layeredLayout, crossingCount} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const first = {project:'/project', run:'first'}, second = {project:'/project', run:'second'};
 const decision = {id:'d7', purpose:'lane3', kind:'authorization', failed:[]};
 const controller = createDecisionController();
@@ -248,7 +248,6 @@ for(const [lang,labels] of [['ko',['넘겨줌','검토함','결정을 기다림'
   ['hands_over','reviews','waits_for_decision'].forEach((relation,i)=>assert.equal(edgeRelationLabel({relation,label:''},lang),labels[i]));
   assert.equal(edgeRelationLabel({relation:'hands_over',label:'Readable result'},lang),labels[0]+': Readable result');
 }
-for(const [status,attempts,state] of [['running',1,'make'],['running',2,'fix'],['running',3,'fix'],['submitted',1,'check'],['submitted',2,'check'],['unverified',2,'check'],['passed',1,'exit'],['passed',2,'exit'],['waiting_for_you',2,'report'],['awaiting_approval',1,'report'],['held',1,'report'],['pending',0,null]])assert.equal(innerLoopState(status,attempts),state);
 assert.deepEqual(attemptPips(['current'],3,'awaiting_approval').map(p=>p.state),['waiting_for_you','unused','unused']);
 """)
 
@@ -387,7 +386,7 @@ globalThis.document={body,documentElement:root,hidden:false,activeElement:null,
   querySelector:selector=>body.querySelector(selector), querySelectorAll:selector=>body.querySelectorAll(selector),
   addEventListener:(type,fn)=>{docEvents[type]=fn;}};
 body.append(new Element('nav'));
-for (const id of ['map','notice','picker','picker-label','find','find-text','flow','history','decision','flow-tab','history-tab','title','subtitle','node-list','edge-list','decision-list','panel','accessible']) {
+for (const id of ['map','notice','picker','picker-label','find','find-text','home','flow','decision','home-tab','flow-tab','where','title','subtitle','node-list','edge-list','decision-list','panel','accessible']) {
   const e=new Element(id==='picker'?'select':'div'); e.id=id; body.append(e);
 }
 Object.defineProperty(globalThis,'navigator',{value:{language:'ko-KR'},configurable:true});
@@ -399,7 +398,7 @@ globalThis.matchMedia=()=>({matches:true,addEventListener(){}});
 globalThis.setTimeout=()=>0; globalThis.clearTimeout=()=>{};
 const d={...decision,purpose:'hold',kind:'review',node:'work',question:'Approve hold for work?',record_purpose:'hold',
   files:[{name:'guide.md',path:'docs/guide.md'}],context:{},verified:['A verified fact'],unverified:[],worker_note:'Read me',has_evidence:false,failed:['Missing case'],trajectory_reasons:[]};
-let live={title:'Flow',language:'en',nodes:[{id:'work',title:'Work',summary:'Summary',status:'submitted',attempts:1,max_attempts:3,laps:[],returned_reasons:[],inputs:[],outputs:[]}],edges:[],decisions:[d],lessons:[],counts:{done:0,doing:0,waiting:0,needs_you:1,returned:0},complete:false};
+let live={title:'Flow',language:'en',nodes:[{id:'work',title:'Work',summary:'Summary',status:'submitted',attempts:1,max_attempts:3,laps:[],returned_reasons:[],inputs:[],outputs:[]}],edges:[],decisions:[d],lessons:[],timeline:[{id:'e3',seq:3,ts:'2026-11-15T14:16:37Z',kind:'attempt',by:{role:'worker',session:'t3:0123456789abcdef'},node:'work',node_title:'Work',attempt:1,state:'returned',worker:{model:'m'},checks:[{id:'unit',title:'Unit passes',result:'failed',phase:'gate',command:'run tests',exit_code:1,duration_ms:90,log:'evidence/work/unit/a1.log',violations:[]}],notes:'Tried',files:['a.py'],unsure:[],reason:'check unit exited 1',findings:[]},{id:'e9',seq:9,ts:'2026-11-15T14:20:00Z',kind:'asked',by:{role:'leader',session:null},decision:'d7',node:'work',node_title:'Work',question:'Approve hold for work?'}],counts:{done:0,doing:0,waiting:0,needs_you:1,returned:0},complete:false};
 const posts=[]; let resolvePost;
 globalThis.fetch=async (path,options)=>{
   if (options.method==='POST') { posts.push(JSON.parse(options.body)); return new Promise(resolve=>{resolvePost=()=>resolve({ok:true,json:async()=>({ok:true})});}); }
@@ -410,6 +409,14 @@ const settle=async()=>{ for(let i=0;i<12;i++) await new Promise(setImmediate); }
 await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64')+'#dom'); await settle();
 const get=id=>document.getElementById(id);
 assert.equal(document.documentElement.lang,'en','plan language must override Korean browser');
+// The first screen is the inbox and the record, newest entry first, with the real check of a returned attempt.
+assert.equal(get('home').hidden,false); assert.equal(get('flow').hidden,true);
+const entries=get('home').querySelectorAll('li').filter(e=>e.id);
+assert.deepEqual(entries.map(e=>e.id),['e9','e3']);
+const words=e=>e.textContent;
+assert.match(words(entries[1]),/attempt 1 came back/); assert.match(words(entries[1]),/Unit passes/); assert.match(words(entries[1]),/run tests/); assert.match(words(entries[1]),/T3 thread 01234567/);
+assert.equal(entries[1].querySelector('details').open,true,'a returned attempt shows its checks without a click');
+get('flow-tab').click(); assert.equal(get('flow').hidden,false); assert.equal(get('home').hidden,true);
 // Open through the HTML fallback; map and panel route to the same openDecision.
 get('decision-list').querySelector('button').click();
 const input=get('answer-text'), actions=get('answer-actions'), buttons=[...actions.children];
@@ -454,6 +461,19 @@ assert.equal(get('answer-text'),null);
             view = server._view(current, derived, events, root / 'project')
             self.assertEqual(view['counts'], {'done': 2, 'doing': 1, 'waiting': 2, 'needs_you': 1, 'returned': 1, 'returns_total': 1})
             self.assertEqual([n['laps'] for n in view['nodes']], [['passed'], ['passed'], ['returned', 'current'], ['waiting_for_you'], [], []])
+            # The record is in the order things happened, one row per attempt with its real checks.
+            rows = view['timeline']
+            self.assertEqual([r['seq'] for r in rows], sorted(r['seq'] for r in rows))
+            self.assertEqual([r['kind'] for r in rows[:2]], ['started', 'planned'])
+            returned = [r for r in rows if r['kind'] == 'attempt' and r['state'] == 'returned']
+            self.assertEqual(len(returned), 1)
+            failed = [c for c in returned[0]['checks'] if c['result'] == 'failed']
+            self.assertTrue(failed and all(c['command'] and c['phase'] == 'gate' for c in failed))
+            self.assertTrue(returned[0]['reason'])
+            self.assertEqual(len({r['id'] for r in rows}), len(rows))
+            asked = [r for r in rows if r['kind'] == 'asked']
+            self.assertEqual([r['decision'] for r in asked], [d['id'] for d in view['decisions']])
+            self.assertEqual(view['run'], run.name)
             decision = view['decisions'][0]
             self.assertEqual(decision['purpose'], 'human_check')
             self.assertEqual(decision['verified'], ['약속한 결과가 빠짐없이 있어요'])

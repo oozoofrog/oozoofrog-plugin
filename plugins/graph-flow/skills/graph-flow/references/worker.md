@@ -11,7 +11,7 @@ Use the environment printed in the brief:
 | `GF_RUN` | Resolved run directory shared with the leader, even from another worktree. |
 | `GF_ROLE` | `worker` or `reviewer`; never change it to obtain more permissions. |
 | `GF_NODE` | Your one node; never bind yourself to another node. |
-| `GF_SESSION` | Optional session/model label recorded in events; set it to the actual session identity. |
+| `GF_SESSION` | Optional session/model label recorded in events; set it to the actual session identity. When unset, the host's chat id (`T3CODE_THREAD_ID`, else `CLAUDE_CODE_SESSION_ID`) is recorded. |
 
 Use the tool invocation printed in the brief. Below, `gf` abbreviates it. `gf status <node>` can recover your node's state; a reviewer can also inspect its assigned target. Do not read other nodes, their briefs, results, or private discussions, and do not inspect the run log to bypass that boundary. Read only the supplied inputs and necessary project instructions.
 

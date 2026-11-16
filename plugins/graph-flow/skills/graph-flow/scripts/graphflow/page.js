@@ -2,25 +2,21 @@
 const STRINGS = {
   "ko": {
     "flow": "전체 흐름",
-    "history": "지금까지",
     "chooseRun": "흐름 고르기",
-    "skip": "목록으로 건너뛰기",
-    "listView": "목록으로도 볼 수 있어요",
+    "skip": "내용으로 건너뛰기",
+    "listView": "그래프를 목록으로 보기",
     "nodes": "하는 일",
     "handoffs": "주고받는 것",
     "yourTurn": "내가 할 일",
     "choiceEffects": "고르면 생기는 일",
-    "nothing": "지금은 결정할 일이 없어요. 필요해지면 알려 드릴게요.",
+    "nothing": "필요해지면 여기에 나타나요.",
     "needsYou": "읽고 결정해 주세요",
-    "counts": "지금 흐름",
     "done": "끝남",
     "doing": "하는 중",
     "waiting": "앞 일을 기다림",
     "needs_you": "내 결정을 기다림",
     "returned": "고치러 돌아옴",
     "legend": "읽는 법",
-    "now": "지금",
-    "whyReturned": "통과하지 못한 확인",
     "received": "받는 것",
     "outputs": "넘기는 것",
     "noHandoffs": "기록된 주고받기가 없어요.",
@@ -29,7 +25,6 @@ const STRINGS = {
     "from": "보낸 곳",
     "to": "받는 곳",
     "noReason": "돌아온 까닭이 따로 기록되지 않았어요.",
-    "noReturns": "돌아온 적이 없어요.",
     "attempt": "{n}번째 시도 · 최대 {max}번",
     "notStarted": "아직 시작하지 않았어요",
     "passed": "끝났어요",
@@ -55,12 +50,8 @@ const STRINGS = {
     "workedBy": "맡은 곳: {who}",
     "find": "찾기",
     "findHint": "d41 또는 일 이름",
-    "findNone": "“{text}”에 맞는 결정이나 일이 이 흐름에 없어요.",
+    "findNone": "“{text}”에 맞는 결정이나 일이 이 흐름에 없어요. 다른 흐름이면 위에서 흐름을 바꿔 주세요.",
     "jumpNoRun": "이 주소가 가리키는 흐름을 찾지 못했어요.",
-    "alreadyAnswered": "{id}은(는) 이미 답한 결정이에요 · {title} · 답: {answer}",
-    "outcome_approved": "통과",
-    "outcome_revision_requested": "돌려보냄",
-    "outcome_answered": "답함",
     "roleLeader": "리더",
     "roleWorker": "작업자",
     "roleReviewer": "검토자",
@@ -91,20 +82,12 @@ const STRINGS = {
     "loading": "흐름을 읽고 있어요…",
     "lessons": "배운 것",
     "noLessons": "아직 기록된 배움이 없어요.",
-    "planOrder": "전체 시간 순서는 기록에서 알 수 없어 계획 순서로 보여 드려요. 각 일의 시도는 일어난 순서예요.",
-    "returns": "고치러 돌아온 일",
-    "complete": "모든 흐름이 끝났어요!",
+    "complete": "모든 일이 끝났어요 · 일 {total}개",
     "waitingBubble": "읽어 주세요!",
-    "attemptBubble": "{n}번째 시도예요",
-    "make": "만들기",
-    "check": "검사",
-    "fix": "고치기",
-    "pastOrbit": "앞서 돌아온 시도",
     "unnamed": "이 일",
     "handoff": "넘길 결과",
-    "overview": "일 {total}개 · 끝남 {done}개 · 내 결정 {needs}개",
-    "reviewed": "다른 눈으로 검토했어요",
-    "runOption": "{project} · 흐름 {n}",
+    "overview": "내 답이 필요한 것 {needs} · 진행 중 {doing} · 끝남 {done}/{total}",
+    "runOption": "{project} · {run}",
     "purposeReview": "사람이 직접 살펴봐야 하는 결과를 받아들일지 정해 주세요.",
     "purposeAuthorization": "되돌리기 어려운 일을 허락할지 정해 주세요.",
     "purposeTrajectory": "평소와 다르게 진행된 일을 받아들일지 정해 주세요.",
@@ -130,7 +113,6 @@ const STRINGS = {
     "openFile": "파일 읽기",
     "fileFailed": "지금은 읽을 수 있는 글 파일이 아니에요. 흐름을 새로 읽고 다시 해 주세요.",
     "noFiles": "이 결정에 적힌 파일이 없어요.",
-    "returnTimes": "돌아온 횟수 {n}번",
     "cometLegend": "고치러 돌아온 횟수",
     "goal": "목표",
     "work": "작업",
@@ -146,38 +128,98 @@ const STRINGS = {
     "mapHelp": "끌어서 이동 · + − 확대 · 0 맞추기",
     "firstPass": "한 번에",
     "finishedAttempts": "{n}번 만에",
-    "passes": "통과 →",
-    "fails": "미통과 ↓",
-    "pastAttempt": "{n}번째 시도",
-    "loopDescription": "만들기에서 검사로, 통과하면 다음 일로 넘겨요. 통과하지 못하면 고쳐서 다시 만들어요.",
     "pipPassed": "통과한 시도",
     "pipReturned": "돌아온 시도",
     "pipCurrent": "지금 시도",
     "pipUnused": "남은 시도",
     "lineLegend": "선 위의 글은 넘기는 것이에요",
-    "unusedAttempts": "시도 0번 · 최대 {max}번"
+    "unusedAttempts": "시도 0번 · 최대 {max}번",
+    "home": "할 일과 기록",
+    "graph": "그래프",
+    "nothingTitle": "지금은 답할 일이 없어요",
+    "doingNow": "지금 하는 중",
+    "idle": "지금 진행 중인 일이 없어요. 리더 세션이 다음 일을 시작하면 여기에 나타나요.",
+    "log": "일어난 일",
+    "logEmpty": "아직 기록된 일이 없어요.",
+    "filterEmpty": "여기에 해당하는 기록이 없어요.",
+    "filterAll": "전체",
+    "filterMine": "내 결정",
+    "filterReturned": "되돌아온 것",
+    "onlyNode": "“{title}”의 기록만 보는 중",
+    "showAll": "전체 보기",
+    "evStarted": "흐름을 시작했어요",
+    "evPlanned": "계획을 정했어요 · 일 {n}개",
+    "evReplanned": "계획을 바꿨어요 · {rev}번째 계획 · 일 {n}개",
+    "evRunning": "{n}번째 시도 중",
+    "evSubmitted": "{n}번째 시도 제출 · 검사를 기다려요",
+    "evPassed": "{n}번째 시도 통과",
+    "evReturned": "{n}번째 시도 되돌아옴",
+    "evReplan": "{n}번째 시도 되돌아옴 · 시도를 다 써서 새 계획이 필요해요",
+    "evNeedsYou": "{n}번째 시도 · 내 답을 기다려요",
+    "evHeld": "{n}번째 시도 · 멈춰 두었어요",
+    "evReopened": "다시 열었어요",
+    "evAsked": "질문",
+    "evAnswered": "답함",
+    "evFinalPassed": "최종 확인 통과",
+    "evFinalFailed": "최종 확인 실패",
+    "evLearned": "배운 것을 기록했어요",
+    "checksPassed": "검사 {n}개 통과",
+    "checksFailed": "통과하지 못한 검사: {names}",
+    "rowDetails": "검사와 메모 보기",
+    "checkPassed": "통과",
+    "checkFailed": "실패",
+    "checkTimedOut": "시간 초과",
+    "exitCode": "종료 코드 {n}",
+    "seconds": "{n}초",
+    "gateRun": "리더가 확인",
+    "workerRun": "작업자가 확인",
+    "outside": "맡은 파일 밖을 건드림: {files}",
+    "changedFiles": "바뀐 파일",
+    "unsure": "확신이 낮은 부분",
+    "findings": "검토 의견",
+    "reason": "되돌린 까닭",
+    "showLog": "로그 보기",
+    "hideLog": "로그 접기",
+    "logFailed": "로그를 읽지 못했어요.",
+    "tasks": "일 {n}개 표로 보기",
+    "colTask": "일",
+    "colStatus": "상태",
+    "colWorker": "맡은 곳",
+    "colTries": "시도",
+    "colWaits": "기다리는 것",
+    "showInLog": "이 일의 기록 보기",
+    "lessonsCount": "배운 것 {n}개",
+    "copied": "복사했어요: {text}",
+    "copyFailed": "복사하지 못했어요. 직접 적어 주세요: {text}",
+    "copyHint": "눌러서 채팅에 붙여넣을 말을 복사",
+    "roleHuman": "나",
+    "sessionT3": "T3 스레드 {id}",
+    "sessionClaude": "Claude 세션 {id}",
+    "sessionDashboard": "대시보드",
+    "selectHint": "일을 누르면 그 일의 시도와 검사 결과가 여기에 나와요.",
+    "attemptsOf": "시도와 검사",
+    "runOptionNeeds": "{project} · {run} · 내 답 {n}",
+    "since": "{time}부터",
+    "returnTimes": "돌아온 횟수 {n}번",
+    "allDone": "모든 흐름이 끝났어요!"
   },
   "en": {
     "flow": "Whole flow",
-    "history": "So far",
     "chooseRun": "Choose a flow",
-    "skip": "Skip to the list",
-    "listView": "Read the flow as a list",
+    "skip": "Skip to content",
+    "listView": "Read the graph as a list",
     "nodes": "The work",
     "handoffs": "What is handed over",
     "yourTurn": "Your turn",
     "choiceEffects": "What each choice does",
-    "nothing": "Nothing needs you right now. We’ll let you know when it does.",
+    "nothing": "It will appear here when something does.",
     "needsYou": "Ready for you to read",
-    "counts": "At a glance",
     "done": "Done",
     "doing": "In progress",
     "waiting": "Waiting to begin",
     "needs_you": "Waiting for you",
     "returned": "Came back",
     "legend": "How to read it",
-    "now": "Now",
-    "whyReturned": "Checks that did not pass",
     "received": "Receives",
     "outputs": "Hands over",
     "noHandoffs": "No handoff is recorded.",
@@ -186,7 +228,6 @@ const STRINGS = {
     "from": "From",
     "to": "To",
     "noReason": "No readable reason was recorded.",
-    "noReturns": "No returns so far.",
     "attempt": "Attempt {n} of {max}",
     "notStarted": "Not started",
     "passed": "Finished",
@@ -212,12 +253,8 @@ const STRINGS = {
     "workedBy": "Worked by: {who}",
     "find": "Find",
     "findHint": "d41 or a task name",
-    "findNone": "No decision or task in this flow matches “{text}”.",
+    "findNone": "No decision or task in this flow matches “{text}”. If it belongs to another flow, switch flows above.",
     "jumpNoRun": "The flow this address points to was not found.",
-    "alreadyAnswered": "{id} was already answered · {title} · answer: {answer}",
-    "outcome_approved": "approved",
-    "outcome_revision_requested": "sent back",
-    "outcome_answered": "answered",
     "roleLeader": "leader",
     "roleWorker": "worker",
     "roleReviewer": "reviewer",
@@ -248,20 +285,12 @@ const STRINGS = {
     "loading": "Reading the flow…",
     "lessons": "What we learned",
     "noLessons": "No lessons recorded yet.",
-    "planOrder": "The overall time order is unknown, so this follows plan order. Each task’s attempts are in their recorded order.",
-    "returns": "What came back for fixing",
-    "complete": "The whole flow is complete!",
+    "complete": "Everything is done · {total} tasks",
     "waitingBubble": "Please read this.",
-    "attemptBubble": "On attempt {n}.",
-    "make": "Make",
-    "check": "Check",
-    "fix": "Fix",
-    "pastOrbit": "Earlier returned attempt",
     "unnamed": "This task",
     "handoff": "Handoff",
-    "overview": "{total} tasks · {done} done · {needs} waiting for you",
-    "reviewed": "Reviewed with another pair of eyes",
-    "runOption": "{project} · flow {n}",
+    "overview": "{needs} need you · {doing} in progress · {done}/{total} done",
+    "runOption": "{project} · {run}",
     "purposeReview": "Decide whether to accept a result that needs a human look.",
     "purposeAuthorization": "Decide whether to allow work that is hard to undo.",
     "purposeTrajectory": "Decide whether to accept work with an unclean path.",
@@ -287,7 +316,6 @@ const STRINGS = {
     "openFile": "Open file",
     "fileFailed": "This file is no longer available as readable text. Refresh the flow and try again.",
     "noFiles": "No files are listed for this decision.",
-    "returnTimes": "Came back {n} times",
     "cometLegend": "Times it came back",
     "goal": "Goal",
     "work": "Work",
@@ -303,16 +331,80 @@ const STRINGS = {
     "mapHelp": "Drag to pan · + − zoom · 0 fit",
     "firstPass": "First attempt",
     "finishedAttempts": "In {n} attempts",
-    "passes": "passes →",
-    "fails": "fails ↓",
-    "pastAttempt": "Attempt {n}",
-    "loopDescription": "Make, then check. Passes lead to the next handoff. Failed checks lead to fix, then make again.",
     "pipPassed": "Passed attempt",
     "pipReturned": "Returned attempt",
     "pipCurrent": "Current attempt",
     "pipUnused": "Attempt left",
     "lineLegend": "Text on a line is what gets handed over",
-    "unusedAttempts": "0 attempts · up to {max}"
+    "unusedAttempts": "0 attempts · up to {max}",
+    "home": "To do and log",
+    "graph": "Graph",
+    "nothingTitle": "Nothing needs your answer",
+    "doingNow": "In progress now",
+    "idle": "Nothing is in progress. Work appears here when the leader session starts the next task.",
+    "log": "What happened",
+    "logEmpty": "Nothing has been recorded yet.",
+    "filterEmpty": "No entries match.",
+    "filterAll": "All",
+    "filterMine": "My decisions",
+    "filterReturned": "Came back",
+    "onlyNode": "Showing only “{title}”",
+    "showAll": "Show all",
+    "evStarted": "The flow started",
+    "evPlanned": "Plan set · {n} tasks",
+    "evReplanned": "Plan changed · revision {rev} · {n} tasks",
+    "evRunning": "attempt {n} in progress",
+    "evSubmitted": "attempt {n} submitted · waiting to be checked",
+    "evPassed": "attempt {n} passed",
+    "evReturned": "attempt {n} came back",
+    "evReplan": "attempt {n} came back · no attempts left, a new plan is needed",
+    "evNeedsYou": "attempt {n} · waiting for your answer",
+    "evHeld": "attempt {n} · put on hold",
+    "evReopened": "reopened",
+    "evAsked": "asked",
+    "evAnswered": "answered",
+    "evFinalPassed": "Final check passed",
+    "evFinalFailed": "Final check failed",
+    "evLearned": "A lesson was recorded",
+    "checksPassed": "{n} checks passed",
+    "checksFailed": "checks that did not pass: {names}",
+    "rowDetails": "Checks and notes",
+    "checkPassed": "passed",
+    "checkFailed": "failed",
+    "checkTimedOut": "timed out",
+    "exitCode": "exit code {n}",
+    "seconds": "{n}s",
+    "gateRun": "checked by the leader",
+    "workerRun": "checked by the worker",
+    "outside": "touched files outside its own: {files}",
+    "changedFiles": "Changed files",
+    "unsure": "Low confidence",
+    "findings": "Review findings",
+    "reason": "Why it came back",
+    "showLog": "Show log",
+    "hideLog": "Hide log",
+    "logFailed": "The log could not be read.",
+    "tasks": "{n} tasks as a table",
+    "colTask": "Task",
+    "colStatus": "Status",
+    "colWorker": "Worked by",
+    "colTries": "Attempts",
+    "colWaits": "Waiting for",
+    "showInLog": "Show this task's entries",
+    "lessonsCount": "{n} lessons",
+    "copied": "Copied: {text}",
+    "copyFailed": "Could not copy. Type it instead: {text}",
+    "copyHint": "Copy the words to paste into the chat",
+    "roleHuman": "you",
+    "sessionT3": "T3 thread {id}",
+    "sessionClaude": "Claude session {id}",
+    "sessionDashboard": "dashboard",
+    "selectHint": "Select a task to see its attempts and check results here.",
+    "attemptsOf": "Attempts and checks",
+    "runOptionNeeds": "{project} · {run} · {n} need you",
+    "since": "since {time}",
+    "returnTimes": "Came back {n} times",
+    "allDone": "The whole flow is complete!"
   }
 };
 // UI_STRINGS_END
@@ -407,13 +499,6 @@ export function failedBadgeCount(node, decisions) {
 export const MIN_FIT_SCALE = .5;
 export function attemptPips(laps = [], maxAttempts = 3, status = '') {
   return Array.from({length:maxAttempts}, (_, i) => ({state: laps[i] === 'current' && ['awaiting_approval','held'].includes(status) ? 'waiting_for_you' : laps[i] || 'unused'}));
-}
-export function innerLoopState(status, attempts = 0) {
-  if (['awaiting_approval','held','waiting_for_you'].includes(status)) return 'report';
-  if (status === 'passed') return 'exit';
-  if (['submitted','unverified'].includes(status)) return 'check';
-  if (status === 'running') return attempts > 1 ? 'fix' : 'make';
-  return null;
 }
 export function edgeRelationLabel(edge, language = 'en') {
   const words = STRINGS[language];
@@ -529,17 +614,17 @@ history.replaceState(null, '', startup.pathname + startup.search + startup.hash)
 function translate() {
   document.documentElement.lang = language;
   document.querySelectorAll('[data-i18n]').forEach(e => { e.textContent = t(e.dataset.i18n); });
-  document.querySelector('nav').setAttribute('aria-label', t('flow'));
+  document.querySelector('nav').setAttribute('aria-label', t('chooseRun'));
   $('find-text').placeholder = t('findHint');
-  $('map').setAttribute('aria-label', t('flow'));
+  $('map').setAttribute('aria-label', t('graph'));
   document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));
 }
 translate();
-let chosen = null, projects = [], view = null, fingerprint = '', mode = 'flow', selected = null;
+let chosen = null, projects = [], view = null, fingerprint = '', mode = 'home', selected = null;
 let queuedRefresh = false;
 let timer = 0, loading = false, generation = 0, renderer = null;
 const decisionController = createDecisionController();
-let decisionUI = null, decisionNotice = '';
+let decisionUI = null, decisionNotice = '', cameFrom = 'home';
 
 async function api(path, body, text = false) {
   const response = await fetch(path, {method: body ? 'POST' : 'GET', headers: {'X-GF-Token': token, ...(body ? {'Content-Type':'application/json'} : {})}, ...(body ? {body:JSON.stringify(body)} : {})});
@@ -556,14 +641,33 @@ function relationText(edge) { return edgeRelationLabel({...edge,label:edge.label
 function question(d) { return decisionQuestion(d); }
 function decisionTitle(d) { return title(view.nodes.find(n => n.id === d.node)); }
 // The same words an agent session uses for this decision, so either side can find the other.
-function who(actor) {
-  const role = {leader:'roleLeader', worker:'roleWorker', reviewer:'roleReviewer'}[actor?.role];
-  return [role ? t(role) : '', actor?.session || ''].filter(Boolean).join(' · ');
+function sessionName(session) {
+  const host = /^(t3|claude):(.+)$/.exec(session || '');
+  if (host) return t(host[1] === 't3' ? 'sessionT3' : 'sessionClaude', {id:host[2].slice(0, 8)});
+  return session === 'dashboard' ? t('sessionDashboard') : session || '';
 }
-function clock(stamp) { const time = stamp ? new Date(stamp) : null; return time && !isNaN(time) ? time.toLocaleTimeString(language, {hour:'2-digit', minute:'2-digit'}) : ''; }
-function workedBy(n) { return [n.worker?.model, n.worker?.effort, n.session].filter(Boolean).join(' · '); }
+function who(actor) {
+  const role = {leader:'roleLeader', worker:'roleWorker', reviewer:'roleReviewer', human:'roleHuman'}[actor?.role];
+  return [role ? t(role) : '', sessionName(actor?.session)].filter(Boolean).join(' · ');
+}
+// Time of day, with the date when it was not today.
+function clock(stamp) {
+  const time = stamp ? new Date(stamp) : null; if (!time || isNaN(time)) return '';
+  const hours = time.toLocaleTimeString(language, {hour:'2-digit', minute:'2-digit'});
+  return time.toDateString() === new Date().toDateString() ? hours : time.toLocaleDateString(language, {month:'numeric', day:'numeric'}) + ' ' + hours;
+}
+// An id the agent also says. Pressing it copies the words to paste back into the chat.
+function refChip(id, say) {
+  const chip = button(id, async event => {
+    event.stopPropagation();
+    // Said once; the next refresh puts back whatever the page has to report.
+    try { await navigator.clipboard.writeText(say); notice(t('copied', {text:say})); } catch { notice(t('copyFailed', {text:say})); }
+  }, 'ref');
+  chip.title = t('copyHint'); chip.setAttribute('aria-label', `${id}. ${t('copyHint')}`); return chip;
+}
+function workedBy(n) { return [n.worker?.model, n.worker?.effort, sessionName(n.session)].filter(Boolean).join(' · '); }
 function decisionHeading(parent, d, tag) {
-  const reference = el('p', undefined, 'ref-line'); reference.append(el('span', t('decisionRef', {id:d.id}), 'ref'));
+  const reference = el('p', undefined, 'ref-line'); reference.append(refChip(d.id, `${d.id} · ${decisionTitle(d)}`));
   const asker = who(d.asked_by); if (asker) reference.append(el('span', t('askedBy', {who:asker})));
   if (clock(d.asked)) reference.append(el('span', clock(d.asked)));
   parent.append(reference, el(tag, decisionTitle(d)), el('p', purposeWording(d.purpose, language)));
@@ -584,18 +688,13 @@ function status(node) {
 function attempts(node) { return t(node.attempts?'attempt':'unusedAttempts', {n:node.attempts||0, max:node.max_attempts||3}); }
 function card(heading, body, paper = false) { const c = el('div', undefined, 'card' + (paper ? ' paper' : '')); c.append(el('p', heading, 'eyebrow')); if (body) c.append(el('p', body)); return c; }
 function textList(parent, items, empty = 'notRecorded') { const list = el('ul'); if (!items.length) list.append(el('li', t(empty))); else items.forEach(text => list.append(el('li', text))); parent.append(list); }
-function countCard() {
-  const c = card(t('counts')); const list = el('ul', undefined, 'count-list');
-  for (const key of ['done','doing','needs_you','waiting','returned']) { const item = el('li'); item.append(el('span', undefined, 'dot ' + key), el('span', key === 'returned' ? t('returnTimes', {n:view.counts.returns_total ?? 0}) : `${t(key)} ${view.counts[key]}`)); list.append(item); }
-  c.append(list); return c;
-}
 function failedBlock(parent, d) {
   if (!d.failed?.length) return;
   const failed = card(t('failed')); failed.classList.add('failed');
   textList(failed, d.failed.map(text => text === STRINGS.en.untitledFailure ? t('untitledFailure') : text)); parent.append(failed);
 }
 function decisionCard(d) {
-  const c = card(t('yourTurn'), null, true); decisionHeading(c, d, 'h3'); failedBlock(c, d); if (d.context.why) c.append(el('p', d.context.why));
+  const c = el('div', undefined, 'card paper'); decisionHeading(c, d, 'h3'); failedBlock(c, d); if (d.context.why) c.append(el('p', d.context.why));
   c.append(button(t('read'), () => openDecision(d.id), 'amber')); return c;
 }
 function handoffsCard(key, rows, direction) {
@@ -607,10 +706,13 @@ function handoffsCard(key, rows, direction) {
 function panel() {
   const p = $('panel'); clear(p);
   const node = view.nodes.find(n => n.id === selected);
-  p.append(el('p', t('yourTurn'), 'eyebrow'), el('h2',t(view.decisions.length ? 'needsYou' : 'counts')));
-  view.decisions.forEach(d => p.append(decisionCard(d)));
-  if (!view.decisions.length) p.append(el('p',t('nothing')));
-  p.append(countCard());
+  if (node) {
+    const reference = el('p', undefined, 'ref-line'); reference.append(refChip(node.id, `${node.id} · ${title(node)}`)); if (workedBy(node)) reference.append(el('span', t('workedBy', {who:workedBy(node)})));
+    p.append(el('h2', title(node)), reference, el('p', `${status(node)} · ${attempts(node)}`));
+    if (node.summary) p.append(el('p', node.summary, 'muted'));
+    p.append(el('p', t('attemptsOf'), 'eyebrow'), logList(view.timeline.filter(r => r.node === node.id && r.kind !== 'asked' && r.kind !== 'answered'), 'notStarted', false));
+    p.append(handoffsCard('received', node.inputs, 'from'), handoffsCard('outputs', node.outputs, 'to'), button(t('showInLog'), () => showNode(node.id), 'primary'));
+  } else p.append(el('p', t('selectHint')));
   const legend=el('div',undefined,'legend');legend.append(el('p',t('legend'),'eyebrow'));
   const row=(...items)=>{const line=el('p');items.forEach(([mark,text])=>{const item=el('span',undefined,'legend-item');if(mark)item.append(mark);item.append(el('span',text));line.append(item);});legend.append(line);};
   const pip=state=>el('span',undefined,'pip '+state),dot=key=>el('span',undefined,'dot '+key);
@@ -620,26 +722,127 @@ function panel() {
   row([cometGlyph(),t('cometLegend')]);
   row([null,t('lineLegend')]);
   p.append(legend);
-  if(node) {
-    const reference=el('p',undefined,'ref-line');reference.append(el('span',node.id,'ref'));if(workedBy(node))reference.append(el('span',t('workedBy',{who:workedBy(node)})));if(clock(node.started))reference.append(el('span',clock(node.started)));
-    p.append(el('h2',title(node)),reference,card(t('now'),`${status(node)}. ${attempts(node)}. ${node.summary}`,true));
-    const reasons=card(t('whyReturned'),null,true);textList(reasons,node.returned_reasons.flat(),node.returned_reasons.length?'noReason':'noReturns');p.append(reasons);
-    p.append(handoffsCard('received',node.inputs,'from'),handoffsCard('outputs',node.outputs,'to'),button(t('flow'),wholeFlow,'primary'));
-  }
 }
+// One entry of the record. An attempt carries its real checks; the rest are single sentences.
+const rowOpen = new Map(), logShown = new Map();
+function rowSentence(r) {
+  const n = r.attempt || 1;
+  if (r.kind === 'started') return t('evStarted');
+  if (r.kind === 'planned') return r.revision > 1 ? t('evReplanned', {rev:r.revision, n:r.count}) : t('evPlanned', {n:r.count});
+  if (r.kind === 'final') return r.result === 'passed' ? t('evFinalPassed') : [t('evFinalFailed'), ...(r.failed || [])].join(' · ');
+  if (r.kind === 'learned') return `${t('evLearned')} · ${r.text}`;
+  if (r.kind === 'reopened') return [t('evReopened'), r.reason].filter(Boolean).join(' · ');
+  if (r.kind === 'asked') return [t('evAsked'), r.question].filter(Boolean).join(' · ');
+  if (r.kind === 'answered') return [t('evAnswered'), ({approved:t('approve'), revision_requested:t('sendBack')})[r.outcome], r.answer].filter(Boolean).join(' · ');
+  const failed = (r.checks || []).filter(c => c.result === 'failed').map(c => c.title || c.id), passed = (r.checks || []).filter(c => c.result === 'passed').length;
+  const key = {running:'evRunning', submitted:'evSubmitted', passed:'evPassed', returned:'evReturned', replan:'evReplan', needs_you:'evNeedsYou', held:'evHeld'}[r.state] || 'evRunning';
+  const outcome = failed.length ? t('checksFailed', {names:failed.join(', ')}) : r.state === 'returned' && r.reason ? r.reason : passed && r.state !== 'running' ? t('checksPassed', {n:passed}) : '';
+  return [t(key, {n}), outcome].filter(Boolean).join(' · ');
+}
+function rowTone(r) {
+  if (r.kind === 'asked' || r.kind === 'answered' || r.state === 'needs_you') return 'mine';
+  if (r.kind === 'reopened' || r.state === 'returned' || r.state === 'replan' || (r.kind === 'final' && r.result !== 'passed')) return 'returned';
+  if (r.state === 'passed' || (r.kind === 'final' && r.result === 'passed')) return 'passed';
+  return r.state === 'running' || r.state === 'submitted' ? 'running' : '';
+}
+function checkLine(c) {
+  const item = el('li', undefined, c.result === 'failed' ? 'check-failed' : '');
+  const result = c.timed_out ? t('checkTimedOut') : t(c.result === 'failed' ? 'checkFailed' : 'checkPassed');
+  item.append(el('strong', `${c.result === 'failed' ? '✗' : '✓'} ${c.title || c.id}`), el('span', ` · ${result} · ${t(c.phase === 'gate' ? 'gateRun' : 'workerRun')}`));
+  if (c.command) { const run = el('p', undefined, 'muted'); run.append(el('code', c.command), el('span', [c.exit_code === null || c.exit_code === undefined ? '' : ' → ' + t('exitCode', {n:c.exit_code}), typeof c.duration_ms === 'number' ? t('seconds', {n:(c.duration_ms / 1000).toFixed(2)}) : ''].filter(Boolean).join(' · '))); item.append(run); }
+  if (c.violations?.length) item.append(el('p', t('outside', {files:c.violations.join(', ')})));
+  if (c.log) {
+    const output = el('pre'); output.hidden = true; output.tabIndex = 0;
+    const show = text => { output.textContent = text; output.hidden = false; toggle.textContent = t('hideLog'); };
+    const target = chosen, toggle = button(t('showLog'), async () => {
+      if (!output.hidden) { output.hidden = true; toggle.textContent = t('showLog'); logShown.delete(c.log); return; }
+      try { const text = await api(query('/api/evidence', {path:c.log}, target), null, true); if (sameRun(target, chosen)) logShown.set(c.log, text); show(text); } catch { show(t('logFailed')); }
+    }, 'small');
+    item.append(toggle, output); if (logShown.has(c.log)) show(logShown.get(c.log));
+  }
+  return item;
+}
+function logRow(r, anchor = true) {
+  const item = el('li', undefined, rowTone(r)); if (anchor) item.id = r.id;
+  const head = el('div', undefined, 'row-head'), text = el('span', undefined, 'row-text');
+  head.append(el('span', clock(r.ts), 'row-time'));
+  if (r.decision) text.append(refChip(r.decision, `${r.decision} · ${r.node_title || r.question}`));
+  if (r.node) text.append(el('strong', title({id:r.node, title:r.node_title})), refChip(r.node, `${r.node} · ${r.node_title}`));
+  text.append(el('span', rowSentence(r))); head.append(text);
+  const by = [who(r.by), r.kind === 'attempt' ? [r.worker?.model, r.worker?.effort].filter(Boolean).join(' · ') : ''].filter(Boolean).join(' · ');
+  if (by) head.append(el('span', by, 'row-who'));
+  item.append(head);
+  if (r.kind !== 'attempt') return item;
+  const extra = [['reason', r.reason && !r.checks.some(c => c.result === 'failed') ? [r.reason] : []], ['findings', r.findings || []], ['workerNote', r.notes ? [r.notes] : []], ['unsure', r.unsure || []], ['changedFiles', r.files || []]].filter(([, values]) => values.length);
+  if (!r.checks.length && !extra.length) return item;
+  const details = el('details'); details.open = rowOpen.has(r.id) ? rowOpen.get(r.id) : r.state === 'returned' || r.state === 'replan';
+  details.addEventListener('toggle', () => rowOpen.set(r.id, details.open));
+  details.append(el('summary', t('rowDetails')));
+  if (r.checks.length) { const checks = el('ul', undefined, 'checks'); r.checks.forEach(c => checks.append(checkLine(c))); details.append(checks); }
+  for (const [key, values] of extra) { details.append(el('p', t(key), 'eyebrow')); textList(details, values); }
+  item.append(details); return item;
+}
+function logList(rows, empty, anchor = true) {
+  const list = el('ol', undefined, 'log');
+  if (!rows.length) list.append(el('li', t(empty)));
+  [...rows].sort((a, b) => b.seq - a.seq).forEach(r => list.append(logRow(r, anchor)));
+  return list;
+}
+let logFilter = 'all', logNode = null, found = null, mark = null;
+function home() {
+  const box = $('home'); clear(box);
+  const inbox = el('section'); inbox.append(el('p', t('yourTurn'), 'eyebrow'), el('h2', t(view.decisions.length ? 'needsYou' : 'nothingTitle')));
+  view.decisions.forEach(d => inbox.append(decisionCard(d)));
+  if (!view.decisions.length) inbox.append(el('p', t('nothing'), 'muted'));
+  box.append(inbox);
+  if (!view.complete) {
+    const now = el('section'), list = el('ul', undefined, 'now'); now.append(el('h2', t('doingNow')));
+    const active = view.nodes.filter(n => !needs(n) && !['passed','pending','ready','blocked'].includes(n.status) && n.attempts);
+    for (const n of active) {
+      const item = el('li'); if (n.status === 'running') item.append(walker());
+      item.append(el('strong', title(n)), refChip(n.id, `${n.id} · ${title(n)}`), el('span', `${status(n)} · ${attempts(n)}`));
+      const by = [workedBy(n), clock(n.started) ? t('since', {time:clock(n.started)}) : ''].filter(Boolean).join(' · '); if (by) item.append(el('span', by, 'row-who'));
+      list.append(item);
+    }
+    now.append(active.length ? list : el('p', t('idle'), 'muted')); if (active.length || !view.decisions.length) box.append(now);
+  }
+  const log = el('section'); log.id = 'log'; log.append(el('h2', t('log')));
+  const filters = el('div', undefined, 'filters');
+  for (const [key, name] of [['all','filterAll'],['mine','filterMine'],['returned','filterReturned']]) { const b = button(t(name), () => { logFilter = key; home(); }, 'small'); b.setAttribute('aria-pressed', String(logFilter === key)); filters.append(b); }
+  const only = view.nodes.find(n => n.id === logNode);
+  if (only) filters.append(el('span', t('onlyNode', {title:title(only)})), button(t('showAll'), () => { logNode = null; home(); }, 'small'));
+  const rows = view.timeline.filter(r => (!only || r.node === only.id) && (logFilter === 'all' || rowTone(r) === (logFilter === 'mine' ? 'mine' : 'returned')));
+  log.append(filters, logList(rows, view.timeline.length ? 'filterEmpty' : 'logEmpty')); box.append(log);
+  const tasks = el('details'); tasks.id = 'tasks'; tasks.open = !!rowOpen.get('tasks'); tasks.addEventListener('toggle', () => rowOpen.set('tasks', tasks.open));
+  tasks.append(el('summary', t('tasks', {n:view.nodes.length})));
+  const wrap = el('div', undefined, 'table-wrap'), table = el('table', undefined, 'tasks'), heads = el('tr');
+  ['colTask','colStatus','colWorker','colTries','colWaits'].forEach(key => { const th = el('th', t(key)); th.scope = 'col'; heads.append(th); }); table.append(heads);
+  for (const n of view.nodes) {
+    const line = el('tr'), name = el('td'); name.append(button(title(n), () => showNode(n.id), 'link'), refChip(n.id, `${n.id} · ${title(n)}`));
+    const waits = n.inputs.filter(i => !i.delivered).map(i => otherTitle(i.other_title));
+    line.append(name, el('td', status(n)), el('td', workedBy(n)), el('td', `${n.attempts || 0}/${n.max_attempts || 3}`), el('td', [...new Set(waits)].join(', '))); table.append(line);
+  }
+  wrap.append(table); tasks.append(wrap); box.append(tasks);
+  if (view.lessons.length) { const lessons = el('details'); lessons.open = !!rowOpen.get('lessons'); lessons.addEventListener('toggle', () => rowOpen.set('lessons', lessons.open)); lessons.append(el('summary', t('lessonsCount', {n:view.lessons.length}))); textList(lessons, view.lessons.map(l => l.node_title ? `${otherTitle(l.node_title)} · ${l.text}` : l.text)); box.append(lessons); }
+  const marked = document.getElementById(mark || ''); if (marked) marked.classList.add('found');
+  if (found) { const target = document.getElementById(found); found = null; if (target) target.scrollIntoView({block:target.id === 'log' ? 'start' : 'center', behavior:reduced.matches ? 'auto' : 'smooth'}); }
+}
+// Show one task's entries in the record, where the agent's words about it can be matched by time.
+function showNode(id) { if (!showMode('home')) return; logNode = id; logFilter = 'all'; mark = null; found = 'log'; home(); }
 function accessible() {
   clear($('node-list')); clear($('edge-list')); clear($('decision-list'));
   const order = layeredLayout(view.nodes,view.edges,view.decisions).order;
   [...view.nodes].sort((a,b)=>order.indexOf(a.id)-order.indexOf(b.id)).forEach(n => { const item = el('li', undefined, 'card'); item.append(button(title(n), () => selectNode(n.id)), el('p', status(n)), el('p', attempts(n), 'muted'), el('p', n.summary)); if (n.returned_reasons.length) textList(item, n.returned_reasons.flat(), 'noReason'); $('node-list').append(item); });
   view.edges.forEach(e => { const a = view.nodes.find(n => n.id === e.from), b = view.nodes.find(n => n.id === e.to); $('edge-list').append(el('li', `${title(a)} → ${title(b)} · ${relationText(e)} · ${t(e.delivered ? 'delivered' : 'notDelivered')}`)); });
   view.decisions.forEach(d => { const item = el('li'); item.append(button(t('read'), () => openDecision(d.id))); decisionHeading(item, d, 'h3'); failedBlock(item, d); if (d.context.why) item.append(el('p', d.context.why)); $('decision-list').append(item); });
-  if (!view.decisions.length) $('decision-list').append(el('li', t('nothing')));
+  if (!view.decisions.length) $('decision-list').append(el('li', t('nothingTitle')));
 }
 function showMode(next) {
   if (next !== 'decision' && !discardDecision()) return false;
-  mode = next; $('flow').hidden = next !== 'flow'; $('decision').hidden = next !== 'decision'; $('history').hidden = next !== 'history';
-  $('flow-tab').setAttribute('aria-pressed', String(next === 'flow')); $('history-tab').setAttribute('aria-pressed', String(next === 'history'));
-  if (renderer) renderer.wake(); return true;
+  mode = next; $('home').hidden = next !== 'home'; $('flow').hidden = next !== 'flow'; $('decision').hidden = next !== 'decision'; $('accessible').hidden = next !== 'flow';
+  $('home-tab').setAttribute('aria-pressed', String(next === 'home')); $('flow-tab').setAttribute('aria-pressed', String(next === 'flow'));
+  // The map can only measure its cards while it is on screen.
+  if (renderer && next === 'flow' && view) renderer.update(view, selected); return true;
 }
 function discardDecision() {
   if (!decisionController.close()) return false;
@@ -648,10 +851,11 @@ function discardDecision() {
 function closeInvalidDecision(run, decisions) {
   const reason = decisionController.refresh({decisions}, run);
   if (!reason) return false;
-  wholeFlow(); decisionNotice = reason; notice(decisionNotice); return true;
+  goHome(); decisionNotice = reason; notice(decisionNotice); return true;
 }
-function wholeFlow() { if (!showMode('flow')) return; selected = null; if (view) panel(); if (renderer) renderer.select(null); }
-function selectNode(id) { const n=view.nodes.find(n=>n.id===id),d=view.decisions.find(d=>d.node===id); if(n?.kind==='decision'&&d){openDecision(d.id);return;} if (!showMode('flow')) return; selected = id; panel(); if (renderer) renderer.select(id); }
+function goHome() { if (showMode('home') && view) home(); }
+function showGraph() { if (!showMode('flow')) return; panel(); }
+function selectNode(id) { const n=view.nodes.find(n=>n.id===id),d=view.decisions.find(d=>d.node===id); if(n?.kind==='decision'&&d){openDecision(d.id);return;} if (!showMode('flow')) return; selected = selected === id ? null : id; panel(); if (renderer) renderer.select(selected); }
 function focusHeading(heading) { heading.tabIndex = -1; heading.focus(); }
 function openDecision(id, focus = true) {
   const session = decisionController.open(id); if (!session) return;
@@ -659,6 +863,7 @@ function openDecision(id, focus = true) {
   const d = session.decision;
   if (decisionUI?.session === session) { decisionUI.update(); return; }
   decisionNotice = ''; notice('');
+  if (mode !== 'decision') cameFrom = mode;
   showMode('decision'); const box = $('decision'); clear(box);
   const reading = card(t('yourTurn'), null, true); reading.classList.add('reading');
   const introduction = el('div'); reading.append(introduction);
@@ -686,7 +891,7 @@ function openDecision(id, focus = true) {
     let error = null;
     try { await api('/api/answer', request); } catch (failure) { error = failure; }
     const result = decisionController.onResult(request, error);
-    if (result.close && mode === 'decision') wholeFlow();
+    if (result.close && mode === 'decision') leaveDecision();
     decisionNotice = result.notice; notice(decisionNotice);
     if (current()) { message.textContent = t(result.notice); updateActions(); }
     $('picker').disabled = !!decisionController.session?.busy;
@@ -696,7 +901,7 @@ function openDecision(id, focus = true) {
   const actionButton = (outcome, text, cls) => { const b = button(text, () => send(outcome), cls); b.dataset.outcome = outcome; return b; };
   if (isQuestion) actions.append(actionButton('answered', t('answer'), 'primary'));
   else { approveButton = actionButton('approved', '', 'primary'); actions.append(approveButton, actionButton('revision_requested', t('sendBack'))); }
-  const backButton = button(t('leaveUnanswered'), wholeFlow); actions.append(backButton); reading.append(actions);
+  const backButton = button(t('leaveUnanswered'), leaveDecision); actions.append(backButton); reading.append(actions);
   const right = el('div'), surrounding = el('div'); right.append(surrounding);
   const files = card(t('readThis'), null, true), fileChoices = el('div', undefined, 'file-choices'), reader = el('pre', undefined, 'file-reader');
   reader.hidden = true; reader.tabIndex = 0; reader.setAttribute('aria-label',t('readThis'));
@@ -764,16 +969,7 @@ function openDecision(id, focus = true) {
   };
   decisionUI = {session, update}; update(); if (focus) focusHeading(introduction.querySelector('h2'));
 }
-function historyView() {
-  if (!showMode('history')) return; const box = $('history'); clear(box); box.append(el('p', t('planOrder'), 'muted'));
-  const strip = el('ol', undefined, 'timeline');
-  view.nodes.forEach(n => { const item=el('li');item.append(nodeCard(n));strip.append(item); }); box.append(strip);
-  const grid = el('div', undefined, 'history-grid'); const returns = el('div'); returns.append(el('h3', t('returns')));
-  view.nodes.filter(n => n.returned_reasons.length).forEach(n => { const c = card(title(n), null, true); textList(c, n.returned_reasons.map((reasons, i) => `${t('pastAttempt', {n:i + 1})} · ${t('whyReturned')}: ${reasons.length ? reasons.join(' · ') : t('noReason')}`)); returns.append(c); });
-  if (!view.nodes.some(n => n.returned_reasons.length)) returns.append(el('p', t('noReturns')));
-  const lessons = el('div', undefined, 'constellation'); lessons.append(el('h3', t('lessons'))); view.lessons.forEach(l => { const lesson=card(l.node_title ? otherTitle(l.node_title) : t('lessons'), l.text); lesson.classList.add('lesson'); lessons.append(lesson); }); if (!view.lessons.length) lessons.append(el('p', t('noLessons')));
-  const counts = el('div'); counts.append(countCard(), button(t('flow'), wholeFlow, 'primary')); grid.append(returns, lessons, counts); box.append(grid);
-}
+function leaveDecision() { if (cameFrom === 'flow') showGraph(); else goHome(); }
 let pendingJump = null;
 function readFragment() {
   const target = Object.fromEntries(new URLSearchParams(location.hash.slice(1)));
@@ -785,17 +981,19 @@ function readFragment() {
 }
 function jump(target) {
   if (target.run && !(chosen && chosen.run === target.run && (!target.project || chosen.project === target.project))) { decisionNotice = t('jumpNoRun'); notice(decisionNotice); return false; }
+  const miss = text => { decisionNotice = t('findNone', {text}); notice(decisionNotice); return false; };
   if (target.decision) {
-    const id = target.decision.toLowerCase(), open = view.decisions.find(d => d.id === id), closed = (view.answered || []).find(d => d.id === id);
-    if (open) { openDecision(open.id); return true; }
-    if (closed) { wholeFlow(); if (closed.node) selectNode(closed.node); decisionNotice = t('alreadyAnswered', {id:closed.id, title:closed.node_title || closed.question, answer:closed.answer || ({approved:t('outcome_approved'), revision_requested:t('outcome_revision_requested'), answered:t('outcome_answered')})[closed.outcome] || ''}); notice(decisionNotice); return true; }
-    decisionNotice = t('findNone', {text:target.decision}); notice(decisionNotice); return false;
+    const id = target.decision.toLowerCase();
+    if (view.decisions.some(d => d.id === id)) { openDecision(id); return true; }
+    const row = [...view.timeline].reverse().find(r => r.decision === id); if (!row) return miss(target.decision);
+    decisionNotice = ''; notice(''); if (!showMode('home')) return false;
+    logNode = null; logFilter = 'all'; found = mark = row.id; home(); return true;
   }
   if (target.node) {
     const text = target.node.toLowerCase();
     const node = view.nodes.find(n => n.id.toLowerCase() === text) || view.nodes.find(n => (n.title || '').toLowerCase().includes(text));
-    if (node) { decisionNotice = ''; notice(''); selectNode(node.id); return true; }
-    decisionNotice = t('findNone', {text:target.node}); notice(decisionNotice); return false;
+    if (!node) return miss(target.node);
+    decisionNotice = ''; notice(''); showNode(node.id); return true;
   }
   return true;
 }
@@ -808,15 +1006,15 @@ function applyView(next) {
   closeInvalidDecision(chosen, next.decisions);
   const nextFingerprint = JSON.stringify(next); if (nextFingerprint === fingerprint) return;
   language = viewLanguage(next, navigator.language); translate();
-  view = next; fingerprint = nextFingerprint; showMode(mode); if (!view.nodes.some(n => n.id === selected)) selected = null;
-  $('title').textContent = view.title || t('brand'); $('subtitle').textContent = view.complete ? t('complete') : t('overview', {total:view.nodes.length, done:view.counts.done, needs:view.counts.needs_you});
-  accessible(); panel(); if (renderer) renderer.update(view, selected);
-  if (mode === 'history') historyView();
+  view = next; fingerprint = nextFingerprint; if (!view.nodes.some(n => n.id === selected)) selected = null; if (!view.nodes.some(n => n.id === logNode)) logNode = null; showMode(mode);
+  $('title').textContent = view.title || t('brand'); $('where').textContent = [view.project, view.run].filter(Boolean).join(' · ');
+  $('subtitle').textContent = view.complete ? t('complete', {total:view.nodes.length}) : t('overview', {total:view.nodes.length, done:view.counts.done, doing:view.counts.doing, needs:view.counts.needs_you});
+  accessible(); panel(); home(); if (renderer && mode === 'flow') renderer.update(view, selected);
   if (mode === 'decision' && decisionController.session) openDecision(decisionController.session.target.id, false);
 }
 function setChosen(next) {
   if (decisionController.session?.busy || sameRun(chosen, next)) return;
-  closeInvalidDecision(next, []); chosen = next; generation++; resetView(); showMode('flow');
+  closeInvalidDecision(next, []); chosen = next; generation++; resetView(); logNode = null; logFilter = 'all'; found = mark = null; rowOpen.clear(); logShown.clear(); showMode('home');
 }
 function chooseRuns(data) {
   projects = data.projects;
@@ -824,7 +1022,7 @@ function chooseRuns(data) {
   runs.sort((a,b) => Number(b.status === 'open') - Number(a.status === 'open') || (b.last_event || '').localeCompare(a.last_event || ''));
   if (!chosen || !runs.some(r => r.project === chosen.project && r.id === chosen.run)) { const first = runs.find(r => !r.error) || runs[0]; setChosen(first ? {project:first.project,run:first.id} : null); }
   const picker = $('picker'); picker.disabled = !!decisionController.session?.busy; clear(picker);
-  runs.forEach((r, i) => { const option = el('option', t('runOption', {project:r.projectName,n:r.number})); option.value = String(i); option.selected = !!chosen && r.project === chosen.project && r.id === chosen.run; picker.append(option); });
+  runs.forEach((r, i) => { const option = el('option', t(r.open_decisions ? 'runOptionNeeds' : 'runOption', {project:r.projectName, run:r.id, n:r.open_decisions})); option.value = String(i); option.selected = !!chosen && r.project === chosen.project && r.id === chosen.run; picker.append(option); });
   $('picker-label').hidden = runs.length < 2;
   picker.onchange = () => { if (decisionController.session?.busy) return; const r = runs[Number(picker.value)]; setChosen({project:r.project,run:r.id}); refresh(true); };
   return runs.find(r => chosen && r.project === chosen.project && r.id === chosen.run);
@@ -848,13 +1046,13 @@ async function refresh(force = false) {
   } catch (error) { if (currentGeneration === generation) notice(error.status === 401 ? 'unauthorized' : error.status === 400 || error.status === 404 || error.status === 500 ? 'unreadable' : 'lost', true); }
   finally { loading = false; if (queuedRefresh) { queuedRefresh = false; refresh(true); } else schedule(); }
 }
-function resetView() { language = viewLanguage(null, navigator.language); translate(); closeInvalidDecision(chosen, []); view = null; selected = null; fingerprint = ''; ['node-list','edge-list','decision-list','panel'].forEach(id => clear($(id))); if (renderer) renderer.update({nodes:[],edges:[],decisions:[],complete:false}, null); $('flow').hidden = true; $('history').hidden = true; $('decision').hidden = true; $('subtitle').textContent = ''; }
+function resetView() { language = viewLanguage(null, navigator.language); translate(); closeInvalidDecision(chosen, []); view = null; selected = null; fingerprint = ''; ['node-list','edge-list','decision-list','panel','home'].forEach(id => clear($(id))); if (renderer) renderer.update({nodes:[],edges:[],decisions:[],complete:false}, null); $('flow').hidden = true; $('home').hidden = true; $('accessible').hidden = true; $('decision').hidden = true; $('subtitle').textContent = ''; $('where').textContent = ''; }
 function schedule() { clearTimeout(timer); if (!document.hidden) timer = setTimeout(refresh, 2000); }
-$('flow-tab').addEventListener('click', () => { if (view) wholeFlow(); });
-$('history-tab').addEventListener('click', () => { if (view) historyView(); });
+$('home-tab').addEventListener('click', () => { if (view) goHome(); });
+$('flow-tab').addEventListener('click', () => { if (view) showGraph(); });
 $('find').addEventListener('submit', event => { event.preventDefault(); if (find($('find-text').value)) $('find-text').value = ''; });
 addEventListener('hashchange', readFragment);
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.isComposing && view) wholeFlow(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.isComposing && view) { if (mode === 'decision') leaveDecision(); else if (mode === 'flow' && selected) selectNode(selected); } });
 document.addEventListener('visibilitychange', () => { clearTimeout(timer); if (renderer) renderer.wake(); if (!document.hidden) refresh(true); });
 reduced.addEventListener('change', () => { if (renderer) renderer.wake(); });
 notice('loading'); readFragment(); refresh();
@@ -896,7 +1094,7 @@ function nodeCard(n, expanded = false) {
   const header=button('',()=>{
     const decision=view.decisions.find(d=>d.node===n.id);
     if(n.kind==='decision'){if(decision)openDecision(decision.id);else selectNode(n.id);}
-    else if(selected===n.id)wholeFlow();else selectNode(n.id);
+    else selectNode(n.id);
   },'node-header');
   header.setAttribute('aria-label',nodeDescription(n));header.setAttribute('aria-expanded',String(expanded));
   header.append(typeIcon(n.kind),el('strong',title(n),'node-title'),el('span',`${t(n.kind||'work')} · ${status(n)}`,'node-status'));
@@ -908,25 +1106,7 @@ function nodeCard(n, expanded = false) {
   const reference=el('span',undefined,'ref-line');reference.append(el('span',n.id,'ref'));if(workedBy(n))reference.append(el('span',workedBy(n)));header.append(reference);
   if(cometCount(n)){const badge=el('span',undefined,'comet-badge');badge.append(cometGlyph(),el('span',String(cometCount(n))));header.append(badge);}
   root.append(header);
-  if(expanded)root.append(innerLoop(n));
   return root;
-}
-function innerLoop(n) {
-  const loop=el('div',undefined,'inner-loop'),state=innerLoopState(needs(n)?'waiting_for_you':n.status,n.attempts);
-  const diagram=el('div',undefined,'loop-diagram');diagram.setAttribute('aria-label',t('loopDescription'));
-  const lines=svg('svg',{viewBox:'0 0 228 170','aria-hidden':'true',class:'loop-lines'});
-  lines.append(svg('path',{d:'M62 73H136M130 68 136 73 130 78M167 94V153H130M136 148 130 153 136 158M68 153H31V94M26 100 31 94 36 100M198 73H226M220 68 226 73 220 78',fill:'none',stroke:'#6a5a8e','stroke-width':2.5,'stroke-linejoin':'round'}));diagram.append(lines);
-  for(const key of ['make','check','fix']) {
-    const station=el('div',undefined,'loop-state '+key+(state===key?' active':''));station.append(el('span',t(key)));
-    if(state===key)station.append(walker());
-    diagram.append(station);
-  }
-  diagram.append(el('span',t('passes'),'loop-passes'),el('span',t('fails'),'loop-fails'));
-  if(state==='exit')diagram.append(el('span','✓','loop-exit'));
-  if(state==='report'){const report=el('img',undefined,'loop-report');report.src='/static/assets/frog-report.png';report.alt=t('awaiting');diagram.append(report);}
-  loop.append(diagram);
-  (n.returned_reasons||[]).forEach((reasons,i)=>{const row=el('p',undefined,'earlier-attempt');row.append(cometGlyph(),el('span',`${t('pastAttempt',{n:i+1})} · ${t('whyReturned')}: ${reasons.length?reasons.join(' · '):t('noReason')}`));loop.append(row);});
-  return loop;
 }
 function createMap() {
   const map=$('map');map.tabIndex=0;
@@ -968,7 +1148,7 @@ function createMap() {
       seen.set(n.id,{tone:cardTone(n),comets:cometCount(n)});
     }
     const heights=Object.fromEntries([...nodes].map(([id,e])=>[id,e.firstElementChild?.offsetHeight||0]));
-    layout=layeredLayout(data.nodes,data.edges.map(e=>({...e,label:e.label?label(e.label):''})),data.decisions,true,{expanded:chosenNode,heights,language});
+    layout=layeredLayout(data.nodes,data.edges.map(e=>({...e,label:e.label?label(e.label):''})),data.decisions,true,{heights,language});
     // Reorder existing controls without replacing them: tab order follows the drawing.
     for(const id of layout.order){const e=nodes.get(id);setRect(e,layout.positions[id]);stage.append(e);}
     if(drawing)drawing.remove();drawing=svg('svg',{width:layout.bounds.width,height:layout.bounds.height,class:'edge-layer','aria-hidden':'true'});
@@ -998,7 +1178,7 @@ function createMap() {
     for(const n of data.nodes.filter(n=>needs(n)||['held','awaiting_approval'].includes(n.status))) {
       const p=layout.positions[n.id],report=el('div',undefined,'overview-frog');const frog=el('img');frog.src='/static/assets/frog-report.png';frog.alt='';report.append(inPhase(frog,1200),el('span',[t('waitingBubble'),...data.decisions.filter(d=>d.node===n.id).map(d=>d.id)].join(' '),'speech'));Object.assign(report.style,{left:p.x+'px',top:p.y+p.height+8+'px'});stage.append(report);
     }
-    if(data.complete){const frog=el('img',undefined,'overview-frog waving');frog.src='/static/assets/frog-wave.png';frog.alt=t('complete');inPhase(frog,1200);Object.assign(frog.style,{left:layout.goal.x+52+'px',top:layout.goal.y+layout.goal.height+10+'px'});stage.append(frog);}
+    if(data.complete){const frog=el('img',undefined,'overview-frog waving');frog.src='/static/assets/frog-wave.png';frog.alt=t('allDone');inPhase(frog,1200);Object.assign(frog.style,{left:layout.goal.x+52+'px',top:layout.goal.y+layout.goal.height+10+'px'});stage.append(frog);}
     size();
     if(reveal&&layout.positions[id]){const p=layout.positions[id],w=viewport.clientWidth||900;
       if(p.x*scale<viewport.scrollLeft+12||(p.x+p.width)*scale>viewport.scrollLeft+w-12)viewport.scrollLeft=Math.max(0,p.x*scale-(w-p.width*scale)/2);

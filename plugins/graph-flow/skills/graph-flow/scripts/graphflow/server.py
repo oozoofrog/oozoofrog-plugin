@@ -228,6 +228,92 @@ def _history(node, st, events):
     return laps, returned
 
 
+def _timeline(nodes, events, lessons):
+    """What happened, oldest first: one row per attempt instead of one per check."""
+    def title(nid):
+        return _text(_mapping(nodes.get(nid)).get("title"), nid) if isinstance(nid, str) else ""
+
+    def actor_of(event):
+        actor = _mapping(event.get("actor"))
+        return {"role": _text(actor.get("role"), None), "session": _text(actor.get("session"), None)}
+
+    check_titles = {(nid, c["id"]): _text(c.get("title")) for nid, node in nodes.items()
+                    for c in _objects(node.get("checks")) if isinstance(c.get("id"), str)}
+    rows, attempts, assigned, asked = [], {}, {}, {}
+
+    def add(event, kind, **fields):
+        row = {"id": "e%d" % event["seq"], "seq": event["seq"], "ts": _text(event.get("ts"), None),
+               "kind": kind, "by": actor_of(event)}
+        row.update(fields)
+        rows.append(row)
+        return row
+
+    def touch(row, event):
+        # An attempt sits where its latest event happened.
+        row["seq"], row["ts"] = event["seq"], _text(event.get("ts"), None)
+
+    for event in events:
+        kind, data = event.get("type"), _mapping(event.get("data"))
+        nid = data.get("node") if isinstance(data.get("node"), str) else None
+        row = attempts.get(nid)
+        if kind == "run.init":
+            add(event, "started")
+        elif kind == "plan.set":
+            add(event, "planned", revision=data.get("revision"),
+                count=len(_mapping(data.get("fingerprints"))))
+        elif kind == "node.assign" and nid:
+            assigned[nid] = {k: v for k, v in data.items()
+                             if k in ("executor", "model", "effort", "provider") and _text(v)}
+        elif kind == "node.start" and nid:
+            attempts[nid] = add(event, "attempt", node=nid, node_title=title(nid),
+                                attempt=data.get("attempt"), state="running", checks=[],
+                                worker=assigned.get(nid, {}), notes=None, files=[],
+                                unsure=[], reason=None, findings=[])
+        elif kind == "check.result" and row and isinstance(data.get("check"), str):
+            entry = {"id": data["check"], "title": check_titles.get((nid, data["check"]), ""),
+                     "result": _text(data.get("result")), "phase": _text(data.get("phase")),
+                     "command": _text(data.get("command"), None), "exit_code": data.get("exit_code"),
+                     "timed_out": data.get("timed_out") is True,
+                     "duration_ms": data.get("duration_ms"), "log": _text(data.get("log"), None),
+                     "violations": _strings(data.get("violations"))}
+            # The gate's own run of a check replaces the worker's run of it.
+            row["checks"] = [c for c in row["checks"] if c["id"] != entry["id"]] + [entry]
+            touch(row, event)
+        elif kind == "node.submit" and row:
+            row.update(state="submitted", notes=_text(data.get("notes"), None),
+                       files=_strings(data.get("changed_files")),
+                       unsure=_strings(data.get("low_confidence")))
+            touch(row, event)
+        elif kind == "review.submit" and row:
+            row["findings"] = _finding_text(data)
+            row["state"] = "submitted"
+            touch(row, event)
+        elif kind == "gate.verdict" and row:
+            verdict = data.get("verdict")
+            row["state"] = {"pass": "passed", "reject": "returned", "replan": "replan",
+                            "needs_approval": "needs_you", "hold": "held"}.get(verdict, row["state"])
+            row["reason"] = _text(_mapping(data.get("rejection")).get("reason"), row["reason"])
+            touch(row, event)
+        elif kind == "node.reopen" and nid:
+            add(event, "reopened", node=nid, node_title=title(nid),
+                reason=_text(data.get("reason"), None))
+        elif kind == "decision.ask" and isinstance(data.get("id"), str):
+            asked[data["id"]] = data
+            add(event, "asked", decision=data["id"], node=nid, node_title=title(nid),
+                question=_text(data.get("question")))
+        elif kind == "decision.answer" and isinstance(data.get("id"), str):
+            ask = _mapping(asked.get(data["id"]))
+            add(event, "answered", decision=data["id"], node=ask.get("node"),
+                node_title=title(ask.get("node")), question=_text(ask.get("question")),
+                outcome=_text(data.get("outcome")), answer=_text(data.get("answer")))
+        elif kind == "gate.final":
+            add(event, "final", result=_text(data.get("result")),
+                failed=_strings(data.get("failed_checks")))
+        elif kind == "constraint.add" and isinstance(data.get("id"), str) and lessons.get(data["id"]):
+            add(event, "learned", text=lessons[data["id"]])
+    return sorted(rows, key=lambda row: row["seq"])
+
+
 def _view(current, derived, events, project):
     current = current or {}
     nodes = {n["id"]: n for n in current.get("nodes", [])}
@@ -236,7 +322,8 @@ def _view(current, derived, events, project):
             "language": "ko" if re.search(r"[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]",
                 " ".join([_text(current.get("title"))] +
                          [_text(n.get(k)) for n in nodes.values() for k in ("title", "summary")])) else "en",
-            "edges": [], "decisions": [], "answered": [], "lessons": [],
+            "run": derived["run"]["id"], "project": pathlib.Path(project).name,
+            "edges": [], "decisions": [], "answered": [], "lessons": [], "timeline": [],
             "counts": dict.fromkeys(("done", "doing", "waiting", "needs_you", "returned", "returns_total"), 0),
             "complete": derived["run"]["status"] == "complete"}
 
@@ -363,6 +450,7 @@ def _view(current, derived, events, project):
                                      "outcome": _text(decision.get("outcome")), "answer": _text(decision.get("answer")),
                                      "stale": bool(decision.get("stale"))})
 
+    lesson_texts = {}
     # A malformed learning record must not make the run itself unreadable.
     if (pathlib.Path(project) / ".graph-flow" / "constraints.jsonl").is_file():
         try:
@@ -370,6 +458,8 @@ def _view(current, derived, events, project):
         except core.GFError:
             constraints = []
         for constraint in _objects(constraints):
+            if isinstance(constraint.get("id"), str) and _text(constraint.get("text")):
+                lesson_texts[constraint["id"]] = constraint["text"]
             if constraint.get("status") != "active" or not _text(constraint.get("text")):
                 continue
             source = _mapping(constraint.get("derived_from"))
@@ -378,6 +468,7 @@ def _view(current, derived, events, project):
                     and isinstance(source.get("node"), str) and source["node"] in nodes):
                 node_title = title(source["node"])
             view["lessons"].append({"text": constraint["text"], "node_title": node_title})
+    view["timeline"] = _timeline(nodes, events, lesson_texts)
     return view
 
 
