@@ -112,6 +112,28 @@ pre{word-break:normal;white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.7 
 .decision-question{font-size:17px;font-weight:600}.decision-recap{display:none}
 @media(max-width:760px){#decision .ref-line>span{display:none}#decision .decision-question{font-size:16px;margin:12px 0}.decision-recap{display:block;background:#f0f2f5;border-radius:6px;padding:10px;margin:12px 0;font-size:14px;line-height:1.6}.decision-recap p{margin:4px 0}#decision .reading textarea{min-height:64px}#decision .reading>p.eyebrow{margin:0 0 10px}#answer-actions{margin-top:10px;gap:6px}#decision .reading{padding:14px}}
 .failure-mark{font-size:18px;font-weight:800;line-height:1;vertical-align:-1px;margin-right:2px}
+/* Compact map controls; line text belongs to its route, not to a form. */
+.map-toolbar{flex-wrap:wrap;padding:8px 12px;gap:8px;min-height:52px}
+.map-title{flex:none;margin-right:12px}.map-title span{display:none}.map-complete span{display:block}
+.line-key{padding:0;border:0;background:none;margin-right:auto;gap:16px;flex-wrap:nowrap}
+.line-sample{white-space:nowrap}.line-sample i{width:48px;border-color:#596b80}.line-sample.closed i{border-top-width:2px;border-top-style:dashed}.line-sample.review i{border-top-width:3px;border-top-style:dotted}
+.map-overflow{flex:none;margin-left:auto;padding:0 0 0 12px;min-height:32px;background:none;border:0;border-left:1px solid #dce1e8;gap:6px 8px}.map-visible{font-size:12px}
+.map-overflow button{min-height:28px;padding:2px 8px}
+.edge-path.open{stroke:#596b80}marker .open,marker .closed,marker .returned,marker .waiting_for_you{fill:#596b80}.edge-junction{fill:#596b80;stroke:var(--night);stroke-width:1.5}
+.edge-chip,.edge-chip.returned,.edge-chip.waiting_for_you{border:0;border-radius:0;background:var(--night);color:#354253;padding:2px 4px}
+.node-card{min-height:0}.working-note{font-size:14px;padding:5px 14px}.node-position{transition:none}
+#panel{height:100%;min-height:0;align-self:start;padding-bottom:0;scrollbar-width:auto;overflow-y:scroll}
+.panel-end{position:sticky;bottom:0;background:white;border-top:1px solid #c9cfd7;margin:16px -16px 0;padding:10px 16px;color:#606b7a;font-size:13px}
+#phone-flow,#phone-view-toggle,.phone-history{display:none}
+@media(max-width:760px){
+ button,button.small,button.ref,nav>button,#find-text,#picker,.attention-item>button,.map-toolbar button,.map-overflow button{min-height:44px;min-width:44px}
+ #phone-view-toggle{display:block;justify-self:start}#phone-flow{display:block;list-style:none;padding:0;margin:0;min-width:0}
+ #flow:not(.phone-diagram) #map{display:none}#flow.phone-diagram #phone-flow{display:none}
+ #phone-flow .node-card{width:100%}#phone-flow>li{margin:0 0 16px}.phone-handoff{display:flex;gap:8px;margin:8px 10px;font-size:14px;color:#455266}
+ .map-toolbar{flex-wrap:wrap;padding:8px;gap:8px}.map-toolbar .line-key{order:5;width:100%;flex-wrap:wrap;gap:12px;font-size:13px}.map-toolbar .map-title{display:none}.map-toolbar output{margin-left:auto;min-width:42px;padding-right:4px;font-size:13px}
+ .map-overflow{padding:6px 8px}.line-sample i{width:48px}#panel{height:auto;overflow:visible}#decision .decision-history{display:block}
+ #decision .ref-line>span{display:none}.decision-recap{display:none}.phone-history{display:block;margin:10px 0;background:#f0f2f5;border-radius:6px;padding:0 10px;font-size:14px}.phone-history summary{min-height:44px;padding:8px 0}.phone-history .log{margin:0}.phone-history .log>li{padding:10px}.phone-history .row-who{padding-left:0}#decision .decision-history{display:none}
+}
 @keyframes step{50%{transform:translateX(2px)}}
 @keyframes flow{50%{opacity:.55}}
 @keyframes arrive{from{opacity:.45;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
@@ -125,5 +147,5 @@ pre{word-break:normal;white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.7 
 <body>
 <a class="skip" href="#content" data-i18n="skip"></a>
 <header><div><p class="eyebrow" id="where"></p><h1 id="title">Graph flow</h1><p id="subtitle" class="muted" aria-live="polite"></p></div><nav aria-label="Views"><button id="flow-tab" data-i18n="graph" aria-pressed="true"></button><button id="home-tab" data-i18n="home" aria-pressed="false"></button><form id="find" role="search"><label><span data-i18n="find"></span><input id="find-text" type="search" autocomplete="off" spellcheck="false"></label></form><label id="picker-label" hidden><span data-i18n="chooseRun"></span><select id="picker"></select></label></nav></header>
-<main id="content"><section id="notice" role="status" hidden></section><div id="home" hidden></div><section id="flow"><section id="attention" hidden aria-label="Your turn"></section><div id="map" role="region" aria-label="Flow map"></div><aside id="panel" hidden></aside></section><section id="decision" hidden aria-labelledby="decision-title"></section><details id="accessible"><summary data-i18n="listView"></summary><h2 data-i18n="nodes"></h2><ul id="node-list"></ul><h2 data-i18n="handoffs"></h2><ul id="edge-list"></ul><h2 data-i18n="yourTurn"></h2><ul id="decision-list"></ul></details></main>
+<main id="content"><section id="notice" role="status" hidden></section><div id="home" hidden></div><section id="flow"><section id="attention" hidden aria-label="Your turn"></section><div id="map" role="region" aria-label="Flow map"></div><button id="phone-view-toggle" data-i18n="showDiagram" aria-pressed="false"></button><ol id="phone-flow"></ol><aside id="panel" hidden></aside></section><section id="decision" hidden aria-labelledby="decision-title"></section><details id="accessible"><summary data-i18n="listView"></summary><h2 data-i18n="nodes"></h2><ul id="node-list"></ul><h2 data-i18n="handoffs"></h2><ul id="edge-list"></ul><h2 data-i18n="yourTurn"></h2><ul id="decision-list"></ul></details></main>
 </body></html>

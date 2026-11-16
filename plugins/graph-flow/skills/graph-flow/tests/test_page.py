@@ -204,12 +204,13 @@ for(const data of [demo,{nodes,edges},crossed,reviewed]) for(const expanded of [
   }
   const rects=[...layout.cardRects,...layout.chips];
   rects.forEach((a,i)=>rects.slice(i+1).forEach(b=>assert(!overlap(a,b),'cards and chips must never overlap: '+JSON.stringify([a,b]))));
-  // Different edges may cross, but cannot merge into the same horizontal or vertical stroke.
+  // Only one source's identical output may merge into a common trunk.
   const segments=r=>r.points.slice(1).map((p,i)=>[r.points[i],p]);
   for(const [i,r] of layout.routes.entries()) for(const other of layout.routes.slice(i+1)) {
+    if(r.bundle===other.bundle)continue;
     for(const [a,b] of segments(r)) for(const [c,d] of segments(other)) {
       if(a.x===b.x && c.x===d.x && a.x===c.x)assert(Math.min(Math.max(a.y,b.y),Math.max(c.y,d.y))-Math.max(Math.min(a.y,b.y),Math.min(c.y,d.y))<=.001,'vertical routes must not merge');
-      if(a.y===b.y && c.y===d.y && a.y===c.y)assert(Math.min(Math.max(a.x,b.x),Math.max(c.x,d.x))-Math.max(Math.min(a.x,b.x),Math.min(c.x,d.x))<=.001,'horizontal routes must not merge');
+      if(a.y===b.y && c.y===d.y && a.y===c.y)assert(Math.min(Math.max(a.x,b.x),Math.max(c.x,d.x))-Math.max(Math.min(a.x,b.x),Math.min(c.x,d.x))<=.001,'horizontal routes must not merge '+JSON.stringify([r,other]));
     }
   }
   const unsorted=layeredLayout(data.nodes,data.edges,data.decisions,false,options);
@@ -228,13 +229,33 @@ const measured=layeredLayout([{id:'a',kind:'work'}],[],[],true,{heights:{a:127}}
 assert.equal(measured.positions.a.height,127,'ports and spacing use the rendered card height');
 assert(layout.order.includes('review'));
 assert.equal(fitScale({width:10000,height:10000},300,300),MIN_FIT_SCALE);
-// Every edge has its own label and distinct source and target ports.
+// Identical fan-out shares one source port, one label and a visible junction.
 const fork=layeredLayout([{id:'a',kind:'work'},{id:'b',kind:'work'},{id:'c',kind:'work'}],[{from:'a',to:'b',label:'Parsed record',relation:'hands_over',gate:'open'},{from:'a',to:'c',label:'Parsed record',relation:'hands_over',gate:'open'}],[],true,{language:'en'});
-assert.equal(fork.chips.length,2);
-assert.notEqual(fork.routes[0].start.y,fork.routes[1].start.y);
+assert.equal(fork.chips.length,1);
+assert.equal(fork.routes[0].start.y,fork.routes[1].start.y);
+assert(fork.routes.every(r=>r.junction));
 assert.equal(fork.routes.length,2);
 for(const r of fork.routes){assert(r.chip.x>r.start.x);assert(r.chip.x+r.chip.width<r.end.x,'label stays between source and target');}
 assert.deepEqual(fork.terminals,['b','c']);
+const outputs=layeredLayout(['a','b','c'].map(id=>({id,kind:'work'})),[{from:'a',to:'b',label:'One'},{from:'a',to:'c',label:'Two'}]);
+assert.equal(outputs.chips.length,2,'different outputs never share a label');
+assert.notEqual(outputs.routes[0].bundle,outputs.routes[1].bundle);
+const skips=layeredLayout(['a','b','c','d'].map(id=>({id,kind:'work'})),[{from:'a',to:'b',label:'One'},{from:'b',to:'c',label:'Two'},{from:'a',to:'c',label:'One'},{from:'a',to:'d',label:'One'}]);
+assert.equal(skips.chips.filter(c=>skips.routes.find(r=>r.chip===c).from==='a').length,1,'one output retains one label even across layers');
+assert(skips.routes.find(r=>r.from==='a'&&r.to==='c').skip);
+assert.deepEqual(skips.routes[0].start,skips.routes[2].start,'skip and adjacent branches share a source port');
+
+const tall=layeredLayout(nodes,edges,[],true,{heights:Object.fromEntries(nodes.map(n=>[n.id,150])),maxHeight:440});
+for(const p of Object.values(tall.positions))assert(p.y%440+p.height<=416,'page breaks keep whole cards within the initial view');
+const down=layeredLayout(reviewed.nodes,reviewed.edges,[],true,{heights:{work:110,review:140,next:120},vertical:true});
+assert(down.vertical);assert(down.bounds.width<600,'selection reflows into the remaining width');
+for(const r of down.routes) {
+  const source=down.positions[r.from],target=down.positions[r.to];
+  assert.equal(r.start.y,r.reverse?source.y:source.y+source.height);
+  assert.equal(r.end.y,r.reverse?target.y+target.height:target.y);
+  for(const p of r.points)for(const c of down.cardRects)assert(!(p.x>c.x&&p.x<c.x+c.width&&p.y>c.y&&p.y<c.y+c.height),'routes never enter a card except at a port');
+}
+
 // A line's text has one meaning: the name of what is handed over. Reviews, decisions and unnamed handoffs carry none.
 assert.equal(edgeChipText({relation:'hands_over',label:'Parsed record'},'en'),'Parsed record');
 for(const edge of [{relation:'hands_over',label:''},{relation:'reviews',label:'x'},{relation:'waits_for_decision',label:'approval'},{relation:'toward_goal',label:''}]) assert.equal(edgeChipText(edge),'');
@@ -395,7 +416,7 @@ for (const question of ['Approve deploy for prod?','Approve hold for another?','
     def test_dom_uses_controller_and_preserves_composing_input_on_refresh(self):
         self.run_controller(r"""
 class Element {
-  constructor(tag) { this.tagName=tag; this.children=[]; this.dataset={}; this.listeners={}; this.hidden=false; this.disabled=false; this.value=''; this._text=''; this.style={}; this.classList={add(){},toggle(){}}; }
+  constructor(tag) { this.tagName=tag; this.children=[]; this.dataset={}; this.listeners={}; this.hidden=false; this.disabled=false; this.value=''; this._text=''; this.style={}; this.classList={add:name=>{this.className=((this.className||'')+' '+name).trim();},toggle:(name,on)=>{const classes=new Set((this.className||'').split(' ').filter(Boolean));if(on??!classes.has(name))classes.add(name);else classes.delete(name);this.className=[...classes].join(' ');return classes.has(name);}}; }
   prepend(...children) { this.children.unshift(...children); }
   remove() { if(this.parent)this.parent.children=this.parent.children.filter(c=>c!==this); }
   get firstElementChild() { return this.children[0]; }
@@ -421,7 +442,7 @@ globalThis.document={body,documentElement:root,hidden:false,activeElement:null,
   querySelector:selector=>body.querySelector(selector), querySelectorAll:selector=>body.querySelectorAll(selector),
   addEventListener:(type,fn)=>{docEvents[type]=fn;}};
 body.append(new Element('nav'));
-for (const id of ['map','notice','picker','picker-label','find','find-text','home','flow','decision','home-tab','flow-tab','where','title','subtitle','node-list','edge-list','decision-list','panel','attention','accessible']) {
+for (const id of ['map','notice','picker','picker-label','find','find-text','home','flow','decision','home-tab','flow-tab','where','title','subtitle','node-list','edge-list','decision-list','panel','attention','accessible','phone-flow','phone-view-toggle']) {
   const e=new Element(id==='picker'?'select':'div'); e.id=id; body.append(e);
 }
 Object.defineProperty(globalThis,'navigator',{value:{language:'ko-KR'},configurable:true});
@@ -462,8 +483,16 @@ get('answer-actions').children.at(-1).click();
 live.decisions.pop();
 live.decisions.push({...d,id:'d8',node:null,node_title:null,question:'Which language?',kind:'direction',purpose:'direction',failed:[],files:[],verified:[],worker_note:null});
 docEvents.visibilitychange();await settle();get('attention').querySelectorAll('button').at(-1).click();
-assert.equal(get('decision').querySelector('details').hidden,true,'a question without evidence must not advertise an empty disclosure');
+assert.equal(get('decision').querySelectorAll('details').find(e=>e.className==='evidence').hidden,true,'a question without evidence must not advertise an empty disclosure');
 get('answer-actions').children.at(-1).click();live.decisions.pop();
+const saved=structuredClone(live);
+live.decisions[0]={...d,purpose:'human_check',failed:[],files:[],has_evidence:false};live.timeline=[];
+docEvents.visibilitychange();await settle();get('decision-list').querySelector('button').click();
+assert.equal(get('answer-actions').children[0].className,'','no primary acceptance with nothing to inspect');
+assert.equal(get('answer-actions').children[0].disabled,false,'presentation must not add an approval gate');
+assert.match(get('decision').textContent,/Ask the agent session in chat/);
+get('answer-actions').children.at(-1).click();live=saved;docEvents.visibilitychange();await settle();
+
 live.nodes.push({id:'choice',kind:'decision',title:'Pick a direction',status:'pending',answered:true,inputs:[],outputs:[],laps:[],returned_reasons:[]});
 docEvents.visibilitychange();await settle();
 assert.match(get('map').textContent,/Decision · Finished/,'answered decisions use finished words as well as colour');
@@ -502,8 +531,8 @@ const fileButton=get('decision').querySelectorAll('button').find(b=>b.textConten
 assert(fileButton);fileButton.click();await settle();
 assert.match(get('decision').querySelectorAll('pre').find(p=>!p.hidden).textContent,/<script>literal Markdown<\/script>/);
 assert.equal(buttons[0].disabled,true,'a worker-chosen file cannot unlock failed or held work');
-get('decision').querySelector('details').open=true;
-get('decision').querySelector('details').dispatchEvent({type:'toggle'});
+get('decision').querySelectorAll('details').find(e=>e.className==='evidence').open=true;
+get('decision').querySelectorAll('details').find(e=>e.className==='evidence').dispatchEvent({type:'toggle'});
 assert.equal(buttons[0].disabled,false);
 buttons[0].click(); await settle();
 assert.deepEqual(posts,[{...first,id:'d7',outcome:'approved',answer:'고쳐 주세요'}],'real POST must use the controller request');

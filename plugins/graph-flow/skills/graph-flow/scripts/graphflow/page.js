@@ -29,7 +29,7 @@ const STRINGS = {
     "notStarted": "아직 시작하지 않았어요",
     "passed": "끝났어요",
     "running": "만들고 있어요",
-    "retrying": "고친 걸 다시 만들고 있어요",
+    "retrying": "돌아온 일을 다시 만들고 있어요",
     "submitted": "검사받고 있어요",
     "awaiting": "내가 할 일",
     "held": "다음 방향을 기다려요",
@@ -44,7 +44,7 @@ const STRINGS = {
     "questionOnly": "이 결정에는 질문만 기록되어 있어요. 설명, 근거, 읽을 파일은 남겨지지 않았어요.",
     "writeFirst": "답을 적으면 보낼 수 있어요.",
     "leaveUnanswered": "답하지 않고 돌아가기",
-    "aboutWork": "이 일은",
+    "aboutWork": "일의 상세 내용",
     "decisionRef": "결정 {id}",
     "askedBy": "물어본 곳: {who}",
     "workedBy": "맡은 곳: {who}",
@@ -238,7 +238,14 @@ const STRINGS = {
     "lineSampleReview": "검토해요",
     "attemptShort": "{n}번째 시도예요",
     "earlierHistory": "이전 시도 기록",
-    "failureUnknownAttempt": "✕ 기록된 시도에서 “{names}” 확인이 통과하지 못했어요"
+    "failureUnknownAttempt": "✕ 기록된 시도에서 “{names}” 확인이 통과하지 못했어요",
+    "modelName": "모델 {model}",
+    "blindApproval": "채팅에서 에이전트 세션에 결과를 보여 달라고 하거나, 고칠 곳을 적어 돌려보내 주세요.",
+    "showDiagram": "선으로 된 그래프 보기",
+    "showFlowList": "읽기 쉬운 목록 보기",
+    "mapDown": "위에서 아래로",
+    "panelEnd": "상세 내용 끝이에요",
+    "moreDetails": "아래로 내려서 나머지 내용을 읽어요 ↓"
   },
   "en": {
     "flow": "Whole flow",
@@ -269,7 +276,7 @@ const STRINGS = {
     "notStarted": "Not started",
     "passed": "Finished",
     "running": "Making it",
-    "retrying": "Working on the next attempt",
+    "retrying": "Redoing work that came back",
     "submitted": "Being checked",
     "awaiting": "Your turn",
     "held": "Waiting for the next direction",
@@ -284,7 +291,7 @@ const STRINGS = {
     "questionOnly": "Only the question was recorded for this decision. No explanation, evidence or files were left.",
     "writeFirst": "Write an answer to send it.",
     "leaveUnanswered": "Go back without answering",
-    "aboutWork": "This work",
+    "aboutWork": "Work details",
     "decisionRef": "Decision {id}",
     "askedBy": "Asked by: {who}",
     "workedBy": "Worked by: {who}",
@@ -478,7 +485,14 @@ const STRINGS = {
     "lineSampleReview": "Review",
     "attemptShort": "Attempt {n}",
     "earlierHistory": "Earlier attempt history",
-    "failureUnknownAttempt": "✕ In the recorded attempt, “{names}” did not pass"
+    "failureUnknownAttempt": "✕ In the recorded attempt, “{names}” did not pass",
+    "modelName": "Model {model}",
+    "blindApproval": "Ask the agent session in chat to show the result, or send it back with a note about what to change.",
+    "showDiagram": "Show diagram",
+    "showFlowList": "Show readable list",
+    "mapDown": "Top to bottom",
+    "panelEnd": "End of details",
+    "moreDetails": "Scroll to read the remaining details ↓"
   }
 };
 // UI_STRINGS_END
@@ -622,7 +636,7 @@ export function crossingCount(routes, positions) {
   return count;
 }
 export function layeredLayout(nodes, edges, decisions = [], sort = true, options = {}) {
-  const width=232, gap=152, rowGap=20, left=24, top=24, byId=new Map(nodes.map(n=>[n.id,n]));
+  const width=232, gap=132, rowGap=options.rowGap || 28, left=24, top=24, byId=new Map(nodes.map(n=>[n.id,n]));
   // A review's arrow points back to its target; its dependency still points forward.
   const dependencies=edges.filter(e=>e.relation!=='reviews'&&byId.has(e.from)&&byId.has(e.to));
   const parents=new Map(nodes.map(n=>[n.id,dependencies.filter(e=>e.to===n.id).map(e=>e.from)]));
@@ -640,13 +654,12 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
     const lines=Math.max(1,Math.ceil(textWidth(n.title,17,9.5)/184));
     const base=132+lines*26;
     const expanded=options.expanded===n.id ? 210+(n.returned_reasons||[]).reduce((sum,rs)=>sum+30+Math.max(1,Math.ceil(textWidth(rs.join(' · '),13,7)/170))*21,0) : 0;
-    const ports = Math.max(edges.filter(e=>e.from===n.id).length, edges.filter(e=>e.to===n.id).length);
-    return Math.max(options.heights?.[n.id] || base+expanded, ports*48+24);
+    return options.heights?.[n.id] || base+expanded;
   };
   let positions={};
   const place=()=>{
     positions={}; const sizes=layers.map(ids=>ids.reduce((sum,id)=>sum+height(byId.get(id)),0)+Math.max(0,ids.length-1)*rowGap), tallest=Math.max(0,...sizes);
-    layers.forEach((ids,d)=>{let y=top+(options.maxHeight && tallest>options.maxHeight ? 0 : (tallest-sizes[d])/2);ids.forEach(id=>{const h=height(byId.get(id));if(byId.get(id).kind==='review'&&positions[byId.get(id).target])y=Math.max(y,positions[byId.get(id).target].y);positions[id]={x:left+d*(width+gap),y,width,height:h,depth:d,layer:d};y+=h+rowGap;});});
+    layers.forEach((ids,d)=>{let y=top+(options.maxHeight && tallest>options.maxHeight ? 0 : (tallest-sizes[d])/2);ids.forEach(id=>{const h=height(byId.get(id));if(options.maxHeight && h+2*top<=options.maxHeight && tallest>options.maxHeight && y%options.maxHeight+h>options.maxHeight-top)y=Math.ceil(y/options.maxHeight)*options.maxHeight+top;if(byId.get(id).kind==='review'&&positions[byId.get(id).target])y=Math.max(y,positions[byId.get(id).target].y);positions[id]={x:left+d*(width+gap),y,width,height:h,depth:d,layer:d};y+=h+rowGap;});});
   };
   const cost=()=>crossingCount(dependencies,positions)*1e7+dependencies.reduce((s,e)=>s+Math.abs(positions[e.from].y-positions[e.to].y),0);
   place();
@@ -665,47 +678,81 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
   }
     const terminals=nodes.filter(n=>!dependencies.some(e=>e.from===n.id)).map(n=>n.id);
   const allEdges=edges;
-  // Each edge owns its ports, label and route; no two sources merge into a shared stroke.
-  const chips=[],routes=[];
+  // A named output has one trunk; only that source/output/style may share a stroke.
+  const chips=[],routes=[],groups=[];
   for(const [index,e] of allEdges.entries()) {
     const a=positions[e.from],b=positions[e.to];if(!a||!b)continue;
     const reverse=a.x>b.x,text=edgeChipText(e,options.language||'en');
     const waiting=decisions.find(d=>d.node===e.from)||(e.relation==='waits_for_decision'?decisions.find(d=>d.node===e.to):null);
-    routes.push({...e,index,text,reverse,chip:null,gateState:waiting?'waiting_for_you':e.gate||'closed',decision:waiting?.id,skip:Math.abs(a.layer-b.layer)>1});
+    const r={...e,index,text,reverse,chip:null,gateState:waiting?'waiting_for_you':e.gate||'closed',decision:waiting?.id,skip:Math.abs(a.layer-b.layer)>1};
+    const key=JSON.stringify([e.from,e.label,e.relation,r.gateState,reverse]);
+    let group=groups.find(g=>g.key===key && text);
+    if(!group){group={key,id:index,routes:[]};groups.push(group);}
+    group.routes.push(r);r.bundle=group.id;routes.push(r);
   }
-  for(const [id,p] of Object.entries(positions)) for(const side of ['left','right']) {
-    const ports=routes.flatMap(r=>[
-      ...(r.from===id && (r.reverse?'left':'right')===side?[{r,key:'start',other:r.to}]:[]),
-      ...(r.to===id && (r.reverse?'right':'left')===side?[{r,key:'end',other:r.from}]:[])
-    ]).sort((a,b)=>positions[a.other].y-positions[b.other].y || a.r.index-b.r.index);
-    ports.forEach(({r,key},i)=>{r[key]={x:p.x+(side==='right'?p.width:0),y:p.y+p.height*(i+1)/(ports.length+1)};});
-  }
-  let bottom=Math.max(0,...Object.values(positions).map(p=>p.y+p.height));
-  for(const r of routes) {
-    const {start:a,end:b}=r;
-    if(r.skip) {
-      r.channel=bottom+40; bottom+=56;
-      r.points=[a,{x:a.x+16+r.index*2,y:a.y},{x:a.x+16+r.index*2,y:r.channel},{x:b.x-20-r.index*2,y:r.channel},{x:b.x-20-r.index*2,y:b.y},b];
-    } else r.points=[a,b];
-    if(!r.text)continue;
-    const w=88, h=Math.max(1,Math.ceil(textWidth(r.text,14,7.5)/(w-12)))*20+8;
-    const chip={x:(a.x+b.x)/2-w/2,y:(r.skip?r.channel:(a.y+b.y)/2)-h/2,width:w,height:h,first:r.index,key:String(r.index)};
-    const desired=chip.y;
-    for(let step=0;chips.some(c=>chip.x<c.x+c.width+4&&chip.x+chip.width+4>c.x&&chip.y<c.y+c.height+8&&chip.y+chip.height+8>c.y);step++){
-      chip.y=desired+(step%2?-1:1)*Math.ceil((step+1)/2)*16;
-      if(chip.y<8)chip.y=desired+Math.ceil((step+1)/2)*16;
+  for(const g of groups)g.routes.sort((a,b)=>Math.abs(positions[a.to].layer-positions[a.from].layer)-Math.abs(positions[b.to].layer-positions[b.from].layer));
+  // Reserve a separate vertical lane for each output, with room for its label before the fork.
+  const gaps=layers.slice(1).map((_,i)=>Math.max(gap,108+24*groups.filter(g=>Math.min(positions[g.routes[0].from].layer,positions[g.routes[0].to].layer)===i).length));
+  for(const p of Object.values(positions))p.x=left+p.layer*width+gaps.slice(0,p.layer).reduce((a,b)=>a+b,0);
+  if(options.vertical){
+    let y=top;
+    for(const ids of layers){
+      ids.forEach((id,i)=>{const p=positions[id];p.x=left+i*(width+48);p.y=y;});
+      y+=Math.max(...ids.map(id=>positions[id].height))+40;
     }
-    chips.push(chip);r.chip=chip;
   }
-  for(const r of routes.filter(r=>!r.skip)) {
-    const {start:a,end:b}=r, cy=r.chip?r.chip.y+r.chip.height/2:(a.y+b.y)/2;
-    const peers=routes.filter(e=>!e.skip && Math.min(e.start.x,e.end.x)===Math.min(a.x,b.x));
-    const lane=8+(peers.indexOf(r)+1)*24/(peers.length+1), sign=r.reverse?-1:1;
-    r.points=[a,{x:a.x+sign*lane,y:a.y},{x:a.x+sign*lane,y:cy},{x:b.x-sign*lane,y:cy},{x:b.x-sign*lane,y:b.y},b];
+  const vertical=!!options.vertical;
+  const point=(u,v)=>vertical?{x:v,y:u}:{x:u,y:v};
+  const axis=p=>vertical?{u:p.y,v:p.x,length:p.height,breadth:p.width}:{u:p.x,v:p.y,length:p.width,breadth:p.height};
+  for(const [id,p] of Object.entries(positions)) for(const side of ['before','after']) {
+    const ports=[];
+    for(const g of groups){
+      const r=g.routes[0];
+      if(r.from===id && (r.reverse?'before':'after')===side)ports.push({routes:g.routes,key:'start',other:r.to});
+    }
+    for(const r of routes)if(r.to===id && (r.reverse?'after':'before')===side)ports.push({routes:[r],key:'end',other:r.from});
+    ports.sort((a,b)=>axis(positions[a.other]).v-axis(positions[b.other]).v || a.routes[0].index-b.routes[0].index);
+    const q=axis(p);
+    ports.forEach(({routes,key},i)=>routes.forEach(r=>{r[key]=point(q.u+(side==='after'?q.length:0),q.v+q.breadth*(i+1)/(ports.length+1));}));
+  }
+  // Opposing ports at the same height would visually join unrelated handoffs.
+  for(const r of routes){
+    const coordinate=vertical?'x':'y', target=axis(positions[r.to]), original=r.end[coordinate];
+    const collides=value=>routes.some(other=>other!==r && other.bundle!==r.bundle && Math.min(positions[other.from].layer,positions[other.to].layer)===Math.min(positions[r.from].layer,positions[r.to].layer) && (Math.abs(other.start[coordinate]-value)<1 || Math.abs(other.end[coordinate]-value)<1));
+    for(let step=1;collides(r.end[coordinate])&&step<40;step++){
+      const candidate=original+(step%2?1:-1)*Math.ceil(step/2)*8;
+      if(candidate>target.v+8&&candidate<target.v+target.breadth-8)r.end[coordinate]=candidate;
+    }
+  }
+  let bottom=Math.max(0,...Object.values(positions).map(p=>p.y+p.height)),right=Math.max(0,...Object.values(positions).map(p=>p.x+p.width));
+  for(const g of groups){
+    const r=g.routes[0],a=r.start;
+    const peers=groups.filter(other=>Math.min(positions[other.routes[0].from].layer,positions[other.routes[0].to].layer)===Math.min(positions[r.from].layer,positions[r.to].layer));
+    const au=vertical?a.y:a.x,av=vertical?a.x:a.y;
+    const near=Math.min(...g.routes.map(e=>vertical?e.end.y:e.end.x),au);
+    const boundary=Math.min(positions[r.from].layer,positions[r.to].layer);
+    const rowBottom=Math.max(...layers[boundary].map(id=>positions[id].y+positions[id].height));
+    const lane=vertical?rowBottom+12+peers.indexOf(g)*8:near+108+peers.indexOf(g)*24;
+    for(const e of g.routes){
+      const bv=vertical?e.end.x:e.end.y;
+      e.points=[a,point(lane,av),point(lane,bv),e.end];
+      let fork=point(lane,bv);
+      if(e.skip){
+        e.channel=(vertical?right:bottom)+40;if(vertical)right+=56;else bottom+=56;
+        const approach=vertical?e.end.y-20-e.index*2:e.end.x-20-e.index*2;
+        fork=vertical?{x:e.channel,y:lane}:{x:lane,y:e.channel};
+        e.points=vertical?[a,point(lane,av),fork,{x:e.channel,y:approach},{x:e.end.x,y:approach},e.end]:[a,point(lane,av),fork,{x:approach,y:e.channel},{x:approach,y:e.end.y},e.end];
+      }
+      e.junction=g.routes.length>1?fork:null;
+    }
+    if(!r.text)continue;
+    const w=vertical?112:88,h=Math.max(1,Math.ceil(textWidth(r.text,14,7.5)/(w-8)))*20+4;
+    const chip={x:vertical?av+8:(r.reverse?lane+8:au+8),y:vertical?rowBottom+4:av-h/2,width:w,height:h,first:r.index,key:String(r.index)};
+    chips.push(chip);g.routes.forEach(e=>e.chip=chip);
   }
   const cardRects=Object.entries(positions).map(([id,p])=>({id,...p}));
-  const bounds={width:Math.max(296,...cardRects.map(p=>p.x+p.width+left)),height:Math.max(100,bottom+24,...chips.map(c=>c.y+c.height+24))};
-  return {positions,layers,order:layers.flat(),routes,chips,cardRects,terminals,bounds};
+  const bounds={width:Math.max(296,right+left,...chips.map(c=>c.x+c.width+left)),height:options.maxHeight && bottom+24>options.maxHeight?Math.ceil((bottom+24)/options.maxHeight)*options.maxHeight:Math.max(100,bottom+24,...chips.map(c=>c.y+c.height+24))};
+  return {positions,layers,order:layers.flat(),routes,chips,cardRects,terminals,bounds,vertical};
 }
 
 if (typeof document !== 'undefined') {
@@ -778,7 +825,7 @@ function refChip(id, say, decision = false) {
   }, 'ref' + (decision ? ' decision-ref' : ''));
   chip.title = t('copyHint'); chip.setAttribute('aria-label', `${id}. ${t('copyHint')}`); return chip;
 }
-function workedBy(n) { return [n.worker?.model, sessionName(n.session)].filter(Boolean).join(' · '); }
+function workedBy(n) { return [n.worker?.model ? t('modelName',{model:n.worker.model}) : '', sessionName(n.session)].filter(Boolean).join(' · '); }
 function decisionHeading(parent, d, tag) {
   const reference = el('p', undefined, 'ref-line'); reference.append(refChip(d.id, `${d.id} · ${decisionTitle(d)}`, true));
   if (d.node) reference.append(refChip(d.node, `${d.node} · ${decisionTitle(d)}`));
@@ -853,8 +900,9 @@ function panel() {
   const rows = view.timeline.filter(r => r.node === node.id && r.kind === 'attempt').sort((a,b)=>b.seq-a.seq);
   if (rows.length) p.append(el('p', t('attemptsOf'), 'eyebrow'));
   const list = el('ol', undefined, 'panel-history');
+  let earlier=false;
   for (const r of rows) {
-    const item = el('li'); item.className=r.attempt===node.attempts?'current-history':'earlier-history'; item.append(el('strong',t(r.attempt===node.attempts?'currentAttempt':'earlierAttempt')),wording(rowSentence(r),'p'));
+    const item = el('li'); item.className=r.attempt===node.attempts?'current-history':'earlier-history'; if(r.attempt===node.attempts || !earlier)item.append(el('strong',t(r.attempt===node.attempts?'currentAttempt':'earlierAttempt')));if(r.attempt!==node.attempts)earlier=true;item.append(wording(rowSentence(r),'p'));
     const extra=el('details');extra.open=!!rowOpen.get('panel:'+r.id);extra.addEventListener('toggle',()=>rowOpen.set('panel:'+r.id,extra.open)); extra.append(el('summary',t('attemptRecord',{n:r.attempt})));
     const checks=el('ul',undefined,'checks');r.checks.forEach(c=>checks.append(checkLine(c, r.attempt)));extra.append(checks);
     for(const [key,values] of [['workerNote',r.notes?[r.notes]:[]],['changedFiles',r.files||[]],['findings',r.findings||[]],['unsure',r.unsure||[]]])if(values.length){extra.append(el('p',t(key),'eyebrow'));textList(extra,values);}
@@ -865,7 +913,8 @@ function panel() {
   const more=el('details');more.open=!!rowOpen.get('panel:'+node.id);more.addEventListener('toggle',()=>rowOpen.set('panel:'+node.id,more.open));more.append(el('summary',t('workerDetails')));
   if(node.summary)more.append(el('p',node.summary));
     more.append(handoffsCard('received',node.inputs,'from'),handoffsCard('outputs',node.outputs,'to'));
-  p.append(more,button(t('showInLog'),()=>showNode(node.id),'small'));
+  p.append(more,button(t('showInLog'),()=>showNode(node.id),'small'),el('p',t('moreDetails'),'panel-end'));
+  p.onscroll=()=>{p.querySelector('.panel-end').textContent=t(p.scrollTop+p.clientHeight>=p.scrollHeight-2?'panelEnd':'moreDetails');};
 
 }
 // One entry of the record. An attempt carries its real checks; the rest are single sentences.
@@ -917,7 +966,7 @@ function logRow(r, anchor = true, inline = false) {
   if (r.decision) text.append(refChip(r.decision, `${r.decision} · ${r.node_title || r.question}`, true));
   if (r.node) text.append(el('strong', title({id:r.node, title:r.node_title})), refChip(r.node, `${r.node} · ${r.node_title}`));
   text.append(wording(rowSentence(r))); head.append(text);
-  const by = [who(r.by), r.kind === 'attempt' ? r.worker?.model : ''].filter(Boolean).join(' · ');
+  const by = [who(r.by), r.kind === 'attempt' && r.worker?.model ? t('modelName',{model:r.worker.model}) : ''].filter(Boolean).join(' · ');
   if (by) head.append(el('span', by, 'row-who'));
   item.append(head);
   if (r.kind !== 'attempt') return item;
@@ -989,6 +1038,13 @@ function accessible() {
   view.edges.forEach(e => { const a = view.nodes.find(n => n.id === e.from), b = view.nodes.find(n => n.id === e.to); $('edge-list').append(el('li', `${title(a)} → ${title(b)} · ${relationText(e)} · ${t(e.delivered ? 'delivered' : 'notDelivered')}`)); });
   view.decisions.forEach(d => { const item = el('li'); item.append(button(t('read'), () => openDecision(d.id))); decisionHeading(item, d, 'h3'); failedBlock(item, d); if (d.context.why) item.append(el('p', d.context.why)); $('decision-list').append(item); });
   if (!view.decisions.length) $('decision-list').append(el('li', t('nothingTitle')));
+  const phone=$('phone-flow');clear(phone);
+  for(const id of order){
+    const n=view.nodes.find(n=>n.id===id),item=el('li');item.append(nodeCard(n,n.id===selected));
+    const edges=view.edges.filter(e=>e.from===id);
+    for(const e of edges){const handoff=el('p',undefined,'phone-handoff');handoff.append(el('span','↓','status-glyph'),el('span',`${relationText(e)} → ${title(view.nodes.find(n=>n.id===e.to))}`));item.append(handoff);}
+    phone.append(item);
+  }
 }
 function showMode(next) {
   if (next !== 'decision' && !discardDecision()) return false;
@@ -1025,6 +1081,7 @@ function openDecision(id, focus = true) {
   const outcomes = card(t('choiceEffects'), null, true); reading.append(outcomes);
   const isQuestion = ['direction','information'].includes(d.kind);
   const answerLabel = el('label', t(isQuestion ? 'answerLabel' : 'backReason')); answerLabel.htmlFor = 'answer-text';
+  const phoneHistory=el('details',undefined,'phone-history');reading.append(phoneHistory);
   const input = el('textarea'); input.id = 'answer-text'; input.required = true; input.value = session.draft;
   input.addEventListener('input', () => { if (current()) { decisionController.setDraft(input.value); updateActions(); } }); reading.append(answerLabel, input);
   const message = el('p'); message.id = 'answer-message'; message.setAttribute('role','status'); reading.append(message);
@@ -1111,16 +1168,22 @@ function openDecision(id, focus = true) {
     const missing=el('div',undefined,'missing-records');
     if (!decision.files?.length) missing.append(el('p',t('noFiles')));
     if (!rows.some(r=>r.attempt===node?.attempts && r.checks?.length)) missing.append(el('p',t('noCurrentChecks')));
+    const nothingToInspect=!isQuestion && !decision.files?.length && !rows.some(r=>r.attempt===node?.attempts && r.checks?.length);
+    if(nothingToInspect)missing.append(el('p',t('blindApproval')));
+    if(approveButton)approveButton.classList.toggle('primary',!nothingToInspect);
     if(missing.children.length) introduction.append(missing);
-    const previous=rows.filter(r=>r.attempt<node.attempts && r.checks?.some(c=>c.result==='failed')).sort((a,b)=>b.seq-a.seq)[0];
-    if(previous){const recap=el('div',undefined,'decision-recap');recap.append(el('strong',t('earlierHistory')));previous.checks.filter(c=>c.result==='failed').forEach(c=>recap.append(wording(checkWording(c,language,previous.attempt),'p')));introduction.append(recap);}
-    history.hidden = !rows.length;
+    history.hidden = !rows.length;phoneHistory.hidden=!rows.length;clear(phoneHistory);
+    const previous=rows.filter(r=>r.attempt<node?.attempts && r.checks?.some(c=>c.result==='failed')).sort((a,b)=>b.seq-a.seq)[0];
+    phoneHistory.append(el('summary',previous?t('earlierHistory')+' · '+checkWording(previous.checks.find(c=>c.result==='failed'),language,previous.attempt):t('history')));
+    const phoneRows=el('ol',undefined,'log');[...rows].sort((a,b)=>b.seq-a.seq).forEach(r=>phoneRows.append(logRow(r,false,true)));phoneHistory.append(phoneRows);
+    phoneHistory.open=!!rowOpen.get('decision:'+decision.id);phoneHistory.ontoggle=()=>rowOpen.set('decision:'+decision.id,phoneHistory.open);
     if (rows.length) {
       history.append(el('h3', t('history')));
       const list = el('ol', undefined, 'log');
+      let earlier=false;
       [...rows].sort((a,b) => b.seq-a.seq).forEach(r => {
         const item = logRow(r, false, true);
-        item.prepend(el('p', t(r.attempt === node.attempts ? 'currentAttempt' : 'earlierAttempt'), 'eyebrow'));
+        if(r.attempt===node.attempts || !earlier)item.prepend(el('p', t(r.attempt === node.attempts ? 'currentAttempt' : 'earlierAttempt'), 'eyebrow'));if(r.attempt!==node.attempts)earlier=true;
         if (!r.checks.length) item.append(el('p', t('noAttemptChecks'), 'muted'));
         list.append(item);
       }); history.append(list);
@@ -1228,6 +1291,7 @@ async function refresh(force = false) {
 }
 function resetView() { language = viewLanguage(null, navigator.language); translate(); closeInvalidDecision(chosen, []); view = null; selected = null; fingerprint = ''; ['node-list','edge-list','decision-list','panel','home','attention'].forEach(id => clear($(id))); if (renderer) renderer.update({nodes:[],edges:[],decisions:[],complete:false}, null); $('flow').hidden = true; $('home').hidden = true; $('accessible').hidden = true; $('decision').hidden = true; $('subtitle').textContent = ''; $('where').textContent = ''; }
 function schedule() { clearTimeout(timer); if (!document.hidden) timer = setTimeout(refresh, 2000); }
+$('phone-view-toggle').addEventListener('click',()=>{const diagram=$('flow').classList.toggle('phone-diagram');$('phone-view-toggle').dataset.i18n=diagram?'showFlowList':'showDiagram';$('phone-view-toggle').textContent=t(diagram?'showFlowList':'showDiagram');$('phone-view-toggle').setAttribute('aria-pressed',String(diagram));if(renderer&&view)renderer.update(view,selected);});
 $('home-tab').addEventListener('click', () => { if (view) goHome(); });
 $('flow-tab').addEventListener('click', () => { if (view) showGraph(); });
 $('find').addEventListener('submit', event => { event.preventDefault(); if (find($('find-text').value)) $('find-text').value = ''; });
@@ -1284,7 +1348,7 @@ function nodeCard(n, expanded = false) {
     const ask=el('div',undefined,'card-note mine');
     ask.append(button(t('answerHere',{id:d.id}),()=>openDecision(d.id),'small'));root.append(ask);
   }
-  if (['running','retrying'].includes(state)) { const work = el('div', undefined, 'working-note'); work.append(walker(), el('span',t('workingHere'))); root.append(work); }
+  if (['running','retrying'].includes(state)) { const work = el('div', undefined, 'working-note'); work.append(el('span',t('workingHere'))); root.append(work); }
   return root;
 }
 function createMap() {
@@ -1292,17 +1356,16 @@ function createMap() {
   const toolbar=el('div',undefined,'map-toolbar'),viewport=el('div',undefined,'map-viewport'),spacer=el('div',undefined,'map-spacer'),stage=el('div',undefined,'map-stage');
   viewport.tabIndex=0;viewport.setAttribute('aria-label',t('mapHelp'));spacer.append(stage);viewport.append(spacer);map.append(toolbar);
   const key=el('div',undefined,'line-key'), overflow=el('div',undefined,'map-overflow'); overflow.setAttribute('aria-label',t('graphEdges'));
-  for(const [state,word] of [['open','lineSampleOpen'],['closed','lineSampleClosed'],['review','lineSampleReview']]){const sample=el('span',undefined,'line-sample '+state),caption=el('span',t(word));caption.dataset.i18n=word;sample.append(el('i'),caption);key.append(sample);}
-  map.append(key,overflow,viewport);
+  toolbar.append(key);map.append(viewport);
   const visibleCount=el('span',undefined,'map-visible'),overflowButtons=new Map();overflow.append(visibleCount);
   let data={nodes:[],edges:[],decisions:[]},chosenNode=null,layout=null,scale=1,automatic=true;
-  const nodes=new Map(),chips=new Map(),seen=new Map();let drawing=null,placed=false;
+  const nodes=new Map(),chips=new Map(),seen=new Map();let drawing=null,placed=false,lastWidth=0;
   const zoomText=el('output');zoomText.setAttribute('aria-live','polite');
   const zoom=amount=>{automatic=false;scale=Math.max(MIN_FIT_SCALE,Math.min(1.6,scale+amount));size();};
   const fit=()=>{automatic=true;size();viewport.scrollLeft=0;viewport.scrollTop=0;};
   const zoomOut=button('−',()=>zoom(-.1)),zoomIn=button('+',()=>zoom(.1));
-  toolbar.append(zoomOut,zoomIn,button(t('fit'),fit),zoomText,el('span',t('mapHelp'),'map-help'));
-  toolbar.children[0].dataset.i18nLabel='zoomOut';toolbar.children[1].dataset.i18nLabel='zoomIn';toolbar.children[2].dataset.i18n='fit';toolbar.children[4].dataset.i18n='mapHelp';viewport.dataset.i18nLabel='mapHelp';
+  toolbar.append(zoomOut,zoomIn,button(t('fit'),fit),zoomText,overflow);
+  zoomOut.dataset.i18nLabel='zoomOut';zoomIn.dataset.i18nLabel='zoomIn';toolbar.children[3].dataset.i18n='fit';viewport.dataset.i18nLabel='mapHelp';
   const mapTitle=el('div',undefined,'map-title'), name=el('strong',t('graph')), direction=el('span',t('mapDirection'));
   name.dataset.i18n='graph';direction.dataset.i18n='mapDirection';mapTitle.append(name,direction);toolbar.prepend(mapTitle);translate();
   function outside() {
@@ -1314,6 +1377,7 @@ function createMap() {
       const direction=offscreenDirection({x,y,width:p.width*scale,height:p.height*scale},w,h);
       if(direction)groups[direction].push(n);else visible++;
     }
+    for(const c of layout.chips){const chip=chips.get(c.first);if(chip)chip.hidden=!!offscreenDirection({x:c.x*scale+ox-viewport.scrollLeft,y:c.y*scale+oy-viewport.scrollTop,width:c.width*scale,height:c.height*scale},w,h);}
     // The viewport clips routes naturally: an off-screen neighbour leaves a visible continuing stub.
     visibleCount.textContent=t('visibleCards',{n:visible,total:data.nodes.length});
     for(const [direction,b] of overflowButtons)b.hidden=!groups[direction].length;
@@ -1338,14 +1402,16 @@ function createMap() {
       $('panel').style.maxHeight=matchMedia('(max-width:760px)').matches?'none':map.style.height;
     }
     const w=viewport.clientWidth||900,h=viewport.clientHeight||600;
+    if(automatic && Math.abs(w-lastWidth)>1){lastWidth=w;viewport.scrollLeft=0;viewport.scrollTop=0;}
     if(automatic)scale=fitScale(layout.bounds,w-20,h-20,matchMedia('(max-width:760px)').matches);
     Object.assign(stage.style,{left:Math.max(0,(w-layout.bounds.width*scale)/2)+'px',top:Math.max(0,(h-layout.bounds.height*scale)/2)+'px',width:layout.bounds.width+'px',height:layout.bounds.height+'px',transform:`scale(${scale})`});
     Object.assign(spacer.style,{width:Math.max(w,layout.bounds.width*scale)+'px',height:Math.max(h,layout.bounds.height*scale)+'px'});
+    if(!$('panel').hidden && $('panel').onscroll)$('panel').onscroll();
     zoomText.textContent=Math.round(scale*100)+'%';zoomOut.disabled=scale<=MIN_FIT_SCALE;zoomIn.disabled=scale>=1.6;outside();
   }
   const setRect=(element,rect)=>Object.assign(element.style,{left:rect.x+'px',top:rect.y+'px',width:rect.width+'px',height:rect.height+'px'});
   function update(next,id) {
-    const reveal=id&&id!==chosenNode;data=next;chosenNode=id;map.classList.toggle('has-expanded',!!id);
+    const reveal=id&&id!==chosenNode,selectionChanged=id!==chosenNode;data=next;chosenNode=id;if(selectionChanged){automatic=true;placed=false;}map.classList.toggle('has-expanded',!!id);
     const focused=document.activeElement?.closest?.('[data-node]')?.dataset.node,focusedChip=document.activeElement?.dataset?.chip;
     const activeIds=new Set(data.nodes.map(n=>n.id));
     for(const [key,element] of nodes)if(!activeIds.has(key)){element.remove();nodes.delete(key);}
@@ -1368,7 +1434,13 @@ function createMap() {
       // Measure content again so a completed or translated card can shrink after polling.
       card.style.minHeight='0';const height=card.offsetHeight||0;card.style.minHeight='';return [id,height];
     }));
-    layout=layeredLayout(data.nodes,data.edges.map(e=>({...e,label:e.label?label(e.label):''})),data.decisions,true,{heights,language,maxHeight:viewport.clientHeight/MIN_FIT_SCALE});
+    layout=layeredLayout(data.nodes,data.edges.map(e=>({...e,label:e.label?label(e.label):''})),data.decisions,true,{heights,language,rowGap:data.complete?200:28,maxHeight:(viewport.clientHeight-20)/MIN_FIT_SCALE});
+    if(chosenNode && layout.bounds.width*MIN_FIT_SCALE>viewport.clientWidth && !matchMedia('(max-width:760px)').matches)layout=layeredLayout(data.nodes,data.edges.map(e=>({...e,label:e.label?label(e.label):''})),data.decisions,true,{heights,language,vertical:true});
+    clear(key);
+    for(const [state,word] of [['open','lineSampleOpen'],['closed','lineSampleClosed'],['review','lineSampleReview']]){
+      if(!layout.routes.some(r=>state==='review'?r.relation==='reviews':r.relation!=='reviews' && (state==='open'?r.gateState==='open':r.gateState!=='open')))continue;
+      const sample=el('span',undefined,'line-sample '+state),caption=el('span',t(word));caption.dataset.i18n=word;sample.append(el('i'),caption);key.append(sample);
+    }
     // Reorder existing controls without replacing them: tab order follows the drawing.
     for(const id of layout.order){const e=nodes.get(id);setRect(e,layout.positions[id]);stage.append(e);}
     if(drawing)drawing.remove();drawing=svg('svg',{width:layout.bounds.width,height:layout.bounds.height,class:'edge-layer','aria-hidden':'true'});
@@ -1383,7 +1455,7 @@ function createMap() {
       const d=route.points.map((p,i)=>`${i?'L':'M'}${p.x} ${p.y}`).join(' ');
       drawing.append(svg('path',{d,class:'edge-underlay'}));
       const flowing=route.gateState==='open'&&['running','retrying'].includes(displayState(data.nodes.find(n=>n.id===route.to)||{}, data.decisions));
-      const line=svg('path',{d,class:'edge-path '+route.gateState+(route.relation==='reviews'?' review':'')+(flowing?' flowing':''),'marker-end':`url(#arrow-${route.gateState})`});
+      const line=svg('path',{d,'data-from':route.from,'data-to':route.to,class:'edge-path '+route.gateState+(route.relation==='reviews'?' review':'')+(flowing?' flowing':''),'marker-end':`url(#arrow-${route.gateState})`});
       drawing.append(flowing?inPhase(line,2000):line);
       if(!c||chips.has(c.first))continue;
       const chip=el('div',undefined,'edge-chip '+route.gateState);
@@ -1391,19 +1463,17 @@ function createMap() {
       chip.setAttribute('aria-label',`${edgeRelationLabel(route,language)}. ${title(source)} → ${targets}`);
       chip.append(el('span',route.text));chip.dataset.chip=c.key;setRect(chip,c);stage.append(chip);chips.set(c.first,chip);
     }
+    const junctions=new Map();for(const route of layout.routes)if(route.junction)for(const p of [route.junction,route.points[1]])junctions.set(`${p.x},${p.y}`,p);
+    for(const p of junctions.values())drawing.append(svg('circle',{cx:p.x,cy:p.y,r:4,class:'edge-junction'}));
     // All focusable controls are ordered by column and then vertical position.
     [...nodes.values(),...chips.values()].sort((a,b)=>parseFloat(a.style.left)-parseFloat(b.style.left)||parseFloat(a.style.top)-parseFloat(b.style.top)).forEach(e=>stage.append(e));
-    direction.textContent=data.complete?t('allDone'):t('mapDirection');
-    direction.dataset.i18n=data.complete?'allDone':'mapDirection';
+    const directionKey=data.complete?'allDone':layout.vertical?'mapDown':'mapDirection';
+    direction.textContent=t(directionKey);direction.dataset.i18n=directionKey;
     mapTitle.classList.toggle('map-complete',!!data.complete);
     size();
-    // A graph wider than the window first shows where the work is, not where it began.
+    // Start at the beginning, with no clipped labels from a preceding column.
     if(!data.nodes.length)placed=false;
-    else if(!placed&&viewport.clientWidth){
-      placed=true;const open=data.nodes.filter(n=>n.status!=='passed'&&layout.positions[n.id]).map(n=>layout.positions[n.id].x);
-      viewport.scrollLeft=layout.bounds.width*scale>viewport.clientWidth? (open.length?Math.max(0,(Math.min(...open)-(232+152))*scale-24):0):0;
-      if(matchMedia('(max-width:760px)').matches){const first=data.nodes.find(n=>n.status!=='passed'&&layout.positions[n.id])||data.nodes[0];const p=layout.positions[first.id];viewport.scrollLeft=Math.max(0,p.x*scale-36);viewport.scrollTop=Math.max(0,p.y*scale-12);}
-    }
+    else if(!placed&&viewport.clientWidth){placed=true;viewport.scrollLeft=0;viewport.scrollTop=0;}
     if(reveal&&layout.positions[id]){const p=layout.positions[id],w=viewport.clientWidth||900;
       if(p.x*scale<viewport.scrollLeft+12||(p.x+p.width)*scale>viewport.scrollLeft+w-12)viewport.scrollLeft=Math.max(0,p.x*scale-(w-p.width*scale)/2);
       if(layout.bounds.height*scale>viewport.clientHeight)viewport.scrollTop=Math.max(0,p.y*scale-(viewport.clientHeight-p.height*scale)/2);
