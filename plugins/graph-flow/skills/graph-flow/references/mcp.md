@@ -69,7 +69,7 @@ With `GF_ROLE=leader` and `/work/notes` an existing git repository, send these c
 The first and last server responses have this shape; the intervening `tools/list` response contains the leader's tools and their schemas:
 
 ```jsonl
-{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","serverInfo":{"name":"graph-flow","version":"0.1.0"},"capabilities":{"tools":{}}}}
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","serverInfo":{"name":"graph-flow","version":"0.1.1"},"capabilities":{"tools":{}}}}
 {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\"ok\": true, \"run\": \"/work/notes/.graph-flow/runs/notes-export\"}"}],"isError":false}}
 ```
 

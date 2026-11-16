@@ -943,6 +943,91 @@ class ServerTests(unittest.TestCase):
             server.serve()
         self.assertEqual(json.loads((self.home / "server.json").read_text()), {"pid": os.getpid() + 1})
 
+    def running(self, pid=None):
+        """Serve in this process and publish the record `gf serve` would write."""
+        httpd, token = server.make_server()
+        thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+        thread.start()
+        def close():
+            httpd.shutdown()
+            httpd.server_close()
+            thread.join()
+        self.addCleanup(close)
+        port = httpd.server_address[1]
+        record = {"url": "http://127.0.0.1:%s/?t=%s" % (port, token), "port": port, "token": token,
+                  "pid": os.getpid() if pid is None else pid, "started": core.now()}
+        store.atomic_write(self.home / "server.json", json.dumps(record) + "\n")
+        return record
+
+    def test_open_reuses_a_running_dashboard_without_revealing_the_address(self):
+        record, seen = self.running(), []
+        result = server.open_dashboard(launch=lambda: self.fail("must not start another"),
+                                       browse=lambda url: seen.append(url) or True)
+        self.assertEqual(result, {"opened": True, "started": False, "port": record["port"]})
+        self.assertEqual(seen, [record["url"]])
+        self.assertNotIn(record["token"], json.dumps(result))
+
+    def test_open_starts_a_dashboard_when_the_record_is_absent_or_stale(self):
+        stale = [None, {"pid": os.getpid(), "port": 1, "token": "x", "url": "http://127.0.0.1:1/?t=x"},
+                 "wrong-token"]
+        for case in stale:
+            with self.subTest(case=case):
+                path = self.home / "server.json"
+                if case is None:
+                    self.assertFalse(path.exists())
+                elif case == "wrong-token":
+                    record = self.running()
+                    store.atomic_write(path, json.dumps(dict(record, token="wrong")) + "\n")
+                else:
+                    store.atomic_write(path, json.dumps(case) + "\n")
+                launched, seen = [], []
+                def launch():
+                    launched.append(self.running())
+                result = server.open_dashboard(launch=launch, browse=lambda url: seen.append(url) or True)
+                self.assertEqual(len(launched), 1)
+                self.assertEqual(result, {"opened": True, "started": True, "port": launched[0]["port"]})
+                self.assertEqual(seen, [launched[0]["url"]])
+
+    def test_open_reports_a_dashboard_that_never_starts_and_a_missing_browser(self):
+        with self.assertRaises(core.GFError) as caught:
+            server.open_dashboard(launch=lambda: None, browse=lambda url: True, timeout=0.2)
+        self.assertEqual((caught.exception.code, caught.exception.exit_code),
+                         ("dashboard_unavailable", core.EXIT_IO))
+        self.running()
+        with self.assertRaises(core.GFError) as caught:
+            server.open_dashboard(browse=lambda url: False)
+        self.assertEqual(caught.exception.code, "no_browser")
+        self.assertNotIn("?t=", caught.exception.message)
+
+    def test_stop_signals_only_a_dashboard_that_answers(self):
+        self.assertFalse(server.stop_dashboard())
+        store.atomic_write(self.home / "server.json", json.dumps(
+            {"pid": os.getpid(), "port": 1, "token": "x", "url": "u"}) + "\n")
+        with mock.patch.object(server.os, "kill") as kill:
+            self.assertFalse(server.stop_dashboard())
+            self.assertNotIn(server.signal.SIGTERM, [call.args[1] for call in kill.call_args_list])
+        record = self.running(pid=424242)
+        with mock.patch.object(server.os, "kill") as kill:
+            self.assertTrue(server.stop_dashboard())
+            kill.assert_called_with(record["pid"], server.signal.SIGTERM)
+        self.assertFalse((self.home / "server.json").exists())
+
+    def test_open_and_stop_with_a_real_detached_process(self):
+        result = server.open_dashboard(browse=lambda url: True)
+        record = json.loads((self.home / "server.json").read_text())
+        self.addCleanup(lambda: subprocess.run(["kill", str(record["pid"])], capture_output=True))
+        self.assertTrue(result["started"])
+        self.assertNotEqual(record["pid"], os.getpid())
+        self.assertEqual(server.open_dashboard(launch=lambda: self.fail("already running"),
+                                               browse=lambda url: True)["started"], False)
+        self.assertTrue(server.stop_dashboard())
+        self.assertFalse((self.home / "server.json").exists())
+        for _ in range(50):
+            if not server._alive(record):
+                break
+            threading.Event().wait(0.1)
+        self.assertFalse(server._alive(record))
+
 
 class ReviewRegressionTest(unittest.TestCase):
     """Defects found by the cross-family review of the server."""

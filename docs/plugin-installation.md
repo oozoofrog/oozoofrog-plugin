@@ -84,7 +84,7 @@ Swift Intelligence는 macOS, Command Line Tools를 포함한 Xcode, Python 3가 
 
 ## Graph Flow
 
-`graph-flow@oozoofrog-plugin` 0.1.0은 여러 단계의 작업을 계획·분담·검증하고 진행 상황을 기록하는 [Graph Flow 스킬](../plugins/graph-flow/skills/graph-flow/SKILL.md)과 MCP 설정을 설치합니다. Python 3과 Git이 필요합니다. Codex 매니페스트는 `.mcp.json`을 참조하고, Claude 매니페스트는 `${CLAUDE_PLUGIN_ROOT}` 기준의 MCP 실행 경로를 사용합니다.
+`graph-flow@oozoofrog-plugin` 0.1.1은 여러 단계의 작업을 계획·분담·검증하고 진행 상황을 기록하는 [Graph Flow 스킬](../plugins/graph-flow/skills/graph-flow/SKILL.md)과 MCP 설정을 설치합니다. Python 3과 Git이 필요합니다. Codex 매니페스트는 `.mcp.json`을 참조하고, Claude 매니페스트는 `${CLAUDE_PLUGIN_ROOT}` 기준의 MCP 실행 경로를 사용합니다.
 
 게시 전에는 저장소 루트에서 로컬 checkout을 등록한 뒤 설치합니다. 기존 marketplace가 있다면 source가 이 checkout인지 먼저 확인합니다.
 
@@ -98,7 +98,7 @@ claude plugin install graph-flow@oozoofrog-plugin
 
 설치 후 호스트를 다시 시작하고 새 대화에서 Codex는 `$graph-flow`, Claude Code는 `/graph-flow:graph-flow`로 호출합니다. 설치된 버전과 실제 읽은 스킬 경로를 확인하세요. 원격 설치는 변경이 원격 marketplace에 반영된 뒤 사용할 수 있습니다.
 
-대시보드는 사용자가 직접 자신의 터미널에서 `gf serve`를 실행하고 출력된 주소를 엽니다. `gf`는 `python3 <skill-dir>/scripts/gf`를 줄여 쓴 것이며, `<skill-dir>`은 설치된 스킬 디렉터리입니다. 에이전트는 대시보드를 실행하거나 대신 답하지 않습니다. [대시보드 규약](../plugins/graph-flow/skills/graph-flow/references/dashboard.md)을 참고하세요. Workflow 보조 스크립트는 해당 도구를 제공하는 호스트에서만 사용할 수 있습니다.
+대시보드를 보려면 세션에 “대시보드 열어 줘”라고 하면 됩니다. 에이전트가 `gf open`을 실행해 브라우저를 열고, 대시보드가 꺼져 있으면 함께 띄웁니다. 이렇게 띄운 대시보드는 세션이 끝나도 계속 떠 있으므로, 다 보면 닫아 달라고 하거나 `gf open --stop`을 실행합니다. 터미널에서 직접 `gf open`이나 `gf serve`를 실행해도 됩니다. `gf`는 `python3 <skill-dir>/scripts/gf`를 줄여 쓴 것이며, `<skill-dir>`은 설치된 스킬 디렉터리입니다. 에이전트는 대시보드를 열어 주기만 하고 대신 답하지 않습니다. [대시보드 규약](../plugins/graph-flow/skills/graph-flow/references/dashboard.md)을 참고하세요. Workflow 보조 스크립트는 해당 도구를 제공하는 호스트에서만 사용할 수 있습니다.
 
 ## Local AI Studio
 

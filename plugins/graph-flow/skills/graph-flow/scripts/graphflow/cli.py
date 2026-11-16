@@ -115,6 +115,15 @@ def _serve(args, actor):
     return {}
 
 
+def _open(args, actor):
+    server = _lazy_import("server")
+    if args.stop:
+        stopped = server.stop_dashboard()
+        return {"stopped": stopped,
+                "message": "Dashboard stopped." if stopped else "No dashboard is running."}
+    return dict(server.open_dashboard(), message="Dashboard opened in the browser.")
+
+
 def _require_human_terminal(actor):
     if actor["role"] != "human":
         raise core.GFError("forbidden", "decide answer requires role human", core.EXIT_FORBIDDEN)
@@ -237,12 +246,12 @@ _register("review submit", "reviewer", own_node_only=True)
 _register("decide ask,decide wait,decide list", "leader worker reviewer human", own_node_only=True)
 _register("decide answer", "human")
 _register("mcp", "leader worker reviewer", needs_run=False)
-_register("serve", "leader human", needs_run=False)
+_register("serve,open", "leader human", needs_run=False)
 for _path in ("init", "plan validate", "learn list", "learn promote", "learn retire"):
     COMMANDS[tuple(_path.split())]["needs_run"] = False
 for _path, _handler in (("init", _init), ("plan validate", _validate),
                         ("plan set", _set_plan), ("status", _status), ("host set", _host_set),
-                        ("mcp", _mcp), ("serve", _serve)):
+                        ("mcp", _mcp), ("serve", _serve), ("open", _open)):
     COMMANDS[tuple(_path.split())]["handler"] = _handler
 for _path, _entry in COMMANDS.items():
     if _entry["handler"] is None and _path not in (("mcp",), ("serve",)):
@@ -317,6 +326,8 @@ def _parser(authorize_only=False):
                 sub.add_argument("--reason", required=True)
         elif path == ("serve",):
             sub.add_argument("--port", type=int, default=0)
+        elif path == ("open",):
+            sub.add_argument("--stop", action="store_true")
         if authorize_only:
             continue
         if path in (("start",), ("red",), ("check", "run"), ("submit",), ("gate",)):

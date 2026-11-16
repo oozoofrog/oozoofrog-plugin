@@ -26,7 +26,15 @@ The server uses `http.server.ThreadingHTTPServer`. Files are the source of state
 
 ## Who the token stands for
 
-An answer posted with the token is recorded as the person's decision. The token, `server.json` and `human.key` are readable by every process of the same OS user, so roles are a cooperative rule and not a security boundary between a person and an agent on the same account. The rule: the person starts `gf serve` in their own terminal and opens the printed address; an agent session never starts it, never reads `server.json` or `human.key`, and never sends a request to the dashboard. An agent that needs a decision records it with `gf decide ask` and waits.
+An answer posted with the token is recorded as the person's decision. The token, `server.json` and `human.key` are readable by every process of the same OS user, so roles are a cooperative rule and not a security boundary between a person and an agent on the same account. The rule: opening the dashboard is separate from answering on it. A person may run `gf serve` and open the printed address, or run `gf open`. An agent session may run `gf open` when the person asks to see the dashboard, and `gf open --stop` when the person asks to close it; neither prints an address or a token. An agent session never runs `gf serve`, never reads `server.json` or `human.key`, never sends a request to the dashboard, and never operates the page. An agent that needs a decision records it with `gf decide ask` and waits.
+
+## Opening without the address
+
+`gf open` opens the dashboard in the person's default browser. `open_dashboard()` reads `server.json`; the recorded dashboard counts as running only when its PID exists and GET `/api/projects` with the recorded token returns 200 on the recorded port. Otherwise it starts `gf serve` as a detached process in its own session, with no standard streams, and waits up to 10 seconds for a record that answers. It then passes the recorded URL to `webbrowser.open`.
+
+The result is `{"ok": true, "opened": true, "started": <bool>, "port": <port>, "message": "Dashboard opened in the browser."}`; `started` says whether this call started the process. No output or error message contains the URL or the token. A dashboard that does not answer in time fails with `dashboard_unavailable`, and a browser that does not open with `no_browser`, both exit 5.
+
+A dashboard started this way keeps running after the calling session ends. `gf open --stop` stops the recorded dashboard when it answers: it sends SIGTERM to the recorded PID and removes `server.json` under `$GF_HOME/.lock` if the record still names that PID. The result is `{"ok": true, "stopped": <bool>, "message": ...}`; `stopped` is false when no dashboard answers. Both forms are limited to the leader and human roles and need no run.
 
 ## GET /
 

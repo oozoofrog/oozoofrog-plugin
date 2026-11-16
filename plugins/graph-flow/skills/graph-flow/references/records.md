@@ -67,7 +67,7 @@ Roles prevent accidents; they are not a security boundary (P5, P10). An agent th
 | `decide ask`, `decide wait`, `decide list` | yes | own node only | own node only | yes |
 | `decide answer` | no | no | no | yes, see section 7 |
 | `mcp` | yes | yes | yes | no |
-| `serve` | yes | no | no | yes |
+| `serve`, `open` | yes | no | no | yes |
 
 A leader may also do a node's work itself (`inline`). That is allowed for lane 1 only because lane 2 and 3 nodes require an independent review (section 6).
 
@@ -642,6 +642,8 @@ def serve(stdin, stdout): ...                   # newline-delimited JSON-RPC; to
 
 # server.py
 def serve(host="127.0.0.1", port=0): ...        # writes server.json; blocks
+def open_dashboard(): ...                       # starts a detached `gf serve` when none answers; opens the browser; returns no address
+def stop_dashboard(): ...                       # SIGTERM to the recorded dashboard; False when none answers
 ```
 
 The MCP tool list and the dashboard's HTTP API are specified by the units that own `mcp.py` and `server.py`, in `references/mcp.md` and `references/dashboard.md`; both call only the functions above.

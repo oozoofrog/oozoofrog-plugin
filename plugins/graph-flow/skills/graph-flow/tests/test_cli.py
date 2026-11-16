@@ -118,7 +118,7 @@ class CLITests(unittest.TestCase):
             self.assertEqual(self.call('status', code=5)['code'], 'internal')
 
     def test_registry_role_table(self):
-        self.assertEqual(len(cli.COMMANDS), 29)
+        self.assertEqual(len(cli.COMMANDS), 30)
         for path, entry in cli.COMMANDS.items():
             for role in core.ROLES:
                 if role in entry['roles']:
@@ -361,6 +361,21 @@ class CLITests(unittest.TestCase):
             server.serve.reset_mock()
             self.call('serve')
             server.serve.assert_called_once_with(port=0)
+
+    def test_open_dispatch_stop_and_roles(self):
+        server = types.SimpleNamespace(
+            open_dashboard=mock.Mock(return_value={"opened": True, "started": True, "port": 5}),
+            stop_dashboard=mock.Mock(side_effect=[True, False]))
+        with mock.patch.object(cli, '_lazy_import', return_value=server):
+            opened = self.call('open')
+            self.assertEqual(opened, {'ok': True, 'opened': True, 'started': True, 'port': 5,
+                                      'message': 'Dashboard opened in the browser.'})
+            self.assertEqual(self.call('open', '--stop')['stopped'], True)
+            self.assertEqual(self.call('open', '--stop')['message'], 'No dashboard is running.')
+            server.open_dashboard.assert_called_once_with()
+            for role in ('worker', 'reviewer'):
+                with mock.patch.dict(os.environ, GF_ROLE=role, GF_NODE='n'):
+                    self.assertEqual(self.call('open', code=3)['code'], 'forbidden')
 
     def test_mcp_eof_has_no_cli_envelope(self):
         out = io.StringIO()

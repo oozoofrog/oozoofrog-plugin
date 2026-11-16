@@ -39,4 +39,4 @@ If a brief sets `GF_ROLE=worker` or `GF_ROLE=reviewer`, read [worker.md](referen
 - [Worker](references/worker.md): execute or review one brief.
 - [Executors](references/executors.md): choose a host, model, account, and isolation.
 - [MCP](references/mcp.md): invoke commands through tool access.
-- [Dashboard](references/dashboard.md): show recorded progress and let a person answer decisions.
+- [Dashboard](references/dashboard.md): show recorded progress and let a person answer decisions. When the person asks to see it, run `gf open`.

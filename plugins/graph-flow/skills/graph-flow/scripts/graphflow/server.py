@@ -1,12 +1,18 @@
 """Loopback human decision surface (references/dashboard.md)."""
 import codecs
 import hmac
+import http.client
 import json
 import os
 import pathlib
 import re
 import secrets
+import signal
 import stat
+import subprocess
+import sys
+import time
+import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
@@ -693,3 +699,73 @@ def serve(host="127.0.0.1", port=0):
                 record = None
             if isinstance(record, dict) and record.get("pid") == pid:
                 path.unlink()
+
+
+def _record():
+    try:
+        record = json.loads((core.gf_home() / "server.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return record if isinstance(record, dict) else None
+
+
+def _alive(record):
+    """True when the recorded process exists and answers with the recorded token."""
+    try:
+        port, token = int(record["port"]), str(record["token"])
+        os.kill(int(record["pid"]), 0)
+    except (KeyError, TypeError, ValueError, OSError):
+        return False
+    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=2)
+    try:
+        connection.request("GET", "/api/projects", headers={"X-GF-Token": token})
+        return connection.getresponse().status == 200
+    except (OSError, http.client.HTTPException):
+        return False
+    finally:
+        connection.close()
+
+
+def _launch():
+    """Start `gf serve` detached from the calling session."""
+    script = pathlib.Path(__file__).resolve().parents[1] / "gf"
+    subprocess.Popen([sys.executable, "-B", str(script), "serve"], stdin=subprocess.DEVNULL,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+
+
+def open_dashboard(launch=None, browse=None, timeout=10.0):
+    """Open the dashboard in the person's browser, starting it when none answers.
+
+    The result carries no address or token, so the caller learns neither.
+    """
+    record, started = _record(), False
+    if not (record and _alive(record)):
+        (launch or _launch)()
+        started = True
+        deadline = time.monotonic() + timeout
+        while True:
+            record = _record()
+            if record and _alive(record):
+                break
+            if time.monotonic() >= deadline:
+                raise core.GFError("dashboard_unavailable",
+                                   "the dashboard did not start; run gf serve in a terminal", core.EXIT_IO)
+            time.sleep(0.1)
+    if not (browse or webbrowser.open)(record["url"]):
+        raise core.GFError("no_browser", "the dashboard is running but no browser opened; "
+                           "run gf open --stop, then gf serve in a terminal", core.EXIT_IO)
+    return {"opened": True, "started": started, "port": record["port"]}
+
+
+def stop_dashboard():
+    """Stop the recorded dashboard; False when none answers."""
+    record = _record()
+    if not (record and _alive(record)):
+        return False
+    home = core.gf_home()
+    os.kill(int(record["pid"]), signal.SIGTERM)
+    with store.locked(home / ".lock"):
+        current = _record()
+        if current and current.get("pid") == record["pid"]:
+            (home / "server.json").unlink()
+    return True

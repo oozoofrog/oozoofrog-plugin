@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `graph-flow` 0.1.1: add `gf open`, which opens the dashboard in the person's default browser and starts a detached `gf serve` when none is running, and `gf open --stop`, which stops it. Neither prints the address or the token, so an agent session may run them when the person asks to see or close the dashboard. Answering stays with the person: an agent session still never runs `gf serve`, reads `server.json` or `human.key`, sends requests to the dashboard, or operates its page.
+
 - Retire `auto-flow` and `guided-execution`: remove both Plugins, marketplace entries, dedicated distribution checks, the guided-execution CI step, and their usage/validation documentation. Use `graph-flow` for multi-step planning, delegation, and verified execution. Existing installations require removal through the host; user workspaces and handoff data are preserved without migration.
 
 - Add `graph-flow` 0.1.0 to both repository marketplaces using its existing Codex discovery metadata and MCP configuration alongside the existing Plugins. Document graph-based planning, per-node delegation and checks, human decisions, invocation, and the user-run `gf serve` dashboard. Add distribution contracts and isolated Python graph-flow tests to CI.
