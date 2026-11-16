@@ -46,6 +46,10 @@ const STRINGS = {
     "unverified": "아직 확인 안 된 것",
     "workerNote": "쓴 쪽의 메모",
     "notRecorded": "따로 기록되지 않았어요.",
+    "questionOnly": "이 결정에는 질문만 기록되어 있어요. 설명, 근거, 읽을 파일은 남겨지지 않았어요.",
+    "writeFirst": "답을 적으면 보낼 수 있어요.",
+    "leaveUnanswered": "답하지 않고 돌아가기",
+    "aboutWork": "이 일은",
     "ifApproved": "이대로 하면",
     "ifRejected": "돌려보내면",
     "undo": "나중에 바꾸려면",
@@ -71,10 +75,10 @@ const STRINGS = {
     "unauthorized": "이 창의 열쇠가 없거나 바뀌었어요. 서버를 켤 때 받은 주소를 다시 열어 주세요.",
     "retry": "다시 연결",
     "loading": "흐름을 읽고 있어요…",
-    "lessons": "별자리 · 배운 것",
+    "lessons": "배운 것",
     "noLessons": "아직 기록된 배움이 없어요.",
     "planOrder": "전체 시간 순서는 기록에서 알 수 없어 계획 순서로 보여 드려요. 각 일의 시도는 일어난 순서예요.",
-    "returns": "혜성 · 돌아온 일",
+    "returns": "고치러 돌아온 일",
     "complete": "모든 흐름이 끝났어요!",
     "waitingBubble": "읽어 주세요!",
     "attemptBubble": "{n}번째 시도예요",
@@ -84,7 +88,7 @@ const STRINGS = {
     "pastOrbit": "앞서 돌아온 시도",
     "unnamed": "이 일",
     "handoff": "넘길 결과",
-    "overview": "일 {total}곳 · 끝남 {done}곳 · 내 결정 {needs}개",
+    "overview": "일 {total}개 · 끝남 {done}개 · 내 결정 {needs}개",
     "reviewed": "다른 눈으로 검토했어요",
     "runOption": "{project} · 흐름 {n}",
     "purposeReview": "사람이 직접 살펴봐야 하는 결과를 받아들일지 정해 주세요.",
@@ -185,6 +189,10 @@ const STRINGS = {
     "unverified": "Not yet verified",
     "workerNote": "The worker’s note",
     "notRecorded": "Not recorded.",
+    "questionOnly": "Only the question was recorded for this decision. No explanation, evidence or files were left.",
+    "writeFirst": "Write an answer to send it.",
+    "leaveUnanswered": "Go back without answering",
+    "aboutWork": "This work",
     "ifApproved": "If you proceed",
     "ifRejected": "If sent back",
     "undo": "How to undo",
@@ -210,10 +218,10 @@ const STRINGS = {
     "unauthorized": "This window’s key is missing or changed. Reopen the address you received when starting the server.",
     "retry": "Reconnect",
     "loading": "Reading the flow…",
-    "lessons": "Constellation · what we learned",
+    "lessons": "What we learned",
     "noLessons": "No lessons recorded yet.",
     "planOrder": "The overall time order is unknown, so this follows plan order. Each task’s attempts are in their recorded order.",
-    "returns": "Comets · what came back",
+    "returns": "What came back for fixing",
     "complete": "The whole flow is complete!",
     "waitingBubble": "Please read this.",
     "attemptBubble": "On attempt {n}.",
@@ -626,6 +634,8 @@ function openDecision(id, focus = true) {
   const updateActions = () => {
     actions.querySelectorAll('button[data-outcome]').forEach(b => { b.disabled = !current() || !decisionController.canSubmit(b.dataset.outcome, input.value); });
     backButton.disabled = !!decisionController.session?.busy;
+    // Say why sending is unavailable instead of leaving a silent disabled button.
+    if (isQuestion && current() && !session.busy && (!message.textContent || message.textContent === t('writeFirst'))) message.textContent = input.value.trim() ? '' : t('writeFirst');
     input.disabled = !current() || session.busy; $('picker').disabled = !!decisionController.session?.busy;
   };
   const send = async outcome => {
@@ -646,7 +656,7 @@ function openDecision(id, focus = true) {
   const actionButton = (outcome, text, cls) => { const b = button(text, () => send(outcome), cls); b.dataset.outcome = outcome; return b; };
   if (isQuestion) actions.append(actionButton('answered', t('answer'), 'primary'));
   else { approveButton = actionButton('approved', '', 'primary'); actions.append(approveButton, actionButton('revision_requested', t('sendBack'))); }
-  const backButton = button(t('flow'), wholeFlow); actions.append(backButton); reading.append(actions);
+  const backButton = button(t('leaveUnanswered'), wholeFlow); actions.append(backButton); reading.append(actions);
   const right = el('div'), surrounding = el('div'); right.append(surrounding);
   const files = card(t('readThis'), null, true), fileChoices = el('div', undefined, 'file-choices'), reader = el('pre', undefined, 'file-reader');
   reader.hidden = true; reader.tabIndex = 0; reader.setAttribute('aria-label',t('readThis'));
@@ -695,14 +705,19 @@ function openDecision(id, focus = true) {
   const update = () => {
     const decision = session.decision;
     clear(introduction); decisionHeading(introduction, decision, 'h2'); const heading = introduction.querySelector('h2'); heading.id = 'decision-title';
-    const node = view.nodes.find(n => n.id === decision.node); if (node) introduction.append(el('p', node.summary));
+    const node = view.nodes.find(n => n.id === decision.node); if (node?.summary) introduction.append(el('p', `${t('aboutWork')}: ${node.summary}`, 'muted'));
     updateFiles(decision);
-    note.textContent = decision.worker_note || t('notRecorded');
+    note.textContent = decision.worker_note || ''; report.hidden = !decision.worker_note;
     clear(outcomes); outcomes.append(el('p', t('choiceEffects'), 'eyebrow'));
-    for (const [key, name] of [['if_approved','ifApproved'],['if_rejected','ifRejected'],['undo','undo']]) outcomes.append(el('small', t(name)), el('p', decision.context[key] || t('notRecorded')));
-    clear(surrounding); surrounding.append(card(t('why'), decision.context.why || t('notRecorded')));
+    const effects = [['if_approved','ifApproved'],['if_rejected','ifRejected'],['undo','undo']].filter(([key]) => decision.context[key]);
+    for (const [key, name] of effects) outcomes.append(el('small', t(name)), el('p', decision.context[key]));
+    outcomes.hidden = !effects.length;
+    clear(surrounding); if (decision.context.why) surrounding.append(card(t('why'), decision.context.why));
     failedBlock(surrounding, decision);
-    for (const key of ['verified','unverified']) { const c = card(t(key)); textList(c, decision[key]); surrounding.append(c); }
+    for (const key of ['verified','unverified']) { if (!decision[key]?.length) continue; const c = card(t(key)); textList(c, decision[key]); surrounding.append(c); }
+    files.hidden = !decision.files?.length;
+    const bare = !decision.worker_note && !effects.length && !decision.context.why && !decision.failed?.length && !decision.verified?.length && !decision.unverified?.length && !decision.files?.length;
+    if (bare) surrounding.append(el('p', t('questionOnly'), 'muted'));
     reminder.hidden = !decision.has_evidence && !decisionController.requiresDetails;
     if (approveButton) approveButton.textContent = purposeAction(decision.purpose, language, decision.failed);
     updateActions();
@@ -714,7 +729,7 @@ function historyView() {
   const strip = el('ol', undefined, 'timeline');
   view.nodes.forEach(n => { const item=el('li');item.append(nodeCard(n));strip.append(item); }); box.append(strip);
   const grid = el('div', undefined, 'history-grid'); const returns = el('div'); returns.append(el('h3', t('returns')));
-  view.nodes.filter(n => n.returned_reasons.length).forEach(n => { const c = card(title(n), null, true); textList(c, n.returned_reasons.flat(), 'noReason'); returns.append(c); });
+  view.nodes.filter(n => n.returned_reasons.length).forEach(n => { const c = card(title(n), null, true); textList(c, n.returned_reasons.map((reasons, i) => `${t('pastAttempt', {n:i + 1})} · ${t('whyReturned')}: ${reasons.length ? reasons.join(' · ') : t('noReason')}`)); returns.append(c); });
   if (!view.nodes.some(n => n.returned_reasons.length)) returns.append(el('p', t('noReturns')));
   const lessons = el('div', undefined, 'constellation'); lessons.append(el('h3', t('lessons'))); view.lessons.forEach(l => { const lesson=card(l.node_title ? otherTitle(l.node_title) : t('lessons'), l.text); lesson.classList.add('lesson'); lessons.append(lesson); }); if (!view.lessons.length) lessons.append(el('p', t('noLessons')));
   const counts = el('div'); counts.append(countCard(), button(t('flow'), wholeFlow, 'primary')); grid.append(returns, lessons, counts); box.append(grid);
