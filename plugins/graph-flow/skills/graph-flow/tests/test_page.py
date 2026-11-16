@@ -123,7 +123,7 @@ class PageTests(unittest.TestCase):
         js = (S / 'scripts/graphflow/page.js').read_text(encoding='utf-8')
         style = html[html.index('<style'):html.index('</style>')]
         declared = set(re.findall(r'@keyframes ([a-z]+)', style))
-        self.assertEqual(declared, {'step', 'bob', 'flow', 'glow', 'blink', 'pop', 'shake', 'wave'})
+        self.assertEqual(declared, {'step', 'bob', 'flow', 'glow', 'pop', 'shake', 'wave'})
         used = {name for rule in re.findall(r'animation:([^;}]+)', style)
                 for name in re.findall(r'(?:^|,)([a-z]+) ', rule)}
         self.assertEqual(used, declared)
@@ -160,7 +160,7 @@ class PageTests(unittest.TestCase):
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const source = readFileSync(process.argv[2], 'utf8');
-const {createDecisionController, decisionQuestion, purposeWording, purposeAction, viewLanguage, attemptPips, edgeRelationLabel, fitScale, MIN_FIT_SCALE, edgeChipText, cometCount, failedBadgeCount, layeredLayout, crossingCount} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+const {createDecisionController, decisionQuestion, purposeWording, purposeAction, viewLanguage, edgeRelationLabel, fitScale, MIN_FIT_SCALE, edgeChipText, cometCount, layeredLayout, crossingCount} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const first = {project:'/project', run:'first'}, second = {project:'/project', run:'second'};
 const decision = {id:'d7', purpose:'lane3', kind:'authorization', failed:[]};
 const controller = createDecisionController();
@@ -178,16 +178,8 @@ assert.equal(viewLanguage({language:'ko'}, 'en-US'),'ko');
 assert.equal(viewLanguage({language:'en'}, 'ko-KR'),'en');
 assert.equal(viewLanguage({}, 'ko-KR'),'en');
 assert.equal(viewLanguage(null,'ko-KR'),'ko');
-for(const [laps,max,status] of [[[],3,'pending'],[['current'],3,'running'],[['waiting_for_you'],3,'submitted'],[['returned','current'],3,'running'],[['passed'],3,'passed'],[['returned','returned','passed'],3,'passed'],[['current'],2,'running']]) {
-  const segments=attemptPips(laps,max,status);
-  assert.equal(segments.length,max);
-  assert.deepEqual(segments.map(s=>s.state),Array.from({length:max},(_,i)=>laps[i]||'unused'));
-
-}
 assert.equal(cometCount({laps:['returned','returned','passed'],returned_reasons:[[],[],[]]}),2);
 assert.equal(cometCount({laps:[],returned_reasons:[[]]}),0);
-assert.equal(failedBadgeCount({id:'a'},[{node:'a',failed:['first']},{node:'a',failed:['other','question']}]),1,'the badge matches the decision that gate opens');
-for(let n=0;n<9;n++) assert.equal(failedBadgeCount({id:'a'},[{node:'a',failed:Array(n).fill('fail')},{node:'b',failed:['other']}]),n);
 """)
 
     def test_layout_rectangles_depth_reviews_and_fit(self):
@@ -230,16 +222,15 @@ assert.equal(fork.chips.length,1);
 assert.equal(fork.routes.filter(r=>r.chip===fork.chips[0]).length,2);
 assert.equal(fork.routes.filter(r=>r.to==='__goal').length,2);
 assert(fork.routes.filter(r=>r.to==='__goal').every(r=>r.chip===null&&r.text===''));
-// A returned label reserves room for its comet, so long text gets more lines.
-const long='Readable handoff with a long name';
-const tall=state=>layeredLayout([{id:'a',kind:'work'},{id:'b',kind:'work'}],[{from:'a',to:'b',label:long,relation:'hands_over',gate:state}],[],true,{language:'en'}).chips[0].height;
-assert(tall('returned')>tall('open'));
+// A line's text has one meaning: the name of what is handed over. Reviews, decisions and unnamed handoffs carry none.
 assert.equal(edgeChipText({relation:'hands_over',label:'Parsed record'},'en'),'Parsed record');
-assert.equal(edgeChipText({relation:'hands_over',label:''},'ko'),'넘겨줌');
-assert.equal(edgeChipText({relation:'reviews',label:'x'},'ko'),'검토함');
-// Four columns of work and the goal fit an 860px-wide map without scrolling sideways.
+for(const edge of [{relation:'hands_over',label:''},{relation:'reviews',label:'x'},{relation:'waits_for_decision',label:'approval'},{relation:'toward_goal',label:''}]) assert.equal(edgeChipText(edge),'');
+const review=layeredLayout([{id:'a',kind:'work'},{id:'r',kind:'review',target:'a'}],[{from:'r',to:'a',label:'',relation:'reviews',gate:'closed'}],[{id:'d1',node:'a'}]);
+assert.equal(review.chips.length,0,'a review line and a waiting decision add no label');
+// A graph too wide for the map keeps its words readable and scrolls instead of shrinking past the minimum.
 const chain=layeredLayout(['a','b','c','d'].map(id=>({id,kind:'work'})),[['a','b'],['b','c'],['c','d']].map(([from,to])=>({from,to,relation:'hands_over'})),[],true,{language:'ko'});
-assert(chain.bounds.width*fitScale(chain.bounds,860,2000)<=860);
+assert.equal(fitScale(chain.bounds,860,2000),MIN_FIT_SCALE); assert(MIN_FIT_SCALE>=.75);
+assert(chain.bounds.width*MIN_FIT_SCALE>860);
 """)
 
     def test_relation_labels_and_loop_states(self):
@@ -248,7 +239,6 @@ for(const [lang,labels] of [['ko',['넘겨줌','검토함','결정을 기다림'
   ['hands_over','reviews','waits_for_decision'].forEach((relation,i)=>assert.equal(edgeRelationLabel({relation,label:''},lang),labels[i]));
   assert.equal(edgeRelationLabel({relation:'hands_over',label:'Readable result'},lang),labels[0]+': Readable result');
 }
-assert.deepEqual(attemptPips(['current'],3,'awaiting_approval').map(p=>p.state),['waiting_for_you','unused','unused']);
 """)
 
     def test_controller_bound_request(self):
@@ -417,6 +407,7 @@ const words=e=>e.textContent;
 assert.match(words(entries[1]),/attempt 1 came back/); assert.match(words(entries[1]),/Unit passes/); assert.match(words(entries[1]),/run tests/); assert.match(words(entries[1]),/T3 thread 01234567/);
 assert.equal(entries[1].querySelector('details').open,true,'a returned attempt shows its checks without a click');
 get('flow-tab').click(); assert.equal(get('flow').hidden,false); assert.equal(get('home').hidden,true);
+assert.match(get('map').textContent,/d7 read and answer/,'a waiting decision is answered from its card in the graph');
 // Open through the HTML fallback; map and panel route to the same openDecision.
 get('decision-list').querySelector('button').click();
 const input=get('answer-text'), actions=get('answer-actions'), buttons=[...actions.children];

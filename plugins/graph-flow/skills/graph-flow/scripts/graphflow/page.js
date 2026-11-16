@@ -83,7 +83,6 @@ const STRINGS = {
     "lessons": "배운 것",
     "noLessons": "아직 기록된 배움이 없어요.",
     "complete": "모든 일이 끝났어요 · 일 {total}개",
-    "waitingBubble": "읽어 주세요!",
     "unnamed": "이 일",
     "handoff": "넘길 결과",
     "overview": "내 답이 필요한 것 {needs} · 진행 중 {doing} · 끝남 {done}/{total}",
@@ -113,7 +112,6 @@ const STRINGS = {
     "openFile": "파일 읽기",
     "fileFailed": "지금은 읽을 수 있는 글 파일이 아니에요. 흐름을 새로 읽고 다시 해 주세요.",
     "noFiles": "이 결정에 적힌 파일이 없어요.",
-    "cometLegend": "고치러 돌아온 횟수",
     "goal": "목표",
     "work": "작업",
     "review": "검토",
@@ -128,11 +126,7 @@ const STRINGS = {
     "mapHelp": "끌어서 이동 · + − 확대 · 0 맞추기",
     "firstPass": "한 번에",
     "finishedAttempts": "{n}번 만에",
-    "pipPassed": "통과한 시도",
-    "pipReturned": "돌아온 시도",
-    "pipCurrent": "지금 시도",
-    "pipUnused": "남은 시도",
-    "lineLegend": "선 위의 글은 넘기는 것이에요",
+    "lineLegend": "선 위의 글은 넘기는 것의 이름이에요",
     "unusedAttempts": "시도 0번 · 최대 {max}번",
     "home": "할 일과 기록",
     "graph": "그래프",
@@ -201,7 +195,14 @@ const STRINGS = {
     "runOptionNeeds": "{project} · {run} · 내 답 {n}",
     "since": "{time}부터",
     "returnTimes": "돌아온 횟수 {n}번",
-    "allDone": "모든 흐름이 끝났어요!"
+    "allDone": "모든 흐름이 끝났어요!",
+    "answerHere": "{id} 읽고 답하기",
+    "lineOpen": "넘겨줬어요",
+    "lineClosed": "아직 넘기지 않았어요",
+    "lineWaiting": "내 답을 기다려요",
+    "lineReturned": "되돌아온 일에서 나와요",
+    "lineReview": "검토해요",
+    "tries": "시도 {n}/{max}"
   },
   "en": {
     "flow": "Whole flow",
@@ -286,7 +287,6 @@ const STRINGS = {
     "lessons": "What we learned",
     "noLessons": "No lessons recorded yet.",
     "complete": "Everything is done · {total} tasks",
-    "waitingBubble": "Please read this.",
     "unnamed": "This task",
     "handoff": "Handoff",
     "overview": "{needs} need you · {doing} in progress · {done}/{total} done",
@@ -316,7 +316,6 @@ const STRINGS = {
     "openFile": "Open file",
     "fileFailed": "This file is no longer available as readable text. Refresh the flow and try again.",
     "noFiles": "No files are listed for this decision.",
-    "cometLegend": "Times it came back",
     "goal": "Goal",
     "work": "Work",
     "review": "Review",
@@ -331,11 +330,7 @@ const STRINGS = {
     "mapHelp": "Drag to pan · + − zoom · 0 fit",
     "firstPass": "First attempt",
     "finishedAttempts": "In {n} attempts",
-    "pipPassed": "Passed attempt",
-    "pipReturned": "Returned attempt",
-    "pipCurrent": "Current attempt",
-    "pipUnused": "Attempt left",
-    "lineLegend": "Text on a line is what gets handed over",
+    "lineLegend": "Text on a line names what is handed over",
     "unusedAttempts": "0 attempts · up to {max}",
     "home": "To do and log",
     "graph": "Graph",
@@ -404,7 +399,14 @@ const STRINGS = {
     "runOptionNeeds": "{project} · {run} · {n} need you",
     "since": "since {time}",
     "returnTimes": "Came back {n} times",
-    "allDone": "The whole flow is complete!"
+    "allDone": "The whole flow is complete!",
+    "answerHere": "{id} read and answer",
+    "lineOpen": "handed over",
+    "lineClosed": "not handed over yet",
+    "lineWaiting": "waiting for your answer",
+    "lineReturned": "from work that came back",
+    "lineReview": "reviews",
+    "tries": "attempt {n}/{max}"
   }
 };
 // UI_STRINGS_END
@@ -493,13 +495,8 @@ export function viewLanguage(view, browser = 'en') {
   return view ? view.language === 'ko' ? 'ko' : 'en' : browser.toLowerCase().startsWith('ko') ? 'ko' : 'en';
 }
 export function cometCount(node) { return (node.laps || []).filter(lap => lap === 'returned').length; }
-export function failedBadgeCount(node, decisions) {
-  return (decisions.find(d => d.node === node.id)?.failed || []).length;
-}
-export const MIN_FIT_SCALE = .5;
-export function attemptPips(laps = [], maxAttempts = 3, status = '') {
-  return Array.from({length:maxAttempts}, (_, i) => ({state: laps[i] === 'current' && ['awaiting_approval','held'].includes(status) ? 'waiting_for_you' : laps[i] || 'unused'}));
-}
+// Below this the words on a card stop being readable, so a larger graph scrolls instead of shrinking further.
+export const MIN_FIT_SCALE = .75;
 export function edgeRelationLabel(edge, language = 'en') {
   const words = STRINGS[language];
   if (edge.relation === 'toward_goal') return words.towardGoal;
@@ -507,11 +504,9 @@ export function edgeRelationLabel(edge, language = 'en') {
   if (edge.relation === 'waits_for_decision') return words.waitsForDecision;
   return words.handsOver + (edge.label ? ': ' + edge.label : '');
 }
-// The short text drawn on a line. A named handoff shows only its name; the full relation stays in the accessible label.
-export function edgeChipText(edge, language = 'en') {
-  if (edge.relation === 'toward_goal') return '';
-  if ((edge.relation || 'hands_over') === 'hands_over' && edge.label) return edge.label;
-  return edgeRelationLabel(edge, language);
+// Text on a line has one meaning: the name of what is handed over. Reviews and decisions are shown by the line itself.
+export function edgeChipText(edge) {
+  return (edge.relation || 'hands_over') === 'hands_over' && edge.label ? edge.label : '';
 }
 const textWidth = (text, wide, narrow) => Array.from(text || '').reduce((sum, c) => sum + (c.charCodeAt(0) > 0x2e80 ? wide : narrow), 0);
 export function fitScale(bounds, width, height, mobile = false) {
@@ -579,7 +574,7 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
     const route={...e,index,text,reverse,start:{x:reverse?a.x:a.x+a.width,y:anchor(e.from,a)},end:{x:reverse?b.x+b.width:b.x,y:anchor(e.to,b)},chip:null,gateState:waiting?'waiting_for_you':e.gate||'closed',decision:waiting?.id,skip:Math.abs(a.layer-b.layer)>1,channel:20+(index%4)*10};
     routes.push(route);if(!text)continue;
     const key=JSON.stringify([e.from,text,reverse,route.gateState,route.decision||'']);
-    if(!groups.has(key))groups.set(key,{column:reverse?b.layer:a.layer,text,key,icon:route.gateState==='returned'?21:0,routes:[]});
+    if(!groups.has(key))groups.set(key,{column:reverse?b.layer:a.layer,text,key,icon:0,routes:[]});
     groups.get(key).routes.push(route);
   }
   for(const group of groups.values()) {
@@ -715,11 +710,11 @@ function panel() {
   } else p.append(el('p', t('selectHint')));
   const legend=el('div',undefined,'legend');legend.append(el('p',t('legend'),'eyebrow'));
   const row=(...items)=>{const line=el('p');items.forEach(([mark,text])=>{const item=el('span',undefined,'legend-item');if(mark)item.append(mark);item.append(el('span',text));line.append(item);});legend.append(line);};
-  const pip=state=>el('span',undefined,'pip '+state),dot=key=>el('span',undefined,'dot '+key);
+  const dot=key=>el('span',undefined,'dot '+key);
+  const line=state=>{const sample=svg('svg',{viewBox:'0 0 34 10','aria-hidden':'true',class:'line-sample'});sample.append(svg('path',{d:'M1 5H33',class:'edge-path '+state}));return sample;};
   row(...['goal','work','review','decision'].map(kind=>[typeIcon(kind),t(kind)]));
   row(...['done','doing','needs_you','waiting'].map(key=>[dot(key),t(key)]));
-  row(...[['passed','pipPassed'],['returned','pipReturned'],['current','pipCurrent'],['unused','pipUnused']].map(([state,key])=>[pip(state),t(key)]));
-  row([cometGlyph(),t('cometLegend')]);
+  row(...[['open','lineOpen'],['closed','lineClosed'],['waiting_for_you','lineWaiting'],['returned','lineReturned'],['open review','lineReview']].map(([state,key])=>[line(state),t(key)]));
   row([null,t('lineLegend')]);
   p.append(legend);
 }
@@ -1075,10 +1070,6 @@ function typeIcon(kind) {
   }
   return icon;
 }
-function cometGlyph() {
-  const icon=svg('svg',{viewBox:'0 0 32 22','aria-hidden':'true',class:'comet-icon'});
-  icon.append(svg('path',{d:'M25 14 2 2 11 18Z',fill:'#ff9479',stroke:'#1a1330','stroke-width':2,'stroke-linejoin':'round'}),svg('circle',{cx:24,cy:14,r:6,fill:'#fff6ea',stroke:'#1a1330','stroke-width':2}));return icon;
-}
 function cardTone(n) {return needs(n)||['held','awaiting_approval'].includes(n.status)?'waiting_for_you':n.status==='passed'||n.answered?'passed':['running','submitted','unverified'].includes(n.status)?'current':'unused';}
 // Two walking frames; the second stays hidden when motion is reduced.
 function walker() {
@@ -1098,14 +1089,16 @@ function nodeCard(n, expanded = false) {
   },'node-header');
   header.setAttribute('aria-label',nodeDescription(n));header.setAttribute('aria-expanded',String(expanded));
   header.append(typeIcon(n.kind),el('strong',title(n),'node-title'),el('span',`${t(n.kind||'work')} · ${status(n)}`,'node-status'));
-  const pips=el('span',undefined,'attempt-pips');pips.setAttribute('aria-label',attempts(n));
-  attemptPips(n.laps,n.max_attempts,n.status).forEach(p=>{const pip=el('span',undefined,'pip '+p.state);pip.setAttribute('aria-hidden','true');pips.append(pip);});
-  const tries=el('span',undefined,'attempt-row');
-  tries.append(pips,el('span',n.status==='passed'&&n.attempts?(n.attempts===1?t('firstPass'):t('finishedAttempts',{n:n.attempts})):attempts(n),'attempt-caption'));
-  header.append(tries);
+  header.append(el('span',n.status==='passed'&&n.attempts?(n.attempts===1?t('firstPass'):t('finishedAttempts',{n:n.attempts})):t('tries',{n:n.attempts||0,max:n.max_attempts||3}),'attempt-caption'));
   const reference=el('span',undefined,'ref-line');reference.append(el('span',n.id,'ref'));if(workedBy(n))reference.append(el('span',workedBy(n)));header.append(reference);
-  if(cometCount(n)){const badge=el('span',undefined,'comet-badge');badge.append(cometGlyph(),el('span',String(cometCount(n))));header.append(badge);}
   root.append(header);
+  // What came back and what waits for the person are read on the card itself.
+  const returns=cometCount(n),why=(n.returned_reasons||[]).slice(-1)[0]||[];
+  if(returns&&n.status!=='passed')root.append(el('p',[t('returnTimes',{n:returns}),...why].join(' · '),'card-note returned'));
+  for(const d of view.decisions.filter(d=>d.node===n.id)){
+    const ask=el('div',undefined,'card-note mine');if(question(d))ask.append(el('p',question(d)));
+    ask.append(button(t('answerHere',{id:d.id}),()=>openDecision(d.id),'small'));root.append(ask);
+  }
   return root;
 }
 function createMap() {
@@ -1113,7 +1106,7 @@ function createMap() {
   const toolbar=el('div',undefined,'map-toolbar'),viewport=el('div',undefined,'map-viewport'),spacer=el('div',undefined,'map-spacer'),stage=el('div',undefined,'map-stage');
   viewport.tabIndex=0;viewport.setAttribute('aria-label',t('mapHelp'));spacer.append(stage);viewport.append(spacer);map.append(toolbar,viewport);
   let data={nodes:[],edges:[],decisions:[]},chosenNode=null,layout=null,scale=1,automatic=true;
-  const nodes=new Map(),chips=new Map(),seen=new Map();let drawing=null,wasComplete=null;
+  const nodes=new Map(),chips=new Map(),seen=new Map();let drawing=null,wasComplete=null,placed=false;
   const zoomText=el('output');zoomText.setAttribute('aria-live','polite');
   const zoom=amount=>{automatic=false;scale=Math.max(MIN_FIT_SCALE,Math.min(1.6,scale+amount));size();};
   const fit=()=>{automatic=true;size();viewport.scrollLeft=0;viewport.scrollTop=0;};
@@ -1163,23 +1156,26 @@ function createMap() {
       const d=route.skip?`M${a.x} ${a.y} C${mx} ${a.y} ${mx} ${my} ${mx} ${my} V${route.channel+12} Q${mx} ${route.channel} ${mx+bend*12} ${route.channel} H${b.x-bend*30} Q${b.x-bend*18} ${route.channel} ${b.x-bend*18} ${route.channel+12} V${b.y-12} Q${b.x-bend*18} ${b.y} ${b.x-bend*6} ${b.y} H${b.x}`
         :c?`M${a.x} ${a.y} Q${mx-bend*14} ${a.y} ${mx} ${my} Q${mx+bend*14} ${b.y} ${b.x} ${b.y}`:`M${a.x} ${a.y} C${mx} ${a.y} ${mx} ${b.y} ${b.x} ${b.y}`;
       const flowing=route.gateState==='open'&&data.nodes.find(n=>n.id===route.to)?.status==='running';
-      const line=svg('path',{d,class:'edge-path '+route.gateState+(flowing?' flowing':''),'marker-end':`url(#arrow-${route.gateState})`});
+      const line=svg('path',{d,class:'edge-path '+route.gateState+(route.relation==='reviews'?' review':'')+(flowing?' flowing':''),'marker-end':`url(#arrow-${route.gateState})`});
       drawing.append(flowing?inPhase(line,1000):line);
       if(!c||chips.has(c.first))continue;
-      const chip=route.decision?button('',()=>openDecision(route.decision),'edge-chip '+route.gateState):el('div',undefined,'edge-chip '+route.gateState);
+      const chip=el('div',undefined,'edge-chip '+route.gateState);
       const source=data.nodes.find(n=>n.id===route.from),targets=layout.routes.filter(r=>r.chip===c).map(r=>title(data.nodes.find(n=>n.id===r.to))).join(', ');
       chip.setAttribute('aria-label',`${edgeRelationLabel(route,language)}. ${title(source)} → ${targets}`);
-      if(route.gateState==='returned')chip.append(cometGlyph());chip.append(el('span',route.decision?`${route.text} · ${route.decision}`:route.text));chip.dataset.chip=c.key;setRect(chip,c);stage.append(chip);chips.set(c.first,chip);
+      chip.append(el('span',route.text));chip.dataset.chip=c.key;setRect(chip,c);stage.append(chip);chips.set(c.first,chip);
     }
     // All focusable controls are ordered by column and then vertical position.
     [...nodes.values(),...chips.values()].sort((a,b)=>parseFloat(a.style.left)-parseFloat(b.style.left)||parseFloat(a.style.top)-parseFloat(b.style.top)).forEach(e=>stage.append(e));
     stage.querySelectorAll('.overview-frog,.goal-card').forEach(e=>e.remove());
     const goal=el('article',undefined,'goal-card node-card '+(data.complete?'passed':'unused')+(data.complete&&wasComplete===false?' pop':''));wasComplete=!!data.complete;goal.append(typeIcon('goal'),el('strong',data.title||t('goal')),el('span',`${t('goal')} · ${data.complete?t('passed'):t('notStarted')}`));setRect(goal,layout.goal);stage.append(goal);
-    for(const n of data.nodes.filter(n=>needs(n)||['held','awaiting_approval'].includes(n.status))) {
-      const p=layout.positions[n.id],report=el('div',undefined,'overview-frog');const frog=el('img');frog.src='/static/assets/frog-report.png';frog.alt='';report.append(inPhase(frog,1200),el('span',[t('waitingBubble'),...data.decisions.filter(d=>d.node===n.id).map(d=>d.id)].join(' '),'speech'));Object.assign(report.style,{left:p.x+'px',top:p.y+p.height+8+'px'});stage.append(report);
-    }
     if(data.complete){const frog=el('img',undefined,'overview-frog waving');frog.src='/static/assets/frog-wave.png';frog.alt=t('allDone');inPhase(frog,1200);Object.assign(frog.style,{left:layout.goal.x+52+'px',top:layout.goal.y+layout.goal.height+10+'px'});stage.append(frog);}
     size();
+    // A graph wider than the window first shows where the work is, not where it began.
+    if(!data.nodes.length)placed=false;
+    else if(!placed&&viewport.clientWidth){
+      placed=true;const open=data.nodes.filter(n=>n.status!=='passed'&&layout.positions[n.id]).map(n=>layout.positions[n.id].x);
+      viewport.scrollLeft=open.length?Math.max(0,Math.min(...open)*scale-120):0;
+    }
     if(reveal&&layout.positions[id]){const p=layout.positions[id],w=viewport.clientWidth||900;
       if(p.x*scale<viewport.scrollLeft+12||(p.x+p.width)*scale>viewport.scrollLeft+w-12)viewport.scrollLeft=Math.max(0,p.x*scale-(w-p.width*scale)/2);
       viewport.scrollTop=Math.max(0,p.y*scale-20);
