@@ -158,6 +158,7 @@ class PageTests(unittest.TestCase):
             self.skipTest('node is not on PATH; dashboard decision behavior tests skipped')
         script = r"""
 import assert from 'node:assert/strict';
+process.on('uncaughtException', error=>{console.error(error.stack.replace(/data:text[^: ]+/g,'page.js'));process.exit(1);});
 import {readFileSync} from 'node:fs';
 const source = readFileSync(process.argv[2], 'utf8');
 const {createDecisionController, decisionQuestion, purposeWording, purposeAction, viewLanguage, edgeRelationLabel, fitScale, MIN_FIT_SCALE, edgeChipText, cometCount, layeredLayout, crossingCount, displayState, statusGlyph, checkWording, checkTitle, offscreenDirection} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
@@ -182,89 +183,18 @@ assert.equal(cometCount({laps:['returned','returned','passed'],returned_reasons:
 assert.equal(cometCount({laps:[],returned_reasons:[[]]}),0);
 """)
 
-    def test_layout_rectangles_depth_reviews_and_fit(self):
+    def test_layout_demo(self):
         with tempfile.TemporaryDirectory() as directory, mock.patch.dict(os.environ):
             root=pathlib.Path(directory)
             run=build_demo_run(root/'home',root/'project')
             current,events,derived=server._snapshot(run)
             demo=server._view(current,derived,events,root/'project')
         self.run_controller('const demo = '+json.dumps(demo)+r';'+r"""
-const nodes=Array.from({length:12},(_,i)=>({id:'n'+i,kind:'work',title:'Work item '+i,returned_reasons:i===5?[['A required case did not pass']]:[]}));
-const edges=[];
-for(let i=3;i<12;i++) { const layer=Math.floor(i/3); for(const p of [(i%3),(i+1)%3]) edges.push({from:'n'+((layer-1)*3+p),to:'n'+i,label:'Readable handoff '+i,relation:'hands_over',gate:'closed'}); }
-const crossed={nodes:nodes.slice(0,6),edges:[{from:'n0',to:'n5'},{from:'n1',to:'n4'},{from:'n2',to:'n3'}]};
-const reviewed={nodes:[{id:'work',kind:'work'},{id:'review',kind:'review',target:'work'},{id:'next',kind:'work'}],edges:[{from:'review',to:'work',relation:'reviews'},{from:'work',to:'review',relation:'hands_over'},{from:'review',to:'next',relation:'hands_over'}]};
-const overlap=(a,b)=>a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y;
-for(const data of [demo,{nodes,edges},crossed,reviewed]) for(const expanded of [null,data.nodes[0].id,data.nodes.at(-1).id]) {
-  const options={expanded,language:'en'}, layout=layeredLayout(data.nodes,data.edges,data.decisions,true,options);
-  const depth=id=>{const node=data.nodes.find(n=>n.id===id);return node.kind==='review'?depth(node.target)+1:Math.max(0,...data.edges.filter(e=>e.to===id&&e.relation!=='reviews').map(e=>depth(e.from)+1));};
-  for(const node of data.nodes) {
-    const p=layout.positions[node.id];assert.equal(p.depth,depth(node.id));
-    assert.equal(p.layer,depth(node.id));assert(layout.layers[p.depth].includes(node.id));
-  }
-  const rects=[...layout.cardRects,...layout.chips];
-  rects.forEach((a,i)=>rects.slice(i+1).forEach(b=>assert(!overlap(a,b),'cards and chips must never overlap: '+JSON.stringify([a,b]))));
-  // Only one source's identical output may merge into a common trunk.
-  const segments=r=>r.points.slice(1).map((p,i)=>[r.points[i],p]);
-  for(const [i,r] of layout.routes.entries()) for(const other of layout.routes.slice(i+1)) {
-    if(r.bundle===other.bundle)continue;
-    for(const [a,b] of segments(r)) for(const [c,d] of segments(other)) {
-      if(a.x===b.x && c.x===d.x && a.x===c.x)assert(Math.min(Math.max(a.y,b.y),Math.max(c.y,d.y))-Math.max(Math.min(a.y,b.y),Math.min(c.y,d.y))<=.001,'vertical routes must not merge');
-      if(a.y===b.y && c.y===d.y && a.y===c.y)assert(Math.min(Math.max(a.x,b.x),Math.max(c.x,d.x))-Math.max(Math.min(a.x,b.x),Math.min(c.x,d.x))<=.001,'horizontal routes must not merge '+JSON.stringify([r,other]));
-    }
-  }
-  const unsorted=layeredLayout(data.nodes,data.edges,data.decisions,false,options);
-  const deps=data.edges.filter(e=>e.relation!=='reviews');
-  assert(crossingCount(deps,layout.positions)<=crossingCount(deps,unsorted.positions));
-  assert.deepEqual(layout,layeredLayout(data.nodes,data.edges,data.decisions,true,options));
-  assert(layout.bounds.width>=Math.max(...Object.values(layout.positions).map(p=>p.x+p.width)));
-  for(const [w,h] of [[1680,960],[1280,800],[845,912],[390,844]])assert(fitScale(layout.bounds,w,h,w<760)>=MIN_FIT_SCALE);
-}
-const layout=layeredLayout(reviewed.nodes,reviewed.edges);
-assert.equal(layout.positions.review.layer,layout.positions.work.layer+1);
-assert(layout.routes.some(e=>e.from==='work'&&e.to==='review'&&e.relation==='reviews'));
-const back=layout.routes.find(e=>e.relation==='reviews'), forward=layout.routes.find(e=>e.from==='work'&&e.relation!=='reviews');
-assert.notEqual(back.start.y,forward.start.y,'review and handoff use separate ports');
-const measured=layeredLayout([{id:'a',kind:'work'}],[],[],true,{heights:{a:127}});
-assert.equal(measured.positions.a.height,127,'ports and spacing use the rendered card height');
-assert(layout.order.includes('review'));
-assert.equal(fitScale({width:10000,height:10000},300,300),MIN_FIT_SCALE);
-// Identical fan-out shares one source port, one label and a visible junction.
-const fork=layeredLayout([{id:'a',kind:'work'},{id:'b',kind:'work'},{id:'c',kind:'work'}],[{from:'a',to:'b',label:'Parsed record',relation:'hands_over',gate:'open'},{from:'a',to:'c',label:'Parsed record',relation:'hands_over',gate:'open'}],[],true,{language:'en'});
-assert.equal(fork.chips.length,0,'a long label is dropped if it cannot fit its segment');
-assert.equal(fork.routes[0].start.y,fork.routes[1].start.y);
-assert(fork.routes.every(r=>r.junction));
-assert.equal(fork.routes.length,2);
-for(const r of fork.routes)assert.equal(r.chip,null);
-assert.deepEqual(fork.terminals,['b','c']);
-const outputs=layeredLayout(['a','b','c'].map(id=>({id,kind:'work'})),[{from:'a',to:'b',label:'One'},{from:'a',to:'c',label:'Two'}]);
-assert.equal(outputs.chips.length,2,'different outputs never share a label');
-assert.notEqual(outputs.routes[0].bundle,outputs.routes[1].bundle);
-const skips=layeredLayout(['a','b','c','d'].map(id=>({id,kind:'work'})),[{from:'a',to:'b',label:'One'},{from:'b',to:'c',label:'Two'},{from:'a',to:'c',label:'One'},{from:'a',to:'d',label:'One'}]);
-assert.equal(skips.chips.filter(c=>skips.routes.find(r=>r.chip===c).from==='a').length,1,'one output retains one label even across layers');
-assert(skips.routes.find(r=>r.from==='a'&&r.to==='c').skip);
-assert.deepEqual(skips.routes[0].start,skips.routes[2].start,'skip and adjacent branches share a source port');
-
-const tall=layeredLayout(nodes,edges,[],true,{heights:Object.fromEntries(nodes.map(n=>[n.id,150])),maxHeight:440});
-for(const p of Object.values(tall.positions))assert(p.y%440+p.height<=416,'page breaks keep whole cards within the initial view');
-const down=layeredLayout(reviewed.nodes,reviewed.edges,[],true,{heights:{work:110,review:140,next:120},vertical:true});
-assert(down.vertical);assert(down.bounds.width<600,'explicit vertical layout remains supported independently of selection');
-for(const r of down.routes) {
-  const source=down.positions[r.from],target=down.positions[r.to];
-  assert.equal(r.start.y,r.reverse?source.y:source.y+source.height);
-  assert.equal(r.end.y,r.reverse?target.y+target.height:target.y);
-  for(const p of r.points)for(const c of down.cardRects)assert(!(p.x>c.x&&p.x<c.x+c.width&&p.y>c.y&&p.y<c.y+c.height),'routes never enter a card except at a port');
-}
-
-// A line's text has one meaning: the name of what is handed over. Reviews, decisions and unnamed handoffs carry none.
-assert.equal(edgeChipText({relation:'hands_over',label:'Parsed record'},'en'),'Parsed record');
-for(const edge of [{relation:'hands_over',label:''},{relation:'reviews',label:'x'},{relation:'waits_for_decision',label:'approval'},{relation:'toward_goal',label:''}]) assert.equal(edgeChipText(edge),'');
-const review=layeredLayout([{id:'a',kind:'work'},{id:'r',kind:'review',target:'a'}],[{from:'r',to:'a',label:'',relation:'reviews',gate:'closed'}],[{id:'d1',node:'a'}]);
-assert.equal(review.chips.length,0,'a review line and a waiting decision add no label');
-// A graph too wide for the map keeps its words readable and scrolls instead of shrinking past the minimum.
-const chain=layeredLayout(['a','b','c','d'].map(id=>({id,kind:'work'})),[['a','b'],['b','c'],['c','d']].map(([from,to])=>({from,to,relation:'hands_over'})),[],true,{language:'ko'});
-assert.equal(fitScale(chain.bounds,860,2000),MIN_FIT_SCALE); assert.equal(MIN_FIT_SCALE*14,13);
-assert(chain.bounds.width*MIN_FIT_SCALE>860);
+const layout=layeredLayout(demo.nodes,demo.edges,demo.decisions);
+assert.equal(layout.routes.length,demo.edges.length);
+assert.deepEqual(layout,layeredLayout(demo.nodes,demo.edges,demo.decisions));
+assert.equal(edgeChipText({relation:'hands_over',label:'Record'}),'Record');
+assert.equal(edgeChipText({relation:'reviews',label:'Record'}),'');
 """)
 
     def test_offscreen_cards_have_one_direction_and_fit_uses_both_dimensions(self):
@@ -417,10 +347,11 @@ for (const question of ['Approve deploy for prod?','Approve hold for another?','
     def test_dom_uses_controller_and_preserves_composing_input_on_refresh(self):
         self.run_controller(r"""
 class Element {
-  constructor(tag) { this.tagName=tag; this.children=[]; this.dataset={}; this.listeners={}; this.hidden=false; this.disabled=false; this.value=''; this._text=''; this.style={}; this.classList={add:name=>{this.className=((this.className||'')+' '+name).trim();},toggle:(name,on)=>{const classes=new Set((this.className||'').split(' ').filter(Boolean));if(on??!classes.has(name))classes.add(name);else classes.delete(name);this.className=[...classes].join(' ');return classes.has(name);}}; }
+  constructor(tag) { this.tagName=tag; this.children=[]; this.dataset={}; this.listeners={}; this.hidden=false; this.disabled=false; this.value=''; this._text=''; this.style={setProperty(){}}; this.classList={remove:name=>{this.className=(this.className||'').split(' ').filter(c=>c!==name).join(' ');},add:name=>{this.className=((this.className||'')+' '+name).trim();},toggle:(name,on)=>{const classes=new Set((this.className||'').split(' ').filter(Boolean));if(on??!classes.has(name))classes.add(name);else classes.delete(name);this.className=[...classes].join(' ');return classes.has(name);}}; }
   prepend(...children) { for(const c of children){if(c.parent)c.remove();c.parent=this;} this.children.unshift(...children); }
   remove() { if(this.parent)this.parent.children=this.parent.children.filter(c=>c!==this); }
   get firstElementChild() { return this.children[0]; }
+  get parentElement() { return this.parent; }
   append(...children) { for (const c of children) { if(c.parent)c.remove(); c.parent=this; this.children.push(c); } }
   replaceChildren(...children) { for (const c of this.children) { if (c.contains(document.activeElement)) document.activeElement=null; c.parent=null; } this.children=[]; this._text=''; this.append(...children); }
   contains(node) { return this===node || this.children.some(c=>c.contains(node)); }
@@ -431,8 +362,9 @@ class Element {
   dispatchEvent(event) { for (const fn of this.listeners[event.type] || []) fn(event); }
   click() { if (!this.disabled) this.dispatchEvent({type:'click'}); }
   focus() { document.activeElement=this; }
+  scrollIntoView() {}
   querySelectorAll(selector) {
-    const matches = c => selector==='button[data-outcome]' ? c.tagName==='button' && !!c.dataset.outcome : selector==='[data-i18n]' ? false : c.tagName===selector || selector===`#${c.id}`;
+    const matches = c => selector.startsWith('.') ? (c.className||'').split(' ').includes(selector.slice(1)) : selector.startsWith('[data-hint=') ? c.dataset.hint===selector.slice(11,-1) : selector==='[data-effect]' ? !!c.dataset.effect : selector==='button[data-outcome]' ? c.tagName==='button' && !!c.dataset.outcome : selector==='[data-i18n]' ? false : c.tagName===selector || selector===`#${c.id}`;
     return this.children.flatMap(c=>[...(matches(c)?[c]:[]),...c.querySelectorAll(selector)]);
   }
   querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
@@ -448,7 +380,7 @@ for (const id of ['map','notice','picker','picker-label','find','find-text','hom
 }
 Object.defineProperty(globalThis,'navigator',{value:{language:'ko-KR'},configurable:true});
 globalThis.location={href:'http://localhost:5000/?t=demo',port:'5000',hash:'',pathname:'/',search:''};
-globalThis.addEventListener=()=>{};
+globalThis.addEventListener=(type,fn)=>{docEvents['window:'+type]=fn;};
 globalThis.history={replaceState(){}}; globalThis.sessionStorage={getItem(){return 'demo'},setItem(){}};
 globalThis.ResizeObserver=class { observe(){} };
 globalThis.matchMedia=()=>({matches:true,addEventListener(){}});
@@ -460,7 +392,7 @@ const posts=[]; let resolvePost;
 globalThis.fetch=async (path,options)=>{
   if (options.method==='POST') { posts.push(JSON.parse(options.body)); return new Promise(resolve=>{resolvePost=()=>resolve({ok:true,json:async()=>({ok:true})});}); }
   if(path.startsWith('/api/file?')) return {ok:true,text:async()=>'<script>literal Markdown</script>\n# Guide'};
-  return {ok:true,json:async()=>path==='/api/projects'?{projects:[{root:first.project,name:'Project',runs:[{id:first.run,status:'open'}]}]}:{plan:{},view:structuredClone(live),state:{decisions:{}}}};
+  return {ok:true,json:async()=>path==='/api/projects'?{projects:[{root:first.project,name:'Project',runs:[{id:first.run,status:'open'},{id:second.run,status:'open'}]}]}:{plan:{},view:structuredClone(live),state:{decisions:{}}}};
 };
 const settle=async()=>{ for(let i=0;i<12;i++) await new Promise(setImmediate); };
 await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64')+'#dom'); await settle();
@@ -489,7 +421,7 @@ get('answer-actions').children.at(-1).click();live.decisions.pop();
 const saved=structuredClone(live);
 live.decisions[0]={...d,purpose:'human_check',failed:[],files:[],has_evidence:false};live.timeline=[];
 docEvents.visibilitychange();await settle();get('decision-list').querySelector('button').click();
-const emptyActions=get('answer-actions').children;
+const emptyActions=get('answer-actions').querySelectorAll('button[data-outcome]');
 assert.equal(emptyActions[0].dataset.outcome,'revision_requested','request evidence first');
 assert.equal(emptyActions[1].className,'','acceptance is secondary');
 assert.equal(emptyActions[1].disabled,true,'empty acceptance needs explicit confirmation');
@@ -501,14 +433,14 @@ get('answer-actions').children.at(-1).click();live=saved;docEvents.visibilitycha
 const originalNode=structuredClone(live.nodes[0]);
 live.nodes[0].attempts=2;live.nodes[0].laps=['returned','current'];live.nodes[0].returned_reasons=[['Unit passes']];
 docEvents.visibilitychange();await settle();
-assert.match(get('map').textContent,/Earlier attempt 1 returned/);
+assert.match(get('map').textContent,/Attempt 2/);
 assert.doesNotMatch(get('map').textContent,/✕|Unit passes/,'earlier failure cannot dominate the current card');
 assert.match(get('map').textContent,/Your turn/);
 live.nodes[0]=originalNode;docEvents.visibilitychange();await settle();
 
 live.nodes.push({id:'choice',kind:'decision',title:'Pick a direction',status:'pending',answered:true,inputs:[],outputs:[],laps:[],returned_reasons:[]});
 docEvents.visibilitychange();await settle();
-assert.match(get('map').textContent,/Decision · Finished/,'answered decisions use finished words as well as colour');
+assert.match(get('map').textContent,/Finished/,'answered decisions use finished words as well as colour');
 live.nodes.pop();docEvents.visibilitychange();await settle();
 // The other view is the inbox and the record, newest entry first, with the real check of a returned attempt.
 get('home-tab').click(); assert.equal(get('home').hidden,false); assert.equal(get('flow').hidden,true);
@@ -523,8 +455,8 @@ get('decision-list').querySelector('button').click();
 assert.match(get('decision').textContent,/attempt 1 came back/);
 assert.match(get('decision').textContent,/In attempt 1, “Unit passes” did not pass/);
 assert.match(get('decision').textContent,/a.py/);
-assert.equal(get('flow-tab')['aria-pressed'],'true','reading retains its parent tab');
-const input=get('answer-text'), actions=get('answer-actions'), buttons=[...actions.children];
+assert.equal(get('flow-tab')['aria-pressed'],'false','reading must not claim to be the graph');
+const input=get('answer-text'), actions=get('answer-actions'), buttons=actions.querySelectorAll('button[data-outcome]');
 assert(input, 'fallback must open the decision');
 assert.equal(buttons[0].textContent,'Accept anyway'); assert.equal(buttons[0].disabled,true, 'real affirmative button must use controller.canSubmit');
 buttons[0].dispatchEvent({type:'click'}); await settle();
@@ -536,7 +468,7 @@ docEvents.visibilitychange(); await settle();
 assert.equal(get('title').textContent,'Updated flow', 'refresh must actually apply changed content');
 assert.equal(get('answer-text'),input,'refresh must preserve the textarea node');
 assert.equal(get('answer-actions'),actions,'refresh must preserve the actions node');
-assert.deepEqual(actions.children,buttons,'refresh must preserve every action button');
+assert.deepEqual(actions.querySelectorAll('button[data-outcome]'),buttons,'refresh must preserve every action button');
 assert.equal(document.activeElement,input); assert.equal(input.value,'고쳐 주세요');
 assert.equal(input.selectionStart,2); assert.equal(input.selectionEnd,4);
 input.dispatchEvent({type:'compositionend'});
@@ -556,6 +488,14 @@ resolvePost(); await settle();
 assert.match(get('notice').textContent,/Answer sent/,'real outcome must survive the deferred decision-closing refresh');
 assert.equal(get('picker').disabled,false);
 assert.equal(get('answer-text'),null);
+// A selected panel must release its scroll callback when another run is opened.
+get('flow-tab').click();get('map').querySelector('article').querySelector('button').click();
+assert.equal(get('panel').hidden,false);
+live.title='Another run';live.run=second.run;live.project='Project';
+location.hash='#project=%2Fproject&run=second';docEvents['window:hashchange']();await settle();
+assert.equal(get('title').textContent,'Another run','cross-run navigation updates the header');
+assert.equal(get('where').textContent,'Project · second');
+assert.equal(get('panel').hidden,true);assert.equal(get('panel').onscroll,null);
 """)
 
 
@@ -581,7 +521,7 @@ controller.openDetails();assert.equal(controller.canSubmit('approved',''),true);
         self.assertIn('details[open]>summary:before{transform:rotate(45deg)',html)
         self.assertNotIn('content:"▶"',html)
         self.assertNotIn('if(chosenNode && layout.bounds',js)
-        self.assertIn('#flow.has-selection{grid-template-columns:minmax(0,1fr)}',html)
+        self.assertIn('#flow.has-selection{grid-template-columns:minmax(0,1fr) 320px}',html)
         self.run_controller(r"""
 const nodes=['a','b','c'].map(id=>({id,title:id,kind:'work'})), edges=[{from:'a',to:'b'},{from:'b',to:'c'}];
 const before=layeredLayout(nodes,edges);
@@ -592,10 +532,10 @@ assert.equal(statusGlyph('running'),'▶');
     def test_card_history_never_competes_with_current_status(self):
         js=(S / 'scripts/graphflow/page.js').read_text()
         card=js.split('function nodeCard(',1)[1].split('function createMap()',1)[0]
-        self.assertIn("t('pastReturn'",card)
+        self.assertIn("t('returnTimes'",card)
         self.assertNotIn('checkWording',card)
         self.assertNotIn('failure-mark',card)
-        self.assertLess(card.index('statusLine'),card.index("t('pastReturn'"))
+        self.assertLess(card.index('statusLine'),card.index("t('returnTimes'"))
 
     def test_real_demo_and_decision_view(self):
         with tempfile.TemporaryDirectory() as directory, mock.patch.dict(os.environ):

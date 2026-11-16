@@ -1,0 +1,90 @@
+{
+  "nodes": [
+    {
+      "id": "reader",
+      "kind": "work",
+      "title": "기록 읽기",
+      "target": null
+    },
+    {
+      "id": "summary",
+      "kind": "work",
+      "title": "글로 요약하기",
+      "target": null
+    },
+    {
+      "id": "html",
+      "kind": "work",
+      "title": "웹 화면 만들기",
+      "target": null
+    },
+    {
+      "id": "html-review",
+      "kind": "review",
+      "title": "웹 화면 검토",
+      "target": "html"
+    },
+    {
+      "id": "guide",
+      "kind": "work",
+      "title": "사용 설명서",
+      "target": null
+    },
+    {
+      "id": "guide-review",
+      "kind": "review",
+      "title": "설명서 검토",
+      "target": "guide"
+    }
+  ],
+  "edges": [
+    {
+      "from": "reader",
+      "to": "summary",
+      "relation": "hands_over",
+      "label": "읽은 기록"
+    },
+    {
+      "from": "reader",
+      "to": "html",
+      "relation": "hands_over",
+      "label": "읽은 기록"
+    },
+    {
+      "from": "html",
+      "to": "html-review",
+      "relation": "hands_over",
+      "label": "웹 화면 코드"
+    },
+    {
+      "from": "html-review",
+      "to": "html",
+      "relation": "reviews",
+      "label": ""
+    },
+    {
+      "from": "summary",
+      "to": "guide",
+      "relation": "hands_over",
+      "label": "요약 명령"
+    },
+    {
+      "from": "html",
+      "to": "guide",
+      "relation": "hands_over",
+      "label": "웹 화면 코드"
+    },
+    {
+      "from": "guide",
+      "to": "guide-review",
+      "relation": "hands_over",
+      "label": "사용 설명서"
+    },
+    {
+      "from": "guide-review",
+      "to": "guide",
+      "relation": "reviews",
+      "label": ""
+    }
+  ]
+}

@@ -26,7 +26,7 @@ const STRINGS = {
     "to": "받는 곳",
     "noReason": "돌아온 까닭이 따로 기록되지 않았어요.",
     "attempt": "{n}번째 시도예요 · 최대 {max}번",
-    "notStarted": "아직 시작하지 않았어요",
+    "notStarted": "시작 전이에요",
     "passed": "끝났어요",
     "running": "만들고 있어요",
     "retrying": "고치고 있어요",
@@ -124,8 +124,8 @@ const STRINGS = {
     "zoomIn": "크게 보기",
     "zoomOut": "작게 보기",
     "mapHelp": "끌어서 이동 · + − 확대 · 0 맞추기",
-    "firstPass": "첫 시도에 끝났어요",
-    "finishedAttempts": "{n}번 시도해서 끝났어요",
+    "firstPass": "시도 1회",
+    "finishedAttempts": "시도 {n}회",
     "lineLegend": "실선 → 넘겼어요 · 파선 ⇢ 아직 기다려요 · 점선 ↶ 검토해요",
     "unusedAttempts": "최대 {max}번 시도할 수 있어요",
     "home": "할 일과 기록",
@@ -205,7 +205,7 @@ const STRINGS = {
     "tries": "시도 {n}/{max}",
     "closeDetails": "자세한 내용 닫기",
     "mapDirection": "왼쪽에서 오른쪽으로",
-    "checkMet": "✓ 확인했어요: {title}",
+    "checkMet": "✓ {title}",
     "workingHere": "작업자 세션이 진행 중이에요",
     "offLeft": "← 왼쪽",
     "offRight": "오른쪽 →",
@@ -236,7 +236,7 @@ const STRINGS = {
     "lineSampleOpen": "넘겼어요",
     "lineSampleClosed": "아직 기다려요",
     "lineSampleReview": "검토를 맡겼어요",
-    "attemptShort": "{n}번째 시도예요",
+    "attemptShort": "{n}번째 시도",
     "earlierHistory": "이전 시도 기록",
     "failureUnknownAttempt": "✕ 기록된 시도에서 “{names}” 확인이 통과하지 못했어요",
     "modelName": "모델 {model}",
@@ -246,14 +246,22 @@ const STRINGS = {
     "mapDown": "위에서 아래로",
     "panelEnd": "상세 내용 끝이에요",
     "moreDetails": "아래로 내려서 나머지 내용을 읽어요 ↓",
-    "pastReturn": "앞선 시도 {n}번 되돌아옴",
+    "pastReturn": "이전 시도 {n}번 되돌아옴",
     "nothingToJudge": "판단할 자료가 없어요",
     "nothingToJudgeBody": "읽을 파일도, 지금 시도의 검사 결과도 없어요. 결과를 보여 달라고 돌려보내거나 채팅에서 다시 물어봐 주세요.",
     "confirmBlind": "파일과 검사 결과 없이 받아들일게요",
     "blindHint": "자료 없이 받아들이려면 위 내용을 확인해 주세요.",
     "acceptBlind": "자료 없이 받아들이기",
     "lineSampleReturned": "되돌아왔어요",
-    "minZoom": "글자를 읽을 수 있는 최소 크기예요"
+    "minZoom": "글자를 읽을 수 있는 최소 크기예요",
+    "readGateHint": "파일이나 근거를 먼저 열어 주세요",
+    "approveEffect": "받아들이기로 한 답이 리더 세션에 전달돼요",
+    "revisionEffect": "고칠 곳이 리더 세션에 전달돼요",
+    "answerEffect": "답이 리더 세션에 전달돼요",
+    "retryEffect": "다음은 최대 {max}번 중 {n}번째 시도예요",
+    "decisionWork": "관련 일 · {title}",
+    "fitAll": "전체 보기",
+    "readScale": "읽기 크기"
   },
   "en": {
     "flow": "Whole flow",
@@ -379,8 +387,8 @@ const STRINGS = {
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "mapHelp": "Drag to move · + − zoom · 0 fit",
-    "firstPass": "Finished on the first attempt",
-    "finishedAttempts": "Finished after {n} attempts",
+    "firstPass": "1 attempt",
+    "finishedAttempts": "{n} attempts",
     "lineLegend": "Solid → delivered · dashed ⇢ waiting · dotted ↶ review",
     "unusedAttempts": "Up to {max} attempts available",
     "home": "To do and log",
@@ -460,7 +468,7 @@ const STRINGS = {
     "tries": "attempt {n}/{max}",
     "closeDetails": "Close details",
     "mapDirection": "Left to right",
-    "checkMet": "✓ Met: {title}",
+    "checkMet": "✓ {title}",
     "workingHere": "Worker session in progress",
     "offLeft": "← Left",
     "offRight": "Right →",
@@ -508,7 +516,15 @@ const STRINGS = {
     "blindHint": "To accept without evidence, confirm the statement above.",
     "acceptBlind": "Accept without evidence",
     "lineSampleReturned": "Returned",
-    "minZoom": "Minimum zoom for readable text"
+    "minZoom": "Minimum zoom for readable text",
+    "readGateHint": "Open a file or the evidence first",
+    "approveEffect": "Your acceptance is sent to the leader session",
+    "revisionEffect": "Your requested changes are sent to the leader session",
+    "answerEffect": "Your answer is sent to the leader session",
+    "retryEffect": "The next attempt is {n} of {max}",
+    "decisionWork": "About · {title}",
+    "fitAll": "Fit all",
+    "readScale": "Readable size"
   }
 };
 // UI_STRINGS_END
@@ -662,125 +678,140 @@ export function forwardEdges(edges) {
   return edges.map(e => e.relation === 'reviews' ? {...e, from:e.to, to:e.from} : e);
 }
 export function layeredLayout(nodes, edges, decisions = [], sort = true, options = {}) {
-  const width=232, gap=132, rowGap=options.rowGap || 28, left=24, top=24, byId=new Map(nodes.map(n=>[n.id,n]));
-  // Stored review relations name reviewer → target; the drawing reads target → reviewed by.
-  const dependencies=edges.filter(e=>e.relation!=='reviews'&&byId.has(e.from)&&byId.has(e.to));
-  const parents=new Map(nodes.map(n=>[n.id,dependencies.filter(e=>e.to===n.id).map(e=>e.from)]));
-  nodes.filter(n=>n.kind==='review'&&byId.has(n.target)).forEach(n=>parents.set(n.id,[n.target]));
-  const depths=new Map();
-  const depth=(id,seen=new Set())=>{
-    if(depths.has(id))return depths.get(id);
-    if(seen.has(id))return 0;
-    const next=new Set(seen);next.add(id);
-    const d=Math.max(0,...(parents.get(id)||[]).map(p=>depth(p,next)+1));depths.set(id,d);return d;
+  const byId = new Map(nodes.map(n => [n.id, n])), vertices = new Map(), links = [];
+  const routes = forwardEdges(edges).filter(e => byId.has(e.from) && byId.has(e.to)).map((e,index) => {
+    const waiting = decisions.find(d => d.node === e.from);
+    return {...e,index,bundle:index,text:edgeChipText(e),chip:null,gateState:waiting?'waiting_for_you':e.gate||'closed',decision:waiting?.id};
+  });
+  const parents = id => routes.filter(e => e.to === id).map(e => e.from);
+  const depths = new Map();
+  const depth = (id, seen = new Set()) => {
+    if (depths.has(id)) return depths.get(id);
+    if (seen.has(id)) return 0;
+    const next = new Set(seen); next.add(id);
+    const d = Math.max(0,...parents(id).filter(p => !next.has(p)).map(p => depth(p,next)+1));
+    depths.set(id,d); return d;
   };
-  const layers=[];
-  nodes.forEach(n=>(layers[depth(n.id)] ||= []).push(n.id));
-  const height=n=>{
-    const lines=Math.max(1,Math.ceil(textWidth(n.title,17,9.5)/184));
-    const base=132+lines*26;
-    return options.heights?.[n.id] || base;
+  const layers = [];
+  for (const n of nodes) {
+    const d = depth(n.id); vertices.set(n.id,{id:n.id,layer:d,node:n}); (layers[d] ||= []).push(n.id);
+  }
+  // A long edge occupies a real slot in every intervening layer, not an outside detour.
+  for (const r of routes) {
+    r.chain = [r.from];
+    for (let d=depth(r.from)+1; d<depth(r.to); d++) {
+      const id = `\u0000${r.index}:${d}`; vertices.set(id,{id,layer:d,dummy:true,route:r.index}); layers[d].push(id); r.chain.push(id);
+    }
+    r.chain.push(r.to); r.skip = r.chain.length>2;
+    r.chain.slice(1).forEach((id,i) => links.push({from:r.chain[i],to:id,route:r.index}));
+  }
+  const rank = () => new Map(layers.flatMap(ids => ids.map((id,i) => [id,i])));
+  const crossings = () => {
+    const ranks=rank(); let count=0;
+    links.forEach((a,i)=>links.slice(i+1).forEach(b=>{
+      if(vertices.get(a.from).layer===vertices.get(b.from).layer && (ranks.get(a.from)-ranks.get(b.from))*(ranks.get(a.to)-ranks.get(b.to))<0)count++;
+    })); return count;
   };
-  let positions={};
-  const place=()=>{
-    positions={}; const sizes=layers.map(ids=>ids.reduce((sum,id)=>sum+height(byId.get(id)),0)+Math.max(0,ids.length-1)*rowGap), tallest=Math.max(0,...sizes);
-    layers.forEach((ids,d)=>{let y=top+(options.maxHeight && tallest>options.maxHeight ? 0 : (tallest-sizes[d])/2);ids.forEach(id=>{const h=height(byId.get(id));if(options.maxHeight && h+2*top<=options.maxHeight && tallest>options.maxHeight && y%options.maxHeight+h>options.maxHeight-top)y=Math.ceil(y/options.maxHeight)*options.maxHeight+top;if(byId.get(id).kind==='review'&&positions[byId.get(id).target])y=Math.max(y,positions[byId.get(id).target].y);positions[id]={x:left+d*(width+gap),y,width,height:h,depth:d,layer:d};y+=h+rowGap;});});
-  };
-  const cost=()=>crossingCount(dependencies,positions)*1e7+dependencies.reduce((s,e)=>s+Math.abs(positions[e.from].y-positions[e.to].y),0);
-  place();
-  if(sort)for(let sweep=0;sweep<8;sweep++) {
+  let best=layers.map(ids=>[...ids]),bestCost=crossings();
+  if(sort)for(let sweep=0;sweep<12;sweep++) {
+    const order=layers.map((_,i)=>i);if(sweep%2)order.reverse();
+    for(const d of order) {
+      const ranks=rank(), score=id=>{
+        const near=links.filter(e=>sweep%2?e.from===id:e.to===id).map(e=>ranks.get(sweep%2?e.to:e.from));
+        return near.length?near.reduce((a,b)=>a+b,0)/near.length:ranks.get(id);
+      };
+      layers[d].sort((a,b)=>score(a)-score(b)||ranks.get(a)-ranks.get(b));
+    }
+    const cost=crossings();if(cost<bestCost){bestCost=cost;best=layers.map(ids=>[...ids]);}
+  }
+  layers.splice(0,layers.length,...best);
+  const widths=layers.map(ids=>Math.max(208,...ids.filter(id=>byId.has(id)).map(id=>Math.min(280,Math.ceil(textWidth(byId.get(id).title,18,9))+40))));
+  for(const v of vertices.values()) {
+    v.width=widths[v.layer];
+    v.height=v.dummy?24:148+Math.max(0,Math.ceil(textWidth(v.node.title,18,9)/(v.width-40))-1)*26;
+  }
+  const gap=28,margin=28;
+  const total=ids=>ids.reduce((s,id)=>s+vertices.get(id).height,0)+Math.max(0,ids.length-1)*gap;
+  const tallest=Math.max(0,...layers.map(total));
+  for(const ids of layers){let y=margin+(tallest-total(ids))/2;for(const id of ids){vertices.get(id).y=y;y+=vertices.get(id).height+gap;}}
+  // Align connected rows while keeping the chosen order and each dummy's clearance.
+  if(sort)for(let sweep=0;sweep<7;sweep++) {
     const order=layers.map((_,d)=>d);if(sweep%2)order.reverse();
     for(const d of order) {
-      const ids=layers[d];if(!ids)continue;
-      const bary=id=>{
-        const n=byId.get(id);
-        const neighbours=n.kind==='review'&&positions[n.target]?[positions[n.target].y]:dependencies.filter(e=>sweep%2?e.from===id:e.to===id).map(e=>positions[sweep%2?e.to:e.from].y);
-        return neighbours.length?neighbours.reduce((a,b)=>a+b,0)/neighbours.length:positions[id].y;
-      };
-      const before=cost(),old=[...ids];ids.sort((a,b)=>bary(a)-bary(b));place();
-      if(cost()>before){layers[d]=old;place();}
-    }
-  }
-    const terminals=nodes.filter(n=>!dependencies.some(e=>e.from===n.id)).map(n=>n.id);
-  const allEdges=forwardEdges(edges);
-  // A named output has one trunk; only that source/output/style may share a stroke.
-  const chips=[],routes=[],groups=[];
-  for(const [index,e] of allEdges.entries()) {
-    const a=positions[e.from],b=positions[e.to];if(!a||!b)continue;
-    const reverse=a.x>b.x,text=edgeChipText(e,options.language||'en');
-    const waiting=decisions.find(d=>d.node===e.from)||(e.relation==='waits_for_decision'?decisions.find(d=>d.node===e.to):null);
-    const r={...e,index,text,reverse,chip:null,gateState:waiting?'waiting_for_you':e.gate||'closed',decision:waiting?.id,skip:Math.abs(a.layer-b.layer)>1};
-    const key=JSON.stringify([e.from,e.label,e.relation,r.gateState,reverse]);
-    let group=groups.find(g=>g.key===key && text);
-    if(!group){group={key,id:index,routes:[]};groups.push(group);}
-    group.routes.push(r);r.bundle=group.id;routes.push(r);
-  }
-  for(const g of groups)g.routes.sort((a,b)=>Math.abs(positions[a.to].layer-positions[a.from].layer)-Math.abs(positions[b.to].layer-positions[b.from].layer));
-  // Reserve a separate vertical lane for each output, with room for its label before the fork.
-  const gaps=layers.slice(1).map((_,i)=>Math.max(gap,108+24*groups.filter(g=>Math.min(positions[g.routes[0].from].layer,positions[g.routes[0].to].layer)===i).length));
-  for(const p of Object.values(positions))p.x=left+p.layer*width+gaps.slice(0,p.layer).reduce((a,b)=>a+b,0);
-  if(options.vertical){
-    let y=top;
-    for(const ids of layers){
-      ids.forEach((id,i)=>{const p=positions[id];p.x=left+i*(width+48);p.y=y;});
-      y+=Math.max(...ids.map(id=>positions[id].height))+40;
-    }
-  }
-  const vertical=!!options.vertical;
-  const point=(u,v)=>vertical?{x:v,y:u}:{x:u,y:v};
-  const axis=p=>vertical?{u:p.y,v:p.x,length:p.height,breadth:p.width}:{u:p.x,v:p.y,length:p.width,breadth:p.height};
-  for(const [id,p] of Object.entries(positions)) for(const side of ['before','after']) {
-    const ports=[];
-    for(const g of groups){
-      const r=g.routes[0];
-      if(r.from===id && (r.reverse?'before':'after')===side)ports.push({routes:g.routes,key:'start',other:r.to});
-    }
-    for(const r of routes)if(r.to===id && (r.reverse?'after':'before')===side)ports.push({routes:[r],key:'end',other:r.from});
-    ports.sort((a,b)=>axis(positions[a.other]).v-axis(positions[b.other]).v || a.routes[0].index-b.routes[0].index);
-    const q=axis(p);
-    ports.forEach(({routes,key},i)=>routes.forEach(r=>{r[key]=point(q.u+(side==='after'?q.length:0),q.v+q.breadth*(i+1)/(ports.length+1));}));
-  }
-  // Opposing ports at the same height would visually join unrelated handoffs.
-  for(const r of routes){
-    const coordinate=vertical?'x':'y', target=axis(positions[r.to]), original=r.end[coordinate];
-    const collides=value=>routes.some(other=>other!==r && other.bundle!==r.bundle && Math.min(positions[other.from].layer,positions[other.to].layer)===Math.min(positions[r.from].layer,positions[r.to].layer) && (Math.abs(other.start[coordinate]-value)<1 || Math.abs(other.end[coordinate]-value)<1));
-    for(let step=1;collides(r.end[coordinate])&&step<40;step++){
-      const candidate=original+(step%2?1:-1)*Math.ceil(step/2)*8;
-      if(candidate>target.v+8&&candidate<target.v+target.breadth-8)r.end[coordinate]=candidate;
-    }
-  }
-  let bottom=Math.max(0,...Object.values(positions).map(p=>p.y+p.height)),right=Math.max(0,...Object.values(positions).map(p=>p.x+p.width));
-  for(const g of groups){
-    const r=g.routes[0],a=r.start;
-    const peers=groups.filter(other=>Math.min(positions[other.routes[0].from].layer,positions[other.routes[0].to].layer)===Math.min(positions[r.from].layer,positions[r.to].layer));
-    const au=vertical?a.y:a.x,av=vertical?a.x:a.y;
-    const near=Math.min(...g.routes.map(e=>vertical?e.end.y:e.end.x),au);
-    const boundary=Math.min(positions[r.from].layer,positions[r.to].layer);
-    const rowBottom=Math.max(...layers[boundary].map(id=>positions[id].y+positions[id].height));
-    const lane=vertical?rowBottom+12+peers.indexOf(g)*8:near+108+peers.indexOf(g)*24;
-    for(const e of g.routes){
-      const bv=vertical?e.end.x:e.end.y;
-      e.points=[a,point(lane,av),point(lane,bv),e.end];
-      let fork=point(lane,bv);
-      if(e.skip){
-        e.channel=(vertical?right:bottom)+40;if(vertical)right+=56;else bottom+=56;
-        const approach=vertical?e.end.y-20-e.index*2:e.end.x-20-e.index*2;
-        fork=vertical?{x:e.channel,y:lane}:{x:lane,y:e.channel};
-        e.points=vertical?[a,point(lane,av),fork,{x:e.channel,y:approach},{x:e.end.x,y:approach},e.end]:[a,point(lane,av),fork,{x:approach,y:e.channel},{x:approach,y:e.end.y},e.end];
+      const ids=layers[d];let floor=margin;
+      for(const id of ids){const v=vertices.get(id),near=links.filter(e=>sweep%2?e.from===id:e.to===id).map(e=>vertices.get(sweep%2?e.to:e.from));
+        const centre=near.length?near.reduce((s,n)=>s+n.y+n.height/2,0)/near.length:v.y+v.height/2;
+        v.y=Math.max(floor,centre-v.height/2);floor=v.y+v.height+gap;
       }
-      e.junction=g.routes.length>1?fork:null;
+      let ceiling=margin+tallest;
+      for(const id of [...ids].reverse()){const v=vertices.get(id);v.y=Math.min(v.y,ceiling-v.height);ceiling=v.y-gap;}
     }
-    if(!r.text)continue;
-    const w=Math.ceil(textWidth(r.text,14,8))+20,h=28;
-    const chip={x:vertical?av+8:(r.reverse?lane+8:au+8),y:vertical?rowBottom+4:av-h/2,width:w,height:h,first:r.index,key:String(r.index)};
-    const overlaps = rect => chip.x < rect.x+rect.width+6 && chip.x+chip.width+6 > rect.x && chip.y < rect.y+rect.height+6 && chip.y+chip.height+6 > rect.y;
-    // A label must fit on its own straight segment; dropping it keeps the route honest.
-    if ((!vertical && w+16 > Math.abs(lane-au)) || Object.values(positions).some(overlaps) || chips.some(overlaps)) continue;
-    chips.push(chip);g.routes.forEach(e=>e.chip=chip);
   }
-  const cardRects=Object.entries(positions).map(([id,p])=>({id,...p}));
-  const bounds={width:Math.max(296,right+left,...chips.map(c=>c.x+c.width+left)),height:options.maxHeight && bottom+24>options.maxHeight?Math.ceil((bottom+24)/options.maxHeight)*options.maxHeight:Math.max(100,bottom+24,...chips.map(c=>c.y+c.height+24))};
-  return {positions,layers,order:layers.flat(),routes,chips,cardRects,terminals,bounds,vertical};
+  const channels=layers.slice(1).map((_,d)=>links.filter(e=>vertices.get(e.from).layer===d));
+  let x=margin;
+  layers.forEach((ids,d)=>{for(const id of ids)vertices.get(id).x=x;x+=widths[d]+Math.max(108,52+(channels[d]?.length||0)*18);});
+  // Distinct horizontal ordinates prevent a target lead from joining an unrelated source lead.
+  const usedY=[];
+  const ordinate=(ideal,low,high,edge,channels)=>{
+    for(let step=0;step<10000;step++){
+      const y=ideal+(step%2?1:-1)*Math.ceil(step/2)*6;
+      if(y>=low && y<=high && usedY.every(n=>n.edge===edge||!n.channels.some(c=>channels.includes(c))||Math.abs(n.y-y)>=6)){usedY.push({y,edge,channels});return y;}
+    }
+    throw new Error('Graph ports exceed card capacity');
+  };
+  for(const ids of layers)for(const id of ids){
+    const v=vertices.get(id);
+    if(v.dummy){v.port=ordinate(v.y+v.height/2,v.y+2,v.y+v.height-2,v.route,[v.layer-1,v.layer]);continue;}
+    for(const side of ['start','end']){
+      const rs=routes.filter(r=>r[side==='start'?'from':'to']===id);
+      const neighbour=r=>vertices.get(r.chain[side==='start'?1:r.chain.length-2]);
+      rs.sort((a,b)=>{const p=neighbour(a),q=neighbour(b);return p.y+p.height/2-q.y-q.height/2||a.index-b.index;});
+      rs.forEach((r,i)=>r[side]={x:v.x+(side==='start'?v.width:0),y:ordinate(v.y+v.height*(i+1)/(rs.length+1),v.y+12,v.y+v.height-12,r.index,[v.layer-(side==='end'?1:0)])});
+    }
+  }
+  const segmentCross=(a,b,c,d)=>a.y===b.y&&c.x===d.x&&c.x>Math.min(a.x,b.x)&&c.x<Math.max(a.x,b.x)&&a.y>Math.min(c.y,d.y)&&a.y<Math.max(c.y,d.y);
+  const parts=[];
+  channels.forEach((channel,d)=>{
+    const right=vertices.get(layers[d][0]).x+widths[d],next=vertices.get(layers[d+1][0]).x;
+    const pieces=channel.map(e=>{const r=routes[e.route],a=vertices.get(e.from),b=vertices.get(e.to);return {route:r.index,a:a.dummy?{x:a.x+a.width,y:a.port}:r.start,b:b.dummy?{x:b.x,y:b.port}:r.end};});
+    const points=(p,i)=>{const track=right+26+(next-right-52)*(i+1)/(pieces.length+1);return [p.a,{x:track,y:p.a.y},{x:track,y:p.b.y},p.b];};
+    const cost=()=>{let n=0;pieces.forEach((p,i)=>pieces.slice(i+1).forEach((q,j)=>{const a=points(p,i),b=points(q,i+1+j);for(let k=1;k<4;k++)for(let l=1;l<4;l++)if(segmentCross(a[k-1],a[k],b[l-1],b[l])||segmentCross(b[l-1],b[l],a[k-1],a[k]))n++;}));return n;};
+    pieces.sort((a,b)=>(a.b.y-a.a.y)-(b.b.y-b.a.y)||a.route-b.route);
+    for(let sweep=0;sweep<6;sweep++)for(let i=0;i<pieces.length-1;i++){const before=cost();[pieces[i],pieces[i+1]]=[pieces[i+1],pieces[i]];if(cost()>=before)[pieces[i],pieces[i+1]]=[pieces[i+1],pieces[i]];}
+    pieces.forEach((p,i)=>parts.push({...p,layer:d,points:points(p,i)}));
+  });
+  for(const r of routes){
+    const points=parts.filter(p=>p.route===r.index).sort((a,b)=>a.layer-b.layer).flatMap(p=>p.points).filter((p,i,a)=>!i||p.x!==a[i-1].x||p.y!==a[i-1].y);
+    r.points=points.filter((p,i,a)=>!i||i===a.length-1||!((a[i-1].x===p.x&&p.x===a[i+1].x)||(a[i-1].y===p.y&&p.y===a[i+1].y)));
+  }
+  const positions=Object.fromEntries([...vertices].filter(([,v])=>!v.dummy).map(([id,v])=>[id,{x:v.x,y:v.y,width:v.width,height:v.height,depth:v.layer,layer:v.layer}]));
+  const cardRects=Object.entries(positions).map(([id,p])=>({id,...p})),chips=[];
+  const overlaps=(a,b)=>a.x<b.x+b.width+8&&a.x+a.width+8>b.x&&a.y<b.y+b.height+8&&a.y+a.height+8>b.y;
+  for(const r of routes){
+    if(!r.text)continue;
+    const width=Math.ceil(textWidth(r.text,14,7.5))+20,height=26;
+    const segments=r.points.slice(1).map((b,i)=>[r.points[i],b]).filter(([a,b])=>a.y===b.y&&b.x-a.x>width+8).sort((a,b)=>(b[1].x-b[0].x)-(a[1].x-a[0].x));
+    for(const [a,b] of segments){const chip={x:(a.x+b.x-width)/2,y:a.y-height/2,width,height,first:r.index,key:String(r.index)};
+      if(cardRects.some(c=>overlaps(chip,c))||chips.some(c=>overlaps(chip,c)))continue;
+      const blocked=routes.some(other=>other!==r&&other.points.slice(1).some((q,i)=>{const p=other.points[i];return Math.max(p.x,q.x)>chip.x-4&&Math.min(p.x,q.x)<chip.x+width+4&&Math.max(p.y,q.y)>chip.y-4&&Math.min(p.y,q.y)<chip.y+height+4;}));
+      if(!blocked){r.chip=chip;chips.push(chip);break;}
+    }
+  }
+  return {positions,layers:layers.map(ids=>ids.filter(id=>byId.has(id))),order:layers.flat().filter(id=>byId.has(id)),routes,chips,cardRects,
+    terminals:nodes.filter(n=>!routes.some(r=>r.from===n.id)).map(n=>n.id),
+    bounds:{width:Math.max(100,...cardRects.map(p=>p.x+p.width+margin)),height:tallest+margin*2},vertical:false};
+}
+
+export function roundedRoute(points, radius = 5) {
+  const pts=points.filter((p,i)=>!i||p.x!==points[i-1].x||p.y!==points[i-1].y);
+  if(!pts.length)return '';
+  let path=`M${pts[0].x} ${pts[0].y}`;
+  for(let i=1;i<pts.length-1;i++){
+    const a=pts[i-1],b=pts[i],c=pts[i+1],before=Math.hypot(b.x-a.x,b.y-a.y),after=Math.hypot(c.x-b.x,c.y-b.y),r=Math.min(radius,before/2,after/2);
+    if((a.x===b.x&&b.x===c.x)||(a.y===b.y&&b.y===c.y)){path+=` L${b.x} ${b.y}`;continue;}
+    path+=` L${b.x+(a.x-b.x)*r/before} ${b.y+(a.y-b.y)*r/before} Q${b.x} ${b.y} ${b.x+(c.x-b.x)*r/after} ${b.y+(c.y-b.y)*r/after}`;
+  }
+  const end=pts.at(-1);return path+` L${end.x} ${end.y}`;
 }
 
 if (typeof document !== 'undefined') {
@@ -840,9 +871,9 @@ function who(actor) {
   return [role ? t(role) : '', sessionName(actor?.session)].filter(Boolean).join(' · ');
 }
 // The log groups dates separately so every timestamp has the same width.
-function clock(stamp) {
+function clock(stamp, seconds = false) {
   const time = stamp ? new Date(stamp) : null; if (!time || isNaN(time)) return '';
-  return time.toLocaleTimeString(language, {hour:'2-digit', minute:'2-digit', hour12:false});
+  return time.toLocaleTimeString(language, {hour:'2-digit', minute:'2-digit', ...(seconds?{second:'2-digit'}:{}), hour12:false});
 }
 // An id the agent also says. Pressing it copies the words to paste back into the chat.
 function refChip(id, say, decision = false) {
@@ -857,12 +888,12 @@ function workedBy(n) { return [n.worker?.model ? t('modelName',{model:n.worker.m
 function decisionHeading(parent, d, tag) {
   const reference = el('p', undefined, 'ref-line'); reference.append(refChip(d.id, `${d.id} · ${decisionTitle(d)}`, true));
   if (d.node) reference.append(refChip(d.node, `${d.node} · ${decisionTitle(d)}`));
-  const asker = who(d.asked_by); if (asker) reference.append(el('span', t('askedBy', {who:asker})));
-  if (clock(d.asked)) reference.append(el('span', clock(d.asked)));
-  parent.append(reference, el(tag, decisionTitle(d)));
-  if(!question(d))parent.append(el('p',purposeWording(d.purpose,language)));
+  const asker = who(d.asked_by);
+  const origin=[asker?t('askedBy',{who:asker}):'',clock(d.asked)].filter(Boolean).join(' · ');
+  if(origin)reference.append(el('span',origin));
+  parent.append(reference, el('p', t('decisionWork',{title:decisionTitle(d)}), 'decision-work'));
+  parent.append(el(tag, question(d) || purposeWording(d.purpose,language), 'decision-question'));
   if (d.purpose === 'trajectory') textList(parent, (d.trajectory_reasons || []).map(key => t(key)));
-  if (question(d)) parent.append(el('p', question(d), 'decision-question'));
 }
 function needs(node) { return view.decisions.some(d => d.node === node.id); }
 function status(node) { return t(displayState(node, view.decisions)); }
@@ -882,7 +913,7 @@ function failedBlock(parent, d) {
 }
 function decisionCard(d) {
   const c = el('div', undefined, 'card paper'); decisionHeading(c, d, 'h3'); failedBlock(c, d); if (d.context.why) c.append(el('p', d.context.why));
-  c.append(button(t('read'), () => openDecision(d.id), 'amber')); return c;
+  c.append(button(t('read'), () => openDecision(d.id), 'primary')); return c;
 }
 function handoffsCard(key, rows, direction) {
   const c = card(t(key)); const list = el('ul');
@@ -903,7 +934,7 @@ function attention() {
     if (d.node) reference.append(refChip(d.node, `${d.node} · ${d.node_title}`));
     if (d.node_title) reference.append(el('span', d.node_title));
     text.append(reference, el('p', question(d) || purposeWording(d.purpose, language)));
-    item.append(text, button(t('read'), () => openDecision(d.id))); items.append(item);
+    item.append(text, button(t('read'), () => openDecision(d.id), 'primary')); items.append(item);
   }
   box.append(heading, items);
 }
@@ -913,7 +944,7 @@ function panel() {
   const signature=JSON.stringify([selected,view.nodes.find(n=>n.id===selected),view.decisions.filter(d=>d.node===selected),view.timeline.filter(r=>r.node===selected)]);
   if(signature===panelFingerprint)return;
   panelFingerprint=signature;
-  const scroll=selected===panelNode?p.scrollTop:0;panelNode=selected;clear(p);
+  const scroll=selected===panelNode?p.scrollTop:0;panelNode=selected;p.onscroll=null;clear(p);
   const node = view.nodes.find(n => n.id === selected);
   p.hidden = !node; $('flow').classList.toggle('has-selection', !!node);
   if (!node) return;
@@ -979,7 +1010,8 @@ function rowTone(r) {
 function checkLine(c, attempt) {
   const item = el('li', undefined, c.result === 'failed' ? 'check-failed' : '');
   const result = c.timed_out ? t('checkTimedOut') : t(c.result === 'failed' ? 'checkFailed' : 'checkPassed');
-  item.append(wording(checkWording(c, language, attempt),'strong'), el('span', ` · ${result} · ${t(c.phase === 'gate' ? 'gateRun' : 'workerRun')}`));
+  item.append(wording(checkWording(c, language, attempt),'strong'));
+  if(c.timed_out)item.append(el('span', ' · '+result));
   if (c.command) { const run = el('p', undefined, 'muted'); run.append(el('code', c.command), el('span', [c.exit_code === null || c.exit_code === undefined ? '' : ' → ' + t('exitCode', {n:c.exit_code}), typeof c.duration_ms === 'number' ? t('seconds', {n:(c.duration_ms / 1000).toFixed(2)}) : ''].filter(Boolean).join(' · '))); item.append(run); }
   if (c.violations?.length) item.append(el('p', t('outside', {files:c.violations.join(', ')})));
   if (c.log) {
@@ -996,7 +1028,7 @@ function checkLine(c, attempt) {
 function logRow(r, anchor = true, inline = false) {
   const item = el('li', undefined, rowTone(r)); if (anchor) item.id = r.id;
   const head = el('div', undefined, 'row-head'), text = el('span', undefined, 'row-text');
-  head.append(el('span', clock(r.ts), 'row-time'));
+  head.append(el('span', clock(r.ts, true), 'row-time'));
   if (r.decision) text.append(refChip(r.decision, `${r.decision} · ${r.node_title || r.question}`, true));
   if (r.node) text.append(el('strong', title({id:r.node, title:r.node_title})), refChip(r.node, `${r.node} · ${r.node_title}`));
   text.append(wording(rowSentence(r))); head.append(text);
@@ -1083,7 +1115,7 @@ function accessible() {
 function showMode(next) {
   if (next !== 'decision' && !discardDecision()) return false;
   mode = next; $('home').hidden = next !== 'home'; $('flow').hidden = next !== 'flow'; $('decision').hidden = next !== 'decision'; $('accessible').hidden = next !== 'flow';
-  $('home-tab').setAttribute('aria-pressed', String(next === 'home' || next === 'decision' && cameFrom === 'home')); $('flow-tab').setAttribute('aria-pressed', String(next === 'flow' || next === 'decision' && cameFrom === 'flow'));
+  $('home-tab').setAttribute('aria-pressed', String(next === 'home')); $('flow-tab').setAttribute('aria-pressed', String(next === 'flow'));
   // The map can only measure its cards while it is on screen.
   if (renderer && next === 'flow' && view) renderer.update(view, selected); return true;
 }
@@ -1108,11 +1140,10 @@ function openDecision(id, focus = true) {
   decisionNotice = ''; notice('');
   if (mode !== 'decision') cameFrom = mode;
   showMode('decision'); const box = $('decision'); clear(box);
-  const reading = card(t('yourTurn'), null, true); reading.classList.add('reading');
+  const reading = card(t('yourTurn'), null, true); reading.firstElementChild.remove(); reading.classList.add('reading');
   const introduction = el('div'); reading.append(introduction);
   const report = el('div', undefined, 'worker-report'), note = el('div', undefined, 'speech');
   report.append(note); reading.append(report);
-  const outcomes = card(t('choiceEffects'), null, true); reading.append(outcomes);
   const isQuestion = ['direction','information'].includes(d.kind);
   const answerLabel = el('label', t(isQuestion ? 'answerLabel' : 'backReason')); answerLabel.htmlFor = 'answer-text';
   const phoneHistory=el('details',undefined,'phone-history');reading.append(phoneHistory);
@@ -1126,6 +1157,18 @@ function openDecision(id, focus = true) {
   const actions = el('div'); actions.id = 'answer-actions';
   const updateActions = () => {
     actions.querySelectorAll('button[data-outcome]').forEach(b => { b.disabled = !current() || !decisionController.canSubmit(b.dataset.outcome, input.value); });
+    for(const b of actions.querySelectorAll('button[data-outcome]')) {
+      const kind=b.dataset.outcome,hint=actions.querySelector(`[data-hint=${kind}]`);
+      hint.textContent=!b.disabled?'':session.busy?t('sending'):kind==='approved'?(session.nothingToJudge&&!session.blindConfirmed?t('blindHint'):t('readGateHint')):t(isQuestion?'writeFirst':'revisionHint');
+      hint.hidden=!hint.textContent;
+    }
+    const read=canApprove(session),empty=session.nothingToJudge;
+    if(approveButton)approveButton.classList.toggle('primary',!empty&&read);
+    if(revisionButton)revisionButton.classList.toggle('primary',empty);
+    const fileButtons=[...fileChoices.querySelectorAll('button')];
+    const fileCanUnlock=!session.failed.length&&session.purpose!=='hold';
+    fileButtons.forEach((b,i)=>b.classList.toggle('primary',!isQuestion&&!empty&&!read&&fileCanUnlock&&i===0));
+    reminder.querySelector('button').classList.toggle('primary',!isQuestion&&!empty&&!read&&(!fileButtons.length||!fileCanUnlock));
     backButton.disabled = !!decisionController.session?.busy;
     blindCheck.disabled = !!session.busy;
     if (current() && session.nothingToJudge && !session.busy) message.textContent = !input.value.trim() ? t('revisionHint') : !session.blindConfirmed ? t('blindHint') : '';
@@ -1148,15 +1191,20 @@ function openDecision(id, focus = true) {
     if (result.refresh) refresh(true);
   };
   let approveButton, revisionButton;
-  const actionButton = (outcome, text, cls) => { const b = button(text, () => send(outcome), cls); b.dataset.outcome = outcome; return b; };
-  if (isQuestion) actions.append(actionButton('answered', t('answer'), 'primary'));
-  else { approveButton = actionButton('approved', '', 'primary'); revisionButton=actionButton('revision_requested', t('sendBack')); actions.append(approveButton, revisionButton); }
+  const actionButton = (outcome, text, cls) => {
+    const b = button(text, () => send(outcome), cls); b.dataset.outcome = outcome;
+    const row=el('div',undefined,'answer-action'),copy=el('div'),effect=el('p',undefined,'action-effect'),hint=el('p',undefined,'action-hint');
+    effect.dataset.effect=outcome;hint.dataset.hint=outcome;hint.id='hint-'+outcome;b.setAttribute('aria-describedby',hint.id);
+    copy.append(effect,hint);row.append(b,copy);actions.append(row);return b;
+  };
+  if (isQuestion) actionButton('answered', t('answer'), 'primary');
+  else { approveButton = actionButton('approved', '', 'primary'); revisionButton=actionButton('revision_requested', t('sendBack')); }
   const backButton = button(t('leaveUnanswered'), leaveDecision); actions.append(backButton); reading.append(actions);
   const right = el('div'), surrounding = el('div'), history = el('section', undefined, 'decision-history'); right.append(history, surrounding);
   const files = card(t('readThis'), null, true), fileChoices = el('div', undefined, 'file-choices'), reader = el('pre', undefined, 'file-reader');
   reader.hidden = true; reader.tabIndex = 0; reader.setAttribute('aria-label',t('readThis'));
   const fileStatus = el('p'); fileStatus.setAttribute('role','status');
-  files.append(fileChoices, fileStatus, reader); right.append(files);
+  files.append(fileChoices, fileStatus, reader); right.prepend(files);
   let fileFingerprint = '', fileRequest = 0;
   const updateFiles = decision => {
     const signature = JSON.stringify(decision.files || []); if (signature === fileFingerprint) return;
@@ -1180,7 +1228,7 @@ function openDecision(id, focus = true) {
   const markDetailsOpened = () => { if (current() && details.open) { decisionController.openDetails(); updateActions(); } };
   details.addEventListener('toggle', markDetailsOpened);
   const reminder = el('p', t('evidenceReminder'));
-  reminder.append(button(t('details'), () => { if (current()) { details.open = true; markDetailsOpened(); details.querySelector('summary').focus(); } })); reading.append(reminder);
+  reminder.append(button(t('details'), () => { if (current()) { details.open = true; markDetailsOpened(); details.querySelector('summary').focus(); } })); right.prepend(reminder);
   const gateFacts = el('div'); details.append(gateFacts);
   const loadEvidence = button(t('loadEvidence'), async () => {
     if (!current()) return;
@@ -1218,13 +1266,13 @@ function openDecision(id, focus = true) {
     if(approveButton){
       approveButton.classList.toggle('primary',!nothingToInspect);
       revisionButton.classList.toggle('primary',nothingToInspect);
-      if(actions.firstElementChild !== (nothingToInspect?revisionButton:approveButton)) actions.prepend(nothingToInspect?revisionButton:approveButton);
+      const first=(nothingToInspect?revisionButton:approveButton).parentElement;if(actions.firstElementChild!==first)actions.prepend(first);
     }
     if(missing.children.length) introduction.append(missing);
     history.hidden = !rows.length;phoneHistory.hidden=!rows.length;clear(phoneHistory);
     const previous=rows.filter(r=>r.attempt<node?.attempts && r.checks?.some(c=>c.result==='failed')).sort((a,b)=>b.seq-a.seq)[0];
-    phoneHistory.append(el('summary',previous?t('pastReturn',{n:previous.attempt}):t('history')));
-    const phoneRows=el('ol',undefined,'log');[...rows].sort((a,b)=>b.seq-a.seq).forEach(r=>phoneRows.append(logRow(r,false,true)));phoneHistory.append(phoneRows);
+    phoneHistory.append(el('summary',t('history')));
+    const phoneRows=el('ol',undefined,'log');[...rows].sort((a,b)=>b.seq-a.seq).forEach(r=>{const row=logRow(r,false,true);row.prepend(el('p',t(r.attempt===node.attempts?'currentAttempt':'earlierAttempt'),'eyebrow'));phoneRows.append(row);});phoneHistory.append(phoneRows);
     phoneHistory.open=!!rowOpen.get('decision:'+decision.id);phoneHistory.ontoggle=()=>rowOpen.set('decision:'+decision.id,phoneHistory.open);
     if (rows.length) {
       history.append(el('h3', t('history')));
@@ -1239,22 +1287,25 @@ function openDecision(id, focus = true) {
     }
     clear(gateFacts); gateFacts.append(el('p', t('gateReview')), el('p', question(decision) || purposeWording(decision.purpose, language)));
     failedBlock(gateFacts, decision);
+    for(const [key,name] of [['if_approved','ifApproved'],['if_rejected','ifRejected'],['undo','undo']])if(decision.context[key])gateFacts.append(el('p',t(name)+': '+decision.context[key]));
     if (decision.context.why) gateFacts.append(el('p', decision.context.why));
     details.hidden = !decision.has_evidence && !decisionController.requiresDetails;
     loadEvidence.hidden = !decision.has_evidence;
     note.textContent = decision.worker_note || ''; report.hidden = !decision.worker_note;
-    clear(outcomes); outcomes.append(el('p', t('choiceEffects'), 'eyebrow'));
     const effects = [['if_approved','ifApproved'],['if_rejected','ifRejected'],['undo','undo']].filter(([key]) => decision.context[key]);
-    for (const [key, name] of effects) outcomes.append(el('small', t(name)), el('p', decision.context[key]));
-    outcomes.hidden = !effects.length;
     clear(surrounding); if (decision.context.why) surrounding.append(card(t('why'), decision.context.why));
     failedBlock(surrounding, decision);
     for (const key of ['verified','unverified']) { if (!decision[key]?.length) continue; const c = card(t(key)); textList(c, decision[key]); surrounding.append(c); }
     files.hidden = !decision.files?.length;
     const bare = !rows.length && !decision.worker_note && !effects.length && !decision.context.why && !decision.failed?.length && !decision.verified?.length && !decision.unverified?.length && !decision.files?.length;
     if (bare) surrounding.append(el('p', t('questionOnly'), 'muted'));
-    reminder.hidden = !decision.has_evidence && !decisionController.requiresDetails;
+    reminder.hidden = (!decision.has_evidence && !decisionController.requiresDetails) || (!!decision.files?.length && !decision.failed?.length && decision.purpose!=='hold');
     if (approveButton) approveButton.textContent = nothingToInspect ? t('acceptBlind') : purposeAction(decision.purpose, language, decision.failed);
+    for(const effect of actions.querySelectorAll('[data-effect]')) {
+      const kind=effect.dataset.effect;
+      effect.textContent=t(kind==='approved'?'approveEffect':kind==='answered'?'answerEffect':'revisionEffect');
+      if(kind==='revision_requested'&&node?.attempts&&node.attempts<node.max_attempts)effect.textContent=t('retryEffect',{n:node.attempts+1,max:node.max_attempts});
+    }
     updateActions();
   };
   decisionUI = {session, update}; update(); if (focus) focusHeading(introduction.querySelector('h2'));
@@ -1295,6 +1346,9 @@ function applyView(next) {
   if (decisionController.session?.busy) return;
   closeInvalidDecision(chosen, next.decisions, next);
   const nextFingerprint = JSON.stringify(next); if (nextFingerprint === fingerprint) return;
+  const active=document.activeElement,focusId=active?.id,focusLabel=active?.getAttribute?.('aria-label');
+  const focusHeader=active?.className==='node-header',phoneFocus=!!active?.closest?.('#phone-flow'),focusNode=active?.closest?.('[data-node]')?.dataset.node;
+  const pageScroll=typeof scrollY==='number'?{left:scrollX,top:scrollY}:null;
   const languageChanged=language!==viewLanguage(next,navigator.language);
   language = viewLanguage(next, navigator.language); translate();
   if(languageChanged && projects.length)chooseRuns({projects});
@@ -1305,6 +1359,12 @@ function applyView(next) {
   $('subtitle').textContent = view.complete ? t('complete', {total:view.nodes.length}) : t('overview', {total:view.nodes.length, done:view.counts.done, doing:view.counts.doing, needs:view.counts.needs_you});
   accessible(); attention(); panel(); home(); if (renderer && mode === 'flow') renderer.update(view, selected);
   if (mode === 'decision' && decisionController.session) openDecision(decisionController.session.target.id, false);
+  if(active && active.isConnected===false){
+    const scope=phoneFocus?$('phone-flow'):document;
+    const replacement=focusId?$(focusId):[...scope.querySelectorAll('button,summary')].find(e=>(focusHeader?e.className==='node-header':focusLabel?e.getAttribute('aria-label')===focusLabel:e.textContent===active.textContent)&&(!focusNode||e.closest('[data-node]')?.dataset.node===focusNode));
+    replacement?.focus({preventScroll:true});
+  }
+  if(pageScroll && typeof scrollTo==='function')scrollTo(pageScroll);
 }
 function setChosen(next) {
   if (decisionController.session?.busy || sameRun(chosen, next)) return;
@@ -1316,7 +1376,7 @@ function chooseRuns(data) {
   runs.sort((a,b) => Number(b.status === 'open') - Number(a.status === 'open') || (b.last_event || '').localeCompare(a.last_event || ''));
   if (!chosen || !runs.some(r => r.project === chosen.project && r.id === chosen.run)) { const first = runs.find(r => !r.error) || runs[0]; setChosen(first ? {project:first.project,run:first.id} : null); }
   const picker = $('picker'); picker.disabled = !!decisionController.session?.busy; clear(picker);
-  runs.forEach((r, i) => { const option = el('option', t(r.open_decisions ? 'runOptionNeeds' : 'runOption', {project:r.projectName, run:r.id, n:r.open_decisions})); option.value = String(i); option.selected = !!chosen && r.project === chosen.project && r.id === chosen.run; picker.append(option); });
+  runs.forEach((r, i) => { const option = el('option', t(r.open_decisions && !matchMedia('(max-width:760px)').matches ? 'runOptionNeeds' : 'runOption', {project:r.projectName, run:r.id, n:r.open_decisions})); option.value = String(i); option.selected = !!chosen && r.project === chosen.project && r.id === chosen.run; picker.append(option); });
   $('picker-label').hidden = runs.length < 2;
   picker.onchange = () => { if (decisionController.session?.busy) return; const r = runs[Number(picker.value)]; setChosen({project:r.project,run:r.id}); refresh(true); };
   return runs.find(r => chosen && r.project === chosen.project && r.id === chosen.run);
@@ -1340,7 +1400,7 @@ async function refresh(force = false) {
   } catch (error) { if (currentGeneration === generation) notice(error.status === 401 ? 'unauthorized' : error.status === 400 || error.status === 404 || error.status === 500 ? 'unreadable' : 'lost', true); }
   finally { loading = false; if (queuedRefresh) { queuedRefresh = false; refresh(true); } else schedule(); }
 }
-function resetView() { language = viewLanguage(null, navigator.language); translate(); closeInvalidDecision(chosen, []); view = null; selected = null; fingerprint = ''; ['node-list','edge-list','decision-list','panel','home','attention'].forEach(id => clear($(id))); if (renderer) renderer.update({nodes:[],edges:[],decisions:[],complete:false}, null); $('flow').hidden = true; $('home').hidden = true; $('accessible').hidden = true; $('decision').hidden = true; $('subtitle').textContent = ''; $('where').textContent = ''; }
+function resetView() { $('panel').onscroll=null; $('panel').hidden=true; $('flow').classList.remove('has-selection'); panelFingerprint=''; panelNode=null; language = viewLanguage(null, navigator.language); translate(); closeInvalidDecision(chosen, []); view = null; selected = null; fingerprint = ''; ['node-list','edge-list','decision-list','panel','home','attention'].forEach(id => clear($(id))); if (renderer) renderer.update({nodes:[],edges:[],decisions:[],complete:false}, null); $('flow').hidden = true; $('home').hidden = true; $('accessible').hidden = true; $('decision').hidden = true; $('subtitle').textContent = ''; $('where').textContent = ''; }
 function schedule() { clearTimeout(timer); if (!document.hidden) timer = setTimeout(refresh, 2000); }
 $('phone-view-toggle').addEventListener('click',()=>{const diagram=$('flow').classList.toggle('phone-diagram');$('phone-view-toggle').dataset.i18n=diagram?'showFlowList':'showDiagram';$('phone-view-toggle').textContent=t(diagram?'showFlowList':'showDiagram');$('phone-view-toggle').setAttribute('aria-pressed',String(diagram));if(renderer&&view)renderer.update(view,selected);});
 $('home-tab').addEventListener('click', () => { if (view) goHome(); });
@@ -1378,22 +1438,18 @@ function nodeCard(n, expanded = false) {
     else selectNode(n.id);
   },'node-header');
   header.setAttribute('aria-label',nodeDescription(n));header.setAttribute('aria-expanded',String(expanded));
-  const state = displayState(n, view.decisions), statusLine = el('span', (n.kind && n.kind!=='work' ? t(n.kind)+' · ' : '') + status(n), 'node-status');
+  const state = displayState(n, view.decisions), statusLine = el('span', status(n), 'node-status');
   statusLine.prepend(el('span', statusGlyph(state), 'status-glyph'));
   if(n.kind && n.kind!=='work')header.append(typeIcon(n.kind));
   header.append(el('strong',title(n),'node-title'),statusLine);
-  const attempt=el('span',n.status==='passed'&&n.attempts?(n.attempts===1?t('firstPass'):t('finishedAttempts',{n:n.attempts})):n.attempts?t('attemptShort',{n:n.attempts}):t('notStarted'),'attempt-caption');
-  root.append(header);
-  const reference=el('div',undefined,'ref-line node-reference');reference.append(refChip(n.id, `${n.id} · ${title(n)}`),attempt);root.append(reference);
-  // Past attempts are a quiet reference; current state remains the card's strongest mark.
-  if(cometCount(n) && n.status!=='passed') {
-    const attempt=(n.laps||[]).lastIndexOf('returned')+1;
-    root.append(el('p',t('pastReturn',{n:attempt}),'card-note returned'));
-  }
-  for(const d of view.decisions.filter(d=>d.node===n.id)){
-    const ask=el('div',undefined,'card-note mine');
-    ask.append(button(t('answerHere',{id:d.id}),()=>openDecision(d.id),'small'));root.append(ask);
-  }
+  const reference=el('div',undefined,'ref-line node-reference');
+  reference.append(refChip(n.id, `${n.id} · ${title(n)}`));
+  if(n.attempts)reference.append(el('span',t('attemptShort',{n:n.attempts}),'attempt-caption'));
+  const decision=view.decisions.find(d=>d.node===n.id);
+  const footer=el('div',undefined,'node-footer');
+  if(decision)footer.append(button(t('answerHere',{id:decision.id}),()=>openDecision(decision.id),'node-decision'));
+  else if(cometCount(n))footer.append(el('span',t('returnTimes',{n:cometCount(n)})));
+  root.append(header,reference,footer);
   return root;
 }
 function createMap() {
@@ -1404,10 +1460,10 @@ function createMap() {
   toolbar.append(key);map.append(viewport);
   const visibleCount=el('span',undefined,'map-visible'),overflowButtons=new Map();overflow.append(visibleCount);
   let data={nodes:[],edges:[],decisions:[]},chosenNode=null,layout=null,scale=1,automatic=true;
-  const nodes=new Map(),chips=new Map(),seen=new Map();let drawing=null,placed=false,lastWidth=0;
+  const nodes=new Map(),chips=new Map(),seen=new Map();let drawing=null,placed=false,layoutKey='',origin={x:0,y:0};
   const zoomText=el('output');zoomText.setAttribute('aria-live','polite');
-  const zoom=amount=>{automatic=false;scale=Math.max(MIN_FIT_SCALE,Math.min(1.6,scale+amount));size();};
-  const fit=()=>{automatic=true;size();viewport.scrollLeft=0;viewport.scrollTop=0;};
+  const zoom=amount=>{automatic=false;scale=Math.max(2/3,Math.min(1.6,scale+amount));size();};
+  const fit=()=>{scale=Math.max(2/3,Math.min(1,(viewport.clientWidth-24)/layout.bounds.width,(viewport.clientHeight-24)/layout.bounds.height));automatic=false;size();viewport.scrollLeft=0;viewport.scrollTop=0;};
   const zoomOut=button('−',()=>zoom(-.1)),zoomIn=button('+',()=>zoom(.1));
   toolbar.append(zoomOut,zoomIn,button(t('fit'),fit),zoomText,overflow);
   zoomOut.dataset.i18nLabel='zoomOut';zoomIn.dataset.i18nLabel='zoomIn';toolbar.children[3].dataset.i18n='fit';viewport.dataset.i18nLabel='mapHelp';
@@ -1415,20 +1471,21 @@ function createMap() {
   name.dataset.i18n='graph';direction.dataset.i18n='mapDirection';mapTitle.append(name,direction);toolbar.prepend(mapTitle);translate();
   function outside() {
     if(!layout || !viewport.clientWidth)return;
-    const w=viewport.clientWidth,h=viewport.clientHeight,ox=Math.max(0,(w-layout.bounds.width*scale)/2),oy=Math.max(0,(h-layout.bounds.height*scale)/2);
+    const w=viewport.clientWidth,h=viewport.clientHeight,ox=origin.x,oy=origin.y;
     const groups={offLeft:[],offRight:[],offTop:[],offBottom:[]}; let visible=0;
     for(const n of data.nodes) {
       const p=layout.positions[n.id],x=p.x*scale+ox-viewport.scrollLeft,y=p.y*scale+oy-viewport.scrollTop;
       const direction=offscreenDirection({x,y,width:p.width*scale,height:p.height*scale},w,h);
       if(direction)groups[direction].push(n);else visible++;
     }
-    for(const c of layout.chips){const chip=chips.get(c.first);if(chip)chip.hidden=!!chip.dataset.tooWide || !!offscreenDirection({x:c.x*scale+ox-viewport.scrollLeft,y:c.y*scale+oy-viewport.scrollTop,width:c.width*scale,height:c.height*scale},w,h);}
+    for(const c of layout.chips){const chip=chips.get(c.first);if(chip)chip.hidden=scale<MIN_FIT_SCALE || !!chip.dataset.tooWide || !!offscreenDirection({x:c.x*scale+ox-viewport.scrollLeft,y:c.y*scale+oy-viewport.scrollTop,width:c.width*scale,height:c.height*scale},w,h);}
     // The viewport clips routes naturally: an off-screen neighbour leaves a visible continuing stub.
     visibleCount.textContent=t('visibleCards',{n:visible,total:data.nodes.length});
     for(const [direction,b] of overflowButtons)b.hidden=!groups[direction].length;
     for(const [direction,items] of Object.entries(groups))if(items.length) {
       let b=overflowButtons.get(direction);
       if(!b){b=button('',()=>{},'small');overflowButtons.set(direction,b);overflow.append(b);}
+      overflow.append(b);
       b.textContent=t('offCount',{direction:t(direction),n:items.length}) + (items.some(n=>['running','retrying','submitted'].includes(displayState(n,data.decisions))) ? t('offWorking',{n:items.filter(n=>['running','retrying','submitted'].includes(displayState(n,data.decisions))).length}) : '') + (items.some(n=>data.decisions.some(d=>d.node===n.id)) ? t('offNeeds',{n:items.filter(n=>data.decisions.some(d=>d.node===n.id)).length}) : '');
       b.onclick=()=>{
         const horizontal=['offLeft','offRight'].includes(direction),back=['offLeft','offTop'].includes(direction);
@@ -1444,21 +1501,23 @@ function createMap() {
     if(!layout)return;
     if(map.getBoundingClientRect){
       map.style.height=Math.max(300,innerHeight-map.getBoundingClientRect().top-62)+'px';
-      $('panel').style.maxHeight=matchMedia('(max-width:760px)').matches?'none':Math.max(240,parseFloat(map.style.height)-80)+'px';
+      $('panel').style.maxHeight=matchMedia('(max-width:760px)').matches?'none':parseFloat(map.style.height)+'px';
       $('panel').style.height=$('panel').style.maxHeight;
     }
     const w=viewport.clientWidth||900,h=viewport.clientHeight||600;
-    if(automatic && Math.abs(w-lastWidth)>1){lastWidth=w;viewport.scrollLeft=0;viewport.scrollTop=0;}
-    if(automatic)scale=fitScale(layout.bounds,w-20,h-20,matchMedia('(max-width:760px)').matches);
-    Object.assign(stage.style,{left:Math.max(0,(w-layout.bounds.width*scale)/2)+'px',top:Math.max(0,(h-layout.bounds.height*scale)/2)+'px',width:layout.bounds.width+'px',height:layout.bounds.height+'px',transform:`scale(${scale})`});
-    const cover=chosenNode && !matchMedia('(max-width:760px)').matches ? ($('panel').offsetWidth||340)+16 : 0;
-    Object.assign(spacer.style,{width:Math.max(w,layout.bounds.width*scale)+cover+'px',height:Math.max(h,layout.bounds.height*scale)+'px'});
+    if(!placed && automatic)scale=fitScale(layout.bounds,w-24,h-24);
+    origin={x:Math.max(0,(w-layout.bounds.width*scale)/2),y:Math.max(0,(h-layout.bounds.height*scale)/2)};
+    Object.assign(stage.style,{left:origin.x+'px',top:origin.y+'px',width:layout.bounds.width+'px',height:layout.bounds.height+'px',transform:`scale(${scale})`});
+    stage.style.setProperty('--map-text',Math.max(14,12/scale)+'px');
+    Object.assign(spacer.style,{width:layout.bounds.width*scale>w?layout.bounds.width*scale+'px':'100%',height:layout.bounds.height*scale>h?layout.bounds.height*scale+'px':'100%'});
     if(!$('panel').hidden && $('panel').onscroll)$('panel').onscroll();
-    zoomText.textContent=Math.round(scale*100)+'%';zoomOut.disabled=scale<=MIN_FIT_SCALE;zoomOut.title=zoomOut.disabled?t('minZoom'):t('zoomOut');zoomIn.disabled=scale>=1.6;outside();
+    zoomText.textContent=Math.round(scale*100)+'%';zoomOut.disabled=scale<=2/3;zoomOut.title=zoomOut.disabled?t('minZoom'):t('zoomOut');zoomIn.disabled=scale>=1.6;outside();
   }
   const setRect=(element,rect)=>Object.assign(element.style,{left:rect.x+'px',top:rect.y+'px',width:rect.width+'px',height:rect.height+'px'});
   function update(next,id) {
     if(layout)size();
+    const planKey=JSON.stringify([next.nodes.map(n=>[n.id,n.title,n.kind,n.target]),next.edges.map(e=>[e.from,e.to,e.relation,e.label])]);
+    if(planKey!==layoutKey){layoutKey=planKey;placed=false;automatic=true;}
     const reveal=id&&id!==chosenNode;data=next;chosenNode=id;map.classList.toggle('has-expanded',!!id);
     const focused=document.activeElement?.closest?.('[data-node]')?.dataset.node,focusedChip=document.activeElement?.dataset?.chip;
     const activeIds=new Set(data.nodes.map(n=>n.id));
@@ -1477,15 +1536,10 @@ function createMap() {
       }
       seen.set(n.id,{tone:cardTone(n),comets:cometCount(n)});
     }
-    const heights=Object.fromEntries([...nodes].map(([id,e])=>{
-      const card=e.firstElementChild;if(!card)return [id,0];
-      // Measure content again so a completed or translated card can shrink after polling.
-      card.style.minHeight='0';const height=card.offsetHeight||0;card.style.minHeight='';return [id,height];
-    }));
-    layout=layeredLayout(data.nodes,data.edges.map(e=>({...e,label:e.label?label(e.label):''})),data.decisions,true,{heights,language,rowGap:36,maxHeight:(viewport.clientHeight-20)/MIN_FIT_SCALE});
+    layout=layeredLayout(data.nodes,data.edges.map(e=>({...e,label:e.label?label(e.label):''})),data.decisions,true,{language});
     clear(key);
     for(const [state,word] of [['open','lineSampleOpen'],['closed','lineSampleClosed'],['review','lineSampleReview'],['returned','lineSampleReturned']]){
-      if(!['review','returned'].includes(state) && !layout.routes.some(r=>state==='review'?r.relation==='reviews':r.relation!=='reviews' && (state==='open'?r.gateState==='open':state==='returned'?r.gateState==='returned':!['open','returned'].includes(r.gateState))))continue;
+      if(!layout.routes.some(r=>(r.gateState==='returned'?'returned':r.relation==='reviews'?'review':r.gateState==='open'?'open':'closed')===state))continue;
       const sample=el('span',undefined,'line-sample '+state),caption=el('span',t(word));caption.dataset.i18n=word;sample.append(el('i'),caption);key.append(sample);
     }
     // Reorder existing controls without replacing them: tab order follows the drawing.
@@ -1493,33 +1547,38 @@ function createMap() {
     if(drawing)drawing.remove();drawing=svg('svg',{width:layout.bounds.width,height:layout.bounds.height,class:'edge-layer','aria-hidden':'true'});
     const defs=svg('defs');
     for(const state of ['open','closed','returned','waiting_for_you']) {
-      const marker=svg('marker',{id:'arrow-'+state,viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'});marker.append(svg('path',{d:'M0 0 10 5 0 10Z',class:state}));defs.append(marker);
+      const marker=svg('marker',{id:'arrow-'+state,viewBox:'0 0 10 10',refX:10,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'});marker.append(svg('path',{d:'M0 0 10 5 0 10Z',class:state}));defs.append(marker);
     }
     drawing.append(defs);stage.prepend(drawing);
     for(const element of chips.values())element.remove();chips.clear();
     for(const route of layout.routes) {
       const {chip:c}=route;
-      const d=route.points.map((p,i)=>`${i?'L':'M'}${p.x} ${p.y}`).join(' ');
+      const d=roundedRoute(route.points);
       const flowing=route.gateState==='open'&&['running','retrying'].includes(displayState(data.nodes.find(n=>n.id===route.to)||{}, data.decisions));
       const line=svg('path',{d,'data-from':route.from,'data-to':route.to,class:'edge-path '+route.gateState+(route.relation==='reviews'?' review':'')+(flowing?' flowing':''),'marker-end':`url(#arrow-${route.gateState})`});
-      drawing.append(flowing?inPhase(line,2000):line);
+      drawing.append(svg('path',{d,class:'edge-underlay'}),flowing?inPhase(line,2000):line);
+      if(route.gateState==='returned'){const p=route.end;drawing.append(svg('path',{d:`M${p.x-16} ${p.y-6} v12 m-4 -4 l4 4 4 -4`,class:'return-mark'}));}
       if(!c||chips.has(c.first))continue;
       const chip=el('div',undefined,'edge-chip '+route.gateState);
       const source=data.nodes.find(n=>n.id===route.from),targets=layout.routes.filter(r=>r.chip===c).map(r=>title(data.nodes.find(n=>n.id===r.to))).join(', ');
       chip.setAttribute('aria-label',`${edgeRelationLabel(route,language)}. ${title(source)} → ${targets}`);
       chip.append(el('span',route.text));chip.dataset.chip=c.key;setRect(chip,c);stage.append(chip);if(chip.firstElementChild.offsetWidth>c.width-20)chip.dataset.tooWide='true';chips.set(c.first,chip);
     }
-    const junctions=new Map();for(const route of layout.routes)if(route.junction)for(const p of [route.junction,route.points[1]])junctions.set(`${p.x},${p.y}`,p);
-    for(const p of junctions.values())drawing.append(svg('circle',{cx:p.x,cy:p.y,r:4,class:'edge-junction'}));
     // All focusable controls are ordered by column and then vertical position.
     [...nodes.values(),...chips.values()].sort((a,b)=>parseFloat(a.style.left)-parseFloat(b.style.left)||parseFloat(a.style.top)-parseFloat(b.style.top)).forEach(e=>stage.append(e));
-    const directionKey=data.complete?'allDone':layout.vertical?'mapDown':'mapDirection';
+    const directionKey='mapDirection';
     direction.textContent=t(directionKey);direction.dataset.i18n=directionKey;
-    mapTitle.classList.toggle('map-complete',!!data.complete);
+    mapTitle.classList.remove('map-complete');
     size();
     // Start at the beginning, with no clipped labels from a preceding column.
     if(!data.nodes.length)placed=false;
-    else if(!placed&&viewport.clientWidth){placed=true;viewport.scrollLeft=0;viewport.scrollTop=0;}
+    else if(!placed&&viewport.clientWidth){
+      placed=true;viewport.scrollLeft=0;viewport.scrollTop=0;
+      if(layout.bounds.width*scale>viewport.clientWidth||layout.bounds.height*scale>viewport.clientHeight){
+        const first=layout.order.find(id=>!['passed'].includes(displayState(data.nodes.find(n=>n.id===id),data.decisions)));
+        if(first){const p=layout.positions[first];viewport.scrollLeft=Math.max(0,p.x*scale-28);viewport.scrollTop=Math.max(0,p.y*scale-28);}
+      }
+    }
     if(reveal)revealSelection();
     outside();
     if(focused)nodes.get(focused)?.querySelector('button')?.focus({preventScroll:true});
@@ -1539,23 +1598,18 @@ function createMap() {
   new ResizeObserver(size).observe(viewport);
   function revealSelection() {
     const p=layout?.positions[chosenNode];if(!p || !viewport.clientWidth)return;
-    const mobile=matchMedia('(max-width:760px)').matches,w=viewport.clientWidth,h=viewport.clientHeight;
-    const cover=mobile?0:($('panel').offsetWidth||340)+16;
-    const ox=Math.max(0,(w-layout.bounds.width*scale)/2),oy=Math.max(0,(h-layout.bounds.height*scale)/2);
-    // Extra scroll room belongs to the overlay, never to the graph's geometry.
-    spacer.style.width=Math.max(w,layout.bounds.width*scale+ox+cover)+'px';
-    const x=p.x*scale+ox,y=p.y*scale+oy,right=x+p.width*scale,bottom=y+p.height*scale;
-    let left=viewport.scrollLeft,top=viewport.scrollTop;
-    if(right>left+w-cover-16)left=right-w+cover+16;
-    if(x<left+16)left=x-16;
-    if(bottom>top+h-16)top=bottom-h+16;
-    if(y<top+16)top=y-16;
-    viewport.scrollTo({left:Math.max(0,left),top:Math.max(0,top),behavior:reduced.matches?'auto':'smooth'});
+    const w=viewport.clientWidth,h=viewport.clientHeight,ox=origin.x,oy=origin.y;
+    const neighbours=layout.routes.filter(r=>r.from===chosenNode||r.to===chosenNode).map(r=>layout.positions[r.from===chosenNode?r.to:r.from]);
+    let left=p.x,right=p.x+p.width,top=p.y,bottom=p.y+p.height;
+    for(const q of neighbours.sort((a,b)=>Math.abs(a.x-p.x)-Math.abs(b.x-p.x))){
+      if((Math.max(right,q.x+q.width)-Math.min(left,q.x))*scale<w-32 && (Math.max(bottom,q.y+q.height)-Math.min(top,q.y))*scale<h-32){left=Math.min(left,q.x);right=Math.max(right,q.x+q.width);top=Math.min(top,q.y);bottom=Math.max(bottom,q.y+q.height);}
+    }
+    viewport.scrollTo({left:Math.max(0,(left+right)*scale/2+ox-w/2),top:Math.max(0,(top+bottom)*scale/2+oy-h/2),behavior:'auto'});
   }
   return {update,select:id=>{
     chosenNode=id;
     for(const [key,element] of nodes){element.firstElementChild.classList.toggle('expanded',key===id);element.querySelector('.node-header').setAttribute('aria-expanded',String(key===id));}
-    if(id)revealSelection();
+    size();if(id)revealSelection();
   },wake:size};
 }
 renderer = createMap(); if(view)renderer.update(view,selected);
