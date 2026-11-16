@@ -129,11 +129,11 @@ class PageTests(unittest.TestCase):
         self.assertEqual(used, declared)
         reduced = '@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important'
         self.assertGreater(style.index(reduced), max(style.rindex('@keyframes'), style.rindex('animation:flow')))
-        # The second walking frame is hidden unless an animation reveals it.
-        self.assertIn('.walker img+img{opacity:0;', style)
+        # The native play mark remains visible when animation is disabled.
+        self.assertIn("el('span','▶','walker')", js)
         for used_class in ('working', 'changed', 'flowing', 'walker'):
             self.assertIn("'" + used_class, js.replace("' " + used_class, "'" + used_class))
-        self.assertIn('/static/assets/frog-walk-b.png', js)
+        self.assertNotIn('frog-walk', js)
         self.assertNotIn('requestAnimationFrame', js)
 
     def test_translation_keys_match(self):
@@ -160,7 +160,7 @@ class PageTests(unittest.TestCase):
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const source = readFileSync(process.argv[2], 'utf8');
-const {createDecisionController, decisionQuestion, purposeWording, purposeAction, viewLanguage, edgeRelationLabel, fitScale, MIN_FIT_SCALE, edgeChipText, cometCount, layeredLayout, crossingCount, displayState, statusGlyph, checkWording} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+const {createDecisionController, decisionQuestion, purposeWording, purposeAction, viewLanguage, edgeRelationLabel, fitScale, MIN_FIT_SCALE, edgeChipText, cometCount, layeredLayout, crossingCount, displayState, statusGlyph, checkWording, checkTitle, offscreenDirection} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const first = {project:'/project', run:'first'}, second = {project:'/project', run:'second'};
 const decision = {id:'d7', purpose:'lane3', kind:'authorization', failed:[]};
 const controller = createDecisionController();
@@ -204,6 +204,14 @@ for(const data of [demo,{nodes,edges},crossed,reviewed]) for(const expanded of [
   }
   const rects=[...layout.cardRects,...layout.chips];
   rects.forEach((a,i)=>rects.slice(i+1).forEach(b=>assert(!overlap(a,b),'cards and chips must never overlap: '+JSON.stringify([a,b]))));
+  // Different edges may cross, but cannot merge into the same horizontal or vertical stroke.
+  const segments=r=>r.points.slice(1).map((p,i)=>[r.points[i],p]);
+  for(const [i,r] of layout.routes.entries()) for(const other of layout.routes.slice(i+1)) {
+    for(const [a,b] of segments(r)) for(const [c,d] of segments(other)) {
+      if(a.x===b.x && c.x===d.x && a.x===c.x)assert(Math.min(Math.max(a.y,b.y),Math.max(c.y,d.y))-Math.max(Math.min(a.y,b.y),Math.min(c.y,d.y))<=.001,'vertical routes must not merge');
+      if(a.y===b.y && c.y===d.y && a.y===c.y)assert(Math.min(Math.max(a.x,b.x),Math.max(c.x,d.x))-Math.max(Math.min(a.x,b.x),Math.min(c.x,d.x))<=.001,'horizontal routes must not merge');
+    }
+  }
   const unsorted=layeredLayout(data.nodes,data.edges,data.decisions,false,options);
   const deps=data.edges.filter(e=>e.relation!=='reviews');
   assert(crossingCount(deps,layout.positions)<=crossingCount(deps,unsorted.positions));
@@ -220,12 +228,12 @@ const measured=layeredLayout([{id:'a',kind:'work'}],[],[],true,{heights:{a:127}}
 assert.equal(measured.positions.a.height,127,'ports and spacing use the rendered card height');
 assert(layout.order.includes('review'));
 assert.equal(fitScale({width:10000,height:10000},300,300),MIN_FIT_SCALE);
-// One thing handed to two places is one label with two lines; completion does not add invented nodes.
+// Every edge has its own label and distinct source and target ports.
 const fork=layeredLayout([{id:'a',kind:'work'},{id:'b',kind:'work'},{id:'c',kind:'work'}],[{from:'a',to:'b',label:'Parsed record',relation:'hands_over',gate:'open'},{from:'a',to:'c',label:'Parsed record',relation:'hands_over',gate:'open'}],[],true,{language:'en'});
-assert.equal(fork.chips.length,1);
-assert.equal(fork.routes.filter(r=>r.chip===fork.chips[0]).length,2);
+assert.equal(fork.chips.length,2);
+assert.notEqual(fork.routes[0].start.y,fork.routes[1].start.y);
 assert.equal(fork.routes.length,2);
-for(const r of fork.routes){assert.equal(r.start.y,r.chip.y+r.chip.height/2);assert(r.chip.x>r.start.x);assert(r.chip.x+r.chip.width<r.end.x,'label stays on its source stub before the fork');}
+for(const r of fork.routes){assert(r.chip.x>r.start.x);assert(r.chip.x+r.chip.width<r.end.x,'label stays between source and target');}
 assert.deepEqual(fork.terminals,['b','c']);
 // A line's text has one meaning: the name of what is handed over. Reviews, decisions and unnamed handoffs carry none.
 assert.equal(edgeChipText({relation:'hands_over',label:'Parsed record'},'en'),'Parsed record');
@@ -234,8 +242,23 @@ const review=layeredLayout([{id:'a',kind:'work'},{id:'r',kind:'review',target:'a
 assert.equal(review.chips.length,0,'a review line and a waiting decision add no label');
 // A graph too wide for the map keeps its words readable and scrolls instead of shrinking past the minimum.
 const chain=layeredLayout(['a','b','c','d'].map(id=>({id,kind:'work'})),[['a','b'],['b','c'],['c','d']].map(([from,to])=>({from,to,relation:'hands_over'})),[],true,{language:'ko'});
-assert.equal(fitScale(chain.bounds,860,2000),MIN_FIT_SCALE); assert.equal(MIN_FIT_SCALE,1);
+assert.equal(fitScale(chain.bounds,860,2000),MIN_FIT_SCALE); assert.equal(MIN_FIT_SCALE*14,13);
 assert(chain.bounds.width*MIN_FIT_SCALE>860);
+""")
+
+    def test_offscreen_cards_have_one_direction_and_fit_uses_both_dimensions(self):
+        self.run_controller(r"""
+const cases=[
+ [{x:-30,y:-5,width:100,height:100},'offTop'],
+ [{x:320,y:40,width:100,height:100},'offRight'],
+ [{x:-150,y:300,width:100,height:100},'offBottom'],
+ [{x:20,y:20,width:100,height:100},null],
+];
+for(const [rect,expected] of cases)assert.equal(offscreenDirection(rect,300,300),expected);
+const counts={}; for(const [rect] of cases){const direction=offscreenDirection(rect,300,300);if(direction)counts[direction]=(counts[direction]||0)+1;}
+assert.equal(Object.values(counts).reduce((a,b)=>a+b,0),3);
+assert.equal(fitScale({width:900,height:400},855,500),.95);
+assert.equal(fitScale({width:900,height:400},855,500,true),.95);
 """)
 
     def test_relation_labels_and_loop_states(self):
@@ -258,6 +281,8 @@ for(const language of ['en','ko']) {
   const failed=checkWording({id:'screen',title:'A screen exists',result:'failed'},language);
   assert(failed.startsWith('✕'));assert(failed.includes('“A screen exists”'));
   assert(checkWording({id:'screen',title:'A screen exists',result:'passed'},language).startsWith('✓'));
+  assert(checkWording({id:'screen',title:'A screen exists',result:'failed'},language,2).includes('2'));
+  assert(!checkTitle({id:'scope',title:'scope'},language).includes('scope'));
 }
 """)
 
@@ -454,7 +479,7 @@ get('flow-tab').click(); assert.equal(get('flow').hidden,false); assert.equal(ge
 // Open through the HTML fallback; map and panel route to the same openDecision.
 get('decision-list').querySelector('button').click();
 assert.match(get('decision').textContent,/attempt 1 came back/);
-assert.match(get('decision').textContent,/Not met · expected: “Unit passes”/);
+assert.match(get('decision').textContent,/In attempt 1, “Unit passes” did not pass/);
 assert.match(get('decision').textContent,/a.py/);
 assert.equal(get('flow-tab')['aria-pressed'],'true','reading retains its parent tab');
 const input=get('answer-text'), actions=get('answer-actions'), buttons=[...actions.children];
