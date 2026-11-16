@@ -52,6 +52,7 @@ Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed 
 | `handoff@oozoofrog-plugin` | [Keep work state in a project-local handoff document](plugins/handoff/skills/handoff/SKILL.md) so a new Claude Code session continues after `/clear` without relying on compaction; see [Handoff](#handoff). |
 | `model-advisor@oozoofrog-plugin` | [Recommend a Claude model and effort for a task](plugins/model-advisor/skills/model-advisor/SKILL.md), and on request hand the task to a subagent or background Claude Code session running that model; see [Model Advisor](#model-advisor). |
 | `auto-flow@oozoofrog-plugin` | [Run a task-tiered Claude Workflow](plugins/auto-flow/skills/auto-flow/SKILL.md) with model and effort selection, one failure escalation, and optional T3 Code cross-provider review; see [Auto Flow](#auto-flow). |
+| `graph-flow@oozoofrog-plugin` | [Plan, delegate, verify, and track multi-step work as a graph](plugins/graph-flow/skills/graph-flow/SKILL.md), with per-node checks, human decisions, and a progress dashboard; see [Graph Flow](#graph-flow). |
 
 ## Examples
 
@@ -97,6 +98,14 @@ The skill picks a starting model and effort from the task type, applies upgrade 
 작업 난이도를 분류해 단계마다 맞는 Claude 모델(Haiku·Sonnet·Opus·Fable)과 effort로 계획·실행·통합 검증하는 Workflow를 실행한다. 실패하면 한 번만 모델이나 effort를 올려 수정한다. "/auto-flow", "auto-flow로 해줘", "모델 알아서 골라서 워크플로로 진행해줘", "토큰 효율적으로 워크플로 돌려줘", "교차 검토까지 해줘", "Codex도 섞어서 진행해줘", "보안 점검·공격 시나리오까지 워크플로로 해줘"에 사용한다. 보안 점검은 security tier(Fable)로 돌리고, Fable 안전장치에 막힌 단위만 사용자가 허용하면 Mythos 5.2로 넘긴다. T3 Code에서는 Codex 계정을 남은 사용량 기준으로 골라 교차 검토와 실행 분담에 쓴다.
 
 [Auto Flow](plugins/auto-flow/skills/auto-flow/SKILL.md) 0.3.0 classifies task difficulty, plans and executes with Claude models and effort, integrates verification, and escalates once on failure. Security reviews and attack-scenario tests of your own systems run in a `security` tier on Fable 5.2; a unit blocked by Fable's safeguards is never retried automatically, and only with your approval goes to a Mythos 5.2 background session (available only to organizations verified by Anthropic, with 30-day data retention by default). Codex receives the skill only; the Workflow script and the two plugin agents work only in Claude Code with its Workflow tool. Sessions without that tool must report the limitation and must not imitate Workflow. Cross-provider steps need T3 Code `delegate_task` tools, Python 3, and usage data in `~/.t3/caches/*.json`. Agent lookup tries `auto-flow:flow-planner` / `auto-flow:flow-verifier`, then bare names, then the default agent with a note; the nine-agent cap counts `run()` calls, not name retries. See [installation](docs/plugin-installation.md#auto-flow).
+
+## Graph Flow
+
+Use when a user asks to plan, split, delegate, verify, or track multi-step work with checks that can fail, per-node sub-session assignment, human decision points, or a progress dashboard, or explicitly invokes graph-flow. Exclude simple edits and ordinary questions that need no coordination.
+
+`graph-flow` 0.1.0 records dependencies, per-node assignments, checks, attempts, and human decisions so work can resume in another session. Invoke `$graph-flow` in Codex or `/graph-flow:graph-flow` in Claude Code, for example: “Plan this work as a graph with checks, and track progress.” Python 3 and Git are required. Both Plugins include MCP configuration; Workflow execution additionally needs the host's Workflow tool.
+
+For the dashboard, run `gf serve` yourself in your terminal and open the printed address. Here `gf` means `python3 <skill-dir>/scripts/gf`, where `<skill-dir>` is the installed skill directory; no command is added to PATH. The agent records decision requests and waits for your answer. See [installation](docs/plugin-installation.md#graph-flow) and the [dashboard contract](plugins/graph-flow/skills/graph-flow/references/dashboard.md).
 
 ## Local AI Studio
 

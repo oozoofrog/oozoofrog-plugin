@@ -123,6 +123,24 @@ codex plugin add local-ai-studio@oozoofrog-plugin
 
 Swift Intelligence는 macOS, Command Line Tools를 포함한 Xcode, Python 3가 필요합니다. Xcode에 포함된 `sourcekit-lsp`를 실행하며 외부 MCP 바이너리나 Python 패키지를 설치하지 않습니다. Swift Intelligence 설치 후 Codex를 다시 시작하고 새 작업을 열어 Skill과 MCP 도구를 로드하십시오. 자세한 내용은 [Swift Intelligence 설치 및 사용](../plugins/swift-intelligence/docs/installation-and-usage.md)을 참고하세요.
 
+## Graph Flow
+
+`graph-flow@oozoofrog-plugin` 0.1.0은 여러 단계의 작업을 계획·분담·검증하고 진행 상황을 기록하는 [Graph Flow 스킬](../plugins/graph-flow/skills/graph-flow/SKILL.md)과 MCP 설정을 설치합니다. Python 3과 Git이 필요합니다. Codex 매니페스트는 `.mcp.json`을 참조하고, Claude 매니페스트는 `${CLAUDE_PLUGIN_ROOT}` 기준의 MCP 실행 경로를 사용합니다.
+
+게시 전에는 저장소 루트에서 로컬 checkout을 등록한 뒤 설치합니다. 기존 marketplace가 있다면 source가 이 checkout인지 먼저 확인합니다.
+
+```sh
+codex plugin marketplace add "$PWD"
+codex plugin add graph-flow@oozoofrog-plugin
+# Claude Code
+claude plugin marketplace add "$PWD"
+claude plugin install graph-flow@oozoofrog-plugin
+```
+
+설치 후 호스트를 다시 시작하고 새 대화에서 Codex는 `$graph-flow`, Claude Code는 `/graph-flow:graph-flow`로 호출합니다. 설치된 버전과 실제 읽은 스킬 경로를 확인하세요. 원격 설치는 변경이 원격 marketplace에 반영된 뒤 사용할 수 있습니다.
+
+대시보드는 사용자가 직접 자신의 터미널에서 `gf serve`를 실행하고 출력된 주소를 엽니다. `gf`는 `python3 <skill-dir>/scripts/gf`를 줄여 쓴 것이며, `<skill-dir>`은 설치된 스킬 디렉터리입니다. 에이전트는 대시보드를 실행하거나 대신 답하지 않습니다. [대시보드 규약](../plugins/graph-flow/skills/graph-flow/references/dashboard.md)을 참고하세요. Workflow 보조 스크립트는 해당 도구를 제공하는 호스트에서만 사용할 수 있습니다.
+
 ## Local AI Studio
 
 버전 0.3.0은 별도 `whisper-cli`를 사용하는 [Whisper 전사·추정 타임스탬프 흐름](../plugins/local-ai-studio/skills/local-ai-studio/references/whisper.md)도 제공합니다. 기존 모델 재사용, crop 오프셋, DTW 실패와 정확도 한계를 구분합니다. 별도 CLI 지침이며 네이티브 앱 통합을 뜻하지 않습니다.

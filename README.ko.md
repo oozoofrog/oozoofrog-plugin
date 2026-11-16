@@ -83,6 +83,16 @@ skills-only Plugin `0.3.0`을 제공합니다. Plugin에 모델·런타임·생�
 
 `auto-flow` 0.3.0은 자기 시스템의 보안 점검·공격 시나리오 시험을 `security` tier(Fable 5.2)로 실행합니다. Fable 안전장치에 막힌 단위는 자동으로 다시 시도하지 않고, 사용자가 승인할 때만 Mythos 5.2 백그라운드 세션으로 넘깁니다(Anthropic 검증 조직만 호출 가능, 기본 30일 데이터 보관). Codex에는 스킬만 제공됩니다. Workflow 스크립트와 두 Plugin 에이전트는 Claude Code의 Workflow 도구에서만 동작합니다. 이 도구가 없는 세션은 실행 불가를 알리고 Workflow를 흉내 내지 않습니다. 교차 제공자 단계에는 T3 Code `delegate_task` 도구, Python 3, `~/.t3/caches/*.json` 사용량 데이터가 필요합니다. 에이전트는 `auto-flow:flow-planner`·`auto-flow:flow-verifier`, bare 이름, 기본 에이전트 순서로 찾으며 대체 기록을 남깁니다. 9개 상한은 이름 재시도가 아닌 `run()` 호출 수입니다. [설치](docs/plugin-installation.md#auto-flow)를 확인하세요.
 
+## Graph Flow
+
+| Plugin | 용도 |
+| --- | --- |
+| `graph-flow@oozoofrog-plugin` | [여러 단계의 작업을 그래프로 계획·분담·검증하고 진행 상황 확인](plugins/graph-flow/skills/graph-flow/SKILL.md) |
+
+`graph-flow` 0.1.0은 작업을 노드로 나누고 의존 관계, 노드별 세션 배정, 실패할 수 있는 검사와 시도 기록을 남깁니다. 계획·분담·검증·진행 추적, 사람의 판단이나 대시보드가 필요한 여러 단계의 작업에 사용합니다. 단순 수정과 조율이 필요 없는 일반 질문은 대상에서 제외합니다. Codex에서는 `$graph-flow`, Claude Code에서는 `/graph-flow:graph-flow`로 호출합니다. 예: “이 작업을 검사 가능한 노드로 나누고 세션별로 배정해 진행 상황을 기록해 주세요.” Python 3과 Git이 필요하며, 두 Plugin에 MCP 설정을 포함합니다. Workflow 실행에는 호스트의 Workflow 도구가 추가로 필요합니다.
+
+대시보드는 사용자가 자신의 터미널에서 `gf serve`를 실행하고 출력된 주소를 엽니다. 여기서 `gf`는 `python3 <skill-dir>/scripts/gf`의 줄임말이며, `<skill-dir>`에는 설치된 스킬 경로를 넣습니다. PATH에 명령을 추가하지 않습니다. 에이전트는 결정 요청을 기록하고 사용자의 답변을 기다립니다. [설치](docs/plugin-installation.md#graph-flow)와 [대시보드 규약](plugins/graph-flow/skills/graph-flow/references/dashboard.md)을 참고하세요.
+
 ## 설치
 
 필요한 Plugin만 선택해 설치합니다. 아래 명령은 해당 변경이 원격 marketplace에 반영된 뒤 사용할 수 있습니다.
