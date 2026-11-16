@@ -123,7 +123,7 @@ class PageTests(unittest.TestCase):
         js = (S / 'scripts/graphflow/page.js').read_text(encoding='utf-8')
         style = html[html.index('<style'):html.index('</style>')]
         declared = set(re.findall(r'@keyframes ([a-z]+)', style))
-        self.assertEqual(declared, {'step', 'turn', 'flow', 'arrive'})
+        self.assertEqual(declared, {'step', 'flow', 'arrive'})
         used = {name for rule in re.findall(r'animation:([^;}]+)', style)
                 for name in re.findall(r'(?:^|,)([a-z]+) ', rule)}
         self.assertEqual(used, declared)
@@ -160,7 +160,7 @@ class PageTests(unittest.TestCase):
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const source = readFileSync(process.argv[2], 'utf8');
-const {createDecisionController, decisionQuestion, purposeWording, purposeAction, viewLanguage, edgeRelationLabel, fitScale, MIN_FIT_SCALE, edgeChipText, cometCount, layeredLayout, crossingCount} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+const {createDecisionController, decisionQuestion, purposeWording, purposeAction, viewLanguage, edgeRelationLabel, fitScale, MIN_FIT_SCALE, edgeChipText, cometCount, layeredLayout, crossingCount, displayState, statusGlyph, checkWording} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const first = {project:'/project', run:'first'}, second = {project:'/project', run:'second'};
 const decision = {id:'d7', purpose:'lane3', kind:'authorization', failed:[]};
 const controller = createDecisionController();
@@ -225,6 +225,7 @@ const fork=layeredLayout([{id:'a',kind:'work'},{id:'b',kind:'work'},{id:'c',kind
 assert.equal(fork.chips.length,1);
 assert.equal(fork.routes.filter(r=>r.chip===fork.chips[0]).length,2);
 assert.equal(fork.routes.length,2);
+for(const r of fork.routes){assert.equal(r.start.y,r.chip.y+r.chip.height/2);assert(r.chip.x>r.start.x);assert(r.chip.x+r.chip.width<r.end.x,'label stays on its source stub before the fork');}
 assert.deepEqual(fork.terminals,['b','c']);
 // A line's text has one meaning: the name of what is handed over. Reviews, decisions and unnamed handoffs carry none.
 assert.equal(edgeChipText({relation:'hands_over',label:'Parsed record'},'en'),'Parsed record');
@@ -242,6 +243,21 @@ assert(chain.bounds.width*MIN_FIT_SCALE>860);
 for(const [lang,labels] of [['ko',['넘겨줌','검토함','결정을 기다림']],['en',['hands over','reviews','waits for a decision']]]) {
   ['hands_over','reviews','waits_for_decision'].forEach((relation,i)=>assert.equal(edgeRelationLabel({relation,label:''},lang),labels[i]));
   assert.equal(edgeRelationLabel({relation:'hands_over',label:'Readable result'},lang),labels[0]+': Readable result');
+}
+""")
+
+    def test_displayed_states_and_failed_expectations(self):
+        self.run_controller(r"""
+const states=['passed','running','retrying','awaiting','notStarted','exhausted','submitted','held','returned'];
+assert.equal(new Set(states.map(statusGlyph)).size,states.length,'each state has a distinct stable shape');
+for(const status of ['running','submitted','awaiting_approval','replan']) {
+  assert.equal(displayState({id:'work',status,attempts:2},[{node:'work'}]),'awaiting');
+}
+assert.equal(displayState({id:'work',status:'running',attempts:2},[]),'retrying');
+for(const language of ['en','ko']) {
+  const failed=checkWording({id:'screen',title:'A screen exists',result:'failed'},language);
+  assert(failed.startsWith('✕'));assert(failed.includes('“A screen exists”'));
+  assert(checkWording({id:'screen',title:'A screen exists',result:'passed'},language).startsWith('✓'));
 }
 """)
 
@@ -405,7 +421,7 @@ const get=id=>document.getElementById(id);
 assert.equal(document.documentElement.lang,'en','plan language must override Korean browser');
 // The graph opens first, and a waiting decision is answered from its card.
 assert.equal(get('flow').hidden,false); assert.equal(get('home').hidden,true);
-assert.match(get('map').textContent,/d7 read and answer/);
+assert.match(get('map').textContent,/d7 · Read and decide/);
 assert.equal(get('panel').hidden,true,'no idle legend occupies the graph');
 assert.equal(get('attention').hidden,false);
 assert.match(get('attention').textContent,/d7/);
@@ -419,6 +435,10 @@ get('attention').querySelectorAll('button').at(-1).click();
 assert(get('answer-text'),'unbound decision opens in one click');
 get('answer-actions').children.at(-1).click();
 live.decisions.pop();
+live.decisions.push({...d,id:'d8',node:null,node_title:null,question:'Which language?',kind:'direction',purpose:'direction',failed:[],files:[],verified:[],worker_note:null});
+docEvents.visibilitychange();await settle();get('attention').querySelectorAll('button').at(-1).click();
+assert.equal(get('decision').querySelector('details').hidden,true,'a question without evidence must not advertise an empty disclosure');
+get('answer-actions').children.at(-1).click();live.decisions.pop();
 live.nodes.push({id:'choice',kind:'decision',title:'Pick a direction',status:'pending',answered:true,inputs:[],outputs:[],laps:[],returned_reasons:[]});
 docEvents.visibilitychange();await settle();
 assert.match(get('map').textContent,/Decision · Finished/,'answered decisions use finished words as well as colour');
@@ -433,6 +453,10 @@ assert.equal(entries[1].querySelector('details').open,true,'a returned attempt s
 get('flow-tab').click(); assert.equal(get('flow').hidden,false); assert.equal(get('home').hidden,true);
 // Open through the HTML fallback; map and panel route to the same openDecision.
 get('decision-list').querySelector('button').click();
+assert.match(get('decision').textContent,/attempt 1 came back/);
+assert.match(get('decision').textContent,/Not met · expected: “Unit passes”/);
+assert.match(get('decision').textContent,/a.py/);
+assert.equal(get('flow-tab')['aria-pressed'],'true','reading retains its parent tab');
 const input=get('answer-text'), actions=get('answer-actions'), buttons=[...actions.children];
 assert(input, 'fallback must open the decision');
 assert.equal(buttons[0].textContent,'Accept anyway'); assert.equal(buttons[0].disabled,true, 'real affirmative button must use controller.canSubmit');

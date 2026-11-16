@@ -25,7 +25,7 @@ const STRINGS = {
     "from": "보낸 곳",
     "to": "받는 곳",
     "noReason": "돌아온 까닭이 따로 기록되지 않았어요.",
-    "attempt": "{n}번째 시도 · 최대 {max}번",
+    "attempt": "{n}번째 시도예요 · 최대 {max}번",
     "notStarted": "아직 시작하지 않았어요",
     "passed": "끝났어요",
     "running": "만들고 있어요",
@@ -124,10 +124,10 @@ const STRINGS = {
     "zoomIn": "크게 보기",
     "zoomOut": "작게 보기",
     "mapHelp": "끌어서 이동 · + − 확대 · 0 기본 크기",
-    "firstPass": "한 번에",
-    "finishedAttempts": "{n}번 만에",
-    "lineLegend": "선 위의 글은 넘기는 것의 이름이에요",
-    "unusedAttempts": "시도 0번 · 최대 {max}번",
+    "firstPass": "첫 시도에 끝났어요",
+    "finishedAttempts": "{n}번 시도해서 끝났어요",
+    "lineLegend": "실선 → 넘겼어요 · 파선 ⇢ 아직 기다려요 · 점선 ↶ 검토해요",
+    "unusedAttempts": "최대 {max}번 시도할 수 있어요",
     "home": "할 일과 기록",
     "graph": "그래프",
     "nothingTitle": "지금은 답할 일이 없어요",
@@ -149,7 +149,7 @@ const STRINGS = {
     "evPassed": "{n}번째 시도 통과",
     "evReturned": "{n}번째 시도 되돌아옴",
     "evReplan": "{n}번째 시도 되돌아옴 · 시도를 다 써서 새 계획이 필요해요",
-    "evNeedsYou": "{n}번째 시도 · 내 답을 기다려요",
+    "evNeedsYou": "{n}번째 시도 · 내 결정을 기다려요",
     "evHeld": "{n}번째 시도 · 멈춰 두었어요",
     "evReopened": "다시 열었어요",
     "evAsked": "질문",
@@ -158,7 +158,7 @@ const STRINGS = {
     "evFinalFailed": "최종 확인 실패",
     "evLearned": "배운 것을 기록했어요",
     "checksPassed": "검사 {n}개 통과",
-    "checksFailed": "통과하지 못한 검사: {names}",
+    "checksFailed": "✕ 확인 실패 · 기대한 내용: “{names}”",
     "rowDetails": "검사와 메모 보기",
     "checkPassed": "통과",
     "checkFailed": "실패",
@@ -194,9 +194,9 @@ const STRINGS = {
     "attemptsOf": "시도와 검사",
     "runOptionNeeds": "{project} · {run} · 내 답 {n}",
     "since": "{time}부터",
-    "returnTimes": "돌아온 횟수 {n}번",
+    "returnTimes": "이전에 {n}번 돌아왔어요",
     "allDone": "이 흐름이 끝났어요",
-    "answerHere": "{id} 읽고 답하기",
+    "answerHere": "{id} · 읽고 결정하기",
     "lineOpen": "넘겨줬어요",
     "lineClosed": "아직 넘기지 않았어요",
     "lineWaiting": "내 답을 기다려요",
@@ -204,7 +204,28 @@ const STRINGS = {
     "lineReview": "검토해요",
     "tries": "시도 {n}/{max}",
     "closeDetails": "자세한 내용 닫기",
-    "mapDirection": "왼쪽에서 오른쪽으로"
+    "mapDirection": "왼쪽에서 오른쪽으로",
+    "checkMet": "✓ 확인했어요: {title}",
+    "workingHere": "작업자가 진행 중이에요",
+    "offLeft": "← 왼쪽",
+    "offRight": "오른쪽 →",
+    "offTop": "↑ 위쪽",
+    "offBottom": "↓ 아래쪽",
+    "offCount": "{direction} {n}개",
+    "visibleCards": "전체 {total}개 중 {n}개가 보여요",
+    "graphEdges": "화면 밖의 일로 이동해요",
+    "history": "이 일의 시도와 검사 기록",
+    "currentAttempt": "지금 시도",
+    "earlierAttempt": "이전 시도",
+    "decisionLocation": "결정을 읽는 중이에요",
+    "gateReview": "답하기 전에 이 결정의 기록을 확인해 주세요.",
+    "noAttemptChecks": "이 시도의 검사 결과는 아직 기록되지 않았어요.",
+    "previousReason": "이전에 돌아온 까닭: {reason}",
+    "offWorking": " · 진행 {n}",
+    "offNeeds": " · 내 결정 {n}",
+    "workerDetails": "맡은 곳과 주고받는 것",
+    "attemptRecord": "{n}번째 시도의 검사와 메모",
+    "earlierFailure": "이전에 확인하지 못했어요: “{reason}”"
   },
   "en": {
     "flow": "Whole flow",
@@ -231,7 +252,7 @@ const STRINGS = {
     "from": "From",
     "to": "To",
     "noReason": "No readable reason was recorded.",
-    "attempt": "Attempt {n} of {max}",
+    "attempt": "Attempt {n} · up to {max} attempts",
     "notStarted": "Not started",
     "passed": "Finished",
     "running": "Making it",
@@ -330,10 +351,10 @@ const STRINGS = {
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "mapHelp": "Drag to pan · + − zoom · 0 reset",
-    "firstPass": "First attempt",
-    "finishedAttempts": "In {n} attempts",
-    "lineLegend": "Text on a line names what is handed over",
-    "unusedAttempts": "0 attempts · up to {max}",
+    "firstPass": "Finished on the first attempt",
+    "finishedAttempts": "Finished after {n} attempts",
+    "lineLegend": "Solid → delivered · dashed ⇢ waiting · dotted ↶ review",
+    "unusedAttempts": "Up to {max} attempts available",
     "home": "To do and log",
     "graph": "Graph",
     "nothingTitle": "Nothing needs your answer",
@@ -355,7 +376,7 @@ const STRINGS = {
     "evPassed": "attempt {n} passed",
     "evReturned": "attempt {n} came back",
     "evReplan": "attempt {n} came back · no attempts left, a new plan is needed",
-    "evNeedsYou": "attempt {n} · waiting for your answer",
+    "evNeedsYou": "Attempt {n} · waiting for you",
     "evHeld": "attempt {n} · put on hold",
     "evReopened": "reopened",
     "evAsked": "asked",
@@ -364,7 +385,7 @@ const STRINGS = {
     "evFinalFailed": "Final check failed",
     "evLearned": "A lesson was recorded",
     "checksPassed": "{n} checks passed",
-    "checksFailed": "checks that did not pass: {names}",
+    "checksFailed": "✕ Not met · expected: “{names}”",
     "rowDetails": "Checks and notes",
     "checkPassed": "passed",
     "checkFailed": "failed",
@@ -400,9 +421,9 @@ const STRINGS = {
     "attemptsOf": "Attempts and checks",
     "runOptionNeeds": "{project} · {run} · {n} need you",
     "since": "since {time}",
-    "returnTimes": "Came back {n} times",
+    "returnTimes": "Came back {n} times before",
     "allDone": "This flow is complete",
-    "answerHere": "{id} read and answer",
+    "answerHere": "{id} · Read and decide",
     "lineOpen": "handed over",
     "lineClosed": "not handed over yet",
     "lineWaiting": "waiting for your answer",
@@ -410,7 +431,28 @@ const STRINGS = {
     "lineReview": "reviews",
     "tries": "attempt {n}/{max}",
     "closeDetails": "Close details",
-    "mapDirection": "Left to right"
+    "mapDirection": "Left to right",
+    "checkMet": "✓ Met: {title}",
+    "workingHere": "Someone is working here",
+    "offLeft": "← Left",
+    "offRight": "Right →",
+    "offTop": "↑ Above",
+    "offBottom": "↓ Below",
+    "offCount": "{direction}: {n}",
+    "visibleCards": "Showing {n} of {total} cards",
+    "graphEdges": "Go to work beyond this view",
+    "history": "Attempts and checks for this work",
+    "currentAttempt": "Current attempt",
+    "earlierAttempt": "Earlier attempt",
+    "decisionLocation": "Reading a decision",
+    "gateReview": "Review this decision’s record before answering.",
+    "noAttemptChecks": "No check results are recorded for this attempt yet.",
+    "previousReason": "Earlier return reason: {reason}",
+    "offWorking": " · working {n}",
+    "offNeeds": " · for you {n}",
+    "workerDetails": "Worker and handoffs",
+    "attemptRecord": "Checks and notes for attempt {n}",
+    "earlierFailure": "Previously not met: “{reason}”"
   }
 };
 // UI_STRINGS_END
@@ -512,6 +554,23 @@ export function edgeRelationLabel(edge, language = 'en') {
 export function edgeChipText(edge) {
   return (edge.relation || 'hands_over') === 'hands_over' && edge.label ? edge.label : '';
 }
+export function displayState(node, decisions = []) {
+  if (decisions.some(d => d.node === node.id)) return 'awaiting';
+  if (node.status === 'passed' || node.answered) return 'passed';
+  if (node.status === 'running') return node.attempts > 1 ? 'retrying' : 'running';
+  if (['submitted','unverified'].includes(node.status)) return 'submitted';
+  if (['replan','exhausted'].includes(node.status)) return 'exhausted';
+  if (node.status === 'rejected') return 'returned';
+  if (['held','awaiting_approval'].includes(node.status)) return 'held';
+  return 'notStarted';
+}
+export function statusGlyph(state) {
+  return {passed:'✓', running:'▶', retrying:'↪', submitted:'⌕', awaiting:'◆', returned:'↩', notStarted:'○', exhausted:'!', held:'Ⅱ'}[state];
+}
+export function checkWording(check, language = 'en') {
+  const key = check.result === 'passed' ? 'checkMet' : 'checksFailed';
+  return STRINGS[language][key].replace('{title}', check.title || check.id).replace('{names}', check.title || check.id);
+}
 const textWidth = (text, wide, narrow) => Array.from(text || '').reduce((sum, c) => sum + (c.charCodeAt(0) > 0x2e80 ? wide : narrow), 0);
 export function fitScale(bounds, width, height, mobile = false) {
   const available = mobile ? height / bounds.height : Math.min(width / bounds.width, height / bounds.height);
@@ -527,7 +586,7 @@ export function crossingCount(routes, positions) {
   return count;
 }
 export function layeredLayout(nodes, edges, decisions = [], sort = true, options = {}) {
-  const width=248, gap=104, rowGap=40, left=32, top=48, byId=new Map(nodes.map(n=>[n.id,n]));
+  const width=248, gap=176, rowGap=20, left=24, top=12, byId=new Map(nodes.map(n=>[n.id,n]));
   // A review's arrow points back to its target; its dependency still points forward.
   const dependencies=edges.filter(e=>e.relation!=='reviews'&&byId.has(e.from)&&byId.has(e.to));
   const parents=new Map(nodes.map(n=>[n.id,dependencies.filter(e=>e.to===n.id).map(e=>e.from)]));
@@ -582,14 +641,16 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
     groups.get(key).routes.push(route);
   }
   for(const group of groups.values()) {
-    const w=Math.min(gap-12,Math.max(34,Math.ceil(textWidth(group.text,13,7.2))+14+group.icon)),lines=Math.ceil(textWidth(group.text,13,7.4)/(gap-28-group.icon));
-    const middle=group.routes.reduce((sum,r)=>sum+(r.start.y+r.end.y)/2,0)/group.routes.length;
-    const chip={x:left+group.column*(width+gap)+width+(gap-w)/2,y:Math.max(8,middle-(lines*19+10)/2),width:w,height:lines*19+10,first:group.routes[0].index,key:group.key};
+    const siblings=[...groups.values()].filter(g=>g.routes[0].from===group.routes[0].from);
+    const p=positions[group.routes[0].from], slot=siblings.indexOf(group);
+    const w=gap-44, lines=Math.max(1,Math.ceil(textWidth(group.text,13,7.4)/(w-12)));
+    const y=p.y+p.height/2+(slot-(siblings.length-1)/2)*60;
+    const chip={x:p.x+p.width+10,y:y-(lines*19+10)/2,width:w,height:lines*19+10,first:group.routes[0].index,key:group.key};
     while(chips.some(c=>chip.x<c.x+c.width+6&&chip.x+chip.width+6>c.x&&chip.y<c.y+c.height+8&&chip.y+chip.height+8>c.y))chip.y+=12;
-    chips.push(chip);group.routes.forEach(r=>{r.chip=chip;});
+    chips.push(chip);group.routes.forEach(r=>{r.chip=chip;r.start.y=chip.y+chip.height/2;});
   }
   const cardRects=Object.entries(positions).map(([id,p])=>({id,...p}));
-  const bounds={width:Math.max(360,...cardRects.map(p=>p.x+p.width+left)),height:Math.max(320,...cardRects.map(p=>p.y+p.height+48),...chips.map(c=>c.y+c.height+40))};
+  const bounds={width:Math.max(360,...cardRects.map(p=>p.x+p.width+left)),height:Math.max(320,...cardRects.map(p=>p.y+p.height+12),...chips.map(c=>c.y+c.height+40))};
   return {positions,layers,order:layers.flat(),routes,chips,cardRects,terminals,bounds};
 }
 
@@ -674,23 +735,14 @@ function decisionHeading(parent, d, tag) {
   if (question(d)) parent.append(el('p', question(d)));
 }
 function needs(node) { return view.decisions.some(d => d.node === node.id); }
-function status(node) {
-  if (needs(node)) return t('awaiting');
-  if (node.status === 'passed' || node.answered) return t('passed');
-  if (node.status === 'running') return t(node.attempts > 1 ? 'retrying' : 'running');
-  if (['submitted','unverified'].includes(node.status)) return t('submitted');
-  if (['replan','exhausted'].includes(node.status)) return t('exhausted');
-  if (node.status === 'rejected') return t('returned');
-  if (['held','awaiting_approval'].includes(node.status)) return t('held');
-  return t('notStarted');
-}
-function attempts(node) { return t(node.attempts?'attempt':'unusedAttempts', {n:node.attempts||0, max:node.max_attempts||3}); }
+function status(node) { return t(displayState(node, view.decisions)); }
+function attempts(node) { return node.status==='passed' && node.attempts ? t(node.attempts===1?'firstPass':'finishedAttempts',{n:node.attempts}) : t(node.attempts?'attempt':'unusedAttempts', {n:node.attempts||0, max:node.max_attempts||3}); }
 function card(heading, body, paper = false) { const c = el('div', undefined, 'card' + (paper ? ' paper' : '')); c.append(el('p', heading, 'eyebrow')); if (body) c.append(el('p', body)); return c; }
 function textList(parent, items, empty = 'notRecorded') { const list = el('ul'); if (!items.length) list.append(el('li', t(empty))); else items.forEach(text => list.append(el('li', text))); parent.append(list); }
 function failedBlock(parent, d) {
   if (!d.failed?.length) return;
   const failed = card(t('failed')); failed.classList.add('failed');
-  textList(failed, d.failed.map(text => text === STRINGS.en.untitledFailure ? t('untitledFailure') : text)); parent.append(failed);
+  textList(failed, d.failed.map(text => text === STRINGS.en.untitledFailure ? t('untitledFailure') : t('checksFailed', {names:text}))); parent.append(failed);
 }
 function decisionCard(d) {
   const c = el('div', undefined, 'card paper'); decisionHeading(c, d, 'h3'); failedBlock(c, d); if (d.context.why) c.append(el('p', d.context.why));
@@ -728,11 +780,31 @@ function panel() {
     const id = selected; selectNode(id);
     [...document.querySelectorAll('.node-card')].find(e => e.dataset.node === id)?.querySelector('.node-header')?.focus({preventScroll:!matchMedia('(max-width:760px)').matches});
   }, 'panel-close'); close.setAttribute('aria-label', t('closeDetails'));
-  const reference = el('p', undefined, 'ref-line'); reference.append(refChip(node.id, `${node.id} · ${title(node)}`)); if (workedBy(node)) reference.append(el('span', t('workedBy', {who:workedBy(node)})));
-  p.append(close, el('h2', title(node)), reference, el('p', `${status(node)} · ${attempts(node)}`));
-  if (node.summary) p.append(el('p', node.summary, 'muted'));
-  p.append(el('p', t('attemptsOf'), 'eyebrow'), logList(view.timeline.filter(r => r.node === node.id && r.kind !== 'asked' && r.kind !== 'answered'), 'notStarted', false));
-  p.append(handoffsCard('received', node.inputs, 'from'), handoffsCard('outputs', node.outputs, 'to'), button(t('showInLog'), () => showNode(node.id), 'primary'));
+  const reference = el('p', undefined, 'ref-line'); reference.append(refChip(node.id, `${node.id} · ${title(node)}`));
+  if(workedBy(node))reference.append(el('span',t('workedBy',{who:workedBy(node)})));
+  p.append(close);
+  for (const d of view.decisions.filter(d => d.node === node.id)) {
+    const ask = card(t('yourTurn'), question(d) || purposeWording(d.purpose, language), true);
+    ask.append(refChip(d.id, `${d.id} · ${title(node)}`), button(t('read'), () => openDecision(d.id), 'primary')); p.append(ask);
+  }
+  p.append(el('h2', title(node)), reference, el('p', `${status(node)} · ${attempts(node)}`));
+  const rows = view.timeline.filter(r => r.node === node.id && r.kind === 'attempt').sort((a,b)=>b.seq-a.seq);
+  if (rows.length) p.append(el('p', t('attemptsOf'), 'eyebrow'));
+  const list = el('ol', undefined, 'panel-history');
+  for (const r of rows) {
+    const item = el('li'); item.append(el('p',rowSentence(r)));
+    const extra=el('details');extra.open=!!rowOpen.get('panel:'+r.id);extra.addEventListener('toggle',()=>rowOpen.set('panel:'+r.id,extra.open)); extra.append(el('summary',t('attemptRecord',{n:r.attempt})));
+    const checks=el('ul',undefined,'checks');r.checks.forEach(c=>checks.append(checkLine(c)));extra.append(checks);
+    for(const [key,values] of [['workerNote',r.notes?[r.notes]:[]],['changedFiles',r.files||[]],['findings',r.findings||[]],['unsure',r.unsure||[]]])if(values.length){extra.append(el('p',t(key),'eyebrow'));textList(extra,values);}
+    if(r.checks.length||r.notes||r.files?.length||r.findings?.length||r.unsure?.length)item.append(extra);
+    list.append(item);
+  }
+  p.append(list);
+  const more=el('details');more.open=!!rowOpen.get('panel:'+node.id);more.addEventListener('toggle',()=>rowOpen.set('panel:'+node.id,more.open));more.append(el('summary',t('workerDetails')));
+  if(node.summary)more.append(el('p',node.summary));
+    more.append(handoffsCard('received',node.inputs,'from'),handoffsCard('outputs',node.outputs,'to'));
+  p.append(more,button(t('showInLog'),()=>showNode(node.id),'small'));
+
 }
 // One entry of the record. An attempt carries its real checks; the rest are single sentences.
 const rowOpen = new Map(), logShown = new Map();
@@ -746,11 +818,14 @@ function rowSentence(r) {
   if (r.kind === 'asked') return [t('evAsked'), r.question].filter(Boolean).join(' · ');
   if (r.kind === 'answered') return [t('evAnswered'), ({approved:t('approve'), revision_requested:t('sendBack')})[r.outcome], r.answer].filter(Boolean).join(' · ');
   const failed = (r.checks || []).filter(c => c.result === 'failed').map(c => c.title || c.id), passed = (r.checks || []).filter(c => c.result === 'passed').length;
-  const key = {running:'evRunning', submitted:'evSubmitted', passed:'evPassed', returned:'evReturned', replan:'evReplan', needs_you:'evNeedsYou', held:'evHeld'}[r.state] || 'evRunning';
+  const current = view.nodes.find(node => node.id === r.node && node.attempts === r.attempt);
+  const key = current && needs(current) && !['returned','replan','passed'].includes(r.state) ? 'evNeedsYou' : {running:'evRunning', submitted:'evSubmitted', passed:'evPassed', returned:'evReturned', replan:'evReplan', needs_you:'evNeedsYou', held:'evHeld'}[r.state] || 'evRunning';
   const outcome = failed.length ? t('checksFailed', {names:failed.join(', ')}) : r.state === 'returned' && r.reason ? r.reason : passed && r.state !== 'running' ? t('checksPassed', {n:passed}) : '';
   return [t(key, {n}), outcome].filter(Boolean).join(' · ');
 }
 function rowTone(r) {
+  const current=view.nodes.find(n=>n.id===r.node && n.attempts===r.attempt);
+  if(current && needs(current) && !['returned','replan','passed'].includes(r.state))return 'mine';
   if (r.kind === 'asked' || r.kind === 'answered' || r.state === 'needs_you') return 'mine';
   if (r.kind === 'reopened' || r.state === 'returned' || r.state === 'replan' || (r.kind === 'final' && r.result !== 'passed')) return 'returned';
   if (r.state === 'passed' || (r.kind === 'final' && r.result === 'passed')) return 'passed';
@@ -759,7 +834,7 @@ function rowTone(r) {
 function checkLine(c) {
   const item = el('li', undefined, c.result === 'failed' ? 'check-failed' : '');
   const result = c.timed_out ? t('checkTimedOut') : t(c.result === 'failed' ? 'checkFailed' : 'checkPassed');
-  item.append(el('strong', `${c.result === 'failed' ? '✗' : '✓'} ${c.title || c.id}`), el('span', ` · ${result} · ${t(c.phase === 'gate' ? 'gateRun' : 'workerRun')}`));
+  item.append(el('strong', checkWording(c, language)), el('span', ` · ${result} · ${t(c.phase === 'gate' ? 'gateRun' : 'workerRun')}`));
   if (c.command) { const run = el('p', undefined, 'muted'); run.append(el('code', c.command), el('span', [c.exit_code === null || c.exit_code === undefined ? '' : ' → ' + t('exitCode', {n:c.exit_code}), typeof c.duration_ms === 'number' ? t('seconds', {n:(c.duration_ms / 1000).toFixed(2)}) : ''].filter(Boolean).join(' · '))); item.append(run); }
   if (c.violations?.length) item.append(el('p', t('outside', {files:c.violations.join(', ')})));
   if (c.log) {
@@ -773,7 +848,7 @@ function checkLine(c) {
   }
   return item;
 }
-function logRow(r, anchor = true) {
+function logRow(r, anchor = true, inline = false) {
   const item = el('li', undefined, rowTone(r)); if (anchor) item.id = r.id;
   const head = el('div', undefined, 'row-head'), text = el('span', undefined, 'row-text');
   head.append(el('span', clock(r.ts), 'row-time'));
@@ -786,9 +861,9 @@ function logRow(r, anchor = true) {
   if (r.kind !== 'attempt') return item;
   const extra = [['reason', r.reason && !r.checks.some(c => c.result === 'failed') ? [r.reason] : []], ['findings', r.findings || []], ['workerNote', r.notes ? [r.notes] : []], ['unsure', r.unsure || []], ['changedFiles', r.files || []]].filter(([, values]) => values.length);
   if (!r.checks.length && !extra.length) return item;
-  const details = el('details'); details.open = rowOpen.has(r.id) ? rowOpen.get(r.id) : r.state === 'returned' || r.state === 'replan';
+  const details = el(inline ? 'div' : 'details'); details.open = rowOpen.has(r.id) ? rowOpen.get(r.id) : r.state === 'returned' || r.state === 'replan';
   details.addEventListener('toggle', () => rowOpen.set(r.id, details.open));
-  details.append(el('summary', t('rowDetails')));
+  if (!inline) details.append(el('summary', t('rowDetails')));
   if (r.checks.length) { const checks = el('ul', undefined, 'checks'); r.checks.forEach(c => checks.append(checkLine(c))); details.append(checks); }
   for (const [key, values] of extra) { details.append(el('p', t(key), 'eyebrow')); textList(details, values); }
   item.append(details); return item;
@@ -843,7 +918,7 @@ function showNode(id) { if (!showMode('home')) return; logNode = id; logFilter =
 function accessible() {
   clear($('node-list')); clear($('edge-list')); clear($('decision-list'));
   const order = layeredLayout(view.nodes,view.edges,view.decisions).order;
-  [...view.nodes].sort((a,b)=>order.indexOf(a.id)-order.indexOf(b.id)).forEach(n => { const item = el('li', undefined, 'card'); item.append(button(title(n), () => selectNode(n.id)), el('p', status(n)), el('p', attempts(n), 'muted'), el('p', n.summary)); if (n.returned_reasons.length) textList(item, n.returned_reasons.flat(), 'noReason'); $('node-list').append(item); });
+  [...view.nodes].sort((a,b)=>order.indexOf(a.id)-order.indexOf(b.id)).forEach(n => { const item = el('li', undefined, 'card'); item.append(button(title(n), () => selectNode(n.id)), el('p', status(n)), el('p', attempts(n), 'muted'), el('p', n.summary)); if (n.returned_reasons.length) textList(item, n.returned_reasons.flat().map(reason=>t('earlierFailure',{reason})), 'noReason'); $('node-list').append(item); });
   view.edges.forEach(e => { const a = view.nodes.find(n => n.id === e.from), b = view.nodes.find(n => n.id === e.to); $('edge-list').append(el('li', `${title(a)} → ${title(b)} · ${relationText(e)} · ${t(e.delivered ? 'delivered' : 'notDelivered')}`)); });
   view.decisions.forEach(d => { const item = el('li'); item.append(button(t('read'), () => openDecision(d.id))); decisionHeading(item, d, 'h3'); failedBlock(item, d); if (d.context.why) item.append(el('p', d.context.why)); $('decision-list').append(item); });
   if (!view.decisions.length) $('decision-list').append(el('li', t('nothingTitle')));
@@ -851,7 +926,7 @@ function accessible() {
 function showMode(next) {
   if (next !== 'decision' && !discardDecision()) return false;
   mode = next; $('home').hidden = next !== 'home'; $('flow').hidden = next !== 'flow'; $('decision').hidden = next !== 'decision'; $('accessible').hidden = next !== 'flow';
-  $('home-tab').setAttribute('aria-pressed', String(next === 'home')); $('flow-tab').setAttribute('aria-pressed', String(next === 'flow'));
+  $('home-tab').setAttribute('aria-pressed', String(next === 'home' || next === 'decision' && cameFrom === 'home')); $('flow-tab').setAttribute('aria-pressed', String(next === 'flow' || next === 'decision' && cameFrom === 'flow'));
   // The map can only measure its cards while it is on screen.
   if (renderer && next === 'flow' && view) renderer.update(view, selected); return true;
 }
@@ -877,6 +952,7 @@ function openDecision(id, focus = true) {
   if (mode !== 'decision') cameFrom = mode;
   showMode('decision'); const box = $('decision'); clear(box);
   const reading = card(t('yourTurn'), null, true); reading.classList.add('reading');
+  const backLink = button('← ' + t('leaveUnanswered'), leaveDecision, 'link'); reading.append(el('p', t('decisionLocation'), 'eyebrow'), backLink);
   const introduction = el('div'); reading.append(introduction);
   const report = el('div', undefined, 'worker-report'), note = el('div', undefined, 'speech');
   const mascot = el('img'); mascot.src = '/static/assets/frog-report.png'; mascot.alt = ''; report.append(mascot, note); reading.append(report);
@@ -913,7 +989,7 @@ function openDecision(id, focus = true) {
   if (isQuestion) actions.append(actionButton('answered', t('answer'), 'primary'));
   else { approveButton = actionButton('approved', '', 'primary'); actions.append(approveButton, actionButton('revision_requested', t('sendBack'))); }
   const backButton = button(t('leaveUnanswered'), leaveDecision); actions.append(backButton); reading.append(actions);
-  const right = el('div'), surrounding = el('div'); right.append(surrounding);
+  const right = el('div'), surrounding = el('div'), history = el('section', undefined, 'decision-history'); right.append(history, surrounding);
   const files = card(t('readThis'), null, true), fileChoices = el('div', undefined, 'file-choices'), reader = el('pre', undefined, 'file-reader');
   reader.hidden = true; reader.tabIndex = 0; reader.setAttribute('aria-label',t('readThis'));
   const fileStatus = el('p'); fileStatus.setAttribute('role','status');
@@ -942,7 +1018,8 @@ function openDecision(id, focus = true) {
   details.addEventListener('toggle', markDetailsOpened);
   const reminder = el('p', t('evidenceReminder'));
   reminder.append(button(t('details'), () => { if (current()) { details.open = true; markDetailsOpened(); details.querySelector('summary').focus(); } })); reading.append(reminder);
-  details.append(button(t('loadEvidence'), async () => {
+  const gateFacts = el('div'); details.append(gateFacts);
+  const loadEvidence = button(t('loadEvidence'), async () => {
     if (!current()) return;
     raw.textContent = t('loading');
     try {
@@ -957,12 +1034,30 @@ function openDecision(id, focus = true) {
       if (!current()) return;
       raw.textContent = (evidence ? JSON.stringify(evidence, null, 2) : t('noEvidence')) + (logs.length ? '\n\n' + logs.join('\n\n') : '\n' + t('noEvidence'));
     } catch { if (current()) raw.textContent = t('evidenceFailed'); }
-  }), raw); right.append(details); box.append(reading, right);
+  }); details.append(loadEvidence, raw); right.append(details); box.append(reading, right);
   const update = () => {
     const decision = session.decision;
     clear(introduction); decisionHeading(introduction, decision, 'h2'); const heading = introduction.querySelector('h2'); heading.id = 'decision-title';
     const node = view.nodes.find(n => n.id === decision.node); if (node?.summary) introduction.append(el('p', `${t('aboutWork')}: ${node.summary}`, 'muted'));
     updateFiles(decision);
+    clear(history);
+    const rows = node ? view.timeline.filter(r => r.node === node.id && r.kind === 'attempt') : [];
+    history.hidden = !rows.length;
+    if (rows.length) {
+      history.append(el('h3', t('history')));
+      const list = el('ol', undefined, 'log');
+      [...rows].sort((a,b) => b.seq-a.seq).forEach(r => {
+        const item = logRow(r, false, true);
+        item.prepend(el('p', t(r.attempt === node.attempts ? 'currentAttempt' : 'earlierAttempt'), 'eyebrow'));
+        if (!r.checks.length) item.append(el('p', t('noAttemptChecks'), 'muted'));
+        list.append(item);
+      }); history.append(list);
+    }
+    clear(gateFacts); gateFacts.append(el('p', t('gateReview')), el('p', question(decision) || purposeWording(decision.purpose, language)));
+    failedBlock(gateFacts, decision);
+    if (decision.context.why) gateFacts.append(el('p', decision.context.why));
+    details.hidden = !decision.has_evidence && !decisionController.requiresDetails;
+    loadEvidence.hidden = !decision.has_evidence;
     note.textContent = decision.worker_note || ''; report.hidden = !decision.worker_note;
     clear(outcomes); outcomes.append(el('p', t('choiceEffects'), 'eyebrow'));
     const effects = [['if_approved','ifApproved'],['if_rejected','ifRejected'],['undo','undo']].filter(([key]) => decision.context[key]);
@@ -972,7 +1067,7 @@ function openDecision(id, focus = true) {
     failedBlock(surrounding, decision);
     for (const key of ['verified','unverified']) { if (!decision[key]?.length) continue; const c = card(t(key)); textList(c, decision[key]); surrounding.append(c); }
     files.hidden = !decision.files?.length;
-    const bare = !decision.worker_note && !effects.length && !decision.context.why && !decision.failed?.length && !decision.verified?.length && !decision.unverified?.length && !decision.files?.length;
+    const bare = !rows.length && !decision.worker_note && !effects.length && !decision.context.why && !decision.failed?.length && !decision.verified?.length && !decision.unverified?.length && !decision.files?.length;
     if (bare) surrounding.append(el('p', t('questionOnly'), 'muted'));
     reminder.hidden = !decision.has_evidence && !decisionController.requiresDetails;
     if (approveButton) approveButton.textContent = purposeAction(decision.purpose, language, decision.failed);
@@ -1089,35 +1184,45 @@ function walker() {
 function inPhase(element, period) {element.style.animationDelay=-(performance.now()%period)+'ms';return element;}
 function nodeDescription(n) {return `${t(n.kind||'work')}. ${title(n)}. ${status(n)}. ${attempts(n)}. ${t('returnTimes',{n:cometCount(n)})}`;}
 function nodeCard(n, expanded = false) {
-  const root=el('article',undefined,'node-card '+cardTone(n)+(n.status==='running'?' working':'')+(expanded?' expanded':''));root.dataset.node=n.id;
+  const root=el('article',undefined,'node-card '+cardTone(n)+(['running','retrying'].includes(displayState(n,view.decisions))?' working':'')+(expanded?' expanded':''));root.dataset.node=n.id;
   const header=button('',()=>{
     const decision=view.decisions.find(d=>d.node===n.id);
     if(n.kind==='decision'){if(decision)openDecision(decision.id);else selectNode(n.id);}
     else selectNode(n.id);
   },'node-header');
   header.setAttribute('aria-label',nodeDescription(n));header.setAttribute('aria-expanded',String(expanded));
-  header.append(typeIcon(n.kind),el('strong',title(n),'node-title'),el('span',`${t(n.kind||'work')} · ${status(n)}`,'node-status'));
-  const attempt=el('span',n.status==='passed'&&n.attempts?(n.attempts===1?t('firstPass'):t('finishedAttempts',{n:n.attempts})):t('tries',{n:n.attempts||0,max:n.max_attempts||3}),'attempt-caption');
+  const state = displayState(n, view.decisions), statusLine = el('span', `${t(n.kind||'work')} · ${status(n)}`, 'node-status');
+  statusLine.prepend(el('span', statusGlyph(state), 'status-glyph'));
+  header.append(typeIcon(n.kind),el('strong',title(n),'node-title'),statusLine);
+  const attempt=el('span',n.status==='passed'&&n.attempts?(n.attempts===1?t('firstPass'):t('finishedAttempts',{n:n.attempts})):attempts(n),'attempt-caption');
   root.append(header);
-  const reference=el('div',undefined,'ref-line node-reference');reference.append(refChip(n.id, `${n.id} · ${title(n)}`),attempt);if(workedBy(n))reference.append(el('span',workedBy(n),'node-worker'));root.append(reference);
+  const reference=el('div',undefined,'ref-line node-reference');reference.append(refChip(n.id, `${n.id} · ${title(n)}`),attempt);root.append(reference);
   // What came back and what waits for the person are read on the card itself.
   const returns=cometCount(n),why=(n.returned_reasons||[]).slice(-1)[0]||[];
   if(returns&&n.status!=='passed'){
     const note=el('p',undefined,'card-note returned');note.append(el('strong',t('returnTimes',{n:returns})));
-    if(why.length)note.append(el('span',t('checksFailed',{names:why.join(', ')})));root.append(note);
+    const returned = (view.timeline || []).filter(r=>r.node===n.id && ['returned','replan'].includes(r.state)).at(-1);
+    const failed = (returned?.checks || []).filter(c=>c.result==='failed');
+    if(failed.length) failed.forEach(c=>note.append(el('span',checkWording(c,language))));
+    else if(why.length)note.append(el('span',t('earlierFailure',{reason:why.join(', ')})));
+    root.append(note);
   }
   for(const d of view.decisions.filter(d=>d.node===n.id)){
     const ask=el('div',undefined,'card-note mine');
     ask.append(button(t('answerHere',{id:d.id}),()=>openDecision(d.id),'small'));root.append(ask);
   }
+  if (['running','retrying'].includes(state)) { const work = el('div', undefined, 'working-note'); work.append(walker(), el('span',t('workingHere'))); root.append(work); }
   return root;
 }
 function createMap() {
   const map=$('map');map.tabIndex=0;
   const toolbar=el('div',undefined,'map-toolbar'),viewport=el('div',undefined,'map-viewport'),spacer=el('div',undefined,'map-spacer'),stage=el('div',undefined,'map-stage');
-  viewport.tabIndex=0;viewport.setAttribute('aria-label',t('mapHelp'));spacer.append(stage);viewport.append(spacer);map.append(toolbar,viewport);
+  viewport.tabIndex=0;viewport.setAttribute('aria-label',t('mapHelp'));spacer.append(stage);viewport.append(spacer);map.append(toolbar);
+  const key=el('p',t('lineLegend'),'line-key'), overflow=el('div',undefined,'map-overflow'); overflow.setAttribute('aria-label',t('graphEdges'));
+  key.dataset.i18n='lineLegend'; map.append(key,overflow,viewport);
+  const visibleCount=el('span',undefined,'map-visible'),overflowButtons=new Map();overflow.append(visibleCount);
   let data={nodes:[],edges:[],decisions:[]},chosenNode=null,layout=null,scale=1,automatic=true;
-  const nodes=new Map(),chips=new Map(),seen=new Map();let drawing=null,placed=false;
+  const nodes=new Map(),chips=new Map(),lines=new Map(),seen=new Map();let drawing=null,placed=false;
   const zoomText=el('output');zoomText.setAttribute('aria-live','polite');
   const zoom=amount=>{automatic=false;scale=Math.max(MIN_FIT_SCALE,Math.min(1.6,scale+amount));size();};
   const fit=()=>{automatic=true;size();viewport.scrollLeft=0;viewport.scrollTop=0;};
@@ -1126,13 +1231,46 @@ function createMap() {
   toolbar.children[0].dataset.i18nLabel='zoomOut';toolbar.children[1].dataset.i18nLabel='zoomIn';toolbar.children[2].dataset.i18n='fit';toolbar.children[4].dataset.i18n='mapHelp';viewport.dataset.i18nLabel='mapHelp';
   const mapTitle=el('div',undefined,'map-title'), name=el('strong',t('graph')), direction=el('span',t('mapDirection'));
   name.dataset.i18n='graph';direction.dataset.i18n='mapDirection';mapTitle.append(name,direction);toolbar.prepend(mapTitle);translate();
+  function outside() {
+    if(!layout || !viewport.clientWidth)return;
+    const w=viewport.clientWidth,h=viewport.clientHeight,ox=Math.max(0,(w-layout.bounds.width*scale)/2),oy=Math.max(0,(h-layout.bounds.height*scale)/2);
+    const groups={offLeft:[],offRight:[],offTop:[],offBottom:[]}, hidden=new Set(); let visible=0;
+    for(const n of data.nodes) {
+      const p=layout.positions[n.id],x=p.x*scale+ox-viewport.scrollLeft,y=p.y*scale+oy-viewport.scrollTop;
+      const left=x<0,right=x+p.width*scale>w,top=y<0,bottom=y+p.height*scale>h;
+      if(left)groups.offLeft.push(n);if(right)groups.offRight.push(n);if(top)groups.offTop.push(n);if(bottom)groups.offBottom.push(n);
+      const clipped=(left||right||top||bottom) && p.height*scale<=h && p.width*scale<=w;
+      nodes.get(n.id)?.classList.toggle('offscreen',clipped);if(clipped)hidden.add(n.id);
+      if(!clipped && x<w && x+p.width*scale>0 && y<h && y+p.height*scale>0)visible++;
+    }
+    for(const c of layout.chips) {
+      const x=c.x*scale+ox-viewport.scrollLeft,y=c.y*scale+oy-viewport.scrollTop;
+      chips.get(c.first)?.classList.toggle('offscreen',x<0||y<0||x+c.width*scale>w||y+c.height*scale>h||layout.routes.filter(r=>r.chip===c).every(r=>hidden.has(r.from)||hidden.has(r.to)));
+    }
+    for(const r of layout.routes)lines.get(r.index)?.classList.toggle('offscreen',hidden.has(r.from)||hidden.has(r.to));
+    visibleCount.textContent=t('visibleCards',{n:visible,total:data.nodes.length});
+    for(const [direction,b] of overflowButtons)b.hidden=!groups[direction].length;
+    for(const [direction,items] of Object.entries(groups))if(items.length) {
+      let b=overflowButtons.get(direction);
+      if(!b){b=button('',()=>{},'small');overflowButtons.set(direction,b);overflow.append(b);}
+      b.textContent=t('offCount',{direction:t(direction),n:items.length}) + (items.some(n=>['running','retrying','submitted'].includes(displayState(n,data.decisions))) ? t('offWorking',{n:items.filter(n=>['running','retrying','submitted'].includes(displayState(n,data.decisions))).length}) : '') + (items.some(n=>data.decisions.some(d=>d.node===n.id)) ? t('offNeeds',{n:items.filter(n=>data.decisions.some(d=>d.node===n.id)).length}) : '');
+      b.onclick=()=>{
+        const horizontal=['offLeft','offRight'].includes(direction),back=['offLeft','offTop'].includes(direction);
+        const sorted=[...items].sort((a,b)=>(layout.positions[a.id][horizontal?'x':'y']-layout.positions[b.id][horizontal?'x':'y'])*(back?-1:1));
+        const p=layout.positions[sorted[0].id];
+        viewport.scrollLeft=Math.max(0,p.x*scale-(w-p.width*scale)/2+ox);
+        viewport.scrollTop=Math.max(0,p.y*scale-Math.max(12,(h-p.height*scale)/2)+oy);outside();viewport.focus({preventScroll:true});
+      };
+    }
+  }
+  viewport.addEventListener('scroll',outside);
   function size() {
     if(!layout)return;
     const w=viewport.clientWidth||900,h=viewport.clientHeight||600;
     if(automatic)scale=fitScale(layout.bounds,w-20,h-20,matchMedia('(max-width:760px)').matches);
     Object.assign(stage.style,{left:Math.max(0,(w-layout.bounds.width*scale)/2)+'px',top:Math.max(0,(h-layout.bounds.height*scale)/2)+'px',width:layout.bounds.width+'px',height:layout.bounds.height+'px',transform:`scale(${scale})`});
     Object.assign(spacer.style,{width:Math.max(w,layout.bounds.width*scale)+'px',height:Math.max(h,layout.bounds.height*scale)+'px'});
-    zoomText.textContent=Math.round(scale*100)+'%';zoomOut.disabled=scale<=MIN_FIT_SCALE;zoomIn.disabled=scale>=1.6;
+    zoomText.textContent=Math.round(scale*100)+'%';zoomOut.disabled=scale<=MIN_FIT_SCALE;zoomIn.disabled=scale>=1.6;outside();
   }
   const setRect=(element,rect)=>Object.assign(element.style,{left:rect.x+'px',top:rect.y+'px',width:rect.width+'px',minHeight:rect.height+'px'});
   function update(next,id) {
@@ -1150,7 +1288,7 @@ function createMap() {
         // One-shot motion only for a change observed while the page was open.
         if(before&&cometCount(n)>before.comets)card.classList.add('changed');
         else if(before&&before.tone!==tone&&['passed','current'].includes(tone))card.classList.add('changed');
-        element.replaceChildren(card);if(n.status==='running')element.append(walker());element.dataset.signature=signature;
+        element.replaceChildren(card);element.dataset.signature=signature;
       }
       seen.set(n.id,{tone:cardTone(n),comets:cometCount(n)});
     }
@@ -1163,15 +1301,15 @@ function createMap() {
     for(const state of ['open','closed','returned','waiting_for_you']) {
       const marker=svg('marker',{id:'arrow-'+state,viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'});marker.append(svg('path',{d:'M0 0 10 5 0 10Z',class:state}));defs.append(marker);
     }
-    drawing.append(defs);stage.prepend(drawing);
+    drawing.append(defs);stage.prepend(drawing);lines.clear();
     for(const element of chips.values())element.remove();chips.clear();
     for(const route of layout.routes) {
       const {start:a,end:b,chip:c}=route,bend=route.reverse?-1:1,mx=c?c.x+c.width/2:route.skip?a.x+bend*7:(a.x+b.x)/2,my=c?c.y+c.height/2:route.skip?a.y:(a.y+b.y)/2;
-      const d=route.skip?`M${a.x} ${a.y} C${mx} ${a.y} ${mx} ${my} ${mx} ${my} V${route.channel+12} Q${mx} ${route.channel} ${mx+bend*12} ${route.channel} H${b.x-bend*30} Q${b.x-bend*18} ${route.channel} ${b.x-bend*18} ${route.channel+12} V${b.y-12} Q${b.x-bend*18} ${b.y} ${b.x-bend*6} ${b.y} H${b.x}`
-        :c?`M${a.x} ${a.y} Q${mx-bend*14} ${a.y} ${mx} ${my} Q${mx+bend*14} ${b.y} ${b.x} ${b.y}`:`M${a.x} ${a.y} C${mx} ${a.y} ${mx} ${b.y} ${b.x} ${b.y}`;
-      const flowing=route.gateState==='open'&&data.nodes.find(n=>n.id===route.to)?.status==='running';
+      const d=route.skip?`M${a.x} ${a.y} H${c?c.x+c.width+8:mx} V${route.channel+12} Q${mx} ${route.channel} ${mx+bend*12} ${route.channel} H${b.x-bend*30} Q${b.x-bend*18} ${route.channel} ${b.x-bend*18} ${route.channel+12} V${b.y-12} Q${b.x-bend*18} ${b.y} ${b.x-bend*6} ${b.y} H${b.x}`
+        :c?`M${a.x} ${a.y} H${c.x+c.width+8} C${b.x-16} ${a.y} ${b.x-16} ${b.y} ${b.x} ${b.y}`:`M${a.x} ${a.y} C${mx} ${a.y} ${mx} ${b.y} ${b.x} ${b.y}`;
+      const flowing=route.gateState==='open'&&['running','retrying'].includes(displayState(data.nodes.find(n=>n.id===route.to)||{}, data.decisions));
       const line=svg('path',{d,class:'edge-path '+route.gateState+(route.relation==='reviews'?' review':'')+(flowing?' flowing':''),'marker-end':`url(#arrow-${route.gateState})`});
-      drawing.append(flowing?inPhase(line,1000):line);
+      drawing.append(flowing?inPhase(line,2000):line);lines.set(route.index,line);
       if(!c||chips.has(c.first))continue;
       const chip=el('div',undefined,'edge-chip '+route.gateState);
       const source=data.nodes.find(n=>n.id===route.from),targets=layout.routes.filter(r=>r.chip===c).map(r=>title(data.nodes.find(n=>n.id===r.to))).join(', ');
@@ -1188,12 +1326,14 @@ function createMap() {
     if(!data.nodes.length)placed=false;
     else if(!placed&&viewport.clientWidth){
       placed=true;const open=data.nodes.filter(n=>n.status!=='passed'&&layout.positions[n.id]).map(n=>layout.positions[n.id].x);
-      viewport.scrollLeft=layout.bounds.width*scale>viewport.clientWidth? (open.length?Math.max(0,Math.min(...open)*scale-32):0):0;
+      viewport.scrollLeft=layout.bounds.width*scale>viewport.clientWidth? (open.length?Math.max(0,Math.min(...open)*scale-24):0):0;
+      if(matchMedia('(max-width:760px)').matches){const first=data.nodes.find(n=>n.status!=='passed'&&layout.positions[n.id])||data.nodes[0];const p=layout.positions[first.id];viewport.scrollTop=Math.max(0,p.y*scale-12);}
     }
     if(reveal&&layout.positions[id]){const p=layout.positions[id],w=viewport.clientWidth||900;
       if(p.x*scale<viewport.scrollLeft+12||(p.x+p.width)*scale>viewport.scrollLeft+w-12)viewport.scrollLeft=Math.max(0,p.x*scale-(w-p.width*scale)/2);
       viewport.scrollTop=Math.max(0,p.y*scale-20);
     }
+    outside();
     if(focused)nodes.get(focused)?.querySelector('button')?.focus({preventScroll:true});
     if(focusedChip)[...chips.values()].find(e=>e.dataset.chip===focusedChip&&e.tagName==='BUTTON')?.focus({preventScroll:true});
   }
