@@ -162,7 +162,7 @@ import {readFileSync} from 'node:fs';
 const source = readFileSync(process.argv[2], 'utf8');
 const {createDecisionController, decisionQuestion, purposeWording, purposeAction, viewLanguage, edgeRelationLabel, fitScale, MIN_FIT_SCALE, edgeChipText, cometCount, layeredLayout, crossingCount, displayState, statusGlyph, checkWording, checkTitle, offscreenDirection} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const first = {project:'/project', run:'first'}, second = {project:'/project', run:'second'};
-const decision = {id:'d7', purpose:'lane3', kind:'authorization', failed:[]};
+const decision = {id:'d7', purpose:'lane3', kind:'authorization', failed:[], files:[{name:'Result',path:'result.txt'}]};
 const controller = createDecisionController();
 const show = (decisions = [decision], run = first) => controller.refresh({decisions}, run);
 show();
@@ -222,20 +222,20 @@ for(const data of [demo,{nodes,edges},crossed,reviewed]) for(const expanded of [
 }
 const layout=layeredLayout(reviewed.nodes,reviewed.edges);
 assert.equal(layout.positions.review.layer,layout.positions.work.layer+1);
-assert(layout.routes.some(e=>e.from==='review'&&e.to==='work'&&e.relation==='reviews'));
-const back=layout.routes.find(e=>e.relation==='reviews'), forward=layout.routes.find(e=>e.from==='work');
-assert.notEqual(back.end.y,forward.start.y,'review and handoff use separate ports');
+assert(layout.routes.some(e=>e.from==='work'&&e.to==='review'&&e.relation==='reviews'));
+const back=layout.routes.find(e=>e.relation==='reviews'), forward=layout.routes.find(e=>e.from==='work'&&e.relation!=='reviews');
+assert.notEqual(back.start.y,forward.start.y,'review and handoff use separate ports');
 const measured=layeredLayout([{id:'a',kind:'work'}],[],[],true,{heights:{a:127}});
 assert.equal(measured.positions.a.height,127,'ports and spacing use the rendered card height');
 assert(layout.order.includes('review'));
 assert.equal(fitScale({width:10000,height:10000},300,300),MIN_FIT_SCALE);
 // Identical fan-out shares one source port, one label and a visible junction.
 const fork=layeredLayout([{id:'a',kind:'work'},{id:'b',kind:'work'},{id:'c',kind:'work'}],[{from:'a',to:'b',label:'Parsed record',relation:'hands_over',gate:'open'},{from:'a',to:'c',label:'Parsed record',relation:'hands_over',gate:'open'}],[],true,{language:'en'});
-assert.equal(fork.chips.length,1);
+assert.equal(fork.chips.length,0,'a long label is dropped if it cannot fit its segment');
 assert.equal(fork.routes[0].start.y,fork.routes[1].start.y);
 assert(fork.routes.every(r=>r.junction));
 assert.equal(fork.routes.length,2);
-for(const r of fork.routes){assert(r.chip.x>r.start.x);assert(r.chip.x+r.chip.width<r.end.x,'label stays between source and target');}
+for(const r of fork.routes)assert.equal(r.chip,null);
 assert.deepEqual(fork.terminals,['b','c']);
 const outputs=layeredLayout(['a','b','c'].map(id=>({id,kind:'work'})),[{from:'a',to:'b',label:'One'},{from:'a',to:'c',label:'Two'}]);
 assert.equal(outputs.chips.length,2,'different outputs never share a label');
@@ -248,7 +248,7 @@ assert.deepEqual(skips.routes[0].start,skips.routes[2].start,'skip and adjacent 
 const tall=layeredLayout(nodes,edges,[],true,{heights:Object.fromEntries(nodes.map(n=>[n.id,150])),maxHeight:440});
 for(const p of Object.values(tall.positions))assert(p.y%440+p.height<=416,'page breaks keep whole cards within the initial view');
 const down=layeredLayout(reviewed.nodes,reviewed.edges,[],true,{heights:{work:110,review:140,next:120},vertical:true});
-assert(down.vertical);assert(down.bounds.width<600,'selection reflows into the remaining width');
+assert(down.vertical);assert(down.bounds.width<600,'explicit vertical layout remains supported independently of selection');
 for(const r of down.routes) {
   const source=down.positions[r.from],target=down.positions[r.to];
   assert.equal(r.start.y,r.reverse?source.y:source.y+source.height);
@@ -284,7 +284,7 @@ assert.equal(fitScale({width:900,height:400},855,500,true),.95);
 
     def test_relation_labels_and_loop_states(self):
         self.run_controller(r"""
-for(const [lang,labels] of [['ko',['넘겨줌','검토함','결정을 기다림']],['en',['hands over','reviews','waits for a decision']]]) {
+for(const [lang,labels] of [['ko',['넘겨줌','검토를 맡겼어요','결정을 기다림']],['en',['hands over','reviewed by','waits for a decision']]]) {
   ['hands_over','reviews','waits_for_decision'].forEach((relation,i)=>assert.equal(edgeRelationLabel({relation,label:''},lang),labels[i]));
   assert.equal(edgeRelationLabel({relation:'hands_over',label:'Readable result'},lang),labels[0]+': Readable result');
 }
@@ -348,7 +348,8 @@ for (const changes of [
   controller.onResult(request);
 }
 show([{...decision,purpose:'human_check',kind:'review'}]); controller.open('d7');
-assert.equal(controller.canSubmit('approved', ''), true);
+assert.equal(controller.canSubmit('approved', ''), false);
+controller.openFile();assert.equal(controller.canSubmit('approved', ''), true);
 controller.close();
 show([{...decision,kind:'direction'}]); controller.open('d7');
 assert.equal(controller.canSubmit('approved', 'text'), false);
@@ -417,7 +418,7 @@ for (const question of ['Approve deploy for prod?','Approve hold for another?','
         self.run_controller(r"""
 class Element {
   constructor(tag) { this.tagName=tag; this.children=[]; this.dataset={}; this.listeners={}; this.hidden=false; this.disabled=false; this.value=''; this._text=''; this.style={}; this.classList={add:name=>{this.className=((this.className||'')+' '+name).trim();},toggle:(name,on)=>{const classes=new Set((this.className||'').split(' ').filter(Boolean));if(on??!classes.has(name))classes.add(name);else classes.delete(name);this.className=[...classes].join(' ');return classes.has(name);}}; }
-  prepend(...children) { this.children.unshift(...children); }
+  prepend(...children) { for(const c of children){if(c.parent)c.remove();c.parent=this;} this.children.unshift(...children); }
   remove() { if(this.parent)this.parent.children=this.parent.children.filter(c=>c!==this); }
   get firstElementChild() { return this.children[0]; }
   append(...children) { for (const c of children) { if(c.parent)c.remove(); c.parent=this; this.children.push(c); } }
@@ -488,10 +489,22 @@ get('answer-actions').children.at(-1).click();live.decisions.pop();
 const saved=structuredClone(live);
 live.decisions[0]={...d,purpose:'human_check',failed:[],files:[],has_evidence:false};live.timeline=[];
 docEvents.visibilitychange();await settle();get('decision-list').querySelector('button').click();
-assert.equal(get('answer-actions').children[0].className,'','no primary acceptance with nothing to inspect');
-assert.equal(get('answer-actions').children[0].disabled,false,'presentation must not add an approval gate');
-assert.match(get('decision').textContent,/Ask the agent session in chat/);
+const emptyActions=get('answer-actions').children;
+assert.equal(emptyActions[0].dataset.outcome,'revision_requested','request evidence first');
+assert.equal(emptyActions[1].className,'','acceptance is secondary');
+assert.equal(emptyActions[1].disabled,true,'empty acceptance needs explicit confirmation');
+assert.match(get('decision').textContent,/There is nothing here to judge by/);
+get('blind-confirm').checked=true;get('blind-confirm').dispatchEvent({type:'change'});
+assert.equal(emptyActions[1].disabled,false,'explicit confirmation retains the ability to accept');
 get('answer-actions').children.at(-1).click();live=saved;docEvents.visibilitychange();await settle();
+
+const originalNode=structuredClone(live.nodes[0]);
+live.nodes[0].attempts=2;live.nodes[0].laps=['returned','current'];live.nodes[0].returned_reasons=[['Unit passes']];
+docEvents.visibilitychange();await settle();
+assert.match(get('map').textContent,/Earlier attempt 1 returned/);
+assert.doesNotMatch(get('map').textContent,/✕|Unit passes/,'earlier failure cannot dominate the current card');
+assert.match(get('map').textContent,/Your turn/);
+live.nodes[0]=originalNode;docEvents.visibilitychange();await settle();
 
 live.nodes.push({id:'choice',kind:'decision',title:'Pick a direction',status:'pending',answered:true,inputs:[],outputs:[],laps:[],returned_reasons:[]});
 docEvents.visibilitychange();await settle();
@@ -544,6 +557,45 @@ assert.match(get('notice').textContent,/Answer sent/,'real outcome must survive 
 assert.equal(get('picker').disabled,false);
 assert.equal(get('answer-text'),null);
 """)
+
+
+    def test_no_evidence_confirmation_is_bound_and_not_a_reading_bypass(self):
+        self.run_controller(r"""
+const empty={...decision,purpose:'human_check',kind:'review',files:[]};
+show([empty]);controller.open('d7');
+assert.equal(controller.canSubmit('approved',''),false);
+assert.equal(controller.buildRequest('approved',''),null);
+controller.openDetails();assert.equal(controller.canSubmit('approved',''),false);
+controller.confirmBlind(true);assert.equal(controller.canSubmit('approved',''),true);
+show([empty]);assert.equal(controller.canSubmit('approved',''),true,'polling preserves confirmation');
+controller.close();controller.open('d7');assert.equal(controller.canSubmit('approved',''),false,'reopening resets consent');
+show([{...empty,purpose:'hold',failed:['Failed check']}]);controller.open('d7');
+controller.confirmBlind(true);assert.equal(controller.canSubmit('approved',''),false,'confirmation never bypasses the reading gate');
+controller.openDetails();assert.equal(controller.canSubmit('approved',''),true);
+""")
+
+    def test_selection_keeps_geometry_and_disclosures_use_chevrons(self):
+        html=(S / 'scripts/graphflow/page.html').read_text()
+        js=(S / 'scripts/graphflow/page.js').read_text()
+        self.assertIn('summary::-webkit-details-marker{display:none}',html)
+        self.assertIn('details[open]>summary:before{transform:rotate(45deg)',html)
+        self.assertNotIn('content:"▶"',html)
+        self.assertNotIn('if(chosenNode && layout.bounds',js)
+        self.assertIn('#flow.has-selection{grid-template-columns:minmax(0,1fr)}',html)
+        self.run_controller(r"""
+const nodes=['a','b','c'].map(id=>({id,title:id,kind:'work'})), edges=[{from:'a',to:'b'},{from:'b',to:'c'}];
+const before=layeredLayout(nodes,edges);
+for(const expanded of ['a','b','c'])assert.deepEqual(layeredLayout(nodes,edges,[],true,{expanded}).positions,before.positions);
+assert.equal(statusGlyph('running'),'▶');
+""")
+
+    def test_card_history_never_competes_with_current_status(self):
+        js=(S / 'scripts/graphflow/page.js').read_text()
+        card=js.split('function nodeCard(',1)[1].split('function createMap()',1)[0]
+        self.assertIn("t('pastReturn'",card)
+        self.assertNotIn('checkWording',card)
+        self.assertNotIn('failure-mark',card)
+        self.assertLess(card.index('statusLine'),card.index("t('pastReturn'"))
 
     def test_real_demo_and_decision_view(self):
         with tempfile.TemporaryDirectory() as directory, mock.patch.dict(os.environ):
