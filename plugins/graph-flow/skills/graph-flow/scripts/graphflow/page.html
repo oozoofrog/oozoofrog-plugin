@@ -64,7 +64,7 @@ marker .open{fill:var(--mint)}marker .closed{fill:var(--line)}marker .returned{f
 .loop-diagram{width:228px;zoom:.9;height:190px;position:relative;isolation:isolate}.loop-lines{position:absolute;width:100%;height:170px;top:0;left:0;z-index:-1}
 .loop-state{position:absolute;min-width:62px;min-height:42px;border:2px solid var(--ink);border-radius:8px;background:var(--paper);font-size:14px;display:flex;justify-content:center;align-items:center;padding:6px}
 .loop-state.make{left:0;top:51px}.loop-state.check{right:30px;top:51px}.loop-state.fix{left:68px;top:131px}.loop-state.active{background:var(--violet);box-shadow:0 3px 0 var(--ink)}
-.loop-state img{position:absolute;width:48px;height:48px;bottom:38px;left:5px;object-fit:contain}
+.loop-state .walker{width:48px;height:48px;bottom:38px;left:5px;top:auto;right:auto}
 .loop-passes{position:absolute;right:0;top:94px;font-size:12px}.loop-fails{position:absolute;right:8px;top:123px;font-size:12px}.loop-exit{position:absolute;right:0;top:42px;font-size:27px;color:#23684c}.loop-report{position:absolute;right:-4px;top:0;width:48px;height:48px;object-fit:contain}
 .earlier-attempt{display:flex;align-items:flex-start;gap:5px;font-size:13px;line-height:1.6;margin:6px 0;overflow-wrap:anywhere}
 aside{padding:20px;background:var(--panel);border:3px solid var(--ink);border-radius:20px;box-shadow:0 6px 0 var(--ink);align-self:start;min-width:0;max-height:calc(100dvh - 170px);overflow:auto}
@@ -90,6 +90,21 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 ui-monospace,monos
 .empty{padding:25px 0}.skip{position:absolute;left:12px;top:-80px;background:var(--paper);color:var(--ink);padding:10px;z-index:10}.skip:focus{top:12px}[hidden]{display:none!important}
 @media(max-width:1050px){#flow{grid-template-columns:minmax(0,1fr) 280px}aside{padding:16px}header{padding:20px}main{padding:0 16px 24px}.map-help{display:none}}
 @media(max-width:760px){header{display:block;padding:18px}nav{margin-top:16px}h1{font-size:22px}#flow,#decision,.history-grid{grid-template-columns:1fr}#map{height:420px;min-height:340px}#map.has-expanded{height:560px}aside{max-height:none}#decision{padding:10px 0;gap:12px}#decision .reading{padding:16px}.file-reader{padding:12px;font-size:13px}#picker-label{margin-top:12px}.map-toolbar{padding:10px}.map-help{display:none}}
+@keyframes step{0%,49.9%{opacity:1}50%,100%{opacity:0}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes flow{to{stroke-dashoffset:-20}}
+@keyframes glow{0%,100%{box-shadow:4px 5px 0 var(--ink),0 0 0 0 #c3b1ff00}50%{box-shadow:4px 5px 0 var(--ink),0 0 0 7px #c3b1ff66}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes pop{0%{transform:scale(.93)}55%{transform:scale(1.05)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+@keyframes wave{0%,100%{transform:rotate(0)}25%{transform:rotate(-9deg)}75%{transform:rotate(9deg)}}
+.walker{position:absolute;right:14px;top:-41px;width:44px;height:44px;z-index:4;pointer-events:none;animation:bob .5s ease-in-out infinite}
+.walker img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:contain;animation:step .5s linear infinite}.walker img+img{opacity:0;animation-delay:-.25s}
+.node-card.working{animation:glow 2s ease-in-out infinite}.node-card.working .pip.current{animation:blink 1s ease-in-out infinite}
+.node-card.pop{animation:pop .45s ease-out}.node-card.shake{animation:shake .45s ease-in-out}
+.node-card.working.pop{animation:pop .45s ease-out,glow 2s ease-in-out infinite}.node-card.working.shake{animation:shake .45s ease-in-out,glow 2s ease-in-out infinite}
+.edge-path.flowing{stroke-dasharray:10 10;animation:flow 1s linear infinite}
+.overview-frog>img{animation:bob 1.2s ease-in-out infinite}img.overview-frog.waving{transform-origin:50% 100%;animation:wave 1.2s ease-in-out infinite}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 </style>
 <script type="module" nonce="__NONCE__" src="/static/page.js"></script>

@@ -795,9 +795,17 @@ function cometGlyph() {
   icon.append(svg('path',{d:'M25 14 2 2 11 18Z',fill:'#ff9479',stroke:'#1a1330','stroke-width':2,'stroke-linejoin':'round'}),svg('circle',{cx:24,cy:14,r:6,fill:'#fff6ea',stroke:'#1a1330','stroke-width':2}));return icon;
 }
 function cardTone(n) {return needs(n)||['held','awaiting_approval'].includes(n.status)?'waiting_for_you':n.status==='passed'||n.answered?'passed':['running','submitted','unverified'].includes(n.status)?'current':'unused';}
+// Two walking frames; the second stays hidden when motion is reduced.
+function walker() {
+  const frames=el('span',undefined,'walker');frames.setAttribute('aria-hidden','true');
+  for(const frame of ['a','b']){const frog=el('img');frog.src=`/static/assets/frog-walk-${frame}.png`;frog.alt='';frames.append(frog);}
+  return frames;
+}
+// A rebuilt element joins a looping animation at the phase it would have reached.
+function inPhase(element, period) {element.style.animationDelay=-(performance.now()%period)+'ms';return element;}
 function nodeDescription(n) {return `${t(n.kind||'work')}. ${title(n)}. ${status(n)}. ${attempts(n)}. ${t('returnTimes',{n:cometCount(n)})}`;}
 function nodeCard(n, expanded = false) {
-  const root=el('article',undefined,'node-card '+cardTone(n)+(expanded?' expanded':''));root.dataset.node=n.id;
+  const root=el('article',undefined,'node-card '+cardTone(n)+(n.status==='running'?' working':'')+(expanded?' expanded':''));root.dataset.node=n.id;
   const header=button('',()=>{
     const decision=view.decisions.find(d=>d.node===n.id);
     if(n.kind==='decision'){if(decision)openDecision(decision.id);else selectNode(n.id);}
@@ -822,7 +830,7 @@ function innerLoop(n) {
   lines.append(svg('path',{d:'M62 73H136M130 68 136 73 130 78M167 94V153H130M136 148 130 153 136 158M68 153H31V94M26 100 31 94 36 100M198 73H226M220 68 226 73 220 78',fill:'none',stroke:'#6a5a8e','stroke-width':2.5,'stroke-linejoin':'round'}));diagram.append(lines);
   for(const key of ['make','check','fix']) {
     const station=el('div',undefined,'loop-state '+key+(state===key?' active':''));station.append(el('span',t(key)));
-    if(state===key){const frog=el('img');frog.src='/static/assets/frog-walk-a.png';frog.alt='';station.append(frog);}
+    if(state===key)station.append(walker());
     diagram.append(station);
   }
   diagram.append(el('span',t('passes'),'loop-passes'),el('span',t('fails'),'loop-fails'));
@@ -837,7 +845,7 @@ function createMap() {
   const toolbar=el('div',undefined,'map-toolbar'),viewport=el('div',undefined,'map-viewport'),spacer=el('div',undefined,'map-spacer'),stage=el('div',undefined,'map-stage');
   viewport.tabIndex=0;viewport.setAttribute('aria-label',t('mapHelp'));spacer.append(stage);viewport.append(spacer);map.append(toolbar,viewport);
   let data={nodes:[],edges:[],decisions:[]},chosenNode=null,layout=null,scale=1,automatic=true;
-  const nodes=new Map(),chips=new Map();let drawing=null;
+  const nodes=new Map(),chips=new Map(),seen=new Map();let drawing=null,wasComplete=null;
   const zoomText=el('output');zoomText.setAttribute('aria-live','polite');
   const zoom=amount=>{automatic=false;scale=Math.max(MIN_FIT_SCALE,Math.min(1.6,scale+amount));size();};
   const fit=()=>{automatic=true;size();viewport.scrollLeft=0;viewport.scrollTop=0;};
@@ -862,7 +870,14 @@ function createMap() {
       const signature=JSON.stringify([n,expanded,data.decisions.filter(d=>d.node===n.id)]);
       let element=nodes.get(n.id);
       if(!element){element=el('div',undefined,'node-position');nodes.set(n.id,element);stage.append(element);}
-      if(element.dataset.signature!==signature){element.replaceChildren(nodeCard(n,expanded));element.dataset.signature=signature;}
+      if(element.dataset.signature!==signature) {
+        const card=nodeCard(n,expanded),before=seen.get(n.id),tone=cardTone(n);
+        // One-shot motion only for a change observed while the page was open.
+        if(before&&cometCount(n)>before.comets)card.classList.add('shake');
+        else if(before&&before.tone!==tone&&['passed','current'].includes(tone))card.classList.add('pop');
+        element.replaceChildren(card);if(n.status==='running')element.append(walker());element.dataset.signature=signature;
+      }
+      seen.set(n.id,{tone:cardTone(n),comets:cometCount(n)});
     }
     const heights=Object.fromEntries([...nodes].map(([id,e])=>[id,e.firstElementChild?.offsetHeight||0]));
     layout=layeredLayout(data.nodes,data.edges.map(e=>({...e,label:e.label?label(e.label):''})),data.decisions,true,{expanded:chosenNode,heights,language});
@@ -879,7 +894,9 @@ function createMap() {
       const {start:a,end:b,chip:c}=route,bend=route.reverse?-1:1,mx=c?c.x+c.width/2:route.skip?a.x+bend*7:(a.x+b.x)/2,my=c?c.y+c.height/2:route.skip?a.y:(a.y+b.y)/2;
       const d=route.skip?`M${a.x} ${a.y} C${mx} ${a.y} ${mx} ${my} ${mx} ${my} V${route.channel+12} Q${mx} ${route.channel} ${mx+bend*12} ${route.channel} H${b.x-bend*30} Q${b.x-bend*18} ${route.channel} ${b.x-bend*18} ${route.channel+12} V${b.y-12} Q${b.x-bend*18} ${b.y} ${b.x-bend*6} ${b.y} H${b.x}`
         :c?`M${a.x} ${a.y} Q${mx-bend*14} ${a.y} ${mx} ${my} Q${mx+bend*14} ${b.y} ${b.x} ${b.y}`:`M${a.x} ${a.y} C${mx} ${a.y} ${mx} ${b.y} ${b.x} ${b.y}`;
-      drawing.append(svg('path',{d,class:'edge-path '+route.gateState,'marker-end':`url(#arrow-${route.gateState})`}));
+      const flowing=route.gateState==='open'&&data.nodes.find(n=>n.id===route.to)?.status==='running';
+      const line=svg('path',{d,class:'edge-path '+route.gateState+(flowing?' flowing':''),'marker-end':`url(#arrow-${route.gateState})`});
+      drawing.append(flowing?inPhase(line,1000):line);
       if(!c||chips.has(c.first))continue;
       const chip=route.decision?button('',()=>openDecision(route.decision),'edge-chip '+route.gateState):el('div',undefined,'edge-chip '+route.gateState);
       const source=data.nodes.find(n=>n.id===route.from),targets=layout.routes.filter(r=>r.chip===c).map(r=>title(data.nodes.find(n=>n.id===r.to))).join(', ');
@@ -889,11 +906,11 @@ function createMap() {
     // All focusable controls are ordered by column and then vertical position.
     [...nodes.values(),...chips.values()].sort((a,b)=>parseFloat(a.style.left)-parseFloat(b.style.left)||parseFloat(a.style.top)-parseFloat(b.style.top)).forEach(e=>stage.append(e));
     stage.querySelectorAll('.overview-frog,.goal-card').forEach(e=>e.remove());
-    const goal=el('article',undefined,'goal-card node-card '+(data.complete?'passed':'unused'));goal.append(typeIcon('goal'),el('strong',data.title||t('goal')),el('span',`${t('goal')} · ${data.complete?t('passed'):t('notStarted')}`));setRect(goal,layout.goal);stage.append(goal);
+    const goal=el('article',undefined,'goal-card node-card '+(data.complete?'passed':'unused')+(data.complete&&wasComplete===false?' pop':''));wasComplete=!!data.complete;goal.append(typeIcon('goal'),el('strong',data.title||t('goal')),el('span',`${t('goal')} · ${data.complete?t('passed'):t('notStarted')}`));setRect(goal,layout.goal);stage.append(goal);
     for(const n of data.nodes.filter(n=>needs(n)||['held','awaiting_approval'].includes(n.status))) {
-      const p=layout.positions[n.id],report=el('div',undefined,'overview-frog');const frog=el('img');frog.src='/static/assets/frog-report.png';frog.alt='';report.append(frog,el('span',t('waitingBubble'),'speech'));Object.assign(report.style,{left:p.x+'px',top:p.y+p.height+8+'px'});stage.append(report);
+      const p=layout.positions[n.id],report=el('div',undefined,'overview-frog');const frog=el('img');frog.src='/static/assets/frog-report.png';frog.alt='';report.append(inPhase(frog,1200),el('span',t('waitingBubble'),'speech'));Object.assign(report.style,{left:p.x+'px',top:p.y+p.height+8+'px'});stage.append(report);
     }
-    if(data.complete){const frog=el('img',undefined,'overview-frog waving');frog.src='/static/assets/frog-wave.png';frog.alt=t('complete');Object.assign(frog.style,{left:layout.goal.x+52+'px',top:layout.goal.y+layout.goal.height+10+'px'});stage.append(frog);}
+    if(data.complete){const frog=el('img',undefined,'overview-frog waving');frog.src='/static/assets/frog-wave.png';frog.alt=t('complete');inPhase(frog,1200);Object.assign(frog.style,{left:layout.goal.x+52+'px',top:layout.goal.y+layout.goal.height+10+'px'});stage.append(frog);}
     size();
     if(reveal&&layout.positions[id]){const p=layout.positions[id],w=viewport.clientWidth||900;
       if(p.x*scale<viewport.scrollLeft+12||(p.x+p.width)*scale>viewport.scrollLeft+w-12)viewport.scrollLeft=Math.max(0,p.x*scale-(w-p.width*scale)/2);
