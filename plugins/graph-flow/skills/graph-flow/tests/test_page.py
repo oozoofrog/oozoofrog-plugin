@@ -399,15 +399,17 @@ const settle=async()=>{ for(let i=0;i<12;i++) await new Promise(setImmediate); }
 await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64')+'#dom'); await settle();
 const get=id=>document.getElementById(id);
 assert.equal(document.documentElement.lang,'en','plan language must override Korean browser');
-// The first screen is the inbox and the record, newest entry first, with the real check of a returned attempt.
-assert.equal(get('home').hidden,false); assert.equal(get('flow').hidden,true);
+// The graph opens first, and a waiting decision is answered from its card.
+assert.equal(get('flow').hidden,false); assert.equal(get('home').hidden,true);
+assert.match(get('map').textContent,/d7 read and answer/);
+// The other view is the inbox and the record, newest entry first, with the real check of a returned attempt.
+get('home-tab').click(); assert.equal(get('home').hidden,false); assert.equal(get('flow').hidden,true);
 const entries=get('home').querySelectorAll('li').filter(e=>e.id);
 assert.deepEqual(entries.map(e=>e.id),['e9','e3']);
 const words=e=>e.textContent;
 assert.match(words(entries[1]),/attempt 1 came back/); assert.match(words(entries[1]),/Unit passes/); assert.match(words(entries[1]),/run tests/); assert.match(words(entries[1]),/T3 thread 01234567/);
 assert.equal(entries[1].querySelector('details').open,true,'a returned attempt shows its checks without a click');
 get('flow-tab').click(); assert.equal(get('flow').hidden,false); assert.equal(get('home').hidden,true);
-assert.match(get('map').textContent,/d7 read and answer/,'a waiting decision is answered from its card in the graph');
 // Open through the HTML fallback; map and panel route to the same openDecision.
 get('decision-list').querySelector('button').click();
 const input=get('answer-text'), actions=get('answer-actions'), buttons=[...actions.children];

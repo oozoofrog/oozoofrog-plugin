@@ -615,11 +615,11 @@ function translate() {
   document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));
 }
 translate();
-let chosen = null, projects = [], view = null, fingerprint = '', mode = 'home', selected = null;
+let chosen = null, projects = [], view = null, fingerprint = '', mode = 'flow', selected = null;
 let queuedRefresh = false;
 let timer = 0, loading = false, generation = 0, renderer = null;
 const decisionController = createDecisionController();
-let decisionUI = null, decisionNotice = '', cameFrom = 'home';
+let decisionUI = null, decisionNotice = '', cameFrom = 'flow';
 
 async function api(path, body, text = false) {
   const response = await fetch(path, {method: body ? 'POST' : 'GET', headers: {'X-GF-Token': token, ...(body ? {'Content-Type':'application/json'} : {})}, ...(body ? {body:JSON.stringify(body)} : {})});
@@ -846,7 +846,7 @@ function discardDecision() {
 function closeInvalidDecision(run, decisions) {
   const reason = decisionController.refresh({decisions}, run);
   if (!reason) return false;
-  goHome(); decisionNotice = reason; notice(decisionNotice); return true;
+  if (mode === 'decision') leaveDecision(); decisionNotice = reason; notice(decisionNotice); return true;
 }
 function goHome() { if (showMode('home') && view) home(); }
 function showGraph() { if (!showMode('flow')) return; panel(); }
@@ -964,7 +964,7 @@ function openDecision(id, focus = true) {
   };
   decisionUI = {session, update}; update(); if (focus) focusHeading(introduction.querySelector('h2'));
 }
-function leaveDecision() { if (cameFrom === 'flow') showGraph(); else goHome(); }
+function leaveDecision() { if (cameFrom === 'home') goHome(); else showGraph(); }
 let pendingJump = null;
 function readFragment() {
   const target = Object.fromEntries(new URLSearchParams(location.hash.slice(1)));
@@ -988,7 +988,7 @@ function jump(target) {
     const text = target.node.toLowerCase();
     const node = view.nodes.find(n => n.id.toLowerCase() === text) || view.nodes.find(n => (n.title || '').toLowerCase().includes(text));
     if (!node) return miss(target.node);
-    decisionNotice = ''; notice(''); showNode(node.id); return true;
+    decisionNotice = ''; notice(''); selected = null; selectNode(node.id); return true;
   }
   return true;
 }
@@ -1009,7 +1009,7 @@ function applyView(next) {
 }
 function setChosen(next) {
   if (decisionController.session?.busy || sameRun(chosen, next)) return;
-  closeInvalidDecision(next, []); chosen = next; generation++; resetView(); logNode = null; logFilter = 'all'; found = mark = null; rowOpen.clear(); logShown.clear(); showMode('home');
+  closeInvalidDecision(next, []); chosen = next; generation++; resetView(); logNode = null; logFilter = 'all'; found = mark = null; rowOpen.clear(); logShown.clear(); showMode('flow');
 }
 function chooseRuns(data) {
   projects = data.projects;
