@@ -16,21 +16,7 @@
 
 설치 후 호출 예: `$korean-product-writing로 이 화면의 제목·설명·버튼을 사실과 조건을 유지해 다듬어 주세요.` 실제 설치나 자동 호출을 시험했다는 뜻은 아닙니다.
 
-## 협업 실행
-
-[협업 실행](plugins/guided-execution/skills/guided-execution/SKILL.md) (`guided-execution` 0.6.1)은 여러 단계의 프로젝트 구현·재개에서 프로젝트 분석, 최소 질문, 실제 검증과 사람의 판단을 연결하는 Plugin입니다. 일반 정보 답변, 학습 지도, 단독 리뷰, 프로젝트 조율이 필요 없는 작은 수정은 적용 대상에서 제외합니다.
-
-새로운 여러 단계의 작업은 프로젝트 자료와 기존 결정을 먼저 확인한 뒤, 아직 정해지지 않은 중요한 우선순위·사용 흐름·범위·품질 기준에 관해 질문 1개를 먼저 합니다. 확인한 맥락과 추천안을 제시하고, 답변을 받은 뒤 해당 판단에 의존하는 구현을 시작합니다. 구현할 수 있다는 판단이나 쉽게 되돌릴 수 있다는 이유만으로 사람의 의견을 생략하지 않습니다.
-
-관련 판단이 현재 요청이나 이전 답변에 이미 명시됐거나, 사용자가 해당 선택을 명시적으로 위임하거나 질문을 원하지 않는다고 했거나, 판단이 정해진 범위 그대로 작업을 재개할 때만 초기 질문을 생략하고 근거를 기록합니다. 초기 질문을 포함해 요청 전체에서 독립적인 선택·선호 결정은 최대 3개, 질문을 주고받는 차례는 최대 2회입니다. 실행 중의 선호·품질 검토 질문도 이 한도에 합산합니다.
-
-기존 답변과 권한을 유지하고, 초기 판단과 목표·제약·완료 기준·허용 범위가 정해지면 `.agent-loop/<run-id>/`를 만들어 구현·검증·수정을 이어갑니다. 이미 요청한 실행에 대해 다시 시작 허락을 묻지 않습니다. 답변을 기다리는 동안에는 그 판단과 무관하고 이미 허용된 조사·준비만 계속합니다. 피드백이 바꾸는 작업과 후속 결과를 다시 검증하고, 유효한 나머지 작업은 보존합니다.
-
-```text
-$guided-execution 프로젝트와 도구·기존 선호를 확인하고, 미결정된 중요한 판단은 질문한 뒤 제 답변을 기다려주세요. 실제 검사와 상태 기록을 남기며 진행해주세요.
-```
-
-프로젝트의 실제 도구·검사와 적용 가능한 선호·교훈을 확인하고 다음 실행에 반영합니다. Python 표준 라이브러리 도구로 작업 시작, 검사 근거, 사용자 결정, 관련 작업 재검증을 기록하며 문자를 최소화한 읽기 전용 온톨로지 그래프 파이프라인을 만듭니다. 작업·에이전트 기록·검증·결정을 다른 도형으로 구분하고 계획·기록·수정 경로를 표시하며, 모바일은 세로로 배치합니다. 상세 근거는 접힌 영역에 남깁니다. 온톨로지·지식그래프 사례를 반영한 적극적인 CSS 모션과 주변 관계 강조는 연출임을 표시하고 모션 끄기와 시스템 동작 줄이기를 지원하며, 실제 상태나 실행 기록을 바꾸지 않습니다. 기존 기록 검사 명령과 schema 1은 유지합니다. 실제 작업과 권한 확인은 호스트 에이전트가 수행하며, 보고서는 실시간 제어 화면이 아닙니다. 별도 백그라운드 실행기는 포함하지 않습니다. Claude Code에서는 읽기 전용 Mod가 현재 실행의 할 일을 채팅 옆 패널(목록·관계 보기)과 프롬프트 위 한 줄로 보여 주고, 패널 버튼으로 토큰이 필요한 `127.0.0.1` 실시간 대시보드를 엽니다. 대시보드의 상태 색은 기록에서만 가져오며, Haiku 요약은 단계 묶음과 이름만 정하고 '기록 아님'으로 표시합니다. [실시간 보드](plugins/guided-execution/skills/guided-execution/references/workspace.md#live-board)를 참고하세요. [환경 구성과 재사용](plugins/guided-execution/skills/guided-execution/references/environment.md)을 참고하세요. [설치 안내](docs/plugin-installation.md#guided-execution), [작업 환경 규약](plugins/guided-execution/skills/guided-execution/references/workspace.md), [검증 범위](docs/validation/guided-execution.md)를 확인하세요.
+`auto-flow`와 `guided-execution`은 폐기했습니다. 여러 단계의 계획·분담·검증 작업에는 [graph-flow](#graph-flow)를 사용하세요. 기존 설치본은 호스트의 Plugin 제거 기능으로 정리하며, Codex에서는 설정과 캐시를 함께 정리합니다. Marketplace 항목 삭제만으로 설치본이 제거되지는 않습니다. [제거 안내](docs/plugin-installation.md#retired-plugins)를 참고하세요.
 
 ## Jev Client
 
@@ -73,15 +59,15 @@ skills-only Plugin `0.3.0`을 제공합니다. Plugin에 모델·런타임·생�
 
 [모델 선택](plugins/model-advisor/skills/model-advisor/SKILL.md) (`model-advisor` 0.1.1)은 작업에 맞는 Claude 모델(Haiku 5.5, Sonnet 5.5, Opus 5.5, Fable 5.2)과 effort를 추천합니다. 넘겨 달라고 하면 이 대화 없이도 시작할 수 있는 지시문을 써서, 그 모델·effort로 서브에이전트를 부르거나 `claude --bg`로 백그라운드 Claude Code 세션을 띄웁니다. 띄운 뒤 `claude logs`에서 실제 모델을 확인하고 `claude attach <id>`로 여는 방법을 알려 줍니다. 현재 세션의 모델은 바꾸지 못하므로 `/compact`, `/model`, `/effort` 순서를 안내합니다. 백그라운드 세션은 `claude` CLI와 신뢰 승인을 마친 프로젝트 폴더가 필요합니다. 모델별 기준과 가격은 2026-11-09 claude.dev 글을 따릅니다. Codex에서는 스킬만 쓸 수 있습니다. [설치](docs/plugin-installation.md#model-advisor)를 확인하세요.
 
-## Auto Flow
+## Graph Flow
 
 | Plugin | 용도 |
 | --- | --- |
-| `auto-flow@oozoofrog-plugin` | [난이도별 Claude Workflow와 T3 Code 교차 검토](plugins/auto-flow/skills/auto-flow/SKILL.md) |
+| `graph-flow@oozoofrog-plugin` | [여러 단계의 작업을 그래프로 계획·분담·검증하고 진행 상황 확인](plugins/graph-flow/skills/graph-flow/SKILL.md) |
 
-작업 난이도를 분류해 단계마다 맞는 Claude 모델(Haiku·Sonnet·Opus·Fable)과 effort로 계획·실행·통합 검증하는 Workflow를 실행한다. 실패하면 한 번만 모델이나 effort를 올려 수정한다. "/auto-flow", "auto-flow로 해줘", "모델 알아서 골라서 워크플로로 진행해줘", "토큰 효율적으로 워크플로 돌려줘", "교차 검토까지 해줘", "Codex도 섞어서 진행해줘", "보안 점검·공격 시나리오까지 워크플로로 해줘"에 사용한다. 보안 점검은 security tier(Fable)로 돌리고, Fable 안전장치에 막힌 단위만 사용자가 허용하면 Mythos 5.2로 넘긴다. T3 Code에서는 Codex 계정을 남은 사용량 기준으로 골라 교차 검토와 실행 분담에 쓴다.
+`graph-flow` 0.1.0은 작업을 노드로 나누고 의존 관계, 노드별 세션 배정, 실패할 수 있는 검사와 시도 기록을 남깁니다. 계획·분담·검증·진행 추적, 사람의 판단이나 대시보드가 필요한 여러 단계의 작업에 사용합니다. 단순 수정과 조율이 필요 없는 일반 질문은 대상에서 제외합니다. Codex에서는 `$graph-flow`, Claude Code에서는 `/graph-flow:graph-flow`로 호출합니다. 예: “이 작업을 검사 가능한 노드로 나누고 세션별로 배정해 진행 상황을 기록해 주세요.” Python 3과 Git이 필요하며, 두 Plugin에 MCP 설정을 포함합니다. Workflow 실행에는 호스트의 Workflow 도구가 추가로 필요합니다.
 
-`auto-flow` 0.3.0은 자기 시스템의 보안 점검·공격 시나리오 시험을 `security` tier(Fable 5.2)로 실행합니다. Fable 안전장치에 막힌 단위는 자동으로 다시 시도하지 않고, 사용자가 승인할 때만 Mythos 5.2 백그라운드 세션으로 넘깁니다(Anthropic 검증 조직만 호출 가능, 기본 30일 데이터 보관). Codex에는 스킬만 제공됩니다. Workflow 스크립트와 두 Plugin 에이전트는 Claude Code의 Workflow 도구에서만 동작합니다. 이 도구가 없는 세션은 실행 불가를 알리고 Workflow를 흉내 내지 않습니다. 교차 제공자 단계에는 T3 Code `delegate_task` 도구, Python 3, `~/.t3/caches/*.json` 사용량 데이터가 필요합니다. 에이전트는 `auto-flow:flow-planner`·`auto-flow:flow-verifier`, bare 이름, 기본 에이전트 순서로 찾으며 대체 기록을 남깁니다. 9개 상한은 이름 재시도가 아닌 `run()` 호출 수입니다. [설치](docs/plugin-installation.md#auto-flow)를 확인하세요.
+대시보드는 사용자가 자신의 터미널에서 `gf serve`를 실행하고 출력된 주소를 엽니다. 여기서 `gf`는 `python3 <skill-dir>/scripts/gf`의 줄임말이며, `<skill-dir>`에는 설치된 스킬 경로를 넣습니다. PATH에 명령을 추가하지 않습니다. 에이전트는 결정 요청을 기록하고 사용자의 답변을 기다립니다. [설치](docs/plugin-installation.md#graph-flow)와 [대시보드 규약](plugins/graph-flow/skills/graph-flow/references/dashboard.md)을 참고하세요.
 
 ## 설치
 

@@ -1,8 +1,0 @@
-interface:
-  display_name: "협업 실행"
-  short_description: "프로젝트 도구·선호를 반영하고 검증 기록과 상태 보고서로 실행을 이어갑니다"
-  default_prompt: "$guided-execution 프로젝트와 도구·기존 선호를 확인하고, 미결정된 중요한 판단은 질문한 뒤 제 답변을 기다려주세요. 실제 검사와 상태 기록을 남기며 진행해주세요."
-  icon_small: "assets/icon.svg"
-  icon_large: "assets/icon.svg"
-policy:
-  allow_implicit_invocation: true

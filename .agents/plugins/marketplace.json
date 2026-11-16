@@ -125,18 +125,6 @@
       "category": "Productivity"
     },
     {
-      "name": "guided-execution",
-      "source": {
-        "source": "local",
-        "path": "./plugins/guided-execution"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
       "name": "handoff",
       "source": {
         "source": "local",
@@ -161,10 +149,10 @@
       "category": "Productivity"
     },
     {
-      "name": "auto-flow",
+      "name": "graph-flow",
       "source": {
         "source": "local",
-        "path": "./plugins/auto-flow"
+        "path": "./plugins/graph-flow"
       },
       "policy": {
         "installation": "AVAILABLE",

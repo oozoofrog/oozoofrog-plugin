@@ -1,0 +1,26 @@
+{
+  "name": "graph-flow",
+  "version": "0.1.0",
+  "description": "Use when a user asks to plan, split, delegate, verify, or track multi-step work with checks that can fail, per-node sub-session assignment, human decision points, or a progress dashboard, or explicitly invokes graph-flow. Exclude simple edits and ordinary questions that need no coordination.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "skills": "./skills/",
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
+  "interface": {
+    "displayName": "Graph Flow",
+    "shortDescription": "Plan, verify, and track multi-step work as a graph",
+    "longDescription": "Use when a user asks to plan, split, delegate, verify, or track multi-step work with checks that can fail, per-node sub-session assignment, human decision points, or a progress dashboard, or explicitly invokes graph-flow. Exclude simple edits and ordinary questions that need no coordination.",
+    "developerName": "oozoofrog",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "$graph-flow Plan this work as a graph with checks, and track progress."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}
