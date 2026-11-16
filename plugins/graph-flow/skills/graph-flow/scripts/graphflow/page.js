@@ -120,10 +120,10 @@ const STRINGS = {
     "reviews": "검토함",
     "waitsForDecision": "결정을 기다림",
     "towardGoal": "목표로",
-    "fit": "맞추기",
+    "fit": "기본 크기",
     "zoomIn": "크게 보기",
     "zoomOut": "작게 보기",
-    "mapHelp": "끌어서 이동 · + − 확대 · 0 맞추기",
+    "mapHelp": "끌어서 이동 · + − 확대 · 0 기본 크기",
     "firstPass": "한 번에",
     "finishedAttempts": "{n}번 만에",
     "lineLegend": "선 위의 글은 넘기는 것의 이름이에요",
@@ -195,14 +195,16 @@ const STRINGS = {
     "runOptionNeeds": "{project} · {run} · 내 답 {n}",
     "since": "{time}부터",
     "returnTimes": "돌아온 횟수 {n}번",
-    "allDone": "모든 흐름이 끝났어요!",
+    "allDone": "이 흐름이 끝났어요",
     "answerHere": "{id} 읽고 답하기",
     "lineOpen": "넘겨줬어요",
     "lineClosed": "아직 넘기지 않았어요",
     "lineWaiting": "내 답을 기다려요",
     "lineReturned": "되돌아온 일에서 나와요",
     "lineReview": "검토해요",
-    "tries": "시도 {n}/{max}"
+    "tries": "시도 {n}/{max}",
+    "closeDetails": "자세한 내용 닫기",
+    "mapDirection": "왼쪽에서 오른쪽으로"
   },
   "en": {
     "flow": "Whole flow",
@@ -324,10 +326,10 @@ const STRINGS = {
     "reviews": "reviews",
     "waitsForDecision": "waits for a decision",
     "towardGoal": "toward the goal",
-    "fit": "Fit",
+    "fit": "Reset",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
-    "mapHelp": "Drag to pan · + − zoom · 0 fit",
+    "mapHelp": "Drag to pan · + − zoom · 0 reset",
     "firstPass": "First attempt",
     "finishedAttempts": "In {n} attempts",
     "lineLegend": "Text on a line names what is handed over",
@@ -399,14 +401,16 @@ const STRINGS = {
     "runOptionNeeds": "{project} · {run} · {n} need you",
     "since": "since {time}",
     "returnTimes": "Came back {n} times",
-    "allDone": "The whole flow is complete!",
+    "allDone": "This flow is complete",
     "answerHere": "{id} read and answer",
     "lineOpen": "handed over",
     "lineClosed": "not handed over yet",
     "lineWaiting": "waiting for your answer",
     "lineReturned": "from work that came back",
     "lineReview": "reviews",
-    "tries": "attempt {n}/{max}"
+    "tries": "attempt {n}/{max}",
+    "closeDetails": "Close details",
+    "mapDirection": "Left to right"
   }
 };
 // UI_STRINGS_END
@@ -496,7 +500,7 @@ export function viewLanguage(view, browser = 'en') {
 }
 export function cometCount(node) { return (node.laps || []).filter(lap => lap === 'returned').length; }
 // Below this the words on a card stop being readable, so a larger graph scrolls instead of shrinking further.
-export const MIN_FIT_SCALE = .75;
+export const MIN_FIT_SCALE = 1;
 export function edgeRelationLabel(edge, language = 'en') {
   const words = STRINGS[language];
   if (edge.relation === 'toward_goal') return words.towardGoal;
@@ -523,7 +527,7 @@ export function crossingCount(routes, positions) {
   return count;
 }
 export function layeredLayout(nodes, edges, decisions = [], sort = true, options = {}) {
-  const width=232, gap=104, rowGap=64, left=24, top=72, byId=new Map(nodes.map(n=>[n.id,n]));
+  const width=248, gap=104, rowGap=40, left=32, top=48, byId=new Map(nodes.map(n=>[n.id,n]));
   // A review's arrow points back to its target; its dependency still points forward.
   const dependencies=edges.filter(e=>e.relation!=='reviews'&&byId.has(e.from)&&byId.has(e.to));
   const parents=new Map(nodes.map(n=>[n.id,dependencies.filter(e=>e.to===n.id).map(e=>e.from)]));
@@ -538,14 +542,15 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
   const layers=[];
   nodes.forEach(n=>(layers[depth(n.id)] ||= []).push(n.id));
   const height=n=>{
-    const lines=Math.max(1,Math.ceil(textWidth(n.title,17,9.5)/158));
-    const base=92+lines*24;
+    const lines=Math.max(1,Math.ceil(textWidth(n.title,17,9.5)/184));
+    const base=132+lines*26;
     const expanded=options.expanded===n.id ? 210+(n.returned_reasons||[]).reduce((sum,rs)=>sum+30+Math.max(1,Math.ceil(textWidth(rs.join(' · '),13,7)/170))*21,0) : 0;
-    return Math.max(base+expanded,options.heights?.[n.id]||0);
+    return options.heights?.[n.id] || base+expanded;
   };
   let positions={};
   const place=()=>{
-    positions={}; layers.forEach((ids,d)=>{let y=top;ids.forEach(id=>{const h=height(byId.get(id));if(byId.get(id).kind==='review'&&positions[byId.get(id).target])y=Math.max(y,positions[byId.get(id).target].y);positions[id]={x:left+d*(width+gap),y,width,height:h,depth:d,layer:d};y+=h+rowGap;});});
+    positions={}; const sizes=layers.map(ids=>ids.reduce((sum,id)=>sum+height(byId.get(id)),0)+Math.max(0,ids.length-1)*rowGap), tallest=Math.max(0,...sizes);
+    layers.forEach((ids,d)=>{let y=top+(tallest-sizes[d])/2;ids.forEach(id=>{const h=height(byId.get(id));if(byId.get(id).kind==='review'&&positions[byId.get(id).target])y=Math.max(y,positions[byId.get(id).target].y);positions[id]={x:left+d*(width+gap),y,width,height:h,depth:d,layer:d};y+=h+rowGap;});});
   };
   const cost=()=>crossingCount(dependencies,positions)*1e7+dependencies.reduce((s,e)=>s+Math.abs(positions[e.from].y-positions[e.to].y),0);
   place();
@@ -562,31 +567,30 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
       if(cost()>before){layers[d]=old;place();}
     }
   }
-  const last=Math.max(0,...depths.values()), goal={x:left+(last+1)*(width+gap),y:top,width:148,height:116,layer:last+1};
-  const terminals=nodes.filter(n=>!dependencies.some(e=>e.from===n.id)).map(n=>n.id);
-  const allEdges=[...edges,...terminals.map(id=>({from:id,to:'__goal',label:'',relation:'toward_goal',gate:byId.get(id).status==='passed'?'open':'closed'}))];
+    const terminals=nodes.filter(n=>!dependencies.some(e=>e.from===n.id)).map(n=>n.id);
+  const allEdges=edges;
   // Edges that hand the same thing from the same node share one label; only the lines fork.
   const chips=[],routes=[],groups=new Map(),anchor=(id,p)=>p.y+(options.expanded===id?52:p.height/2);
   for(const [index,e] of allEdges.entries()) {
-    const a=positions[e.from],b=e.to==='__goal'?goal:positions[e.to];if(!a||!b)continue;
+    const a=positions[e.from],b=positions[e.to];if(!a||!b)continue;
     const reverse=a.x>b.x,text=edgeChipText(e,options.language||'en');
     const waiting=decisions.find(d=>d.node===e.from)||(e.relation==='waits_for_decision'?decisions.find(d=>d.node===e.to):null);
-    const route={...e,index,text,reverse,start:{x:reverse?a.x:a.x+a.width,y:anchor(e.from,a)},end:{x:reverse?b.x+b.width:b.x,y:anchor(e.to,b)},chip:null,gateState:waiting?'waiting_for_you':e.gate||'closed',decision:waiting?.id,skip:Math.abs(a.layer-b.layer)>1,channel:20+(index%4)*10};
+    const route={...e,index,text,reverse,start:{x:reverse?a.x:a.x+a.width,y:e.relation==='reviews'?a.y+a.height-22:anchor(e.from,a)},end:{x:reverse?b.x+b.width:b.x,y:e.relation==='reviews'?b.y+b.height-22:anchor(e.to,b)},chip:null,gateState:waiting?'waiting_for_you':e.gate||'closed',decision:waiting?.id,skip:Math.abs(a.layer-b.layer)>1,channel:20+(index%4)*10};
     routes.push(route);if(!text)continue;
     const key=JSON.stringify([e.from,text,reverse,route.gateState,route.decision||'']);
     if(!groups.has(key))groups.set(key,{column:reverse?b.layer:a.layer,text,key,icon:0,routes:[]});
     groups.get(key).routes.push(route);
   }
   for(const group of groups.values()) {
-    const w=Math.min(gap-12,Math.max(34,Math.ceil(textWidth(group.text,12,6.8))+14+group.icon)),lines=Math.ceil(textWidth(group.text,12,7.2)/(gap-28-group.icon));
+    const w=Math.min(gap-12,Math.max(34,Math.ceil(textWidth(group.text,13,7.2))+14+group.icon)),lines=Math.ceil(textWidth(group.text,13,7.4)/(gap-28-group.icon));
     const middle=group.routes.reduce((sum,r)=>sum+(r.start.y+r.end.y)/2,0)/group.routes.length;
-    const chip={x:left+group.column*(width+gap)+width+(gap-w)/2,y:Math.max(8,middle-(lines*17+8)/2),width:w,height:lines*17+8,first:group.routes[0].index,key:group.key};
+    const chip={x:left+group.column*(width+gap)+width+(gap-w)/2,y:Math.max(8,middle-(lines*19+10)/2),width:w,height:lines*19+10,first:group.routes[0].index,key:group.key};
     while(chips.some(c=>chip.x<c.x+c.width+6&&chip.x+chip.width+6>c.x&&chip.y<c.y+c.height+8&&chip.y+chip.height+8>c.y))chip.y+=12;
     chips.push(chip);group.routes.forEach(r=>{r.chip=chip;});
   }
   const cardRects=Object.entries(positions).map(([id,p])=>({id,...p}));
-  const bounds={width:goal.x+goal.width+left,height:Math.max(360,goal.y+goal.height+80,...cardRects.map(p=>p.y+p.height+76),...chips.map(c=>c.y+c.height+40))};
-  return {positions,layers,order:layers.flat(),routes,chips,cardRects,goal,terminals,bounds};
+  const bounds={width:Math.max(360,...cardRects.map(p=>p.x+p.width+left)),height:Math.max(320,...cardRects.map(p=>p.y+p.height+48),...chips.map(c=>c.y+c.height+40))};
+  return {positions,layers,order:layers.flat(),routes,chips,cardRects,terminals,bounds};
 }
 
 if (typeof document !== 'undefined') {
@@ -672,7 +676,7 @@ function decisionHeading(parent, d, tag) {
 function needs(node) { return view.decisions.some(d => d.node === node.id); }
 function status(node) {
   if (needs(node)) return t('awaiting');
-  if (node.status === 'passed') return t('passed');
+  if (node.status === 'passed' || node.answered) return t('passed');
   if (node.status === 'running') return t(node.attempts > 1 ? 'retrying' : 'running');
   if (['submitted','unverified'].includes(node.status)) return t('submitted');
   if (['replan','exhausted'].includes(node.status)) return t('exhausted');
@@ -698,25 +702,37 @@ function handoffsCard(key, rows, direction) {
   for (const row of rows) list.append(el('li', `${label(row.label)} · ${t(direction)} ${otherTitle(row.other_title)} · ${t(row.delivered ? 'delivered' : 'notDelivered')}`));
   c.append(list); return c;
 }
+function attention() {
+  const box = $('attention'); clear(box); box.hidden = !view.decisions.length;
+  box.setAttribute('aria-label', t('yourTurn'));
+  if (box.hidden) return;
+  const heading = el('div', undefined, 'attention-heading');
+  heading.append(el('span', t('yourTurn')), el('strong', String(view.decisions.length)));
+  const items = el('div', undefined, 'attention-items');
+  for (const d of view.decisions) {
+    const item = el('div', undefined, 'attention-item'), text = el('div'), reference = el('div', undefined, 'ref-line');
+    reference.append(refChip(d.id, `${d.id} · ${d.node_title || question(d)}`));
+    if (d.node_title) reference.append(el('span', d.node_title));
+    text.append(reference, el('p', question(d) || purposeWording(d.purpose, language)));
+    item.append(text, button(t('read'), () => openDecision(d.id))); items.append(item);
+  }
+  box.append(heading, items);
+}
 function panel() {
   const p = $('panel'); clear(p);
   const node = view.nodes.find(n => n.id === selected);
-  if (node) {
-    const reference = el('p', undefined, 'ref-line'); reference.append(refChip(node.id, `${node.id} · ${title(node)}`)); if (workedBy(node)) reference.append(el('span', t('workedBy', {who:workedBy(node)})));
-    p.append(el('h2', title(node)), reference, el('p', `${status(node)} · ${attempts(node)}`));
-    if (node.summary) p.append(el('p', node.summary, 'muted'));
-    p.append(el('p', t('attemptsOf'), 'eyebrow'), logList(view.timeline.filter(r => r.node === node.id && r.kind !== 'asked' && r.kind !== 'answered'), 'notStarted', false));
-    p.append(handoffsCard('received', node.inputs, 'from'), handoffsCard('outputs', node.outputs, 'to'), button(t('showInLog'), () => showNode(node.id), 'primary'));
-  } else p.append(el('p', t('selectHint')));
-  const legend=el('div',undefined,'legend');legend.append(el('p',t('legend'),'eyebrow'));
-  const row=(...items)=>{const line=el('p');items.forEach(([mark,text])=>{const item=el('span',undefined,'legend-item');if(mark)item.append(mark);item.append(el('span',text));line.append(item);});legend.append(line);};
-  const dot=key=>el('span',undefined,'dot '+key);
-  const line=state=>{const sample=svg('svg',{viewBox:'0 0 34 10','aria-hidden':'true',class:'line-sample'});sample.append(svg('path',{d:'M1 5H33',class:'edge-path '+state}));return sample;};
-  row(...['goal','work','review','decision'].map(kind=>[typeIcon(kind),t(kind)]));
-  row(...['done','doing','needs_you','waiting'].map(key=>[dot(key),t(key)]));
-  row(...[['open','lineOpen'],['closed','lineClosed'],['waiting_for_you','lineWaiting'],['returned','lineReturned'],['open review','lineReview']].map(([state,key])=>[line(state),t(key)]));
-  row([null,t('lineLegend')]);
-  p.append(legend);
+  p.hidden = !node; $('flow').classList.toggle('has-selection', !!node);
+  if (!node) return;
+  p.setAttribute('aria-label', title(node));
+  const close = button('×', () => {
+    const id = selected; selectNode(id);
+    [...document.querySelectorAll('.node-card')].find(e => e.dataset.node === id)?.querySelector('.node-header')?.focus({preventScroll:!matchMedia('(max-width:760px)').matches});
+  }, 'panel-close'); close.setAttribute('aria-label', t('closeDetails'));
+  const reference = el('p', undefined, 'ref-line'); reference.append(refChip(node.id, `${node.id} · ${title(node)}`)); if (workedBy(node)) reference.append(el('span', t('workedBy', {who:workedBy(node)})));
+  p.append(close, el('h2', title(node)), reference, el('p', `${status(node)} · ${attempts(node)}`));
+  if (node.summary) p.append(el('p', node.summary, 'muted'));
+  p.append(el('p', t('attemptsOf'), 'eyebrow'), logList(view.timeline.filter(r => r.node === node.id && r.kind !== 'asked' && r.kind !== 'answered'), 'notStarted', false));
+  p.append(handoffsCard('received', node.inputs, 'from'), handoffsCard('outputs', node.outputs, 'to'), button(t('showInLog'), () => showNode(node.id), 'primary'));
 }
 // One entry of the record. An attempt carries its real checks; the rest are single sentences.
 const rowOpen = new Map(), logShown = new Map();
@@ -850,7 +866,7 @@ function closeInvalidDecision(run, decisions) {
 }
 function goHome() { if (showMode('home') && view) home(); }
 function showGraph() { if (!showMode('flow')) return; panel(); }
-function selectNode(id) { const n=view.nodes.find(n=>n.id===id),d=view.decisions.find(d=>d.node===id); if(n?.kind==='decision'&&d){openDecision(d.id);return;} if (!showMode('flow')) return; selected = selected === id ? null : id; panel(); if (renderer) renderer.select(selected); }
+function selectNode(id) { const n=view.nodes.find(n=>n.id===id),d=view.decisions.find(d=>d.node===id); if(n?.kind==='decision'&&d){openDecision(d.id);return;} if (!showMode('flow')) return; selected = selected === id ? null : id; panel(); if (renderer) renderer.select(selected); if (selected && matchMedia('(max-width:760px)').matches) $('panel').scrollIntoView({block:'start',behavior:reduced.matches?'auto':'smooth'}); }
 function focusHeading(heading) { heading.tabIndex = -1; heading.focus(); }
 function openDecision(id, focus = true) {
   const session = decisionController.open(id); if (!session) return;
@@ -1004,7 +1020,7 @@ function applyView(next) {
   view = next; fingerprint = nextFingerprint; if (!view.nodes.some(n => n.id === selected)) selected = null; if (!view.nodes.some(n => n.id === logNode)) logNode = null; showMode(mode);
   $('title').textContent = view.title || t('brand'); $('where').textContent = [view.project, view.run].filter(Boolean).join(' · ');
   $('subtitle').textContent = view.complete ? t('complete', {total:view.nodes.length}) : t('overview', {total:view.nodes.length, done:view.counts.done, doing:view.counts.doing, needs:view.counts.needs_you});
-  accessible(); panel(); home(); if (renderer && mode === 'flow') renderer.update(view, selected);
+  accessible(); attention(); panel(); home(); if (renderer && mode === 'flow') renderer.update(view, selected);
   if (mode === 'decision' && decisionController.session) openDecision(decisionController.session.target.id, false);
 }
 function setChosen(next) {
@@ -1041,7 +1057,7 @@ async function refresh(force = false) {
   } catch (error) { if (currentGeneration === generation) notice(error.status === 401 ? 'unauthorized' : error.status === 400 || error.status === 404 || error.status === 500 ? 'unreadable' : 'lost', true); }
   finally { loading = false; if (queuedRefresh) { queuedRefresh = false; refresh(true); } else schedule(); }
 }
-function resetView() { language = viewLanguage(null, navigator.language); translate(); closeInvalidDecision(chosen, []); view = null; selected = null; fingerprint = ''; ['node-list','edge-list','decision-list','panel','home'].forEach(id => clear($(id))); if (renderer) renderer.update({nodes:[],edges:[],decisions:[],complete:false}, null); $('flow').hidden = true; $('home').hidden = true; $('accessible').hidden = true; $('decision').hidden = true; $('subtitle').textContent = ''; $('where').textContent = ''; }
+function resetView() { language = viewLanguage(null, navigator.language); translate(); closeInvalidDecision(chosen, []); view = null; selected = null; fingerprint = ''; ['node-list','edge-list','decision-list','panel','home','attention'].forEach(id => clear($(id))); if (renderer) renderer.update({nodes:[],edges:[],decisions:[],complete:false}, null); $('flow').hidden = true; $('home').hidden = true; $('accessible').hidden = true; $('decision').hidden = true; $('subtitle').textContent = ''; $('where').textContent = ''; }
 function schedule() { clearTimeout(timer); if (!document.hidden) timer = setTimeout(refresh, 2000); }
 $('home-tab').addEventListener('click', () => { if (view) goHome(); });
 $('flow-tab').addEventListener('click', () => { if (view) showGraph(); });
@@ -1057,17 +1073,9 @@ function svg(tag, attributes = {}) {
   Object.entries(attributes).forEach(([key,value])=>element.setAttribute(key,String(value)));return element;
 }
 function typeIcon(kind) {
-  const icon=svg('svg',{viewBox:'0 0 36 36','aria-hidden':'true',class:'type-icon'});
-  const path=d=>icon.append(svg('path',{d,fill:'var(--paper)',stroke:'#1a1330','stroke-width':2.6,'stroke-linejoin':'round','stroke-linecap':'round'}));
-  if(kind==='goal')path('M18 3 22 12 32 13 25 21 27 32 18 27 8 32 10 21 3 13 14 12Z');
-  else if(kind==='review')path('M27 5C8 0 0 23 17 31 24 34 31 29 33 24 17 30 8 12 27 5Z');
-  else if(kind==='decision') {
-    path('M12 13H24V27H12ZM3 12H10V27H3ZM26 12H33V27H26ZM18 13V6M14 7Q18 2 22 7');
-    icon.append(svg('circle',{cx:18,cy:20,r:3,fill:'#ffd166',stroke:'#1a1330','stroke-width':2}));
-  } else {
-    icon.append(svg('circle',{cx:18,cy:17,r:11,fill:'#c3b1ff',stroke:'#1a1330','stroke-width':2.6}));
-    path('M8 15C-5 27 14 33 32 13M5 23C12 26 26 21 32 13');
-  }
+  const icon=svg('svg',{viewBox:'0 0 24 24','aria-hidden':'true',class:'type-icon'});
+  const paths={work:'M5 4H19V20H5Z M8 8H16 M8 12H16 M8 16H12',review:'M10 3A7 7 0 1 0 10 17A7 7 0 1 0 10 3 M15 15L21 21 M7 10L9 12L13 8',decision:'M12 3L22 12L12 21L2 12Z M12 7V13 M12 16V17',goal:'M5 21V3 M5 4H20L16 9L20 14H5'};
+  icon.append(svg('path',{d:paths[kind]||paths.work,fill:'none',stroke:'currentColor','stroke-width':1.6,'stroke-linejoin':'round','stroke-linecap':'round'}));
   return icon;
 }
 function cardTone(n) {return needs(n)||['held','awaiting_approval'].includes(n.status)?'waiting_for_you':n.status==='passed'||n.answered?'passed':['running','submitted','unverified'].includes(n.status)?'current':'unused';}
@@ -1089,14 +1097,17 @@ function nodeCard(n, expanded = false) {
   },'node-header');
   header.setAttribute('aria-label',nodeDescription(n));header.setAttribute('aria-expanded',String(expanded));
   header.append(typeIcon(n.kind),el('strong',title(n),'node-title'),el('span',`${t(n.kind||'work')} · ${status(n)}`,'node-status'));
-  header.append(el('span',n.status==='passed'&&n.attempts?(n.attempts===1?t('firstPass'):t('finishedAttempts',{n:n.attempts})):t('tries',{n:n.attempts||0,max:n.max_attempts||3}),'attempt-caption'));
-  const reference=el('span',undefined,'ref-line');reference.append(el('span',n.id,'ref'));if(workedBy(n))reference.append(el('span',workedBy(n)));header.append(reference);
+  const attempt=el('span',n.status==='passed'&&n.attempts?(n.attempts===1?t('firstPass'):t('finishedAttempts',{n:n.attempts})):t('tries',{n:n.attempts||0,max:n.max_attempts||3}),'attempt-caption');
   root.append(header);
+  const reference=el('div',undefined,'ref-line node-reference');reference.append(refChip(n.id, `${n.id} · ${title(n)}`),attempt);if(workedBy(n))reference.append(el('span',workedBy(n),'node-worker'));root.append(reference);
   // What came back and what waits for the person are read on the card itself.
   const returns=cometCount(n),why=(n.returned_reasons||[]).slice(-1)[0]||[];
-  if(returns&&n.status!=='passed')root.append(el('p',[t('returnTimes',{n:returns}),...why].join(' · '),'card-note returned'));
+  if(returns&&n.status!=='passed'){
+    const note=el('p',undefined,'card-note returned');note.append(el('strong',t('returnTimes',{n:returns})));
+    if(why.length)note.append(el('span',t('checksFailed',{names:why.join(', ')})));root.append(note);
+  }
   for(const d of view.decisions.filter(d=>d.node===n.id)){
-    const ask=el('div',undefined,'card-note mine');if(question(d))ask.append(el('p',question(d)));
+    const ask=el('div',undefined,'card-note mine');
     ask.append(button(t('answerHere',{id:d.id}),()=>openDecision(d.id),'small'));root.append(ask);
   }
   return root;
@@ -1106,19 +1117,22 @@ function createMap() {
   const toolbar=el('div',undefined,'map-toolbar'),viewport=el('div',undefined,'map-viewport'),spacer=el('div',undefined,'map-spacer'),stage=el('div',undefined,'map-stage');
   viewport.tabIndex=0;viewport.setAttribute('aria-label',t('mapHelp'));spacer.append(stage);viewport.append(spacer);map.append(toolbar,viewport);
   let data={nodes:[],edges:[],decisions:[]},chosenNode=null,layout=null,scale=1,automatic=true;
-  const nodes=new Map(),chips=new Map(),seen=new Map();let drawing=null,wasComplete=null,placed=false;
+  const nodes=new Map(),chips=new Map(),seen=new Map();let drawing=null,placed=false;
   const zoomText=el('output');zoomText.setAttribute('aria-live','polite');
   const zoom=amount=>{automatic=false;scale=Math.max(MIN_FIT_SCALE,Math.min(1.6,scale+amount));size();};
   const fit=()=>{automatic=true;size();viewport.scrollLeft=0;viewport.scrollTop=0;};
-  toolbar.append(button('−',()=>zoom(-.1)),button('+',()=>zoom(.1)),button(t('fit'),fit),zoomText,el('span',t('mapHelp'),'map-help'));
-  toolbar.children[0].dataset.i18nLabel='zoomOut';toolbar.children[1].dataset.i18nLabel='zoomIn';toolbar.children[2].dataset.i18n='fit';toolbar.children[4].dataset.i18n='mapHelp';viewport.dataset.i18nLabel='mapHelp';translate();
+  const zoomOut=button('−',()=>zoom(-.1)),zoomIn=button('+',()=>zoom(.1));
+  toolbar.append(zoomOut,zoomIn,button(t('fit'),fit),zoomText,el('span',t('mapHelp'),'map-help'));
+  toolbar.children[0].dataset.i18nLabel='zoomOut';toolbar.children[1].dataset.i18nLabel='zoomIn';toolbar.children[2].dataset.i18n='fit';toolbar.children[4].dataset.i18n='mapHelp';viewport.dataset.i18nLabel='mapHelp';
+  const mapTitle=el('div',undefined,'map-title'), name=el('strong',t('graph')), direction=el('span',t('mapDirection'));
+  name.dataset.i18n='graph';direction.dataset.i18n='mapDirection';mapTitle.append(name,direction);toolbar.prepend(mapTitle);translate();
   function size() {
     if(!layout)return;
     const w=viewport.clientWidth||900,h=viewport.clientHeight||600;
     if(automatic)scale=fitScale(layout.bounds,w-20,h-20,matchMedia('(max-width:760px)').matches);
-    Object.assign(stage.style,{width:layout.bounds.width+'px',height:layout.bounds.height+'px',transform:`scale(${scale})`});
+    Object.assign(stage.style,{left:Math.max(0,(w-layout.bounds.width*scale)/2)+'px',top:Math.max(0,(h-layout.bounds.height*scale)/2)+'px',width:layout.bounds.width+'px',height:layout.bounds.height+'px',transform:`scale(${scale})`});
     Object.assign(spacer.style,{width:Math.max(w,layout.bounds.width*scale)+'px',height:Math.max(h,layout.bounds.height*scale)+'px'});
-    zoomText.textContent=Math.round(scale*100)+'%';
+    zoomText.textContent=Math.round(scale*100)+'%';zoomOut.disabled=scale<=MIN_FIT_SCALE;zoomIn.disabled=scale>=1.6;
   }
   const setRect=(element,rect)=>Object.assign(element.style,{left:rect.x+'px',top:rect.y+'px',width:rect.width+'px',minHeight:rect.height+'px'});
   function update(next,id) {
@@ -1127,15 +1141,15 @@ function createMap() {
     const activeIds=new Set(data.nodes.map(n=>n.id));
     for(const [key,element] of nodes)if(!activeIds.has(key)){element.remove();nodes.delete(key);}
     for(const n of data.nodes) {
-      const expanded=n.id===chosenNode&&n.kind!=='decision';
+      const expanded=n.id===chosenNode;
       const signature=JSON.stringify([n,expanded,data.decisions.filter(d=>d.node===n.id)]);
       let element=nodes.get(n.id);
       if(!element){element=el('div',undefined,'node-position');nodes.set(n.id,element);stage.append(element);}
       if(element.dataset.signature!==signature) {
         const card=nodeCard(n,expanded),before=seen.get(n.id),tone=cardTone(n);
         // One-shot motion only for a change observed while the page was open.
-        if(before&&cometCount(n)>before.comets)card.classList.add('shake');
-        else if(before&&before.tone!==tone&&['passed','current'].includes(tone))card.classList.add('pop');
+        if(before&&cometCount(n)>before.comets)card.classList.add('changed');
+        else if(before&&before.tone!==tone&&['passed','current'].includes(tone))card.classList.add('changed');
         element.replaceChildren(card);if(n.status==='running')element.append(walker());element.dataset.signature=signature;
       }
       seen.set(n.id,{tone:cardTone(n),comets:cometCount(n)});
@@ -1166,15 +1180,15 @@ function createMap() {
     }
     // All focusable controls are ordered by column and then vertical position.
     [...nodes.values(),...chips.values()].sort((a,b)=>parseFloat(a.style.left)-parseFloat(b.style.left)||parseFloat(a.style.top)-parseFloat(b.style.top)).forEach(e=>stage.append(e));
-    stage.querySelectorAll('.overview-frog,.goal-card').forEach(e=>e.remove());
-    const goal=el('article',undefined,'goal-card node-card '+(data.complete?'passed':'unused')+(data.complete&&wasComplete===false?' pop':''));wasComplete=!!data.complete;goal.append(typeIcon('goal'),el('strong',data.title||t('goal')),el('span',`${t('goal')} · ${data.complete?t('passed'):t('notStarted')}`));setRect(goal,layout.goal);stage.append(goal);
-    if(data.complete){const frog=el('img',undefined,'overview-frog waving');frog.src='/static/assets/frog-wave.png';frog.alt=t('allDone');inPhase(frog,1200);Object.assign(frog.style,{left:layout.goal.x+52+'px',top:layout.goal.y+layout.goal.height+10+'px'});stage.append(frog);}
+    direction.textContent=data.complete?t('allDone'):t('mapDirection');
+    direction.dataset.i18n=data.complete?'allDone':'mapDirection';
+    mapTitle.classList.toggle('map-complete',!!data.complete);
     size();
     // A graph wider than the window first shows where the work is, not where it began.
     if(!data.nodes.length)placed=false;
     else if(!placed&&viewport.clientWidth){
       placed=true;const open=data.nodes.filter(n=>n.status!=='passed'&&layout.positions[n.id]).map(n=>layout.positions[n.id].x);
-      viewport.scrollLeft=open.length?Math.max(0,Math.min(...open)*scale-120):0;
+      viewport.scrollLeft=layout.bounds.width*scale>viewport.clientWidth? (open.length?Math.max(0,Math.min(...open)*scale-32):0):0;
     }
     if(reveal&&layout.positions[id]){const p=layout.positions[id],w=viewport.clientWidth||900;
       if(p.x*scale<viewport.scrollLeft+12||(p.x+p.width)*scale>viewport.scrollLeft+w-12)viewport.scrollLeft=Math.max(0,p.x*scale-(w-p.width*scale)/2);
@@ -1191,7 +1205,7 @@ function createMap() {
     if(e.key==='ArrowUp')viewport.scrollTop-=80;if(e.key==='ArrowDown')viewport.scrollTop+=80;
   });
   let drag=null;
-  viewport.addEventListener('pointerdown',e=>{if(e.target.closest('button,summary,a'))return;drag={x:e.clientX,y:e.clientY,left:viewport.scrollLeft,top:viewport.scrollTop};viewport.setPointerCapture(e.pointerId);viewport.classList.add('panning');});
+  viewport.addEventListener('pointerdown',e=>{if(e.target.closest('button,summary,a'))return;drag={x:e.clientX,y:e.clientY,left:viewport.scrollLeft,top:viewport.scrollTop};if(e.pointerType==='touch'){drag=null;return;}viewport.setPointerCapture(e.pointerId);viewport.classList.add('panning');});
   viewport.addEventListener('pointermove',e=>{if(drag){viewport.scrollLeft=drag.left+drag.x-e.clientX;viewport.scrollTop=drag.top+drag.y-e.clientY;}});
   const release=()=>{drag=null;viewport.classList.remove('panning');};viewport.addEventListener('pointerup',release);viewport.addEventListener('pointercancel',release);
   new ResizeObserver(size).observe(viewport);

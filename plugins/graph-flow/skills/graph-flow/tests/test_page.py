@@ -123,15 +123,15 @@ class PageTests(unittest.TestCase):
         js = (S / 'scripts/graphflow/page.js').read_text(encoding='utf-8')
         style = html[html.index('<style'):html.index('</style>')]
         declared = set(re.findall(r'@keyframes ([a-z]+)', style))
-        self.assertEqual(declared, {'step', 'bob', 'flow', 'glow', 'pop', 'shake', 'wave'})
+        self.assertEqual(declared, {'step', 'turn', 'flow', 'arrive'})
         used = {name for rule in re.findall(r'animation:([^;}]+)', style)
                 for name in re.findall(r'(?:^|,)([a-z]+) ', rule)}
         self.assertEqual(used, declared)
         reduced = '@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important'
-        self.assertGreater(style.index(reduced), max(style.rindex('@keyframes'), style.rindex('animation:wave')))
+        self.assertGreater(style.index(reduced), max(style.rindex('@keyframes'), style.rindex('animation:flow')))
         # The second walking frame is hidden unless an animation reveals it.
         self.assertIn('.walker img+img{opacity:0;', style)
-        for used_class in ('working', 'pop', 'shake', 'flowing', 'walker'):
+        for used_class in ('working', 'changed', 'flowing', 'walker'):
             self.assertIn("'" + used_class, js.replace("' " + used_class, "'" + used_class))
         self.assertIn('/static/assets/frog-walk-b.png', js)
         self.assertNotIn('requestAnimationFrame', js)
@@ -202,26 +202,30 @@ for(const data of [demo,{nodes,edges},crossed,reviewed]) for(const expanded of [
     const p=layout.positions[node.id];assert.equal(p.depth,depth(node.id));
     assert.equal(p.layer,depth(node.id));assert(layout.layers[p.depth].includes(node.id));
   }
-  const rects=[...layout.cardRects,layout.goal,...layout.chips];
+  const rects=[...layout.cardRects,...layout.chips];
   rects.forEach((a,i)=>rects.slice(i+1).forEach(b=>assert(!overlap(a,b),'cards and chips must never overlap: '+JSON.stringify([a,b]))));
   const unsorted=layeredLayout(data.nodes,data.edges,data.decisions,false,options);
   const deps=data.edges.filter(e=>e.relation!=='reviews');
   assert(crossingCount(deps,layout.positions)<=crossingCount(deps,unsorted.positions));
   assert.deepEqual(layout,layeredLayout(data.nodes,data.edges,data.decisions,true,options));
-  assert(layout.goal.x>Math.max(...Object.values(layout.positions).map(p=>p.x)));
+  assert(layout.bounds.width>=Math.max(...Object.values(layout.positions).map(p=>p.x+p.width)));
   for(const [w,h] of [[1680,960],[1280,800],[845,912],[390,844]])assert(fitScale(layout.bounds,w,h,w<760)>=MIN_FIT_SCALE);
 }
 const layout=layeredLayout(reviewed.nodes,reviewed.edges);
 assert.equal(layout.positions.review.layer,layout.positions.work.layer+1);
 assert(layout.routes.some(e=>e.from==='review'&&e.to==='work'&&e.relation==='reviews'));
+const back=layout.routes.find(e=>e.relation==='reviews'), forward=layout.routes.find(e=>e.from==='work');
+assert.notEqual(back.end.y,forward.start.y,'review and handoff use separate ports');
+const measured=layeredLayout([{id:'a',kind:'work'}],[],[],true,{heights:{a:127}});
+assert.equal(measured.positions.a.height,127,'ports and spacing use the rendered card height');
 assert(layout.order.includes('review'));
 assert.equal(fitScale({width:10000,height:10000},300,300),MIN_FIT_SCALE);
-// One thing handed to two places is one label with two lines; a goal line carries no label.
+// One thing handed to two places is one label with two lines; completion does not add invented nodes.
 const fork=layeredLayout([{id:'a',kind:'work'},{id:'b',kind:'work'},{id:'c',kind:'work'}],[{from:'a',to:'b',label:'Parsed record',relation:'hands_over',gate:'open'},{from:'a',to:'c',label:'Parsed record',relation:'hands_over',gate:'open'}],[],true,{language:'en'});
 assert.equal(fork.chips.length,1);
 assert.equal(fork.routes.filter(r=>r.chip===fork.chips[0]).length,2);
-assert.equal(fork.routes.filter(r=>r.to==='__goal').length,2);
-assert(fork.routes.filter(r=>r.to==='__goal').every(r=>r.chip===null&&r.text===''));
+assert.equal(fork.routes.length,2);
+assert.deepEqual(fork.terminals,['b','c']);
 // A line's text has one meaning: the name of what is handed over. Reviews, decisions and unnamed handoffs carry none.
 assert.equal(edgeChipText({relation:'hands_over',label:'Parsed record'},'en'),'Parsed record');
 for(const edge of [{relation:'hands_over',label:''},{relation:'reviews',label:'x'},{relation:'waits_for_decision',label:'approval'},{relation:'toward_goal',label:''}]) assert.equal(edgeChipText(edge),'');
@@ -229,7 +233,7 @@ const review=layeredLayout([{id:'a',kind:'work'},{id:'r',kind:'review',target:'a
 assert.equal(review.chips.length,0,'a review line and a waiting decision add no label');
 // A graph too wide for the map keeps its words readable and scrolls instead of shrinking past the minimum.
 const chain=layeredLayout(['a','b','c','d'].map(id=>({id,kind:'work'})),[['a','b'],['b','c'],['c','d']].map(([from,to])=>({from,to,relation:'hands_over'})),[],true,{language:'ko'});
-assert.equal(fitScale(chain.bounds,860,2000),MIN_FIT_SCALE); assert(MIN_FIT_SCALE>=.75);
+assert.equal(fitScale(chain.bounds,860,2000),MIN_FIT_SCALE); assert.equal(MIN_FIT_SCALE,1);
 assert(chain.bounds.width*MIN_FIT_SCALE>860);
 """)
 
@@ -376,7 +380,7 @@ globalThis.document={body,documentElement:root,hidden:false,activeElement:null,
   querySelector:selector=>body.querySelector(selector), querySelectorAll:selector=>body.querySelectorAll(selector),
   addEventListener:(type,fn)=>{docEvents[type]=fn;}};
 body.append(new Element('nav'));
-for (const id of ['map','notice','picker','picker-label','find','find-text','home','flow','decision','home-tab','flow-tab','where','title','subtitle','node-list','edge-list','decision-list','panel','accessible']) {
+for (const id of ['map','notice','picker','picker-label','find','find-text','home','flow','decision','home-tab','flow-tab','where','title','subtitle','node-list','edge-list','decision-list','panel','attention','accessible']) {
   const e=new Element(id==='picker'?'select':'div'); e.id=id; body.append(e);
 }
 Object.defineProperty(globalThis,'navigator',{value:{language:'ko-KR'},configurable:true});
@@ -402,6 +406,23 @@ assert.equal(document.documentElement.lang,'en','plan language must override Kor
 // The graph opens first, and a waiting decision is answered from its card.
 assert.equal(get('flow').hidden,false); assert.equal(get('home').hidden,true);
 assert.match(get('map').textContent,/d7 read and answer/);
+assert.equal(get('panel').hidden,true,'no idle legend occupies the graph');
+assert.equal(get('attention').hidden,false);
+assert.match(get('attention').textContent,/d7/);
+assert.match(get('attention').textContent,/Approve hold for work/);
+const before=get('map').querySelectorAll('article'); docEvents.visibilitychange(); await settle();
+assert.deepEqual(get('map').querySelectorAll('article'),before,'unchanged polling preserves card elements');
+live.decisions.push({...d,id:'d8',node:null,node_title:null,question:'Which language?'});
+docEvents.visibilitychange(); await settle();
+assert.match(get('attention').textContent,/Which language\?/,'unbound decisions are visible above the graph');
+get('attention').querySelectorAll('button').at(-1).click();
+assert(get('answer-text'),'unbound decision opens in one click');
+get('answer-actions').children.at(-1).click();
+live.decisions.pop();
+live.nodes.push({id:'choice',kind:'decision',title:'Pick a direction',status:'pending',answered:true,inputs:[],outputs:[],laps:[],returned_reasons:[]});
+docEvents.visibilitychange();await settle();
+assert.match(get('map').textContent,/Decision · Finished/,'answered decisions use finished words as well as colour');
+live.nodes.pop();docEvents.visibilitychange();await settle();
 // The other view is the inbox and the record, newest entry first, with the real check of a returned attempt.
 get('home-tab').click(); assert.equal(get('home').hidden,false); assert.equal(get('flow').hidden,true);
 const entries=get('home').querySelectorAll('li').filter(e=>e.id);
