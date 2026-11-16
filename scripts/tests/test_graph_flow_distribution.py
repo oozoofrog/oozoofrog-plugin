@@ -52,7 +52,7 @@ class GraphFlowDistributionTests(unittest.TestCase):
         for name in ("README.md", "README.ko.md"):
             text = (ROOT / name).read_text()
             for expected in ("graph-flow@oozoofrog-plugin", "$graph-flow",
-                             "/graph-flow:graph-flow", "gf serve",
+                             "/graph-flow:graph-flow", "graph-flow serve",
                              "docs/plugin-installation.md#graph-flow"):
                 self.assertIn(expected, text, name)
         self.assertIn(description, (ROOT / "README.md").read_text())

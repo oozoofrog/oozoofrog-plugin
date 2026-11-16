@@ -58,7 +58,30 @@ def _set_plan(args, actor):
             "constraints_applied": ids}
 
 
+def _runs(args):
+    """Without a run, say which runs this project has so a new session can pick one up."""
+    root = store.project_root(args.project)
+    found = []
+    directory = pathlib.Path(root) / ".graph-flow" / "runs"
+    for path in sorted(directory.iterdir()) if directory.is_dir() else []:
+        if not (path / "events.jsonl").is_file():
+            continue
+        entry = {"id": path.name, "run": str(path)}
+        try:
+            with store.transaction(path) as tx:
+                derived = state.derive(tx.plan, tx.events)
+            entry.update(status=derived["run"]["status"], last_event=tx.events[-1]["ts"] if tx.events else None,
+                         open_decisions=[d["id"] for d in decisions.open_decisions(derived)])
+        except core.GFError as exc:
+            entry["error"] = exc.message
+        found.append(entry)
+    return {"project": str(root), "runs": found,
+            "message": "Set GF_RUN to one run path, or start a new one with gf init <id>."}
+
+
 def _status(args, actor):
+    if not args.run:
+        return _runs(args)
     with store.transaction(args.run) as tx:
         current_plan = tx.plan
         derived = state.derive(current_plan, tx.events)
@@ -403,7 +426,8 @@ def main(argv=None):
         if entry["handler"] is None:
             raise core.GFError("not_implemented", "%s is not implemented yet" % " ".join(args.command_path))
         if (entry["needs_run"] and not args.run
-                and not (args.command_path == ("brief",) and args.plan_brief)):
+                and not (args.command_path == ("brief",) and args.plan_brief)
+                and not (args.command_path == ("status",) and role in ("leader", "human"))):
             raise core.GFError("run_required", "--run or GF_RUN is required")
         result = entry["handler"](args, actor)
         if args.command_path == ("mcp",):

@@ -649,10 +649,10 @@ def _handler(token):
         def _reload_page(self):
             nonce = secrets.token_urlsafe(24)
             page = '''<!doctype html><html lang="en"><meta charset="utf-8">
-<title>Graph flow</title><p id="message">Open the address printed by gf serve.</p>
+<title>Graph flow</title><p id="message">This tab lost its key. Run graph-flow open, or ask your agent session to open the dashboard.</p>
 <script nonce="__NONCE__">
 if (navigator.language.toLowerCase().startsWith('ko')) {
-  document.getElementById('message').textContent = 'gf serve를 켤 때 나온 주소를 열어 주세요.';
+  document.getElementById('message').textContent = '이 탭의 열쇠가 사라졌어요. 터미널에서 graph-flow open을 실행하거나, 에이전트 세션에 대시보드를 열어 달라고 해 주세요.';
 }
 try {
   const token = sessionStorage.getItem('graph-flow-token:' + location.port);

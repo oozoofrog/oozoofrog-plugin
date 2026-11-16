@@ -11,13 +11,13 @@ Turn multi-step work into bounded nodes with explicit dependencies, owned files,
 
 Invoke `python3 <skill-dir>/scripts/gf`; `<skill-dir>` is the base directory the host prints when it loads this skill. Below, `gf` abbreviates that invocation; it does not require a command on PATH. With MCP available, the same commands exist as tools; see [MCP](references/mcp.md).
 
-As the leader, check `command -v gf` once when you first use this skill for a person. If it finds nothing, tell them in one sentence that `gf setup` puts a `gf` command in `~/.local/bin` so they can run commands such as `gf open` from their own terminal, and ask whether to install it. Run `gf setup` only after a yes, relay its message, and if it reports that the directory is not on PATH, give them the printed `export` line to add to their shell profile instead of editing the profile yourself. After a no, do not ask again in that session. `gf setup --remove` undoes it. Keep invoking the skill's own copy yourself; the command on PATH is for the person.
+As the leader, check `command -v graph-flow` once when you first use this skill for a person. If it finds nothing, tell them in one sentence that `gf setup` puts the commands `graph-flow` and `gf` in `~/.local/bin` so they can run commands such as `graph-flow open` from their own terminal, and ask whether to install it. Many shells already give `gf` another meaning (oh-my-zsh aliases it to `git fetch`), so when you tell the person what to type, write `graph-flow`. Run `gf setup` only after a yes, relay its message, and if it reports that the directory is not on PATH, give them the printed `export` line to add to their shell profile instead of editing the profile yourself. After a no, do not ask again in that session. `gf setup --remove` undoes it. Keep invoking the skill's own copy yourself; the command on PATH is for the person.
 
 If a brief sets `GF_ROLE=worker` or `GF_ROLE=reviewer`, read [worker.md](references/worker.md) only, skip the other references, and follow your brief. Otherwise, this session is the leader: read [leader.md](references/leader.md).
 
 ## Run the loop
 
-1. Inspect the project and existing runs with `gf status`; initialize a new run with `gf init` only when needed, then record observed capabilities with `gf host set`.
+1. Inspect the project and existing runs: with no run selected, `gf status` lists this project's runs with their status and open decisions. To continue one, set `GF_RUN` to its `run` path and run `gf status` again; initialize a new run with `gf init` only when needed, then record observed capabilities with `gf host set`.
 2. Resolve consequential human choices with `gf decide ask`; use `gf decide wait` without blocking unrelated nodes.
 3. Read `gf brief --plan`; write checks before work, split by blast radius, and use `gf plan validate` followed by `gf plan set`.
 4. Select `gf ready` nodes, inspect `gf route`, record `gf assign`, and deliver each `gf brief` to its executor.

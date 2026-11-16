@@ -535,7 +535,7 @@ Who can answer (P10):
 | `cli.py` | Argument parsing, role checks, output |
 | `mcp.py` | stdio MCP server |
 | `server.py` | Dashboard server; `page.html` is its single page |
-| `launcher.py` | The `gf` command on PATH written by `gf setup` |
+| `launcher.py` | The `graph-flow` and `gf` commands on PATH written by `gf setup` |
 
 Public surface. Other modules may rely only on what is listed here. Functions raise `GFError`; "appends" means inside one transaction. `actor` is the dict from `core.actor_from_env`.
 
@@ -647,8 +647,8 @@ def open_dashboard(): ...                       # starts a detached `gf serve` w
 def stop_dashboard(): ...                       # SIGTERM to the recorded dashboard; False when none answers
 
 # launcher.py
-def install(bin_dir=None, script=None): ...     # writes <bin_dir>/gf (default ~/.local/bin); refuses a file it did not write
-def remove(bin_dir=None): ...                   # removes that file when it wrote it
+def install(bin_dir=None, script=None): ...     # writes <bin_dir>/graph-flow and <bin_dir>/gf (default ~/.local/bin); refuses a foreign graph-flow, skips a foreign gf
+def remove(bin_dir=None): ...                   # removes the ones it wrote
 ```
 
 The MCP tool list and the dashboard's HTTP API are specified by the units that own `mcp.py` and `server.py`, in `references/mcp.md` and `references/dashboard.md`; both call only the functions above.

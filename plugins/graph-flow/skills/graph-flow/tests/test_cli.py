@@ -140,7 +140,7 @@ class CLITests(unittest.TestCase):
             self.assertEqual(cli.main(['plan', 'validate', str(self.file)]), 0)
         self.assertIn('problems', out.getvalue())
         with contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(cli.main(['--json', 'status']), 2)
+            self.assertEqual(cli.main(['--json', 'ready']), 2)
 
     def test_optional_constraints(self):
         learn = types.ModuleType('graphflow.learn')
@@ -394,28 +394,49 @@ class CLITests(unittest.TestCase):
                 with mock.patch.dict(os.environ, GF_ROLE=role, GF_NODE='n'):
                     self.assertEqual(self.call('open', code=3)['code'], 'forbidden')
 
+    def test_status_without_a_run_lists_the_projects_runs(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(cli.main(['--json', '--project', str(self.repo), 'status']), 0)
+        listed = json.loads(out.getvalue())
+        self.assertEqual([(r['id'], r['run'], r['status'], r['open_decisions']) for r in listed['runs']],
+                         [('test', str(self.run), 'open', [])])
+        self.assertIn('GF_RUN', listed['message'])
+        out = io.StringIO()
+        with mock.patch.dict(os.environ, GF_ROLE='worker', GF_NODE='a'), contextlib.redirect_stdout(out):
+            self.assertEqual(cli.main(['--json', '--project', str(self.repo), 'status']), 2)
+        self.assertEqual(json.loads(out.getvalue())['code'], 'run_required')
+
     def test_setup_installs_a_working_command_and_keeps_foreign_files(self):
         with tempfile.TemporaryDirectory() as temporary:
             bin_dir = pathlib.Path(temporary).resolve() / "bin"
             with mock.patch.dict(os.environ, PATH=os.pathsep.join([str(bin_dir), "/usr/bin"])):
                 installed = self.call('setup', '--bin-dir', str(bin_dir))
-            self.assertEqual((installed['installed'], installed['on_path']), (str(bin_dir / "gf"), True))
-            self.assertTrue(os.access(str(bin_dir / "gf"), os.X_OK))
-            ran = subprocess.run([sys.executable, str(bin_dir / "gf"), "--json", "plan", "validate",
-                                  "/nonexistent"], capture_output=True, text=True)
-            self.assertEqual((bin_dir / "gf").read_text().splitlines()[0], "#!/usr/bin/env python3")
-            self.assertEqual(json.loads(ran.stdout)["ok"], False)
+            self.assertEqual((installed['installed'], installed['commands'], installed['on_path']),
+                             (str(bin_dir / "graph-flow"), ["graph-flow", "gf"], True))
+            for name in ("graph-flow", "gf"):
+                self.assertTrue(os.access(str(bin_dir / name), os.X_OK))
+                ran = subprocess.run([sys.executable, str(bin_dir / name), "--json", "plan", "validate",
+                                      "/nonexistent"], capture_output=True, text=True)
+                self.assertEqual((bin_dir / name).read_text().splitlines()[0], "#!/usr/bin/env python3")
+                self.assertEqual(json.loads(ran.stdout)["ok"], False)
             with mock.patch.dict(os.environ, PATH="/usr/bin"):
                 again = self.call('setup', '--bin-dir', str(bin_dir))
             self.assertFalse(again['on_path'])
             self.assertIn('export PATH="%s:$PATH"' % bin_dir, again['message'])
-            self.assertEqual(self.call('setup', '--bin-dir', str(bin_dir), '--remove')['removed'], True)
+            self.assertEqual(self.call('setup', '--bin-dir', str(bin_dir), '--remove')['commands'], ["graph-flow", "gf"])
             self.assertEqual(self.call('setup', '--bin-dir', str(bin_dir), '--remove')['removed'], False)
+            # A `gf` that belongs to another program stays; `graph-flow` is still installed.
             (bin_dir / "gf").write_text("#!/bin/sh\necho other\n")
-            for arguments in (['setup', '--bin-dir', str(bin_dir)],
-                              ['setup', '--bin-dir', str(bin_dir), '--remove']):
-                self.assertEqual(self.call(*arguments, code=4)['code'], 'exists')
+            partial = self.call('setup', '--bin-dir', str(bin_dir))
+            self.assertEqual(partial['commands'], ["graph-flow"])
+            self.assertIn("left alone", partial['message'])
+            self.assertEqual(self.call('setup', '--bin-dir', str(bin_dir), '--remove')['commands'], ["graph-flow"])
             self.assertEqual((bin_dir / "gf").read_text(), "#!/bin/sh\necho other\n")
+            (bin_dir / "graph-flow").write_text("#!/bin/sh\necho other\n")
+            self.assertEqual(self.call('setup', '--bin-dir', str(bin_dir), code=4)['code'], 'exists')
+            self.assertEqual(self.call('setup', '--bin-dir', str(bin_dir), '--remove')['removed'], False)
+            self.assertEqual((bin_dir / "graph-flow").read_text(), "#!/bin/sh\necho other\n")
             with mock.patch.dict(os.environ, GF_ROLE='worker', GF_NODE='n'):
                 self.assertEqual(self.call('setup', code=3)['code'], 'forbidden')
 
@@ -424,12 +445,12 @@ class CLITests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary).resolve()
             scripts = {}
-            for version in ("0.1.1", "0.2.0", "0.10.0"):
+            for version in ("0.1.1", "0.2.0", "0.10.0", "tmp-abc123"):
                 scripts[version] = root / "cache" / "graph-flow" / version / "skills" / "graph-flow" / "scripts" / "gf"
                 scripts[version].parent.mkdir(parents=True)
                 scripts[version].write_text("print(%r)\n" % version)
             launcher.install(root / "bin", scripts["0.1.1"])
-            run = lambda: subprocess.run([sys.executable, str(root / "bin" / "gf")], capture_output=True, text=True)
+            run = lambda: subprocess.run([sys.executable, str(root / "bin" / "graph-flow")], capture_output=True, text=True)
             self.assertEqual(run().stdout.strip(), "0.10.0")
             shutil.rmtree(str(scripts["0.10.0"].parents[3]))
             shutil.rmtree(str(scripts["0.1.1"].parents[3]))

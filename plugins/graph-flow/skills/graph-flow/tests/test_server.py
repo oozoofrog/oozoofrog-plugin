@@ -224,7 +224,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn(b"'graph-flow-token:' + location.port", body)
         self.assertIn(b"location.replace('/?t=' + encodeURIComponent(token))", body)
         self.assertIn(b"searchParams.has('t')", body)  # expired tokens must not loop
-        self.assertIn(b'Open the address printed by gf serve.', body)
+        self.assertIn(b'Run graph-flow open, or ask your agent session', body)
         for secret in (self.token, str(self.home), 'server test', 'built.txt', 'api/projects',
                        *map(str, self.projects), *map(str, self.runs), *self.asks):
             self.assertNotIn(secret.encode(), body)
