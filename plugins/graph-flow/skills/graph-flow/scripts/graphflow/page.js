@@ -458,13 +458,13 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
     const route={...e,index,text,reverse,start:{x:reverse?a.x:a.x+a.width,y:anchor(e.from,a)},end:{x:reverse?b.x+b.width:b.x,y:anchor(e.to,b)},chip:null,gateState:waiting?'waiting_for_you':e.gate||'closed',decision:waiting?.id,skip:Math.abs(a.layer-b.layer)>1,channel:20+(index%4)*10};
     routes.push(route);if(!text)continue;
     const key=JSON.stringify([e.from,text,reverse,route.gateState,route.decision||'']);
-    if(!groups.has(key))groups.set(key,{column:reverse?b.layer:a.layer,text,routes:[]});
+    if(!groups.has(key))groups.set(key,{column:reverse?b.layer:a.layer,text,key,icon:route.gateState==='returned'?21:0,routes:[]});
     groups.get(key).routes.push(route);
   }
   for(const group of groups.values()) {
-    const w=Math.min(gap-12,Math.max(34,Math.ceil(textWidth(group.text,12,6.8))+14)),lines=Math.ceil(textWidth(group.text,12,6.8)/(gap-26));
+    const w=Math.min(gap-12,Math.max(34,Math.ceil(textWidth(group.text,12,6.8))+14+group.icon)),lines=Math.ceil(textWidth(group.text,12,7.2)/(gap-28-group.icon));
     const middle=group.routes.reduce((sum,r)=>sum+(r.start.y+r.end.y)/2,0)/group.routes.length;
-    const chip={x:left+group.column*(width+gap)+width+(gap-w)/2,y:Math.max(8,middle-(lines*17+8)/2),width:w,height:lines*17+8,first:group.routes[0].index};
+    const chip={x:left+group.column*(width+gap)+width+(gap-w)/2,y:Math.max(8,middle-(lines*17+8)/2),width:w,height:lines*17+8,first:group.routes[0].index,key:group.key};
     while(chips.some(c=>chip.x<c.x+c.width+6&&chip.x+chip.width+6>c.x&&chip.y<c.y+c.height+8&&chip.y+chip.height+8>c.y))chip.y+=12;
     chips.push(chip);group.routes.forEach(r=>{r.chip=chip;});
   }
@@ -854,7 +854,7 @@ function createMap() {
   const setRect=(element,rect)=>Object.assign(element.style,{left:rect.x+'px',top:rect.y+'px',width:rect.width+'px',minHeight:rect.height+'px'});
   function update(next,id) {
     const reveal=id&&id!==chosenNode;data=next;chosenNode=id;map.classList.toggle('has-expanded',!!id);
-    const focused=document.activeElement?.closest?.('[data-node]')?.dataset.node;
+    const focused=document.activeElement?.closest?.('[data-node]')?.dataset.node,focusedChip=document.activeElement?.dataset?.chip;
     const activeIds=new Set(data.nodes.map(n=>n.id));
     for(const [key,element] of nodes)if(!activeIds.has(key)){element.remove();nodes.delete(key);}
     for(const n of data.nodes) {
@@ -877,14 +877,14 @@ function createMap() {
     for(const element of chips.values())element.remove();chips.clear();
     for(const route of layout.routes) {
       const {start:a,end:b,chip:c}=route,bend=route.reverse?-1:1,mx=c?c.x+c.width/2:route.skip?a.x+bend*7:(a.x+b.x)/2,my=c?c.y+c.height/2:route.skip?a.y:(a.y+b.y)/2;
-      const d=route.skip?`M${a.x} ${a.y} C${mx} ${a.y} ${mx} ${my} ${mx} ${my} V${route.channel+12} Q${mx} ${route.channel} ${mx+12} ${route.channel} H${b.x-30} Q${b.x-18} ${route.channel} ${b.x-18} ${route.channel+12} V${b.y-12} Q${b.x-18} ${b.y} ${b.x-6} ${b.y} H${b.x}`
+      const d=route.skip?`M${a.x} ${a.y} C${mx} ${a.y} ${mx} ${my} ${mx} ${my} V${route.channel+12} Q${mx} ${route.channel} ${mx+bend*12} ${route.channel} H${b.x-bend*30} Q${b.x-bend*18} ${route.channel} ${b.x-bend*18} ${route.channel+12} V${b.y-12} Q${b.x-bend*18} ${b.y} ${b.x-bend*6} ${b.y} H${b.x}`
         :c?`M${a.x} ${a.y} Q${mx-bend*14} ${a.y} ${mx} ${my} Q${mx+bend*14} ${b.y} ${b.x} ${b.y}`:`M${a.x} ${a.y} C${mx} ${a.y} ${mx} ${b.y} ${b.x} ${b.y}`;
       drawing.append(svg('path',{d,class:'edge-path '+route.gateState,'marker-end':`url(#arrow-${route.gateState})`}));
       if(!c||chips.has(c.first))continue;
       const chip=route.decision?button('',()=>openDecision(route.decision),'edge-chip '+route.gateState):el('div',undefined,'edge-chip '+route.gateState);
       const source=data.nodes.find(n=>n.id===route.from),targets=layout.routes.filter(r=>r.chip===c).map(r=>title(data.nodes.find(n=>n.id===r.to))).join(', ');
       chip.setAttribute('aria-label',`${edgeRelationLabel(route,language)}. ${title(source)} → ${targets}`);
-      if(route.gateState==='returned')chip.append(cometGlyph());chip.append(el('span',route.text));setRect(chip,c);stage.append(chip);chips.set(c.first,chip);
+      if(route.gateState==='returned')chip.append(cometGlyph());chip.append(el('span',route.text));chip.dataset.chip=c.key;setRect(chip,c);stage.append(chip);chips.set(c.first,chip);
     }
     // All focusable controls are ordered by column and then vertical position.
     [...nodes.values(),...chips.values()].sort((a,b)=>parseFloat(a.style.left)-parseFloat(b.style.left)||parseFloat(a.style.top)-parseFloat(b.style.top)).forEach(e=>stage.append(e));
@@ -900,6 +900,7 @@ function createMap() {
       viewport.scrollTop=Math.max(0,p.y*scale-20);
     }
     if(focused)nodes.get(focused)?.querySelector('button')?.focus({preventScroll:true});
+    if(focusedChip)[...chips.values()].find(e=>e.dataset.chip===focusedChip&&e.tagName==='BUTTON')?.focus({preventScroll:true});
   }
   map.addEventListener('keydown',e=>{
     if(!['map-viewport','map'].includes(e.target.id||e.target.className))return;

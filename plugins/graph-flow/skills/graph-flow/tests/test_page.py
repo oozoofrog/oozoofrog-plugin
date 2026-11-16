@@ -210,7 +210,12 @@ assert.equal(fitScale({width:10000,height:10000},300,300),MIN_FIT_SCALE);
 const fork=layeredLayout([{id:'a',kind:'work'},{id:'b',kind:'work'},{id:'c',kind:'work'}],[{from:'a',to:'b',label:'Parsed record',relation:'hands_over',gate:'open'},{from:'a',to:'c',label:'Parsed record',relation:'hands_over',gate:'open'}],[],true,{language:'en'});
 assert.equal(fork.chips.length,1);
 assert.equal(fork.routes.filter(r=>r.chip===fork.chips[0]).length,2);
+assert.equal(fork.routes.filter(r=>r.to==='__goal').length,2);
 assert(fork.routes.filter(r=>r.to==='__goal').every(r=>r.chip===null&&r.text===''));
+// A returned label reserves room for its comet, so long text gets more lines.
+const long='Readable handoff with a long name';
+const tall=state=>layeredLayout([{id:'a',kind:'work'},{id:'b',kind:'work'}],[{from:'a',to:'b',label:long,relation:'hands_over',gate:state}],[],true,{language:'en'}).chips[0].height;
+assert(tall('returned')>tall('open'));
 assert.equal(edgeChipText({relation:'hands_over',label:'Parsed record'},'en'),'Parsed record');
 assert.equal(edgeChipText({relation:'hands_over',label:''},'ko'),'넘겨줌');
 assert.equal(edgeChipText({relation:'reviews',label:'x'},'ko'),'검토함');
