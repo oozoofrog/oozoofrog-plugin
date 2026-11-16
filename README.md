@@ -32,6 +32,8 @@ These commands fetch the published remote marketplace, not unpublished changes i
 
 A local package, remote publication, installation and enablement, skill exposure in a new chat, and verified behavior are separate states. Check each state relevant to your task; repository tests alone do not establish installation or runtime behavior.
 
+`auto-flow` and `guided-execution` are retired; use [graph-flow](#graph-flow) for multi-step planning, delegation, and verified execution. Remove existing installations through your host's Plugin removal feature; in Codex, this also clears settings and caches. Removing marketplace entries does not uninstall existing copies; see [retirement guidance](docs/plugin-installation.md#retired-plugins).
+
 ## Choose a Plugin
 
 Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed documentation in this checkout.
@@ -48,10 +50,8 @@ Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed 
 | `refactor@oozoofrog-plugin` | [Refactor code while preserving behavior](plugins/refactor/skills/refactor/SKILL.md), or integrate SwiftLint into project builds; see [Refactor](#refactor). |
 | `high-council-implementation@oozoofrog-plugin` | [Prepare an implementation prompt with an available high-tier model, optionally reviewed by others](plugins/high-council-implementation/skills/high-council-implementation/SKILL.md), before the user chooses whether and how to start an implementation session. See [scope](#high-council-implementation). |
 | `openai-decisions@oozoofrog-plugin` | [Call the OpenAI Decisions API](plugins/openai-decisions/skills/openai-decisions/SKILL.md) for text, JSON, image classification, probabilities, and rubric scores; see [scope and prerequisites](#openai-decisions). |
-| `guided-execution@oozoofrog-plugin` | [Inspect a project, align the key human decision, and execute verified work loops](plugins/guided-execution/skills/guided-execution/SKILL.md), with a focused initial question, a request-wide clarification budget, and project-local evidence; see [scope](#guided-execution). |
 | `handoff@oozoofrog-plugin` | [Keep work state in a project-local handoff document](plugins/handoff/skills/handoff/SKILL.md) so a new Claude Code session continues after `/clear` without relying on compaction; see [Handoff](#handoff). |
 | `model-advisor@oozoofrog-plugin` | [Recommend a Claude model and effort for a task](plugins/model-advisor/skills/model-advisor/SKILL.md), and on request hand the task to a subagent or background Claude Code session running that model; see [Model Advisor](#model-advisor). |
-| `auto-flow@oozoofrog-plugin` | [Run a task-tiered Claude Workflow](plugins/auto-flow/skills/auto-flow/SKILL.md) with model and effort selection, one failure escalation, and optional T3 Code cross-provider review; see [Auto Flow](#auto-flow). |
 | `graph-flow@oozoofrog-plugin` | [Plan, delegate, verify, and track multi-step work as a graph](plugins/graph-flow/skills/graph-flow/SKILL.md), with per-node checks, human decisions, and a progress dashboard; see [Graph Flow](#graph-flow). |
 
 ## Examples
@@ -64,22 +64,10 @@ Use $local-ai-studio with my existing local Whisper model to transcribe this rec
 Use $interface-first-design to review this product screen's actions, states, and recovery paths.
 Use $c4fy to map this repository's architecture with source evidence, including code structure for the components that need it.
 Use $high-council-implementation to prepare an implementation prompt with the best available high-tier model for my review and choice of implementation model.
-Use $guided-execution to inspect this project, ask me one high-value alignment question, then use my answer to implement and verify the requested feature.
+Use $graph-flow to plan this project as bounded nodes, record unsettled human decisions, and implement and verify the requested feature.
 ```
 
 These are requests, not examples of verified results.
-
-## Guided Execution
-
-Use when a user requests implementation or continuation of a multi-step project with minimal clarification, iterative verification, or human decision points, or explicitly invokes guided-execution. Exclude ordinary factual answers, tutoring, standalone reviews, and simple edits requiring no project coordination.
-
-Version 0.6.1 first inspects project evidence, then normally asks one focused question about the highest-impact unsettled human priority, workflow, scope tradeoff, or quality target. It recommends a direction and waits for the user's answer before dependent implementation. Technical feasibility, repository conventions, and reversibility alone do not settle the user's preferred outcome.
-
-Skip that initial question only when the relevant human decisions are already explicit in the request or prior answers, the user explicitly delegates those choices or requests no questions, or unchanged work resumes with those decisions settled. Record the concrete exception and do not invent a question when every material decision is already settled. The initial question counts toward the same request-wide maximum of three independent discretionary decisions across two rounds, including later preference and quality-review questions.
-
-Reuse earlier answers and existing authorization. Once alignment is answered or legitimately skipped and the outcome, constraints, acceptance checks, and authorized scope suffice, create `.agent-loop/<run-id>/` and continue with implementation, real checks, bounded correction, and scoped human feedback. Do not add a separate permission-to-start question to already-authorized work. While awaiting an answer, only authorized independent investigation or preparation continues.
-
-The Plugin includes Python standard-library workspace, transition, read-only HTML report, and local live-dashboard tools. The host splits a request into requirements and small todos recorded per task (`todo-add`, `todo-set`) and, in Claude Code, mirrors them to the session task list. In Claude Code, its read-only mod shows the current run beside the chat (list, relation and requirement-todo views, plus one line above the prompt) and can open a token-protected `127.0.0.1` dashboard with separate session-work and requirement-todo tabs. That dashboard draws an ontology graph whose colors come only from records, with each running task's observed tool calls shown live on its node; an optional Haiku summary groups and labels tasks and is marked as not a record. See [live board](plugins/guided-execution/skills/guided-execution/references/workspace.md#live-board). Existing `init`, `validate-plan`, `check`, and `status` commands remain supported. The host discovers actual tools/checks, reuses applicable project-scoped preferences and lessons, then records starts, evidence, decisions, and targeted revalidation. The host still runs the actual work, checks current artifacts, and applies permissions. The static report uses a minimal-text ontology graph with typed nodes, directed dependencies and history-backed rework paths, plus a separate vertical mobile layout. Expressive, reference-informed CSS motion and local relationship focus are labeled as presentation, with a motion-off switch and system reduced-motion fallback. It is not live control, and the package provides no background scheduler. See [environment setup and reuse](plugins/guided-execution/skills/guided-execution/references/environment.md). See [installation and usage](docs/plugin-installation.md#guided-execution), [workspace contract](plugins/guided-execution/skills/guided-execution/references/workspace.md), and [validation scope](docs/validation/guided-execution.md).
 
 ## Handoff
 
@@ -92,12 +80,6 @@ The Plugin writes `_context/handoff/<branch>.md` inside the project (ignored by 
 작업 설명을 받아 어떤 Claude 모델(Haiku 5.5, Sonnet 5.5, Opus 5.5, Fable 5.2)과 effort가 어울리는지 판단해 추천하고, 원하면 그 모델·effort로 띄운 서브에이전트나 백그라운드 Claude Code 세션에 지시를 넘긴다. "이 작업은 어떤 모델이 좋을까", "Opus로 충분해?", "Fable이 필요한가", "effort 올릴까?", "Sonnet 세션으로 넘겨줘", "추천 모델로 돌려줘", "이건 Haiku한테 맡겨", 큰 작업을 시작하기 전 모델·effort 선택 상담, 작업 중 결과가 부족해 모델이나 effort를 올릴지 판단할 때, 서브에이전트에 쓸 모델을 고를 때 사용한다. API 파라미터·마이그레이션 질문은 다루지 않는다. 현재 세션의 모델은 바꾸지 못하므로 그 경우 `/model`·`/effort`를 안내한다.
 
 The skill picks a starting model and effort from the task type, applies upgrade and downgrade signals, and states its assumptions. When asked to hand off, it writes a self-contained brief and either calls a subagent with that `model` and `effort`, or starts `claude --bg --model <alias> --effort <level>` in the project folder and checks the model shown by `claude logs`. It cannot change the current session's model; it points to `/compact`, `/model` and `/effort` instead. Background handoff needs the `claude` CLI and a trusted project folder. Model guidance, prices and benchmark figures follow the claude.dev post of 2026-11-09. In Codex only the skill is available. See [installation](docs/plugin-installation.md#model-advisor).
-
-## Auto Flow
-
-작업 난이도를 분류해 단계마다 맞는 Claude 모델(Haiku·Sonnet·Opus·Fable)과 effort로 계획·실행·통합 검증하는 Workflow를 실행한다. 실패하면 한 번만 모델이나 effort를 올려 수정한다. "/auto-flow", "auto-flow로 해줘", "모델 알아서 골라서 워크플로로 진행해줘", "토큰 효율적으로 워크플로 돌려줘", "교차 검토까지 해줘", "Codex도 섞어서 진행해줘", "보안 점검·공격 시나리오까지 워크플로로 해줘"에 사용한다. 보안 점검은 security tier(Fable)로 돌리고, Fable 안전장치에 막힌 단위만 사용자가 허용하면 Mythos 5.2로 넘긴다. T3 Code에서는 Codex 계정을 남은 사용량 기준으로 골라 교차 검토와 실행 분담에 쓴다.
-
-[Auto Flow](plugins/auto-flow/skills/auto-flow/SKILL.md) 0.3.0 classifies task difficulty, plans and executes with Claude models and effort, integrates verification, and escalates once on failure. Security reviews and attack-scenario tests of your own systems run in a `security` tier on Fable 5.2; a unit blocked by Fable's safeguards is never retried automatically, and only with your approval goes to a Mythos 5.2 background session (available only to organizations verified by Anthropic, with 30-day data retention by default). Codex receives the skill only; the Workflow script and the two plugin agents work only in Claude Code with its Workflow tool. Sessions without that tool must report the limitation and must not imitate Workflow. Cross-provider steps need T3 Code `delegate_task` tools, Python 3, and usage data in `~/.t3/caches/*.json`. Agent lookup tries `auto-flow:flow-planner` / `auto-flow:flow-verifier`, then bare names, then the default agent with a note; the nine-agent cap counts `run()` calls, not name retries. See [installation](docs/plugin-installation.md#auto-flow).
 
 ## Graph Flow
 

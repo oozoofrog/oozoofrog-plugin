@@ -42,7 +42,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ['swift-intelligence', 'local-ai-studio', 'jev-client', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'high-council-implementation', 'openai-decisions', 'guided-execution', 'handoff', 'model-advisor', 'auto-flow', 'graph-flow'],
+            ['swift-intelligence', 'local-ai-studio', 'jev-client', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'high-council-implementation', 'openai-decisions', 'handoff', 'model-advisor', 'graph-flow'],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -98,52 +98,6 @@ class PluginDistributionTests(unittest.TestCase):
                         for arg in codex_server["args"]
                     ]
                     self.assertEqual(expected_args, server["args"])
-
-    def test_guided_execution_distribution(self) -> None:
-        source = skill_root("guided-execution")
-        plugin = REPO_ROOT / "plugins/guided-execution"
-        expected = {
-            "SKILL.md", "agents/openai.yaml", "assets/icon.svg",
-            "references/questions.md", "references/execution.md", "references/workspace.md",
-            "scripts/loop_workspace.py", "tests/test_loop_workspace.py",
-            "references/environment.md", "scripts/loop_control.py", "scripts/render_report.py",
-            "tests/test_loop_control.py", "tests/test_render_report.py", "tests/test_project_scenario.py",
-            "scripts/serve_dashboard.py", "tests/test_serve_dashboard.py",
-        }
-        claude_mod = {
-            "claude-mod/hooks.json", "claude-mod/register.tsx", "claude-mod/board.test.tsx",
-            "claude-mod/types/index.d.ts",
-        }
-        self.assertEqual(expected, set(tree_files(source)))
-        self.assertEqual(
-            {".codex-plugin/plugin.json", ".claude-plugin/plugin.json"} | claude_mod
-            | {f"skills/guided-execution/{path}" for path in expected},
-            set(tree_files(plugin)),
-        )
-        manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
-        self.assertEqual("0.6.1", manifest["version"])
-        self.assertEqual("./skills/", manifest["skills"])
-        for key in ("mcpServers", "apps", "hooks"):
-            self.assertNotIn(key, manifest)
-        # Codex discovers hooks/hooks.json; the Claude mod lives elsewhere and only the Claude manifest names it.
-        self.assertFalse((plugin / "hooks").exists())
-        claude = json.loads((plugin / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
-        self.assertEqual("0.6.1", claude["version"])
-        self.assertEqual("./claude-mod/hooks.json", claude["hooks"])
-        self.assertEqual("./claude-mod/types/index.d.ts", claude["types"])
-        self.assertEqual({"modules": ["./register.tsx"]},
-                         json.loads((plugin / "claude-mod/hooks.json").read_text(encoding="utf-8")))
-        description = (source / "SKILL.md").read_text(encoding="utf-8").split("description: ", 1)[1].splitlines()[0]
-        self.assertEqual(description, manifest["description"])
-        self.assertEqual(description, manifest["interface"]["longDescription"])
-        self.assertIn(description, (REPO_ROOT / "README.md").read_text(encoding="utf-8"))
-        metadata = {}
-        for line in (source / "agents/openai.yaml").read_text(encoding="utf-8").splitlines():
-            if line.startswith("  ") and ": " in line and not line.strip().startswith("allow_"):
-                key, value = line.strip().split(": ", 1)
-                metadata[key] = json.loads(value)
-        self.assertEqual(metadata["short_description"], manifest["interface"]["shortDescription"])
-        self.assertEqual([metadata["default_prompt"]], manifest["interface"]["defaultPrompt"])
 
     def test_openai_decisions_distribution(self) -> None:
         from test_document_links import local_targets
@@ -321,7 +275,8 @@ class PluginDistributionTests(unittest.TestCase):
                      "astra-team-building", "figma-computer-use", "session-continuity",
                      "ponytail-beck-tdd", "unreal-agent",
                      "team-coordination", "audit", "outcome-brief", "verify-work",
-                     "choice-interview", "obsidian-projects", "korean-travel-guidebook"):
+                     "choice-interview", "obsidian-projects", "korean-travel-guidebook",
+                     "auto-flow", "guided-execution"):
             self.assertFalse((REPO_ROOT / name / "SKILL.md").exists())
             self.assertFalse((REPO_ROOT / "plugins" / name / ".codex-plugin" / "plugin.json").exists())
 

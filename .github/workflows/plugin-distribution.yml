@@ -39,8 +39,6 @@ jobs:
           python-version: '3.12.12'
       - name: Distribution and documentation checks
         run: python -I -S -B -m unittest discover -s scripts/tests -v
-      - name: Guided execution checks
-        run: python -I -S -B -m unittest discover -s plugins/guided-execution/skills/guided-execution/tests -v
       - name: Graph flow checks
         run: python -I -S -B -m unittest discover -s plugins/graph-flow/skills/graph-flow/tests -v
       - name: Whitespace checks

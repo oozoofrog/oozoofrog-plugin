@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Retire `auto-flow` and `guided-execution`: remove both Plugins, marketplace entries, dedicated distribution checks, the guided-execution CI step, and their usage/validation documentation. Use `graph-flow` for multi-step planning, delegation, and verified execution. Existing installations require removal through the host; user workspaces and handoff data are preserved without migration.
+
 - Add `graph-flow` 0.1.0 to both repository marketplaces using its existing Codex discovery metadata and MCP configuration alongside the existing Plugins. Document graph-based planning, per-node delegation and checks, human decisions, invocation, and the user-run `gf serve` dashboard. Add distribution contracts and isolated Python graph-flow tests to CI.
 
 - `auto-flow` 0.3.0: add a `security` tier for defensive reviews, threat models and attack-scenario tests of the user's own systems (Fable 5.2/high execution, Opus/high verification, at most 2 units, gpt-6-astra/high cross review in T3 Code). Security units work from code and synthetic data only and report `blocked: "safeguard"` instead of working around Fable's safeguards; verification can return kind `safeguard`, which is never escalated automatically. The Workflow returns `safeguardBlocked`, and the leader may hand only those units to a Claude Mythos 5.2 background session (`claude --bg --model claude-mythos-5-2`) after asking the user each time, stating that Mythos requires an Anthropic-verified organization and 30-day data retention; a rejected model ID is reported, never substituted.

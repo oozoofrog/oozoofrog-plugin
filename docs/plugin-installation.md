@@ -14,32 +14,9 @@ claude plugin marketplace update oozoofrog-plugin
 
 MCP를 포함한 `swift-intelligence`와 `winpilot`은 Claude 매니페스트에 `${CLAUDE_PLUGIN_ROOT}` 기준의 MCP 설정을 따로 둡니다. Codex용 `.mcp.json`의 상대 경로는 Claude Code에서 Plugin 위치로 해석되지 않기 때문입니다. 두 설정의 실행 명령과 인자는 함께 갱신합니다. Codex 전용 `interface` 메타데이터와 `agents/openai.yaml`은 Claude Code에서 사용하지 않으며, `$<skill>` 대신 `/<plugin>:<skill>` 또는 설명 기반 자동 로드를 사용합니다.
 
-## Guided Execution
+## Retired Plugins
 
-`guided-execution@oozoofrog-plugin`은 프로젝트 분석, 최소 질문, 검증 루프를 연결하는 [협업 실행 스킬](../plugins/guided-execution/skills/guided-execution/SKILL.md) 0.6.1입니다. Python 3로 실행하는 표준 라이브러리 보조 도구와 검사 코드를 포함하며, MCP 서버·별도 모델·인증 정보를 등록하지 않습니다. Claude Code용 매니페스트는 읽기 전용 Mod(`claude-mod/`)를 함께 불러옵니다. Codex 매니페스트는 Mod를 포함하지 않습니다.
-
-처음 등록할 때는 다음 명령을 사용합니다.
-
-```sh
-codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
-codex plugin add guided-execution@oozoofrog-plugin
-codex plugin list --json
-```
-
-이미 marketplace를 등록했다면 갱신 후 선택 설치합니다.
-
-```sh
-codex plugin marketplace upgrade oozoofrog-plugin
-codex plugin add guided-execution@oozoofrog-plugin
-```
-
-프로젝트를 연 뒤 `$guided-execution`으로 목표와 요구사항을 전달합니다. 새로운 여러 단계의 작업에서는 실제 프로젝트를 확인한 뒤 중요한 미결정 판단 1개를 먼저 질문하고, 답변을 반영해 `.agent-loop/<run-id>/`를 만들어 실행합니다. 답변에 의존하는 구현은 기다리며, 이미 허용된 독립 조사·준비만 계속할 수 있습니다. 단독 설치를 선택하면 저장소의 `plugins/guided-execution/skills/guided-execution/` 전체를 사용하며 `references/`, `scripts/`, `agents/`, `assets/`의 상대 경로를 유지합니다. 기존 설치와 중복되는지 확인하고 사용자 설정을 임의로 교체하지 않습니다.
-
-초기 질문 1개는 요청 전체의 기본 한도인 독립적인 선택·선호 결정 최대 3개, 최대 2회에 포함됩니다. 관련 판단이 이미 명시적으로 정해졌거나, 사용자가 해당 선택을 명시적으로 위임하거나 질문을 원하지 않는다고 했거나, 결정이 정해진 범위를 그대로 재개하는 경우에만 질문을 생략하고 그 근거를 기록합니다. 기술적으로 구현 가능하거나 선택을 되돌릴 수 있다는 이유만으로 생략하지 않습니다. 필요한 실행 권한은 질문 예산으로 생략되지 않고, 기존에 받은 권한은 그 범위에서 재사용합니다. 이미 허용된 작업에는 별도의 시작 승인을 반복하지 않습니다.
-
-저장소에 게시된 0.6.0 파일과 사용자 기기의 설치·활성화·새 대화 노출은 별도로 확인해야 합니다. 위 설치 명령은 실제 게시된 버전을 가져오므로 설치 후 버전과 경로를 확인하세요.
-
-작업 단위는 기본 총 3회 시도 후 구체적인 장애 요인을 남깁니다. `loop_control.py`는 명시적인 상태 전이를 기록하고 `render_report.py`는 실행 기록의 정적 HTML 보고서를 생성합니다. `serve_dashboard.py`는 한 실행을 `127.0.0.1`에서 토큰으로 보호해 온톨로지 그래프로 실시간 표시하며, Claude Code Mod의 패널 버튼이 실행합니다. Mod는 진행 중인 작업에서 일어나는 도구 호출을 관찰해 해당 작업 노드에 보여 줍니다. 이 활동은 기록을 바꾸지 않습니다. 요청은 요구사항과 작업별 세부 할 일로 나뉘어 기록되고(`todo-add`, `todo-set`), Claude Code에서는 세션 할 일 목록에도 반영됩니다. 패널과 대시보드는 세션 작업과 요구사항 할 일을 서로 다른 보기로 보여 줍니다. [환경 구성과 재사용](../plugins/guided-execution/skills/guided-execution/references/environment.md)을 먼저 확인하세요. 보조 도구가 확인하는 것은 기록의 무결성이며, 실제 명령 실행·현재 파일 검증·완료 기준의 적절성은 호스트 에이전트가 확인합니다. [작업 환경 규약](../plugins/guided-execution/skills/guided-execution/references/workspace.md)과 [검증 범위](validation/guided-execution.md)를 참고하세요.
+`auto-flow`와 `guided-execution`은 폐기하여 더 이상 게시하지 않습니다. 여러 단계의 계획·분담·검증 작업에는 [graph-flow](#graph-flow)를 사용하세요. 기존 설치본은 호스트의 Plugin 제거 기능으로 정리하세요. Codex에서는 제거 기능으로 설정과 캐시를 함께 정리합니다. Marketplace 항목 삭제만으로 설치본이 제거되지는 않습니다. `.agent-loop/` 작업 기록과 `_context/` 인계 문서 등 사용자 데이터는 삭제하거나 graph-flow로 이전하지 않습니다.
 
 ## Handoff
 
@@ -62,24 +39,6 @@ claude plugin install model-advisor@oozoofrog-plugin
 ```
 
 같은 스킬을 `~/.claude/skills/model-advisor`에 직접 둔 적이 있다면 둘 중 하나만 남깁니다. 둘 다 있으면 같은 요청에 두 스킬이 함께 후보로 뜹니다.
-
-## Auto Flow
-
-`auto-flow@oozoofrog-plugin` 0.3.0은 [자동 워크플로 스킬](../plugins/auto-flow/skills/auto-flow/SKILL.md), Claude Code Workflow 스크립트, `auto-flow:flow-planner`·`auto-flow:flow-verifier` Plugin 에이전트를 제공합니다. 작업 난이도에 맞는 Claude 모델·effort로 계획·실행·통합 검증하고 실패 시 한 번 상향합니다. 보안 점검은 security tier(Fable 5.2)로 실행하고, Fable 안전장치에 막힌 단위는 사용자가 허용할 때만 Mythos 5.2 백그라운드 세션으로 넘깁니다(Anthropic 검증 프로그램을 통과한 조직만 호출 가능, 기본 30일 데이터 보관). T3 Code에서는 Codex 교차 검토·실행 분담을 지원합니다.
-
-Codex에는 스킬만 제공됩니다. Workflow 스크립트와 두 에이전트는 Claude Code에서만 동작하며 Workflow 도구가 필요합니다. 이 도구가 없는 세션에서는 실행할 수 없다고 알리고 Workflow를 흉내 내지 않습니다. 교차 제공자 단계에는 T3 Code `delegate_task` 도구와 `~/.t3/caches/*.json` 사용량 데이터, Python 3이 필요합니다. Plugin은 도구나 인증·계정·사용량 데이터를 설치하지 않습니다.
-
-변경이 main의 원격 marketplace에 반영된 뒤 원하는 환경에 설치합니다.
-
-```sh
-claude plugin marketplace add oozoofrog/oozoofrog-plugin
-claude plugin install auto-flow@oozoofrog-plugin
-# Codex에서는 스킬만 설치합니다.
-codex plugin marketplace add oozoofrog/oozoofrog-plugin --ref main
-codex plugin add auto-flow@oozoofrog-plugin
-```
-
-기존 marketplace는 먼저 Claude Code에서 `claude plugin marketplace update oozoofrog-plugin`, Codex에서 `codex plugin marketplace upgrade oozoofrog-plugin`로 갱신합니다. Claude Code를 다시 시작한 새 세션에서 `/auto-flow:auto-flow`를 호출합니다. Codex에서는 `$auto-flow`로 환경 제한을 확인합니다. 기존 개인 스킬·에이전트는 자동 삭제하거나 덮어쓰지 않습니다. 설치·새 세션 노출과 실제 Workflow 실행은 별도 검증 대상입니다. 특히 Workflow `agent()`에서 namespaced Plugin 에이전트 이름이 해석되는지는 실제 Claude Code에서 확인해야 합니다. 이름 조회 실패 시 bare 이름, 기본 에이전트 순서로 대체하고 `notes`에 남깁니다.
 
 ## OpenAI Decisions
 
