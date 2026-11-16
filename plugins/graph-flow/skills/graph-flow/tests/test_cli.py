@@ -3,6 +3,7 @@ import io
 import json
 import os
 import pathlib
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -118,7 +119,7 @@ class CLITests(unittest.TestCase):
             self.assertEqual(self.call('status', code=5)['code'], 'internal')
 
     def test_registry_role_table(self):
-        self.assertEqual(len(cli.COMMANDS), 29)
+        self.assertEqual(len(cli.COMMANDS), 31)
         for path, entry in cli.COMMANDS.items():
             for role in core.ROLES:
                 if role in entry['roles']:
@@ -361,6 +362,87 @@ class CLITests(unittest.TestCase):
             server.serve.reset_mock()
             self.call('serve')
             server.serve.assert_called_once_with(port=0)
+
+    def test_open_dispatch_stop_and_roles(self):
+        server = types.SimpleNamespace(
+            open_dashboard=mock.Mock(return_value={"opened": True, "started": True, "port": 5}),
+            stop_dashboard=mock.Mock(side_effect=[True, False]))
+        with mock.patch.object(cli, '_lazy_import', return_value=server):
+            opened = self.call('open')
+            self.assertEqual(opened, {'ok': True, 'opened': True, 'started': True, 'port': 5,
+                                      'message': 'Dashboard opened in the browser.'})
+            self.assertEqual(self.call('open', '--stop')['stopped'], True)
+            self.assertEqual(self.call('open', '--stop')['message'], 'No dashboard is running.')
+            server.open_dashboard.assert_called_once_with(target={
+                'project': str(store.project_of(self.run)), 'run': self.run.name, 'decision': None, 'node': None})
+            server.open_dashboard.reset_mock()
+            shown = self.call('open', '--decision', 'd4')
+            self.assertEqual(shown['message'], 'Dashboard opened in the browser on d4.')
+            self.assertEqual(server.open_dashboard.call_args.kwargs['target']['decision'], 'd4')
+            self.call('open', '--node', 'a')
+            self.assertEqual(server.open_dashboard.call_args.kwargs['target']['node'], 'a')
+            # Without a run there is nothing to point at.
+            out = io.StringIO()
+            with mock.patch.dict(os.environ), contextlib.redirect_stdout(out):
+                os.environ.pop('GF_RUN', None)
+                self.assertEqual(cli.main(['--json', 'open', '--decision', 'd4']), 2)
+                server.open_dashboard.reset_mock()
+                self.assertEqual(cli.main(['--json', 'open']), 0)
+                server.open_dashboard.assert_called_once_with()
+            self.assertEqual(json.loads(out.getvalue().splitlines()[0])['code'], 'run_required')
+            for role in ('worker', 'reviewer'):
+                with mock.patch.dict(os.environ, GF_ROLE=role, GF_NODE='n'):
+                    self.assertEqual(self.call('open', code=3)['code'], 'forbidden')
+
+    def test_setup_installs_a_working_command_and_keeps_foreign_files(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            bin_dir = pathlib.Path(temporary).resolve() / "bin"
+            with mock.patch.dict(os.environ, PATH=os.pathsep.join([str(bin_dir), "/usr/bin"])):
+                installed = self.call('setup', '--bin-dir', str(bin_dir))
+            self.assertEqual((installed['installed'], installed['on_path']), (str(bin_dir / "gf"), True))
+            self.assertTrue(os.access(str(bin_dir / "gf"), os.X_OK))
+            ran = subprocess.run([sys.executable, str(bin_dir / "gf"), "--json", "plan", "validate",
+                                  "/nonexistent"], capture_output=True, text=True)
+            self.assertEqual((bin_dir / "gf").read_text().splitlines()[0], "#!/usr/bin/env python3")
+            self.assertEqual(json.loads(ran.stdout)["ok"], False)
+            with mock.patch.dict(os.environ, PATH="/usr/bin"):
+                again = self.call('setup', '--bin-dir', str(bin_dir))
+            self.assertFalse(again['on_path'])
+            self.assertIn('export PATH="%s:$PATH"' % bin_dir, again['message'])
+            self.assertEqual(self.call('setup', '--bin-dir', str(bin_dir), '--remove')['removed'], True)
+            self.assertEqual(self.call('setup', '--bin-dir', str(bin_dir), '--remove')['removed'], False)
+            (bin_dir / "gf").write_text("#!/bin/sh\necho other\n")
+            for arguments in (['setup', '--bin-dir', str(bin_dir)],
+                              ['setup', '--bin-dir', str(bin_dir), '--remove']):
+                self.assertEqual(self.call(*arguments, code=4)['code'], 'exists')
+            self.assertEqual((bin_dir / "gf").read_text(), "#!/bin/sh\necho other\n")
+            with mock.patch.dict(os.environ, GF_ROLE='worker', GF_NODE='n'):
+                self.assertEqual(self.call('setup', code=3)['code'], 'forbidden')
+
+    def test_launcher_follows_the_newest_installed_version(self):
+        from graphflow import launcher
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary).resolve()
+            scripts = {}
+            for version in ("0.1.1", "0.2.0", "0.10.0"):
+                scripts[version] = root / "cache" / "graph-flow" / version / "skills" / "graph-flow" / "scripts" / "gf"
+                scripts[version].parent.mkdir(parents=True)
+                scripts[version].write_text("print(%r)\n" % version)
+            launcher.install(root / "bin", scripts["0.1.1"])
+            run = lambda: subprocess.run([sys.executable, str(root / "bin" / "gf")], capture_output=True, text=True)
+            self.assertEqual(run().stdout.strip(), "0.10.0")
+            shutil.rmtree(str(scripts["0.10.0"].parents[3]))
+            shutil.rmtree(str(scripts["0.1.1"].parents[3]))
+            self.assertEqual(run().stdout.strip(), "0.2.0")
+            shutil.rmtree(str(root / "cache"))
+            gone = run()
+            self.assertEqual(gone.returncode, 5)
+            self.assertIn("run gf setup again", gone.stderr)
+            plain = root / "checkout" / "skills" / "graph-flow" / "scripts" / "gf"
+            plain.parent.mkdir(parents=True)
+            plain.write_text("print('checkout')\n")
+            launcher.install(root / "bin", plain)
+            self.assertEqual(run().stdout.strip(), "checkout")
 
     def test_mcp_eof_has_no_cli_envelope(self):
         out = io.StringIO()

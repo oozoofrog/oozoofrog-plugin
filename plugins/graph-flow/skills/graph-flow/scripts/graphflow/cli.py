@@ -115,6 +115,28 @@ def _serve(args, actor):
     return {}
 
 
+def _open(args, actor):
+    server = _lazy_import("server")
+    if args.stop:
+        stopped = server.stop_dashboard()
+        return {"stopped": stopped,
+                "message": "Dashboard stopped." if stopped else "No dashboard is running."}
+    target = None
+    if args.run:
+        target = {"project": str(_project(args)), "run": pathlib.Path(args.run).name,
+                  "decision": args.decision, "node": args.target_node}
+    elif args.decision or args.target_node:
+        raise core.GFError("run_required", "--run or GF_RUN is required to open a decision or node")
+    opened = server.open_dashboard(target=target) if target else server.open_dashboard()
+    shown = args.decision or args.target_node
+    return dict(opened, message="Dashboard opened in the browser%s." % (" on " + shown if shown else ""))
+
+
+def _setup(args, actor):
+    launcher = _lazy_import("launcher")
+    return launcher.remove(args.bin_dir) if args.remove else launcher.install(args.bin_dir)
+
+
 def _require_human_terminal(actor):
     if actor["role"] != "human":
         raise core.GFError("forbidden", "decide answer requires role human", core.EXIT_FORBIDDEN)
@@ -187,8 +209,10 @@ def _loop(args, actor):
         return gate.reopen(args.run, node, args.reason, actor)
     if path == ("decide", "ask"):
         evidence = {"command": args.evidence_command, "files": args.files, "checks": []}
-        return decisions.ask(args.run, args.kind, args.question, node, args.check,
-                             args.purpose, evidence, actor)
+        asked = decisions.ask(args.run, args.kind, args.question, node, args.check,
+                              args.purpose, evidence, actor)
+        # How to put this question in front of the person (leader.md).
+        return dict(asked, show="gf open --decision %s" % asked["id"])
     if path == ("decide", "list"):
         _, derived = _snapshot(args.run)
         own = actor["node"] if actor["role"] in ("worker", "reviewer") else None
@@ -237,12 +261,12 @@ _register("review submit", "reviewer", own_node_only=True)
 _register("decide ask,decide wait,decide list", "leader worker reviewer human", own_node_only=True)
 _register("decide answer", "human")
 _register("mcp", "leader worker reviewer", needs_run=False)
-_register("serve", "leader human", needs_run=False)
+_register("serve,open,setup", "leader human", needs_run=False)
 for _path in ("init", "plan validate", "learn list", "learn promote", "learn retire"):
     COMMANDS[tuple(_path.split())]["needs_run"] = False
 for _path, _handler in (("init", _init), ("plan validate", _validate),
                         ("plan set", _set_plan), ("status", _status), ("host set", _host_set),
-                        ("mcp", _mcp), ("serve", _serve)):
+                        ("mcp", _mcp), ("serve", _serve), ("open", _open), ("setup", _setup)):
     COMMANDS[tuple(_path.split())]["handler"] = _handler
 for _path, _entry in COMMANDS.items():
     if _entry["handler"] is None and _path not in (("mcp",), ("serve",)):
@@ -317,6 +341,13 @@ def _parser(authorize_only=False):
                 sub.add_argument("--reason", required=True)
         elif path == ("serve",):
             sub.add_argument("--port", type=int, default=0)
+        elif path == ("open",):
+            sub.add_argument("--stop", action="store_true")
+            sub.add_argument("--decision")
+            sub.add_argument("--node", dest="target_node")
+        elif path == ("setup",):
+            sub.add_argument("--bin-dir")
+            sub.add_argument("--remove", action="store_true")
         if authorize_only:
             continue
         if path in (("start",), ("red",), ("check", "run"), ("submit",), ("gate",)):

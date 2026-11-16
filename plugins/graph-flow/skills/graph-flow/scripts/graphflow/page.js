@@ -46,6 +46,24 @@ const STRINGS = {
     "unverified": "아직 확인 안 된 것",
     "workerNote": "쓴 쪽의 메모",
     "notRecorded": "따로 기록되지 않았어요.",
+    "questionOnly": "이 결정에는 질문만 기록되어 있어요. 설명, 근거, 읽을 파일은 남겨지지 않았어요.",
+    "writeFirst": "답을 적으면 보낼 수 있어요.",
+    "leaveUnanswered": "답하지 않고 돌아가기",
+    "aboutWork": "이 일은",
+    "decisionRef": "결정 {id}",
+    "askedBy": "물어본 곳: {who}",
+    "workedBy": "맡은 곳: {who}",
+    "find": "찾기",
+    "findHint": "d41 또는 일 이름",
+    "findNone": "“{text}”에 맞는 결정이나 일이 이 흐름에 없어요.",
+    "jumpNoRun": "이 주소가 가리키는 흐름을 찾지 못했어요.",
+    "alreadyAnswered": "{id}은(는) 이미 답한 결정이에요 · {title} · 답: {answer}",
+    "outcome_approved": "통과",
+    "outcome_revision_requested": "돌려보냄",
+    "outcome_answered": "답함",
+    "roleLeader": "리더",
+    "roleWorker": "작업자",
+    "roleReviewer": "검토자",
     "ifApproved": "이대로 하면",
     "ifRejected": "돌려보내면",
     "undo": "나중에 바꾸려면",
@@ -71,10 +89,10 @@ const STRINGS = {
     "unauthorized": "이 창의 열쇠가 없거나 바뀌었어요. 서버를 켤 때 받은 주소를 다시 열어 주세요.",
     "retry": "다시 연결",
     "loading": "흐름을 읽고 있어요…",
-    "lessons": "별자리 · 배운 것",
+    "lessons": "배운 것",
     "noLessons": "아직 기록된 배움이 없어요.",
     "planOrder": "전체 시간 순서는 기록에서 알 수 없어 계획 순서로 보여 드려요. 각 일의 시도는 일어난 순서예요.",
-    "returns": "혜성 · 돌아온 일",
+    "returns": "고치러 돌아온 일",
     "complete": "모든 흐름이 끝났어요!",
     "waitingBubble": "읽어 주세요!",
     "attemptBubble": "{n}번째 시도예요",
@@ -84,7 +102,7 @@ const STRINGS = {
     "pastOrbit": "앞서 돌아온 시도",
     "unnamed": "이 일",
     "handoff": "넘길 결과",
-    "overview": "일 {total}곳 · 끝남 {done}곳 · 내 결정 {needs}개",
+    "overview": "일 {total}개 · 끝남 {done}개 · 내 결정 {needs}개",
     "reviewed": "다른 눈으로 검토했어요",
     "runOption": "{project} · 흐름 {n}",
     "purposeReview": "사람이 직접 살펴봐야 하는 결과를 받아들일지 정해 주세요.",
@@ -185,6 +203,24 @@ const STRINGS = {
     "unverified": "Not yet verified",
     "workerNote": "The worker’s note",
     "notRecorded": "Not recorded.",
+    "questionOnly": "Only the question was recorded for this decision. No explanation, evidence or files were left.",
+    "writeFirst": "Write an answer to send it.",
+    "leaveUnanswered": "Go back without answering",
+    "aboutWork": "This work",
+    "decisionRef": "Decision {id}",
+    "askedBy": "Asked by: {who}",
+    "workedBy": "Worked by: {who}",
+    "find": "Find",
+    "findHint": "d41 or a task name",
+    "findNone": "No decision or task in this flow matches “{text}”.",
+    "jumpNoRun": "The flow this address points to was not found.",
+    "alreadyAnswered": "{id} was already answered · {title} · answer: {answer}",
+    "outcome_approved": "approved",
+    "outcome_revision_requested": "sent back",
+    "outcome_answered": "answered",
+    "roleLeader": "leader",
+    "roleWorker": "worker",
+    "roleReviewer": "reviewer",
     "ifApproved": "If you proceed",
     "ifRejected": "If sent back",
     "undo": "How to undo",
@@ -210,10 +246,10 @@ const STRINGS = {
     "unauthorized": "This window’s key is missing or changed. Reopen the address you received when starting the server.",
     "retry": "Reconnect",
     "loading": "Reading the flow…",
-    "lessons": "Constellation · what we learned",
+    "lessons": "What we learned",
     "noLessons": "No lessons recorded yet.",
     "planOrder": "The overall time order is unknown, so this follows plan order. Each task’s attempts are in their recorded order.",
-    "returns": "Comets · what came back",
+    "returns": "What came back for fixing",
     "complete": "The whole flow is complete!",
     "waitingBubble": "Please read this.",
     "attemptBubble": "On attempt {n}.",
@@ -494,6 +530,7 @@ function translate() {
   document.documentElement.lang = language;
   document.querySelectorAll('[data-i18n]').forEach(e => { e.textContent = t(e.dataset.i18n); });
   document.querySelector('nav').setAttribute('aria-label', t('flow'));
+  $('find-text').placeholder = t('findHint');
   $('map').setAttribute('aria-label', t('flow'));
   document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));
 }
@@ -510,7 +547,7 @@ async function api(path, body, text = false) {
   return text ? response.text() : response.json();
 }
 function query(route, extra = {}, target = chosen) { return route + '?' + new URLSearchParams({project:target.project, run:target.run, ...extra}); }
-function notice(key, retry = false) { const box = $('notice'); clear(box); box.hidden = !key; if (key) box.append(el('span', t(key))); if (retry) box.append(button(t('retry'), () => refresh(true))); }
+function notice(key, retry = false) { const box = $('notice'); clear(box); box.hidden = !key; if (key) box.append(el('span', STRINGS[language][key] === undefined ? key : t(key))); if (retry) box.append(button(t('retry'), () => refresh(true))); }
 function title(node) { return node && node.title && node.title !== node.id ? node.title : t('unnamed'); }
 function otherTitle(value) { return view.nodes.some(n => n.id === value && n.title === value) ? t('unnamed') : value || t('unnamed'); }
 // Legacy plans may have only an artifact path; keep that technical fallback out of normal views.
@@ -518,8 +555,18 @@ function label(value) { return !value || /[\/\\]|\.[a-z0-9]{1,8}$/.test(value) |
 function relationText(edge) { return edgeRelationLabel({...edge,label:edge.label?label(edge.label):''},language); }
 function question(d) { return decisionQuestion(d); }
 function decisionTitle(d) { return title(view.nodes.find(n => n.id === d.node)); }
+// The same words an agent session uses for this decision, so either side can find the other.
+function who(actor) {
+  const role = {leader:'roleLeader', worker:'roleWorker', reviewer:'roleReviewer'}[actor?.role];
+  return [role ? t(role) : '', actor?.session || ''].filter(Boolean).join(' · ');
+}
+function clock(stamp) { const time = stamp ? new Date(stamp) : null; return time && !isNaN(time) ? time.toLocaleTimeString(language, {hour:'2-digit', minute:'2-digit'}) : ''; }
+function workedBy(n) { return [n.worker?.model, n.worker?.effort, n.session].filter(Boolean).join(' · '); }
 function decisionHeading(parent, d, tag) {
-  parent.append(el(tag, decisionTitle(d)), el('p', purposeWording(d.purpose, language)));
+  const reference = el('p', undefined, 'ref-line'); reference.append(el('span', t('decisionRef', {id:d.id}), 'ref'));
+  const asker = who(d.asked_by); if (asker) reference.append(el('span', t('askedBy', {who:asker})));
+  if (clock(d.asked)) reference.append(el('span', clock(d.asked)));
+  parent.append(reference, el(tag, decisionTitle(d)), el('p', purposeWording(d.purpose, language)));
   if (d.purpose === 'trajectory') textList(parent, (d.trajectory_reasons || []).map(key => t(key)));
   if (question(d)) parent.append(el('p', question(d)));
 }
@@ -574,7 +621,8 @@ function panel() {
   row([null,t('lineLegend')]);
   p.append(legend);
   if(node) {
-    p.append(el('h2',title(node)),card(t('now'),`${status(node)}. ${attempts(node)}. ${node.summary}`,true));
+    const reference=el('p',undefined,'ref-line');reference.append(el('span',node.id,'ref'));if(workedBy(node))reference.append(el('span',t('workedBy',{who:workedBy(node)})));if(clock(node.started))reference.append(el('span',clock(node.started)));
+    p.append(el('h2',title(node)),reference,card(t('now'),`${status(node)}. ${attempts(node)}. ${node.summary}`,true));
     const reasons=card(t('whyReturned'),null,true);textList(reasons,node.returned_reasons.flat(),node.returned_reasons.length?'noReason':'noReturns');p.append(reasons);
     p.append(handoffsCard('received',node.inputs,'from'),handoffsCard('outputs',node.outputs,'to'),button(t('flow'),wholeFlow,'primary'));
   }
@@ -626,6 +674,8 @@ function openDecision(id, focus = true) {
   const updateActions = () => {
     actions.querySelectorAll('button[data-outcome]').forEach(b => { b.disabled = !current() || !decisionController.canSubmit(b.dataset.outcome, input.value); });
     backButton.disabled = !!decisionController.session?.busy;
+    // Say why sending is unavailable instead of leaving a silent disabled button.
+    if (isQuestion && current() && !session.busy && (!message.textContent || message.textContent === t('writeFirst'))) message.textContent = input.value.trim() ? '' : t('writeFirst');
     input.disabled = !current() || session.busy; $('picker').disabled = !!decisionController.session?.busy;
   };
   const send = async outcome => {
@@ -646,7 +696,7 @@ function openDecision(id, focus = true) {
   const actionButton = (outcome, text, cls) => { const b = button(text, () => send(outcome), cls); b.dataset.outcome = outcome; return b; };
   if (isQuestion) actions.append(actionButton('answered', t('answer'), 'primary'));
   else { approveButton = actionButton('approved', '', 'primary'); actions.append(approveButton, actionButton('revision_requested', t('sendBack'))); }
-  const backButton = button(t('flow'), wholeFlow); actions.append(backButton); reading.append(actions);
+  const backButton = button(t('leaveUnanswered'), wholeFlow); actions.append(backButton); reading.append(actions);
   const right = el('div'), surrounding = el('div'); right.append(surrounding);
   const files = card(t('readThis'), null, true), fileChoices = el('div', undefined, 'file-choices'), reader = el('pre', undefined, 'file-reader');
   reader.hidden = true; reader.tabIndex = 0; reader.setAttribute('aria-label',t('readThis'));
@@ -695,14 +745,19 @@ function openDecision(id, focus = true) {
   const update = () => {
     const decision = session.decision;
     clear(introduction); decisionHeading(introduction, decision, 'h2'); const heading = introduction.querySelector('h2'); heading.id = 'decision-title';
-    const node = view.nodes.find(n => n.id === decision.node); if (node) introduction.append(el('p', node.summary));
+    const node = view.nodes.find(n => n.id === decision.node); if (node?.summary) introduction.append(el('p', `${t('aboutWork')}: ${node.summary}`, 'muted'));
     updateFiles(decision);
-    note.textContent = decision.worker_note || t('notRecorded');
+    note.textContent = decision.worker_note || ''; report.hidden = !decision.worker_note;
     clear(outcomes); outcomes.append(el('p', t('choiceEffects'), 'eyebrow'));
-    for (const [key, name] of [['if_approved','ifApproved'],['if_rejected','ifRejected'],['undo','undo']]) outcomes.append(el('small', t(name)), el('p', decision.context[key] || t('notRecorded')));
-    clear(surrounding); surrounding.append(card(t('why'), decision.context.why || t('notRecorded')));
+    const effects = [['if_approved','ifApproved'],['if_rejected','ifRejected'],['undo','undo']].filter(([key]) => decision.context[key]);
+    for (const [key, name] of effects) outcomes.append(el('small', t(name)), el('p', decision.context[key]));
+    outcomes.hidden = !effects.length;
+    clear(surrounding); if (decision.context.why) surrounding.append(card(t('why'), decision.context.why));
     failedBlock(surrounding, decision);
-    for (const key of ['verified','unverified']) { const c = card(t(key)); textList(c, decision[key]); surrounding.append(c); }
+    for (const key of ['verified','unverified']) { if (!decision[key]?.length) continue; const c = card(t(key)); textList(c, decision[key]); surrounding.append(c); }
+    files.hidden = !decision.files?.length;
+    const bare = !decision.worker_note && !effects.length && !decision.context.why && !decision.failed?.length && !decision.verified?.length && !decision.unverified?.length && !decision.files?.length;
+    if (bare) surrounding.append(el('p', t('questionOnly'), 'muted'));
     reminder.hidden = !decision.has_evidence && !decisionController.requiresDetails;
     if (approveButton) approveButton.textContent = purposeAction(decision.purpose, language, decision.failed);
     updateActions();
@@ -714,10 +769,39 @@ function historyView() {
   const strip = el('ol', undefined, 'timeline');
   view.nodes.forEach(n => { const item=el('li');item.append(nodeCard(n));strip.append(item); }); box.append(strip);
   const grid = el('div', undefined, 'history-grid'); const returns = el('div'); returns.append(el('h3', t('returns')));
-  view.nodes.filter(n => n.returned_reasons.length).forEach(n => { const c = card(title(n), null, true); textList(c, n.returned_reasons.flat(), 'noReason'); returns.append(c); });
+  view.nodes.filter(n => n.returned_reasons.length).forEach(n => { const c = card(title(n), null, true); textList(c, n.returned_reasons.map((reasons, i) => `${t('pastAttempt', {n:i + 1})} · ${t('whyReturned')}: ${reasons.length ? reasons.join(' · ') : t('noReason')}`)); returns.append(c); });
   if (!view.nodes.some(n => n.returned_reasons.length)) returns.append(el('p', t('noReturns')));
   const lessons = el('div', undefined, 'constellation'); lessons.append(el('h3', t('lessons'))); view.lessons.forEach(l => { const lesson=card(l.node_title ? otherTitle(l.node_title) : t('lessons'), l.text); lesson.classList.add('lesson'); lessons.append(lesson); }); if (!view.lessons.length) lessons.append(el('p', t('noLessons')));
   const counts = el('div'); counts.append(countCard(), button(t('flow'), wholeFlow, 'primary')); grid.append(returns, lessons, counts); box.append(grid);
+}
+let pendingJump = null;
+function readFragment() {
+  const target = Object.fromEntries(new URLSearchParams(location.hash.slice(1)));
+  if (!target.decision && !target.node && !target.run) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  pendingJump = target;
+  if (target.project && target.run && !decisionController.session?.busy) setChosen({project:target.project, run:target.run});
+  refresh(true);
+}
+function jump(target) {
+  if (target.run && !(chosen && chosen.run === target.run && (!target.project || chosen.project === target.project))) { decisionNotice = t('jumpNoRun'); notice(decisionNotice); return false; }
+  if (target.decision) {
+    const id = target.decision.toLowerCase(), open = view.decisions.find(d => d.id === id), closed = (view.answered || []).find(d => d.id === id);
+    if (open) { openDecision(open.id); return true; }
+    if (closed) { wholeFlow(); if (closed.node) selectNode(closed.node); decisionNotice = t('alreadyAnswered', {id:closed.id, title:closed.node_title || closed.question, answer:closed.answer || ({approved:t('outcome_approved'), revision_requested:t('outcome_revision_requested'), answered:t('outcome_answered')})[closed.outcome] || ''}); notice(decisionNotice); return true; }
+    decisionNotice = t('findNone', {text:target.decision}); notice(decisionNotice); return false;
+  }
+  if (target.node) {
+    const text = target.node.toLowerCase();
+    const node = view.nodes.find(n => n.id.toLowerCase() === text) || view.nodes.find(n => (n.title || '').toLowerCase().includes(text));
+    if (node) { decisionNotice = ''; notice(''); selectNode(node.id); return true; }
+    decisionNotice = t('findNone', {text:target.node}); notice(decisionNotice); return false;
+  }
+  return true;
+}
+function find(text) {
+  text = text.trim(); if (!text || !view) return false;
+  return /^d\d+$/i.test(text) ? jump({decision:text}) : jump({node:text});
 }
 function applyView(next) {
   if (decisionController.session?.busy) return;
@@ -760,6 +844,7 @@ async function refresh(force = false) {
     if (available && available.error) { resetView(); notice(decisionNotice || 'unreadable', true); return; }
     const data = await api(query('/api/run')); if (currentGeneration !== generation || document.hidden || decisionController.session?.busy) return;
     notice(decisionNotice || (!data.plan ? 'noPlan' : '')); applyView(data.view);
+    if (pendingJump && view && !decisionController.session?.busy) { const target = pendingJump; pendingJump = null; jump(target); }
   } catch (error) { if (currentGeneration === generation) notice(error.status === 401 ? 'unauthorized' : error.status === 400 || error.status === 404 || error.status === 500 ? 'unreadable' : 'lost', true); }
   finally { loading = false; if (queuedRefresh) { queuedRefresh = false; refresh(true); } else schedule(); }
 }
@@ -767,10 +852,12 @@ function resetView() { language = viewLanguage(null, navigator.language); transl
 function schedule() { clearTimeout(timer); if (!document.hidden) timer = setTimeout(refresh, 2000); }
 $('flow-tab').addEventListener('click', () => { if (view) wholeFlow(); });
 $('history-tab').addEventListener('click', () => { if (view) historyView(); });
+$('find').addEventListener('submit', event => { event.preventDefault(); if (find($('find-text').value)) $('find-text').value = ''; });
+addEventListener('hashchange', readFragment);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.isComposing && view) wholeFlow(); });
 document.addEventListener('visibilitychange', () => { clearTimeout(timer); if (renderer) renderer.wake(); if (!document.hidden) refresh(true); });
 reduced.addEventListener('change', () => { if (renderer) renderer.wake(); });
-notice('loading'); refresh();
+notice('loading'); readFragment(); refresh();
 
 function svg(tag, attributes = {}) {
   const element=document.createElementNS(['http:', '', 'www.w3.org/2000/svg'].join('/'),tag);
@@ -795,9 +882,17 @@ function cometGlyph() {
   icon.append(svg('path',{d:'M25 14 2 2 11 18Z',fill:'#ff9479',stroke:'#1a1330','stroke-width':2,'stroke-linejoin':'round'}),svg('circle',{cx:24,cy:14,r:6,fill:'#fff6ea',stroke:'#1a1330','stroke-width':2}));return icon;
 }
 function cardTone(n) {return needs(n)||['held','awaiting_approval'].includes(n.status)?'waiting_for_you':n.status==='passed'||n.answered?'passed':['running','submitted','unverified'].includes(n.status)?'current':'unused';}
+// Two walking frames; the second stays hidden when motion is reduced.
+function walker() {
+  const frames=el('span',undefined,'walker');frames.setAttribute('aria-hidden','true');
+  for(const source of ['/static/assets/frog-walk-a.png','/static/assets/frog-walk-b.png']){const frog=el('img');frog.src=source;frog.alt='';frames.append(frog);}
+  return frames;
+}
+// A rebuilt element joins a looping animation at the phase it would have reached.
+function inPhase(element, period) {element.style.animationDelay=-(performance.now()%period)+'ms';return element;}
 function nodeDescription(n) {return `${t(n.kind||'work')}. ${title(n)}. ${status(n)}. ${attempts(n)}. ${t('returnTimes',{n:cometCount(n)})}`;}
 function nodeCard(n, expanded = false) {
-  const root=el('article',undefined,'node-card '+cardTone(n)+(expanded?' expanded':''));root.dataset.node=n.id;
+  const root=el('article',undefined,'node-card '+cardTone(n)+(n.status==='running'?' working':'')+(expanded?' expanded':''));root.dataset.node=n.id;
   const header=button('',()=>{
     const decision=view.decisions.find(d=>d.node===n.id);
     if(n.kind==='decision'){if(decision)openDecision(decision.id);else selectNode(n.id);}
@@ -810,6 +905,7 @@ function nodeCard(n, expanded = false) {
   const tries=el('span',undefined,'attempt-row');
   tries.append(pips,el('span',n.status==='passed'&&n.attempts?(n.attempts===1?t('firstPass'):t('finishedAttempts',{n:n.attempts})):attempts(n),'attempt-caption'));
   header.append(tries);
+  const reference=el('span',undefined,'ref-line');reference.append(el('span',n.id,'ref'));if(workedBy(n))reference.append(el('span',workedBy(n)));header.append(reference);
   if(cometCount(n)){const badge=el('span',undefined,'comet-badge');badge.append(cometGlyph(),el('span',String(cometCount(n))));header.append(badge);}
   root.append(header);
   if(expanded)root.append(innerLoop(n));
@@ -822,7 +918,7 @@ function innerLoop(n) {
   lines.append(svg('path',{d:'M62 73H136M130 68 136 73 130 78M167 94V153H130M136 148 130 153 136 158M68 153H31V94M26 100 31 94 36 100M198 73H226M220 68 226 73 220 78',fill:'none',stroke:'#6a5a8e','stroke-width':2.5,'stroke-linejoin':'round'}));diagram.append(lines);
   for(const key of ['make','check','fix']) {
     const station=el('div',undefined,'loop-state '+key+(state===key?' active':''));station.append(el('span',t(key)));
-    if(state===key){const frog=el('img');frog.src='/static/assets/frog-walk-a.png';frog.alt='';station.append(frog);}
+    if(state===key)station.append(walker());
     diagram.append(station);
   }
   diagram.append(el('span',t('passes'),'loop-passes'),el('span',t('fails'),'loop-fails'));
@@ -837,7 +933,7 @@ function createMap() {
   const toolbar=el('div',undefined,'map-toolbar'),viewport=el('div',undefined,'map-viewport'),spacer=el('div',undefined,'map-spacer'),stage=el('div',undefined,'map-stage');
   viewport.tabIndex=0;viewport.setAttribute('aria-label',t('mapHelp'));spacer.append(stage);viewport.append(spacer);map.append(toolbar,viewport);
   let data={nodes:[],edges:[],decisions:[]},chosenNode=null,layout=null,scale=1,automatic=true;
-  const nodes=new Map(),chips=new Map();let drawing=null;
+  const nodes=new Map(),chips=new Map(),seen=new Map();let drawing=null,wasComplete=null;
   const zoomText=el('output');zoomText.setAttribute('aria-live','polite');
   const zoom=amount=>{automatic=false;scale=Math.max(MIN_FIT_SCALE,Math.min(1.6,scale+amount));size();};
   const fit=()=>{automatic=true;size();viewport.scrollLeft=0;viewport.scrollTop=0;};
@@ -862,7 +958,14 @@ function createMap() {
       const signature=JSON.stringify([n,expanded,data.decisions.filter(d=>d.node===n.id)]);
       let element=nodes.get(n.id);
       if(!element){element=el('div',undefined,'node-position');nodes.set(n.id,element);stage.append(element);}
-      if(element.dataset.signature!==signature){element.replaceChildren(nodeCard(n,expanded));element.dataset.signature=signature;}
+      if(element.dataset.signature!==signature) {
+        const card=nodeCard(n,expanded),before=seen.get(n.id),tone=cardTone(n);
+        // One-shot motion only for a change observed while the page was open.
+        if(before&&cometCount(n)>before.comets)card.classList.add('shake');
+        else if(before&&before.tone!==tone&&['passed','current'].includes(tone))card.classList.add('pop');
+        element.replaceChildren(card);if(n.status==='running')element.append(walker());element.dataset.signature=signature;
+      }
+      seen.set(n.id,{tone:cardTone(n),comets:cometCount(n)});
     }
     const heights=Object.fromEntries([...nodes].map(([id,e])=>[id,e.firstElementChild?.offsetHeight||0]));
     layout=layeredLayout(data.nodes,data.edges.map(e=>({...e,label:e.label?label(e.label):''})),data.decisions,true,{expanded:chosenNode,heights,language});
@@ -879,21 +982,23 @@ function createMap() {
       const {start:a,end:b,chip:c}=route,bend=route.reverse?-1:1,mx=c?c.x+c.width/2:route.skip?a.x+bend*7:(a.x+b.x)/2,my=c?c.y+c.height/2:route.skip?a.y:(a.y+b.y)/2;
       const d=route.skip?`M${a.x} ${a.y} C${mx} ${a.y} ${mx} ${my} ${mx} ${my} V${route.channel+12} Q${mx} ${route.channel} ${mx+bend*12} ${route.channel} H${b.x-bend*30} Q${b.x-bend*18} ${route.channel} ${b.x-bend*18} ${route.channel+12} V${b.y-12} Q${b.x-bend*18} ${b.y} ${b.x-bend*6} ${b.y} H${b.x}`
         :c?`M${a.x} ${a.y} Q${mx-bend*14} ${a.y} ${mx} ${my} Q${mx+bend*14} ${b.y} ${b.x} ${b.y}`:`M${a.x} ${a.y} C${mx} ${a.y} ${mx} ${b.y} ${b.x} ${b.y}`;
-      drawing.append(svg('path',{d,class:'edge-path '+route.gateState,'marker-end':`url(#arrow-${route.gateState})`}));
+      const flowing=route.gateState==='open'&&data.nodes.find(n=>n.id===route.to)?.status==='running';
+      const line=svg('path',{d,class:'edge-path '+route.gateState+(flowing?' flowing':''),'marker-end':`url(#arrow-${route.gateState})`});
+      drawing.append(flowing?inPhase(line,1000):line);
       if(!c||chips.has(c.first))continue;
       const chip=route.decision?button('',()=>openDecision(route.decision),'edge-chip '+route.gateState):el('div',undefined,'edge-chip '+route.gateState);
       const source=data.nodes.find(n=>n.id===route.from),targets=layout.routes.filter(r=>r.chip===c).map(r=>title(data.nodes.find(n=>n.id===r.to))).join(', ');
       chip.setAttribute('aria-label',`${edgeRelationLabel(route,language)}. ${title(source)} → ${targets}`);
-      if(route.gateState==='returned')chip.append(cometGlyph());chip.append(el('span',route.text));chip.dataset.chip=c.key;setRect(chip,c);stage.append(chip);chips.set(c.first,chip);
+      if(route.gateState==='returned')chip.append(cometGlyph());chip.append(el('span',route.decision?`${route.text} · ${route.decision}`:route.text));chip.dataset.chip=c.key;setRect(chip,c);stage.append(chip);chips.set(c.first,chip);
     }
     // All focusable controls are ordered by column and then vertical position.
     [...nodes.values(),...chips.values()].sort((a,b)=>parseFloat(a.style.left)-parseFloat(b.style.left)||parseFloat(a.style.top)-parseFloat(b.style.top)).forEach(e=>stage.append(e));
     stage.querySelectorAll('.overview-frog,.goal-card').forEach(e=>e.remove());
-    const goal=el('article',undefined,'goal-card node-card '+(data.complete?'passed':'unused'));goal.append(typeIcon('goal'),el('strong',data.title||t('goal')),el('span',`${t('goal')} · ${data.complete?t('passed'):t('notStarted')}`));setRect(goal,layout.goal);stage.append(goal);
+    const goal=el('article',undefined,'goal-card node-card '+(data.complete?'passed':'unused')+(data.complete&&wasComplete===false?' pop':''));wasComplete=!!data.complete;goal.append(typeIcon('goal'),el('strong',data.title||t('goal')),el('span',`${t('goal')} · ${data.complete?t('passed'):t('notStarted')}`));setRect(goal,layout.goal);stage.append(goal);
     for(const n of data.nodes.filter(n=>needs(n)||['held','awaiting_approval'].includes(n.status))) {
-      const p=layout.positions[n.id],report=el('div',undefined,'overview-frog');const frog=el('img');frog.src='/static/assets/frog-report.png';frog.alt='';report.append(frog,el('span',t('waitingBubble'),'speech'));Object.assign(report.style,{left:p.x+'px',top:p.y+p.height+8+'px'});stage.append(report);
+      const p=layout.positions[n.id],report=el('div',undefined,'overview-frog');const frog=el('img');frog.src='/static/assets/frog-report.png';frog.alt='';report.append(inPhase(frog,1200),el('span',[t('waitingBubble'),...data.decisions.filter(d=>d.node===n.id).map(d=>d.id)].join(' '),'speech'));Object.assign(report.style,{left:p.x+'px',top:p.y+p.height+8+'px'});stage.append(report);
     }
-    if(data.complete){const frog=el('img',undefined,'overview-frog waving');frog.src='/static/assets/frog-wave.png';frog.alt=t('complete');Object.assign(frog.style,{left:layout.goal.x+52+'px',top:layout.goal.y+layout.goal.height+10+'px'});stage.append(frog);}
+    if(data.complete){const frog=el('img',undefined,'overview-frog waving');frog.src='/static/assets/frog-wave.png';frog.alt=t('complete');inPhase(frog,1200);Object.assign(frog.style,{left:layout.goal.x+52+'px',top:layout.goal.y+layout.goal.height+10+'px'});stage.append(frog);}
     size();
     if(reveal&&layout.positions[id]){const p=layout.positions[id],w=viewport.clientWidth||900;
       if(p.x*scale<viewport.scrollLeft+12||(p.x+p.width)*scale>viewport.scrollLeft+w-12)viewport.scrollLeft=Math.max(0,p.x*scale-(w-p.width*scale)/2);

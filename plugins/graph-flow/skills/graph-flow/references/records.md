@@ -67,7 +67,7 @@ Roles prevent accidents; they are not a security boundary (P5, P10). An agent th
 | `decide ask`, `decide wait`, `decide list` | yes | own node only | own node only | yes |
 | `decide answer` | no | no | no | yes, see section 7 |
 | `mcp` | yes | yes | yes | no |
-| `serve` | yes | no | no | yes |
+| `serve`, `open`, `setup` | yes | no | no | yes |
 
 A leader may also do a node's work itself (`inline`). That is allowed for lane 1 only because lane 2 and 3 nodes require an independent review (section 6).
 
@@ -535,6 +535,7 @@ Who can answer (P10):
 | `cli.py` | Argument parsing, role checks, output |
 | `mcp.py` | stdio MCP server |
 | `server.py` | Dashboard server; `page.html` is its single page |
+| `launcher.py` | The `gf` command on PATH written by `gf setup` |
 
 Public surface. Other modules may rely only on what is listed here. Functions raise `GFError`; "appends" means inside one transaction. `actor` is the dict from `core.actor_from_env`.
 
@@ -642,6 +643,12 @@ def serve(stdin, stdout): ...                   # newline-delimited JSON-RPC; to
 
 # server.py
 def serve(host="127.0.0.1", port=0): ...        # writes server.json; blocks
+def open_dashboard(): ...                       # starts a detached `gf serve` when none answers; opens the browser; returns no address
+def stop_dashboard(): ...                       # SIGTERM to the recorded dashboard; False when none answers
+
+# launcher.py
+def install(bin_dir=None, script=None): ...     # writes <bin_dir>/gf (default ~/.local/bin); refuses a file it did not write
+def remove(bin_dir=None): ...                   # removes that file when it wrote it
 ```
 
 The MCP tool list and the dashboard's HTTP API are specified by the units that own `mcp.py` and `server.py`, in `references/mcp.md` and `references/dashboard.md`; both call only the functions above.

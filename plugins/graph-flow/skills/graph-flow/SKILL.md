@@ -11,6 +11,8 @@ Turn multi-step work into bounded nodes with explicit dependencies, owned files,
 
 Invoke `python3 <skill-dir>/scripts/gf`; `<skill-dir>` is the base directory the host prints when it loads this skill. Below, `gf` abbreviates that invocation; it does not require a command on PATH. With MCP available, the same commands exist as tools; see [MCP](references/mcp.md).
 
+As the leader, check `command -v gf` once when you first use this skill for a person. If it finds nothing, tell them in one sentence that `gf setup` puts a `gf` command in `~/.local/bin` so they can run commands such as `gf open` from their own terminal, and ask whether to install it. Run `gf setup` only after a yes, relay its message, and if it reports that the directory is not on PATH, give them the printed `export` line to add to their shell profile instead of editing the profile yourself. After a no, do not ask again in that session. `gf setup --remove` undoes it. Keep invoking the skill's own copy yourself; the command on PATH is for the person.
+
 If a brief sets `GF_ROLE=worker` or `GF_ROLE=reviewer`, read [worker.md](references/worker.md) only, skip the other references, and follow your brief. Otherwise, this session is the leader: read [leader.md](references/leader.md).
 
 ## Run the loop
@@ -39,4 +41,4 @@ If a brief sets `GF_ROLE=worker` or `GF_ROLE=reviewer`, read [worker.md](referen
 - [Worker](references/worker.md): execute or review one brief.
 - [Executors](references/executors.md): choose a host, model, account, and isolation.
 - [MCP](references/mcp.md): invoke commands through tool access.
-- [Dashboard](references/dashboard.md): show recorded progress and let a person answer decisions.
+- [Dashboard](references/dashboard.md): show recorded progress and let a person answer decisions. When the person asks to see it, run `gf open`.

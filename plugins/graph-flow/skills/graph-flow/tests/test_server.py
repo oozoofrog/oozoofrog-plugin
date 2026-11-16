@@ -476,7 +476,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIsNone(data["plan"])
         self.assertEqual(data["ready"], [])
-        self.assertEqual(data["view"], {"title": "", "language": "en", "nodes": [], "edges": [], "decisions": [],
+        self.assertEqual(data["view"], {"title": "", "language": "en", "nodes": [], "edges": [], "decisions": [], "answered": [],
                                       "lessons": [], "complete": False,
                                       "counts": {"done": 0, "doing": 0, "waiting": 0,
                                                  "needs_you": 0, "returned": 0, "returns_total": 0}})
@@ -548,7 +548,7 @@ class ServerTests(unittest.TestCase):
         status, data = self.json_request("GET", "/api/run?" + urlencode({"project": str(project), "run": run.name}))
         self.assertEqual(status, 200)
         view = data["view"]
-        self.assertEqual(set(view), {"title", "language", "nodes", "edges", "decisions", "lessons", "counts", "complete"})
+        self.assertEqual(set(view), {"title", "language", "nodes", "edges", "decisions", "answered", "lessons", "counts", "complete"})
         self.assertEqual(view["title"], raw["title"])
         self.assertFalse(view["complete"])
         self.assertEqual([n["id"] for n in view["nodes"]], [n["id"] for n in current["nodes"]])
@@ -566,6 +566,12 @@ class ServerTests(unittest.TestCase):
             {"from": "human", "to": "waiting", "label": "Chosen wording", "relation": "hands_over", "delivered": False, "gate": "waiting_for_you"},
             {"from": "done", "to": "waiting", "label": "Finished result", "relation": "hands_over", "delivered": True, "gate": "open"},
             {"from": "review-retry", "to": "retry", "label": "", "relation": "reviews", "delivered": False, "gate": "closed"}])
+        asked = view["decisions"][0].pop("asked")
+        self.assertRegex(asked, r"^\d{4}-\d\d-\d\dT")
+        self.assertEqual(view["decisions"][0].pop("asked_by")["role"], "leader")
+        self.assertEqual(view["answered"], [])
+        for node in view["nodes"]:
+            self.assertEqual(set(node) >= {"worker", "session", "started"}, True)
         self.assertEqual(view["decisions"], [{"id": "d%d" % ask, "node": "human", "node_title": "Human",
                                             "question": "Does this wording fit?", "kind": "review",
                                         "purpose": "human_check",
@@ -942,6 +948,94 @@ class ServerTests(unittest.TestCase):
                 contextlib.redirect_stdout(io.StringIO()):
             server.serve()
         self.assertEqual(json.loads((self.home / "server.json").read_text()), {"pid": os.getpid() + 1})
+
+    def running(self, pid=None):
+        """Serve in this process and publish the record `gf serve` would write."""
+        httpd, token = server.make_server()
+        thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+        thread.start()
+        def close():
+            httpd.shutdown()
+            httpd.server_close()
+            thread.join()
+        self.addCleanup(close)
+        port = httpd.server_address[1]
+        record = {"url": "http://127.0.0.1:%s/?t=%s" % (port, token), "port": port, "token": token,
+                  "pid": os.getpid() if pid is None else pid, "started": core.now()}
+        store.atomic_write(self.home / "server.json", json.dumps(record) + "\n")
+        return record
+
+    def test_open_reuses_a_running_dashboard_without_revealing_the_address(self):
+        record, seen = self.running(), []
+        result = server.open_dashboard(launch=lambda: self.fail("must not start another"),
+                                       browse=lambda url: seen.append(url) or True)
+        self.assertEqual(result, {"opened": True, "started": False, "port": record["port"]})
+        self.assertEqual(seen, [record["url"]])
+        self.assertNotIn(record["token"], json.dumps(result))
+        server.open_dashboard(browse=lambda url: seen.append(url) or True,
+                              target={"project": "/p q", "run": "r1", "decision": "d4", "node": None})
+        self.assertEqual(seen[-1], record["url"] + "#project=%2Fp+q&run=r1&decision=d4")
+
+    def test_open_starts_a_dashboard_when_the_record_is_absent_or_stale(self):
+        stale = [None, {"pid": os.getpid(), "port": 1, "token": "x", "url": "http://127.0.0.1:1/?t=x"},
+                 "wrong-token"]
+        for case in stale:
+            with self.subTest(case=case):
+                path = self.home / "server.json"
+                if case is None:
+                    self.assertFalse(path.exists())
+                elif case == "wrong-token":
+                    record = self.running()
+                    store.atomic_write(path, json.dumps(dict(record, token="wrong")) + "\n")
+                else:
+                    store.atomic_write(path, json.dumps(case) + "\n")
+                launched, seen = [], []
+                def launch():
+                    launched.append(self.running())
+                result = server.open_dashboard(launch=launch, browse=lambda url: seen.append(url) or True)
+                self.assertEqual(len(launched), 1)
+                self.assertEqual(result, {"opened": True, "started": True, "port": launched[0]["port"]})
+                self.assertEqual(seen, [launched[0]["url"]])
+
+    def test_open_reports_a_dashboard_that_never_starts_and_a_missing_browser(self):
+        with self.assertRaises(core.GFError) as caught:
+            server.open_dashboard(launch=lambda: None, browse=lambda url: True, timeout=0.2)
+        self.assertEqual((caught.exception.code, caught.exception.exit_code),
+                         ("dashboard_unavailable", core.EXIT_IO))
+        self.running()
+        with self.assertRaises(core.GFError) as caught:
+            server.open_dashboard(browse=lambda url: False)
+        self.assertEqual(caught.exception.code, "no_browser")
+        self.assertNotIn("?t=", caught.exception.message)
+
+    def test_stop_signals_only_a_dashboard_that_answers(self):
+        self.assertFalse(server.stop_dashboard())
+        store.atomic_write(self.home / "server.json", json.dumps(
+            {"pid": os.getpid(), "port": 1, "token": "x", "url": "u"}) + "\n")
+        with mock.patch.object(server.os, "kill") as kill:
+            self.assertFalse(server.stop_dashboard())
+            self.assertNotIn(server.signal.SIGTERM, [call.args[1] for call in kill.call_args_list])
+        record = self.running(pid=424242)
+        with mock.patch.object(server.os, "kill") as kill:
+            self.assertTrue(server.stop_dashboard())
+            kill.assert_called_with(record["pid"], server.signal.SIGTERM)
+        self.assertFalse((self.home / "server.json").exists())
+
+    def test_open_and_stop_with_a_real_detached_process(self):
+        result = server.open_dashboard(browse=lambda url: True)
+        record = json.loads((self.home / "server.json").read_text())
+        self.addCleanup(lambda: subprocess.run(["kill", str(record["pid"])], capture_output=True))
+        self.assertTrue(result["started"])
+        self.assertNotEqual(record["pid"], os.getpid())
+        self.assertEqual(server.open_dashboard(launch=lambda: self.fail("already running"),
+                                               browse=lambda url: True)["started"], False)
+        self.assertTrue(server.stop_dashboard())
+        self.assertFalse((self.home / "server.json").exists())
+        for _ in range(50):
+            if not server._alive(record):
+                break
+            threading.Event().wait(0.1)
+        self.assertFalse(server._alive(record))
 
 
 class ReviewRegressionTest(unittest.TestCase):

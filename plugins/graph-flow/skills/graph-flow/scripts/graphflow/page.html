@@ -24,7 +24,8 @@ p{margin:8px 0}small,.muted{color:var(--muted);font-size:13px}
 .eyebrow{font-size:11px;letter-spacing:.12em;color:var(--muted);margin:0 0 10px}
 header{padding:24px 30px 18px;display:flex;justify-content:space-between;gap:24px;align-items:center}
 nav{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-#picker-label{display:flex;align-items:center;gap:10px}#picker{max-width:260px}
+#picker-label,#find label{display:flex;align-items:center;gap:10px}#find-text{width:170px;min-height:44px;padding:8px 12px;border:3px solid var(--ink);border-radius:12px;background:var(--paper);color:var(--ink)}
+.ref-line{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;grid-column:1/-1;margin:0;font-size:12px;line-height:1.5}.ref{font:700 12px/1.5 ui-monospace,monospace;padding:0 5px;border:1.5px solid currentColor;border-radius:5px}#picker{max-width:260px}
 main{padding:0 24px 24px;min-width:0}
 #notice{margin:12px 0;padding:20px;background:var(--soft);border:3px solid var(--ink);border-radius:18px}
 #notice button{margin-left:16px}
@@ -64,7 +65,7 @@ marker .open{fill:var(--mint)}marker .closed{fill:var(--line)}marker .returned{f
 .loop-diagram{width:228px;zoom:.9;height:190px;position:relative;isolation:isolate}.loop-lines{position:absolute;width:100%;height:170px;top:0;left:0;z-index:-1}
 .loop-state{position:absolute;min-width:62px;min-height:42px;border:2px solid var(--ink);border-radius:8px;background:var(--paper);font-size:14px;display:flex;justify-content:center;align-items:center;padding:6px}
 .loop-state.make{left:0;top:51px}.loop-state.check{right:30px;top:51px}.loop-state.fix{left:68px;top:131px}.loop-state.active{background:var(--violet);box-shadow:0 3px 0 var(--ink)}
-.loop-state img{position:absolute;width:48px;height:48px;bottom:38px;left:5px;object-fit:contain}
+.loop-state .walker{width:48px;height:48px;bottom:38px;left:5px;top:auto;right:auto}
 .loop-passes{position:absolute;right:0;top:94px;font-size:12px}.loop-fails{position:absolute;right:8px;top:123px;font-size:12px}.loop-exit{position:absolute;right:0;top:42px;font-size:27px;color:#23684c}.loop-report{position:absolute;right:-4px;top:0;width:48px;height:48px;object-fit:contain}
 .earlier-attempt{display:flex;align-items:flex-start;gap:5px;font-size:13px;line-height:1.6;margin:6px 0;overflow-wrap:anywhere}
 aside{padding:20px;background:var(--panel);border:3px solid var(--ink);border-radius:20px;box-shadow:0 6px 0 var(--ink);align-self:start;min-width:0;max-height:calc(100dvh - 170px);overflow:auto}
@@ -90,12 +91,27 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 ui-monospace,monos
 .empty{padding:25px 0}.skip{position:absolute;left:12px;top:-80px;background:var(--paper);color:var(--ink);padding:10px;z-index:10}.skip:focus{top:12px}[hidden]{display:none!important}
 @media(max-width:1050px){#flow{grid-template-columns:minmax(0,1fr) 280px}aside{padding:16px}header{padding:20px}main{padding:0 16px 24px}.map-help{display:none}}
 @media(max-width:760px){header{display:block;padding:18px}nav{margin-top:16px}h1{font-size:22px}#flow,#decision,.history-grid{grid-template-columns:1fr}#map{height:420px;min-height:340px}#map.has-expanded{height:560px}aside{max-height:none}#decision{padding:10px 0;gap:12px}#decision .reading{padding:16px}.file-reader{padding:12px;font-size:13px}#picker-label{margin-top:12px}.map-toolbar{padding:10px}.map-help{display:none}}
+@keyframes step{0%,49.9%{opacity:1}50%,100%{opacity:0}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes flow{to{stroke-dashoffset:-20}}
+@keyframes glow{0%,100%{box-shadow:4px 5px 0 var(--ink),0 0 0 0 #c3b1ff00}50%{box-shadow:4px 5px 0 var(--ink),0 0 0 7px #c3b1ff66}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes pop{0%{transform:scale(.93)}55%{transform:scale(1.05)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+@keyframes wave{0%,100%{transform:rotate(0)}25%{transform:rotate(-9deg)}75%{transform:rotate(9deg)}}
+.walker{position:absolute;right:14px;top:-41px;width:44px;height:44px;z-index:4;pointer-events:none;animation:bob .5s ease-in-out infinite}
+.walker img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:contain;animation:step .5s linear infinite}.walker img+img{opacity:0;animation-delay:-.25s}
+.node-card.working{animation:glow 2s ease-in-out infinite}.node-card.working .pip.current{animation:blink 1s ease-in-out infinite}
+.node-card.pop{animation:pop .45s ease-out}.node-card.shake{animation:shake .45s ease-in-out}
+.node-card.working.pop{animation:pop .45s ease-out,glow 2s ease-in-out infinite}.node-card.working.shake{animation:shake .45s ease-in-out,glow 2s ease-in-out infinite}
+.edge-path.flowing{stroke-dasharray:10 10;animation:flow 1s linear infinite}
+.overview-frog>img{animation:bob 1.2s ease-in-out infinite}img.overview-frog.waving{transform-origin:50% 100%;animation:wave 1.2s ease-in-out infinite}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 </style>
 <script type="module" nonce="__NONCE__" src="/static/page.js"></script>
 </head>
 <body>
 <a class="skip" href="#accessible" data-i18n="skip"></a>
-<header><div><p class="eyebrow">GRAPH · FLOW</p><h1 id="title">Graph flow</h1><p id="subtitle" class="muted" aria-live="polite"></p></div><nav aria-label="Views"><button id="flow-tab" data-i18n="flow" aria-pressed="true"></button><button id="history-tab" data-i18n="history" aria-pressed="false"></button><label id="picker-label" hidden><span data-i18n="chooseRun"></span><select id="picker"></select></label></nav></header>
+<header><div><p class="eyebrow">GRAPH · FLOW</p><h1 id="title">Graph flow</h1><p id="subtitle" class="muted" aria-live="polite"></p></div><nav aria-label="Views"><button id="flow-tab" data-i18n="flow" aria-pressed="true"></button><button id="history-tab" data-i18n="history" aria-pressed="false"></button><form id="find" role="search"><label><span data-i18n="find"></span><input id="find-text" type="search" autocomplete="off" spellcheck="false"></label></form><label id="picker-label" hidden><span data-i18n="chooseRun"></span><select id="picker"></select></label></nav></header>
 <main><section id="notice" role="status" hidden></section><section id="flow"><div id="map" role="region" aria-label="Flow map"></div><aside id="panel"></aside></section><section id="decision" hidden aria-labelledby="decision-title"></section><section id="history" hidden></section><details id="accessible"><summary data-i18n="listView"></summary><h2 data-i18n="nodes"></h2><ul id="node-list"></ul><h2 data-i18n="handoffs"></h2><ul id="edge-list"></ul><h2 data-i18n="yourTurn"></h2><ul id="decision-list"></ul></details></main>
 </body></html>

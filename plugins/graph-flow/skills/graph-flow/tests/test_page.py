@@ -118,6 +118,24 @@ class PageTests(unittest.TestCase):
         self.assertIn('createElementNS', js)
         self.assertFalse((S / 'scripts/graphflow/vendor').exists())
 
+    def test_motion_is_declared_in_css_and_stops_for_reduced_motion(self):
+        html = (S / 'scripts/graphflow/page.html').read_text(encoding='utf-8')
+        js = (S / 'scripts/graphflow/page.js').read_text(encoding='utf-8')
+        style = html[html.index('<style'):html.index('</style>')]
+        declared = set(re.findall(r'@keyframes ([a-z]+)', style))
+        self.assertEqual(declared, {'step', 'bob', 'flow', 'glow', 'blink', 'pop', 'shake', 'wave'})
+        used = {name for rule in re.findall(r'animation:([^;}]+)', style)
+                for name in re.findall(r'(?:^|,)([a-z]+) ', rule)}
+        self.assertEqual(used, declared)
+        reduced = '@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important'
+        self.assertGreater(style.index(reduced), max(style.rindex('@keyframes'), style.rindex('animation:wave')))
+        # The second walking frame is hidden unless an animation reveals it.
+        self.assertIn('.walker img+img{opacity:0;', style)
+        for used_class in ('working', 'pop', 'shake', 'flowing', 'walker'):
+            self.assertIn("'" + used_class, js.replace("' " + used_class, "'" + used_class))
+        self.assertIn('/static/assets/frog-walk-b.png', js)
+        self.assertNotIn('requestAnimationFrame', js)
+
     def test_translation_keys_match(self):
         js = (S / 'scripts/graphflow/page.js').read_text(encoding='utf-8')
         literal = js.split('// UI_STRINGS_START\nconst STRINGS = ', 1)[1].split(';\n// UI_STRINGS_END', 1)[0]
@@ -369,11 +387,12 @@ globalThis.document={body,documentElement:root,hidden:false,activeElement:null,
   querySelector:selector=>body.querySelector(selector), querySelectorAll:selector=>body.querySelectorAll(selector),
   addEventListener:(type,fn)=>{docEvents[type]=fn;}};
 body.append(new Element('nav'));
-for (const id of ['map','notice','picker','picker-label','flow','history','decision','flow-tab','history-tab','title','subtitle','node-list','edge-list','decision-list','panel','accessible']) {
+for (const id of ['map','notice','picker','picker-label','find','find-text','flow','history','decision','flow-tab','history-tab','title','subtitle','node-list','edge-list','decision-list','panel','accessible']) {
   const e=new Element(id==='picker'?'select':'div'); e.id=id; body.append(e);
 }
 Object.defineProperty(globalThis,'navigator',{value:{language:'ko-KR'},configurable:true});
-globalThis.location={href:'http://localhost:5000/?t=demo',port:'5000'};
+globalThis.location={href:'http://localhost:5000/?t=demo',port:'5000',hash:'',pathname:'/',search:''};
+globalThis.addEventListener=()=>{};
 globalThis.history={replaceState(){}}; globalThis.sessionStorage={getItem(){return 'demo'},setItem(){}};
 globalThis.ResizeObserver=class { observe(){} };
 globalThis.matchMedia=()=>({matches:true,addEventListener(){}});

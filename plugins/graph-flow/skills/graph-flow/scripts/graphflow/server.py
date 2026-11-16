@@ -1,14 +1,20 @@
 """Loopback human decision surface (references/dashboard.md)."""
 import codecs
 import hmac
+import http.client
 import json
 import os
 import pathlib
 import re
 import secrets
+import signal
 import stat
+import subprocess
+import sys
+import time
+import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, urlencode, urlsplit
 
 from . import core, decisions, graph, learn, state, store, trace
 from . import plan as planning
@@ -230,12 +236,26 @@ def _view(current, derived, events, project):
             "language": "ko" if re.search(r"[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]",
                 " ".join([_text(current.get("title"))] +
                          [_text(n.get(k)) for n in nodes.values() for k in ("title", "summary")])) else "en",
-            "edges": [], "decisions": [], "lessons": [],
+            "edges": [], "decisions": [], "answered": [], "lessons": [],
             "counts": dict.fromkeys(("done", "doing", "waiting", "needs_you", "returned", "returns_total"), 0),
             "complete": derived["run"]["status"] == "complete"}
 
     def title(nid):
         return _text(nodes.get(nid, {}).get("title"), nid)
+
+    # Who works on a node and who asked a question, as recorded with each event.
+    starts, asks = {}, {}
+    for event in events:
+        data = _mapping(event.get("data"))
+        if event.get("type") == "node.start" and isinstance(data.get("node"), str):
+            starts[data["node"]] = event
+        elif event.get("type") == "decision.ask":
+            asks[event.get("seq")] = event
+
+    def actor_of(event):
+        actor = _mapping(_mapping(event).get("actor"))
+        return {"role": _text(actor.get("role"), None), "node": _text(actor.get("node"), None),
+                "session": _text(actor.get("session"), None)}
 
     gates = {}
     for nid, node in nodes.items():
@@ -259,6 +279,10 @@ def _view(current, derived, events, project):
                               "attempts": st["attempts"], "max_attempts": st["max_attempts"],
                               "lane": st["effective_lane"], "laps": laps,
                               "returned_reasons": reasons, "reviewed_by_other_family": bool(reviewed),
+                              "worker": {k: v for k, v in _mapping(st["assignment"]).items()
+                                         if k in ("executor", "model", "effort", "provider") and _text(v)},
+                              "session": actor_of(starts.get(nid))["session"],
+                              "started": _text(_mapping(starts.get(nid)).get("ts"), None),
                               "inputs": [], "outputs": []})
         if passed:
             view["counts"]["done"] += 1
@@ -318,6 +342,8 @@ def _view(current, derived, events, project):
                 failed.extend(_finding_text(review))
         unverified.extend(_strings(submission.get("low_confidence")))
         view["decisions"].append({"id": decision["id"], "node": decision["node"],
+                                  "asked": _text(_mapping(asks.get(decision.get("seq"))).get("ts"), None),
+                                  "asked_by": actor_of(asks.get(decision.get("seq"))),
                                   "node_title": title(decision["node"]),
                                   "question": _text(decision.get("question")), "kind": _text(decision.get("kind")),
                                   "purpose": (_text(decision.get("kind")) if decision.get("purpose") in (None, "node", "free")
@@ -329,6 +355,13 @@ def _view(current, derived, events, project):
                                   "worker_note": _text(submission.get("notes"), None),
                                   "has_evidence": any(evidence.get(k) for k in ("command", "files", "checks"))})
     view["counts"]["needs_you"] = len(opened)
+    for decision in derived["decisions"].values():
+        if decision.get("status") == "answered":
+            view["answered"].append({"id": decision["id"], "node": decision.get("node"),
+                                     "node_title": title(decision.get("node")) if decision.get("node") else "",
+                                     "question": _text(decision.get("question")),
+                                     "outcome": _text(decision.get("outcome")), "answer": _text(decision.get("answer")),
+                                     "stale": bool(decision.get("stale"))})
 
     # A malformed learning record must not make the run itself unreadable.
     if (pathlib.Path(project) / ".graph-flow" / "constraints.jsonl").is_file():
@@ -693,3 +726,78 @@ def serve(host="127.0.0.1", port=0):
                 record = None
             if isinstance(record, dict) and record.get("pid") == pid:
                 path.unlink()
+
+
+def _record():
+    try:
+        record = json.loads((core.gf_home() / "server.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return record if isinstance(record, dict) else None
+
+
+def _alive(record):
+    """True when the recorded process exists and answers with the recorded token."""
+    try:
+        port, token = int(record["port"]), str(record["token"])
+        os.kill(int(record["pid"]), 0)
+    except (KeyError, TypeError, ValueError, OSError):
+        return False
+    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=2)
+    try:
+        connection.request("GET", "/api/projects", headers={"X-GF-Token": token})
+        return connection.getresponse().status == 200
+    except (OSError, http.client.HTTPException):
+        return False
+    finally:
+        connection.close()
+
+
+def _launch():
+    """Start `gf serve` detached from the calling session."""
+    script = pathlib.Path(__file__).resolve().parents[1] / "gf"
+    subprocess.Popen([sys.executable, "-B", str(script), "serve"], stdin=subprocess.DEVNULL,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+
+
+def open_dashboard(launch=None, browse=None, timeout=10.0, target=None):
+    """Open the dashboard in the person's browser, starting it when none answers.
+
+    The result carries no address or token, so the caller learns neither.
+    `target` may name a project, run, decision and node for the page to show.
+    """
+    record, started = _record(), False
+    if not (record and _alive(record)):
+        (launch or _launch)()
+        started = True
+        deadline = time.monotonic() + timeout
+        while True:
+            record = _record()
+            if record and _alive(record):
+                break
+            if time.monotonic() >= deadline:
+                raise core.GFError("dashboard_unavailable",
+                                   "the dashboard did not start; run gf serve in a terminal", core.EXIT_IO)
+            time.sleep(0.1)
+    url = record["url"]
+    if target:
+        # The fragment never reaches the server; the page reads it to choose what to show.
+        url += "#" + urlencode({k: v for k, v in target.items() if v})
+    if not (browse or webbrowser.open)(url):
+        raise core.GFError("no_browser", "the dashboard is running but no browser opened; "
+                           "run gf open --stop, then gf serve in a terminal", core.EXIT_IO)
+    return {"opened": True, "started": started, "port": record["port"]}
+
+
+def stop_dashboard():
+    """Stop the recorded dashboard; False when none answers."""
+    record = _record()
+    if not (record and _alive(record)):
+        return False
+    home = core.gf_home()
+    os.kill(int(record["pid"]), signal.SIGTERM)
+    with store.locked(home / ".lock"):
+        current = _record()
+        if current and current.get("pid") == record["pid"]:
+            (home / "server.json").unlink()
+    return True
