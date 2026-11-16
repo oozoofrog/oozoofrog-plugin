@@ -50,6 +50,20 @@ const STRINGS = {
     "writeFirst": "답을 적으면 보낼 수 있어요.",
     "leaveUnanswered": "답하지 않고 돌아가기",
     "aboutWork": "이 일은",
+    "decisionRef": "결정 {id}",
+    "askedBy": "물어본 곳: {who}",
+    "workedBy": "맡은 곳: {who}",
+    "find": "찾기",
+    "findHint": "d41 또는 일 이름",
+    "findNone": "“{text}”에 맞는 결정이나 일이 이 흐름에 없어요.",
+    "jumpNoRun": "이 주소가 가리키는 흐름을 찾지 못했어요.",
+    "alreadyAnswered": "{id}은(는) 이미 답한 결정이에요 · {title} · 답: {answer}",
+    "outcome_approved": "통과",
+    "outcome_revision_requested": "돌려보냄",
+    "outcome_answered": "답함",
+    "roleLeader": "리더",
+    "roleWorker": "작업자",
+    "roleReviewer": "검토자",
     "ifApproved": "이대로 하면",
     "ifRejected": "돌려보내면",
     "undo": "나중에 바꾸려면",
@@ -193,6 +207,20 @@ const STRINGS = {
     "writeFirst": "Write an answer to send it.",
     "leaveUnanswered": "Go back without answering",
     "aboutWork": "This work",
+    "decisionRef": "Decision {id}",
+    "askedBy": "Asked by: {who}",
+    "workedBy": "Worked by: {who}",
+    "find": "Find",
+    "findHint": "d41 or a task name",
+    "findNone": "No decision or task in this flow matches “{text}”.",
+    "jumpNoRun": "The flow this address points to was not found.",
+    "alreadyAnswered": "{id} was already answered · {title} · answer: {answer}",
+    "outcome_approved": "approved",
+    "outcome_revision_requested": "sent back",
+    "outcome_answered": "answered",
+    "roleLeader": "leader",
+    "roleWorker": "worker",
+    "roleReviewer": "reviewer",
     "ifApproved": "If you proceed",
     "ifRejected": "If sent back",
     "undo": "How to undo",
@@ -502,6 +530,7 @@ function translate() {
   document.documentElement.lang = language;
   document.querySelectorAll('[data-i18n]').forEach(e => { e.textContent = t(e.dataset.i18n); });
   document.querySelector('nav').setAttribute('aria-label', t('flow'));
+  $('find-text').placeholder = t('findHint');
   $('map').setAttribute('aria-label', t('flow'));
   document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));
 }
@@ -518,7 +547,7 @@ async function api(path, body, text = false) {
   return text ? response.text() : response.json();
 }
 function query(route, extra = {}, target = chosen) { return route + '?' + new URLSearchParams({project:target.project, run:target.run, ...extra}); }
-function notice(key, retry = false) { const box = $('notice'); clear(box); box.hidden = !key; if (key) box.append(el('span', t(key))); if (retry) box.append(button(t('retry'), () => refresh(true))); }
+function notice(key, retry = false) { const box = $('notice'); clear(box); box.hidden = !key; if (key) box.append(el('span', STRINGS[language][key] === undefined ? key : t(key))); if (retry) box.append(button(t('retry'), () => refresh(true))); }
 function title(node) { return node && node.title && node.title !== node.id ? node.title : t('unnamed'); }
 function otherTitle(value) { return view.nodes.some(n => n.id === value && n.title === value) ? t('unnamed') : value || t('unnamed'); }
 // Legacy plans may have only an artifact path; keep that technical fallback out of normal views.
@@ -526,8 +555,18 @@ function label(value) { return !value || /[\/\\]|\.[a-z0-9]{1,8}$/.test(value) |
 function relationText(edge) { return edgeRelationLabel({...edge,label:edge.label?label(edge.label):''},language); }
 function question(d) { return decisionQuestion(d); }
 function decisionTitle(d) { return title(view.nodes.find(n => n.id === d.node)); }
+// The same words an agent session uses for this decision, so either side can find the other.
+function who(actor) {
+  const role = {leader:'roleLeader', worker:'roleWorker', reviewer:'roleReviewer'}[actor?.role];
+  return [role ? t(role) : '', actor?.session || ''].filter(Boolean).join(' · ');
+}
+function clock(stamp) { const time = stamp ? new Date(stamp) : null; return time && !isNaN(time) ? time.toLocaleTimeString(language, {hour:'2-digit', minute:'2-digit'}) : ''; }
+function workedBy(n) { return [n.worker?.model, n.worker?.effort, n.session].filter(Boolean).join(' · '); }
 function decisionHeading(parent, d, tag) {
-  parent.append(el(tag, decisionTitle(d)), el('p', purposeWording(d.purpose, language)));
+  const reference = el('p', undefined, 'ref-line'); reference.append(el('span', t('decisionRef', {id:d.id}), 'ref'));
+  const asker = who(d.asked_by); if (asker) reference.append(el('span', t('askedBy', {who:asker})));
+  if (clock(d.asked)) reference.append(el('span', clock(d.asked)));
+  parent.append(reference, el(tag, decisionTitle(d)), el('p', purposeWording(d.purpose, language)));
   if (d.purpose === 'trajectory') textList(parent, (d.trajectory_reasons || []).map(key => t(key)));
   if (question(d)) parent.append(el('p', question(d)));
 }
@@ -582,7 +621,8 @@ function panel() {
   row([null,t('lineLegend')]);
   p.append(legend);
   if(node) {
-    p.append(el('h2',title(node)),card(t('now'),`${status(node)}. ${attempts(node)}. ${node.summary}`,true));
+    const reference=el('p',undefined,'ref-line');reference.append(el('span',node.id,'ref'));if(workedBy(node))reference.append(el('span',t('workedBy',{who:workedBy(node)})));if(clock(node.started))reference.append(el('span',clock(node.started)));
+    p.append(el('h2',title(node)),reference,card(t('now'),`${status(node)}. ${attempts(node)}. ${node.summary}`,true));
     const reasons=card(t('whyReturned'),null,true);textList(reasons,node.returned_reasons.flat(),node.returned_reasons.length?'noReason':'noReturns');p.append(reasons);
     p.append(handoffsCard('received',node.inputs,'from'),handoffsCard('outputs',node.outputs,'to'),button(t('flow'),wholeFlow,'primary'));
   }
@@ -734,6 +774,35 @@ function historyView() {
   const lessons = el('div', undefined, 'constellation'); lessons.append(el('h3', t('lessons'))); view.lessons.forEach(l => { const lesson=card(l.node_title ? otherTitle(l.node_title) : t('lessons'), l.text); lesson.classList.add('lesson'); lessons.append(lesson); }); if (!view.lessons.length) lessons.append(el('p', t('noLessons')));
   const counts = el('div'); counts.append(countCard(), button(t('flow'), wholeFlow, 'primary')); grid.append(returns, lessons, counts); box.append(grid);
 }
+let pendingJump = null;
+function readFragment() {
+  const target = Object.fromEntries(new URLSearchParams(location.hash.slice(1)));
+  if (!target.decision && !target.node && !target.run) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  pendingJump = target;
+  if (target.project && target.run && !decisionController.session?.busy) setChosen({project:target.project, run:target.run});
+  refresh(true);
+}
+function jump(target) {
+  if (target.run && !(chosen && chosen.run === target.run && (!target.project || chosen.project === target.project))) { decisionNotice = t('jumpNoRun'); notice(decisionNotice); return false; }
+  if (target.decision) {
+    const id = target.decision.toLowerCase(), open = view.decisions.find(d => d.id === id), closed = (view.answered || []).find(d => d.id === id);
+    if (open) { openDecision(open.id); return true; }
+    if (closed) { wholeFlow(); if (closed.node) selectNode(closed.node); decisionNotice = t('alreadyAnswered', {id:closed.id, title:closed.node_title || closed.question, answer:closed.answer || ({approved:t('outcome_approved'), revision_requested:t('outcome_revision_requested'), answered:t('outcome_answered')})[closed.outcome] || ''}); notice(decisionNotice); return true; }
+    decisionNotice = t('findNone', {text:target.decision}); notice(decisionNotice); return false;
+  }
+  if (target.node) {
+    const text = target.node.toLowerCase();
+    const node = view.nodes.find(n => n.id.toLowerCase() === text) || view.nodes.find(n => (n.title || '').toLowerCase().includes(text));
+    if (node) { decisionNotice = ''; notice(''); selectNode(node.id); return true; }
+    decisionNotice = t('findNone', {text:target.node}); notice(decisionNotice); return false;
+  }
+  return true;
+}
+function find(text) {
+  text = text.trim(); if (!text || !view) return false;
+  return /^d\d+$/i.test(text) ? jump({decision:text}) : jump({node:text});
+}
 function applyView(next) {
   if (decisionController.session?.busy) return;
   closeInvalidDecision(chosen, next.decisions);
@@ -775,6 +844,7 @@ async function refresh(force = false) {
     if (available && available.error) { resetView(); notice(decisionNotice || 'unreadable', true); return; }
     const data = await api(query('/api/run')); if (currentGeneration !== generation || document.hidden || decisionController.session?.busy) return;
     notice(decisionNotice || (!data.plan ? 'noPlan' : '')); applyView(data.view);
+    if (pendingJump && view && !decisionController.session?.busy) { const target = pendingJump; pendingJump = null; jump(target); }
   } catch (error) { if (currentGeneration === generation) notice(error.status === 401 ? 'unauthorized' : error.status === 400 || error.status === 404 || error.status === 500 ? 'unreadable' : 'lost', true); }
   finally { loading = false; if (queuedRefresh) { queuedRefresh = false; refresh(true); } else schedule(); }
 }
@@ -782,10 +852,12 @@ function resetView() { language = viewLanguage(null, navigator.language); transl
 function schedule() { clearTimeout(timer); if (!document.hidden) timer = setTimeout(refresh, 2000); }
 $('flow-tab').addEventListener('click', () => { if (view) wholeFlow(); });
 $('history-tab').addEventListener('click', () => { if (view) historyView(); });
+$('find').addEventListener('submit', event => { event.preventDefault(); if (find($('find-text').value)) $('find-text').value = ''; });
+addEventListener('hashchange', readFragment);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.isComposing && view) wholeFlow(); });
 document.addEventListener('visibilitychange', () => { clearTimeout(timer); if (renderer) renderer.wake(); if (!document.hidden) refresh(true); });
 reduced.addEventListener('change', () => { if (renderer) renderer.wake(); });
-notice('loading'); refresh();
+notice('loading'); readFragment(); refresh();
 
 function svg(tag, attributes = {}) {
   const element=document.createElementNS(['http:', '', 'www.w3.org/2000/svg'].join('/'),tag);
@@ -833,6 +905,7 @@ function nodeCard(n, expanded = false) {
   const tries=el('span',undefined,'attempt-row');
   tries.append(pips,el('span',n.status==='passed'&&n.attempts?(n.attempts===1?t('firstPass'):t('finishedAttempts',{n:n.attempts})):attempts(n),'attempt-caption'));
   header.append(tries);
+  const reference=el('span',undefined,'ref-line');reference.append(el('span',n.id,'ref'));if(workedBy(n))reference.append(el('span',workedBy(n)));header.append(reference);
   if(cometCount(n)){const badge=el('span',undefined,'comet-badge');badge.append(cometGlyph(),el('span',String(cometCount(n))));header.append(badge);}
   root.append(header);
   if(expanded)root.append(innerLoop(n));
@@ -916,14 +989,14 @@ function createMap() {
       const chip=route.decision?button('',()=>openDecision(route.decision),'edge-chip '+route.gateState):el('div',undefined,'edge-chip '+route.gateState);
       const source=data.nodes.find(n=>n.id===route.from),targets=layout.routes.filter(r=>r.chip===c).map(r=>title(data.nodes.find(n=>n.id===r.to))).join(', ');
       chip.setAttribute('aria-label',`${edgeRelationLabel(route,language)}. ${title(source)} → ${targets}`);
-      if(route.gateState==='returned')chip.append(cometGlyph());chip.append(el('span',route.text));chip.dataset.chip=c.key;setRect(chip,c);stage.append(chip);chips.set(c.first,chip);
+      if(route.gateState==='returned')chip.append(cometGlyph());chip.append(el('span',route.decision?`${route.text} · ${route.decision}`:route.text));chip.dataset.chip=c.key;setRect(chip,c);stage.append(chip);chips.set(c.first,chip);
     }
     // All focusable controls are ordered by column and then vertical position.
     [...nodes.values(),...chips.values()].sort((a,b)=>parseFloat(a.style.left)-parseFloat(b.style.left)||parseFloat(a.style.top)-parseFloat(b.style.top)).forEach(e=>stage.append(e));
     stage.querySelectorAll('.overview-frog,.goal-card').forEach(e=>e.remove());
     const goal=el('article',undefined,'goal-card node-card '+(data.complete?'passed':'unused')+(data.complete&&wasComplete===false?' pop':''));wasComplete=!!data.complete;goal.append(typeIcon('goal'),el('strong',data.title||t('goal')),el('span',`${t('goal')} · ${data.complete?t('passed'):t('notStarted')}`));setRect(goal,layout.goal);stage.append(goal);
     for(const n of data.nodes.filter(n=>needs(n)||['held','awaiting_approval'].includes(n.status))) {
-      const p=layout.positions[n.id],report=el('div',undefined,'overview-frog');const frog=el('img');frog.src='/static/assets/frog-report.png';frog.alt='';report.append(inPhase(frog,1200),el('span',t('waitingBubble'),'speech'));Object.assign(report.style,{left:p.x+'px',top:p.y+p.height+8+'px'});stage.append(report);
+      const p=layout.positions[n.id],report=el('div',undefined,'overview-frog');const frog=el('img');frog.src='/static/assets/frog-report.png';frog.alt='';report.append(inPhase(frog,1200),el('span',[t('waitingBubble'),...data.decisions.filter(d=>d.node===n.id).map(d=>d.id)].join(' '),'speech'));Object.assign(report.style,{left:p.x+'px',top:p.y+p.height+8+'px'});stage.append(report);
     }
     if(data.complete){const frog=el('img',undefined,'overview-frog waving');frog.src='/static/assets/frog-wave.png';frog.alt=t('complete');inPhase(frog,1200);Object.assign(frog.style,{left:layout.goal.x+52+'px',top:layout.goal.y+layout.goal.height+10+'px'});stage.append(frog);}
     size();

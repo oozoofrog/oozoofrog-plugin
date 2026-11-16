@@ -387,11 +387,12 @@ globalThis.document={body,documentElement:root,hidden:false,activeElement:null,
   querySelector:selector=>body.querySelector(selector), querySelectorAll:selector=>body.querySelectorAll(selector),
   addEventListener:(type,fn)=>{docEvents[type]=fn;}};
 body.append(new Element('nav'));
-for (const id of ['map','notice','picker','picker-label','flow','history','decision','flow-tab','history-tab','title','subtitle','node-list','edge-list','decision-list','panel','accessible']) {
+for (const id of ['map','notice','picker','picker-label','find','find-text','flow','history','decision','flow-tab','history-tab','title','subtitle','node-list','edge-list','decision-list','panel','accessible']) {
   const e=new Element(id==='picker'?'select':'div'); e.id=id; body.append(e);
 }
 Object.defineProperty(globalThis,'navigator',{value:{language:'ko-KR'},configurable:true});
-globalThis.location={href:'http://localhost:5000/?t=demo',port:'5000'};
+globalThis.location={href:'http://localhost:5000/?t=demo',port:'5000',hash:'',pathname:'/',search:''};
+globalThis.addEventListener=()=>{};
 globalThis.history={replaceState(){}}; globalThis.sessionStorage={getItem(){return 'demo'},setItem(){}};
 globalThis.ResizeObserver=class { observe(){} };
 globalThis.matchMedia=()=>({matches:true,addEventListener(){}});

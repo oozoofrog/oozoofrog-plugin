@@ -373,7 +373,23 @@ class CLITests(unittest.TestCase):
                                       'message': 'Dashboard opened in the browser.'})
             self.assertEqual(self.call('open', '--stop')['stopped'], True)
             self.assertEqual(self.call('open', '--stop')['message'], 'No dashboard is running.')
-            server.open_dashboard.assert_called_once_with()
+            server.open_dashboard.assert_called_once_with(target={
+                'project': str(store.project_of(self.run)), 'run': self.run.name, 'decision': None, 'node': None})
+            server.open_dashboard.reset_mock()
+            shown = self.call('open', '--decision', 'd4')
+            self.assertEqual(shown['message'], 'Dashboard opened in the browser on d4.')
+            self.assertEqual(server.open_dashboard.call_args.kwargs['target']['decision'], 'd4')
+            self.call('open', '--node', 'a')
+            self.assertEqual(server.open_dashboard.call_args.kwargs['target']['node'], 'a')
+            # Without a run there is nothing to point at.
+            out = io.StringIO()
+            with mock.patch.dict(os.environ), contextlib.redirect_stdout(out):
+                os.environ.pop('GF_RUN', None)
+                self.assertEqual(cli.main(['--json', 'open', '--decision', 'd4']), 2)
+                server.open_dashboard.reset_mock()
+                self.assertEqual(cli.main(['--json', 'open']), 0)
+                server.open_dashboard.assert_called_once_with()
+            self.assertEqual(json.loads(out.getvalue().splitlines()[0])['code'], 'run_required')
             for role in ('worker', 'reviewer'):
                 with mock.patch.dict(os.environ, GF_ROLE=role, GF_NODE='n'):
                     self.assertEqual(self.call('open', code=3)['code'], 'forbidden')

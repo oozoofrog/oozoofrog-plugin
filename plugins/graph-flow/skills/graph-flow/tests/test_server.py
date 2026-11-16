@@ -476,7 +476,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIsNone(data["plan"])
         self.assertEqual(data["ready"], [])
-        self.assertEqual(data["view"], {"title": "", "language": "en", "nodes": [], "edges": [], "decisions": [],
+        self.assertEqual(data["view"], {"title": "", "language": "en", "nodes": [], "edges": [], "decisions": [], "answered": [],
                                       "lessons": [], "complete": False,
                                       "counts": {"done": 0, "doing": 0, "waiting": 0,
                                                  "needs_you": 0, "returned": 0, "returns_total": 0}})
@@ -548,7 +548,7 @@ class ServerTests(unittest.TestCase):
         status, data = self.json_request("GET", "/api/run?" + urlencode({"project": str(project), "run": run.name}))
         self.assertEqual(status, 200)
         view = data["view"]
-        self.assertEqual(set(view), {"title", "language", "nodes", "edges", "decisions", "lessons", "counts", "complete"})
+        self.assertEqual(set(view), {"title", "language", "nodes", "edges", "decisions", "answered", "lessons", "counts", "complete"})
         self.assertEqual(view["title"], raw["title"])
         self.assertFalse(view["complete"])
         self.assertEqual([n["id"] for n in view["nodes"]], [n["id"] for n in current["nodes"]])
@@ -566,6 +566,12 @@ class ServerTests(unittest.TestCase):
             {"from": "human", "to": "waiting", "label": "Chosen wording", "relation": "hands_over", "delivered": False, "gate": "waiting_for_you"},
             {"from": "done", "to": "waiting", "label": "Finished result", "relation": "hands_over", "delivered": True, "gate": "open"},
             {"from": "review-retry", "to": "retry", "label": "", "relation": "reviews", "delivered": False, "gate": "closed"}])
+        asked = view["decisions"][0].pop("asked")
+        self.assertRegex(asked, r"^\d{4}-\d\d-\d\dT")
+        self.assertEqual(view["decisions"][0].pop("asked_by")["role"], "leader")
+        self.assertEqual(view["answered"], [])
+        for node in view["nodes"]:
+            self.assertEqual(set(node) >= {"worker", "session", "started"}, True)
         self.assertEqual(view["decisions"], [{"id": "d%d" % ask, "node": "human", "node_title": "Human",
                                             "question": "Does this wording fit?", "kind": "review",
                                         "purpose": "human_check",
@@ -966,6 +972,9 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(result, {"opened": True, "started": False, "port": record["port"]})
         self.assertEqual(seen, [record["url"]])
         self.assertNotIn(record["token"], json.dumps(result))
+        server.open_dashboard(browse=lambda url: seen.append(url) or True,
+                              target={"project": "/p q", "run": "r1", "decision": "d4", "node": None})
+        self.assertEqual(seen[-1], record["url"] + "#project=%2Fp+q&run=r1&decision=d4")
 
     def test_open_starts_a_dashboard_when_the_record_is_absent_or_stale(self):
         stale = [None, {"pid": os.getpid(), "port": 1, "token": "x", "url": "http://127.0.0.1:1/?t=x"},

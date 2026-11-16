@@ -121,7 +121,15 @@ def _open(args, actor):
         stopped = server.stop_dashboard()
         return {"stopped": stopped,
                 "message": "Dashboard stopped." if stopped else "No dashboard is running."}
-    return dict(server.open_dashboard(), message="Dashboard opened in the browser.")
+    target = None
+    if args.run:
+        target = {"project": str(_project(args)), "run": pathlib.Path(args.run).name,
+                  "decision": args.decision, "node": args.target_node}
+    elif args.decision or args.target_node:
+        raise core.GFError("run_required", "--run or GF_RUN is required to open a decision or node")
+    opened = server.open_dashboard(target=target) if target else server.open_dashboard()
+    shown = args.decision or args.target_node
+    return dict(opened, message="Dashboard opened in the browser%s." % (" on " + shown if shown else ""))
 
 
 def _setup(args, actor):
@@ -201,8 +209,10 @@ def _loop(args, actor):
         return gate.reopen(args.run, node, args.reason, actor)
     if path == ("decide", "ask"):
         evidence = {"command": args.evidence_command, "files": args.files, "checks": []}
-        return decisions.ask(args.run, args.kind, args.question, node, args.check,
-                             args.purpose, evidence, actor)
+        asked = decisions.ask(args.run, args.kind, args.question, node, args.check,
+                              args.purpose, evidence, actor)
+        # How to put this question in front of the person (leader.md).
+        return dict(asked, show="gf open --decision %s" % asked["id"])
     if path == ("decide", "list"):
         _, derived = _snapshot(args.run)
         own = actor["node"] if actor["role"] in ("worker", "reviewer") else None
@@ -333,6 +343,8 @@ def _parser(authorize_only=False):
             sub.add_argument("--port", type=int, default=0)
         elif path == ("open",):
             sub.add_argument("--stop", action="store_true")
+            sub.add_argument("--decision")
+            sub.add_argument("--node", dest="target_node")
         elif path == ("setup",):
             sub.add_argument("--bin-dir")
             sub.add_argument("--remove", action="store_true")
