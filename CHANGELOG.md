@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- `graph-flow` 0.1.1: add `gf open`, which opens the dashboard in the person's default browser and starts a detached `gf serve` when none is running, and `gf open --stop`, which stops it. Neither prints the address or the token, so an agent session may run them when the person asks to see or close the dashboard. Answering stays with the person: an agent session still never runs `gf serve`, reads `server.json` or `human.key`, sends requests to the dashboard, or operates its page.
+- `graph-flow` 0.1.1: add `gf open`, which opens the dashboard in the person's default browser and starts a detached `gf serve` when none is running, and `gf open --stop`, which stops it. Neither prints the address or the token, so an agent session may run them when the person asks to see or close the dashboard. Answering stays with the person: an agent session still never runs `gf serve`, reads `server.json` or `human.key`, sends requests to the dashboard, or operates its page. Add `gf setup`, which writes a `gf` command to `~/.local/bin` (or `--bin-dir`) that runs the newest installed version, refuses to replace a file it did not write, and reports the `export` line when the directory is not on PATH; `gf setup --remove` deletes it. The skill has the leader offer this once when `gf` is not on PATH and run it only after the person agrees.
 
 - Retire `auto-flow` and `guided-execution`: remove both Plugins, marketplace entries, dedicated distribution checks, the guided-execution CI step, and their usage/validation documentation. Use `graph-flow` for multi-step planning, delegation, and verified execution. Existing installations require removal through the host; user workspaces and handoff data are preserved without migration.
 
