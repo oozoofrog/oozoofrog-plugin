@@ -798,7 +798,7 @@ function cardTone(n) {return needs(n)||['held','awaiting_approval'].includes(n.s
 // Two walking frames; the second stays hidden when motion is reduced.
 function walker() {
   const frames=el('span',undefined,'walker');frames.setAttribute('aria-hidden','true');
-  for(const frame of ['a','b']){const frog=el('img');frog.src=`/static/assets/frog-walk-${frame}.png`;frog.alt='';frames.append(frog);}
+  for(const source of ['/static/assets/frog-walk-a.png','/static/assets/frog-walk-b.png']){const frog=el('img');frog.src=source;frog.alt='';frames.append(frog);}
   return frames;
 }
 // A rebuilt element joins a looping animation at the phase it would have reached.

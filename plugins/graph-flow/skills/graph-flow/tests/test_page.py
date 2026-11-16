@@ -133,7 +133,7 @@ class PageTests(unittest.TestCase):
         self.assertIn('.walker img+img{opacity:0;', style)
         for used_class in ('working', 'pop', 'shake', 'flowing', 'walker'):
             self.assertIn("'" + used_class, js.replace("' " + used_class, "'" + used_class))
-        self.assertIn('frog-walk-${frame}.png', js)
+        self.assertIn('/static/assets/frog-walk-b.png', js)
         self.assertNotIn('requestAnimationFrame', js)
 
     def test_translation_keys_match(self):
