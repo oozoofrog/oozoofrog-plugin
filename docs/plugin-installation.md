@@ -84,7 +84,7 @@ Swift Intelligence는 macOS, Command Line Tools를 포함한 Xcode, Python 3가 
 
 ## Graph Flow
 
-`graph-flow@oozoofrog-plugin` 0.1.1은 여러 단계의 작업을 계획·분담·검증하고 진행 상황을 기록하는 [Graph Flow 스킬](../plugins/graph-flow/skills/graph-flow/SKILL.md)과 MCP 설정을 설치합니다. Python 3과 Git이 필요합니다. Codex 매니페스트는 `.mcp.json`을 참조하고, Claude 매니페스트는 `${CLAUDE_PLUGIN_ROOT}` 기준의 MCP 실행 경로를 사용합니다.
+`graph-flow@oozoofrog-plugin` 0.2.0은 여러 단계의 작업을 계획·분담·검증하고 진행 상황을 기록하는 [Graph Flow 스킬](../plugins/graph-flow/skills/graph-flow/SKILL.md)과 MCP 설정을 설치합니다. Python 3과 Git이 필요합니다. Codex 매니페스트는 `.mcp.json`을 참조하고, Claude 매니페스트는 `${CLAUDE_PLUGIN_ROOT}` 기준의 MCP 실행 경로를 사용합니다.
 
 게시 전에는 저장소 루트에서 로컬 checkout을 등록한 뒤 설치합니다. 기존 marketplace가 있다면 source가 이 checkout인지 먼저 확인합니다.
 

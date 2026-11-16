@@ -21,7 +21,7 @@ ACTOR = {"role": "leader", "node": None, "session": "test"}
 
 
 class EnvCase(unittest.TestCase):
-    KEYS = ("GF_ROLE", "GF_NODE", "GF_SESSION", "GF_HOME")
+    KEYS = ("GF_ROLE", "GF_NODE", "GF_SESSION", "GF_HOME", "T3CODE_THREAD_ID", "CLAUDE_CODE_SESSION_ID")
 
     def setUp(self):
         self._saved = {k: os.environ.pop(k, None) for k in self.KEYS}

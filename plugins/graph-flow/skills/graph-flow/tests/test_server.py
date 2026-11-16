@@ -469,6 +469,31 @@ class ServerTests(unittest.TestCase):
         self.assert_error(404, "not_found", "GET", "/missing")
         self.assert_error(404, "not_found", "POST", "/missing", body={})
 
+    def test_timeline_keeps_order_reason_and_survives_odd_events(self):
+        def event(seq, kind, **data):
+            return {"seq": seq, "ts": "2026-11-15T14:00:%02dZ" % seq, "type": kind, "data": data,
+                    "actor": {"role": "worker", "node": data.get("node"), "session": "t3:abc"}}
+        nodes = {"a": {"id": "a", "title": "Make A", "checks": [{"id": "unit", "title": "A works"}]},
+                 "r": {"id": "r", "title": "Review A", "checks": []}}
+        events = [event(1, "node.start", node="a", attempt=1),
+                  event(2, "node.start", node="r", attempt=1),
+                  event(3, "check.result", node="a", check="unit", result="failed", phase="gate", command="run"),
+                  event(4, "gate.verdict", node="a", attempt=1, verdict="reject", rejection={"reason": "unit failed"}),
+                  event(5, "review.submit", node="r", target="a", verdict="fail", findings=[{"text": "Too slow"}]),
+                  event(6, "gate.verdict", node="a", attempt=1, verdict="replan", rejection=None),
+                  event(7, "constraint.add", id=["not", "a", "string"]),
+                  event(8, "constraint.add", id="c1"),
+                  event(9, "check.result", node="missing", check="unit", result="passed")]
+        rows = server._timeline(nodes, events, {"c1": "Keep it small"})
+        self.assertEqual([(r["id"], r["seq"], r["kind"]) for r in rows],
+                         [("e2", 5, "attempt"), ("e1", 6, "attempt"), ("e8", 8, "learned")])
+        review, attempt, learned = rows
+        self.assertEqual((review["state"], review["findings"]), ("submitted", ["Too slow"]))
+        self.assertEqual((attempt["state"], attempt["reason"]), ("replan", "unit failed"))
+        self.assertEqual(attempt["checks"][0]["title"], "A works")
+        self.assertEqual(attempt["by"], {"role": "worker", "session": "t3:abc"})
+        self.assertEqual(learned["text"], "Keep it small")
+
     def test_run_without_plan(self):
         run = store.init_run(self.projects[0], "empty", ACTOR)
         status, data = self.json_request("GET", "/api/run?" + urlencode(
@@ -476,8 +501,10 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIsNone(data["plan"])
         self.assertEqual(data["ready"], [])
+        self.assertEqual([r["kind"] for r in data["view"].pop("timeline")], ["started"])
+        self.assertEqual(data["view"].pop("project"), pathlib.Path(self.projects[0]).name)
         self.assertEqual(data["view"], {"title": "", "language": "en", "nodes": [], "edges": [], "decisions": [], "answered": [],
-                                      "lessons": [], "complete": False,
+                                      "lessons": [], "complete": False, "run": "empty",
                                       "counts": {"done": 0, "doing": 0, "waiting": 0,
                                                  "needs_you": 0, "returned": 0, "returns_total": 0}})
 
@@ -548,7 +575,8 @@ class ServerTests(unittest.TestCase):
         status, data = self.json_request("GET", "/api/run?" + urlencode({"project": str(project), "run": run.name}))
         self.assertEqual(status, 200)
         view = data["view"]
-        self.assertEqual(set(view), {"title", "language", "nodes", "edges", "decisions", "answered", "lessons", "counts", "complete"})
+        self.assertEqual(set(view), {"title", "language", "nodes", "edges", "decisions", "answered", "lessons", "counts", "complete",
+                                     "run", "project", "timeline"})
         self.assertEqual(view["title"], raw["title"])
         self.assertFalse(view["complete"])
         self.assertEqual([n["id"] for n in view["nodes"]], [n["id"] for n in current["nodes"]])
@@ -581,7 +609,11 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(view["lessons"], [{"text": active["text"], "node_title": "Done"},
                                          {"text": unknown["text"], "node_title": None}])
         self.assertEqual(view["counts"], {"done": 1, "doing": 1, "waiting": 2, "needs_you": 1, "returned": 1, "returns_total": 1})
-        self.assertNotIn("SECRET_", json.dumps(view))
+        # Commands, log paths and rejection text are shown only in the record of what happened.
+        self.assertNotIn("SECRET_", json.dumps({k: v for k, v in view.items() if k != "timeline"}))
+        attempts = [r for r in view["timeline"] if r["kind"] == "attempt"]
+        self.assertIn("SECRET_COMMAND", {c["command"] for r in attempts for c in r["checks"]})
+        self.assertIn("SECRET_COMMAND exited 123", {r["reason"] for r in attempts})
         self.assertEqual(store.events(run), before)
         revised = json.loads(json.dumps(current))
         revised["nodes"][1]["goal"] = "Produce a different draft"

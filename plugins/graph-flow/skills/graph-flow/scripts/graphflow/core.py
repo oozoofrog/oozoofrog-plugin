@@ -23,6 +23,19 @@ class GFError(Exception):
         self.exit_code = exit_code
 
 
+# Hosts that expose the chat a command runs in; GF_SESSION, a name the person chose, wins.
+HOST_SESSIONS = (("T3CODE_THREAD_ID", "t3"), ("CLAUDE_CODE_SESSION_ID", "claude"))
+
+
+def session_from_env():
+    if os.environ.get("GF_SESSION"):
+        return os.environ["GF_SESSION"]
+    for name, host in HOST_SESSIONS:
+        if os.environ.get(name):
+            return "%s:%s" % (host, os.environ[name])
+    return None
+
+
 def actor_from_env(role=None, node=None):
     role = role or os.environ.get("GF_ROLE") or "leader"
     if role not in ROLES:
@@ -30,7 +43,7 @@ def actor_from_env(role=None, node=None):
     return {
         "role": role,
         "node": node or os.environ.get("GF_NODE") or None,
-        "session": os.environ.get("GF_SESSION") or None,
+        "session": session_from_env(),
     }
 
 

@@ -11,7 +11,7 @@ The MCP adapter calls `cli.main` in-process with `--json` for every tool (P6). P
 | `GF_RUN` | Absolute run directory; an optional tool argument `run` overrides it for that call only. |
 | `GF_ROLE` | `leader` by default, or `worker`, `reviewer`, `human`. |
 | `GF_NODE` | Required bound node for worker and reviewer roles. |
-| `GF_SESSION` | Session label recorded in events. |
+| `GF_SESSION` | Session label recorded in events; the host's chat id is recorded when unset. |
 | `GF_HOME` | Optional isolated registry and human-key directory; defaults to `~/.graph-flow`. |
 
 Pass these variables in the MCP host's server environment when starting a session. Tools never accept a `role` or session-identity override. A tool's `node` argument names its target; it does not replace `GF_NODE`. The CLI enforces own-node limits, including a reviewer's access to its target's status. Roles prevent accidental context sharing; they are not a security boundary.
@@ -69,7 +69,7 @@ With `GF_ROLE=leader` and `/work/notes` an existing git repository, send these c
 The first and last server responses have this shape; the intervening `tools/list` response contains the leader's tools and their schemas:
 
 ```jsonl
-{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","serverInfo":{"name":"graph-flow","version":"0.1.1"},"capabilities":{"tools":{}}}}
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","serverInfo":{"name":"graph-flow","version":"0.2.0"},"capabilities":{"tools":{}}}}
 {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\"ok\": true, \"run\": \"/work/notes/.graph-flow/runs/notes-export\"}"}],"isError":false}}
 ```
 
