@@ -59,17 +59,7 @@ def _runs(root):
 
 
 def _snapshot(run_dir):
-    # Transactions record observed stale consent before returning the view.
-    try:
-        with store.transaction(run_dir) as tx:
-            return tx.plan, tx.events, state.derive(tx.plan, tx.events)
-    except core.GFError as exc:
-        if exc.code != "plan_tampered":
-            raise
-        events = store.events(run_dir)
-        derived = state.derive(None, events)
-        derived["run"]["plan_error"] = True
-        return None, events, derived
+    return store.snapshot(run_dir)
 
 
 def _run(project, run):
@@ -272,7 +262,9 @@ def _timeline(nodes, events, lessons, verified_decisions=None, repin_seq=0):
         elif kind == "plan.set":
             add(event, "planned", revision=data.get("revision"),
                 count=len(_mapping(data.get("fingerprints"))), counts=data.get("node_counts"),
-                replaced_unverifiable=bool(data.get("replaced_unverifiable")))
+                replaced_unverifiable=bool(data.get("replaced_unverifiable")),
+                wording_only=bool(data.get("wording_only")),
+                question_wording_changed=data.get("question_wording_changed", []))
         elif kind == "node.assign" and nid:
             assigned[nid] = {k: v for k, v in data.items()
                              if k in ("executor", "model", "effort", "provider") and _text(v)}
@@ -603,6 +595,7 @@ def _view(current, derived, events, project):
                 node_title = title(source["node"])
             view["lessons"].append({"text": constraint["text"], "node_title": node_title})
     view["timeline"] = _timeline(nodes, events, lesson_texts, derived["decisions"], derived["run"].get("repin_seq", 0))
+    view["integrity"] = derived["run"].get("integrity", [])
     view["plan_error"] = derived["run"].get("plan_error", False)
     view["key_mismatch"] = derived["run"].get("key_mismatch", False)
     view["location_mismatch"] = derived["run"].get("location_mismatch", False)
@@ -916,7 +909,7 @@ try {
                     return self._send(200, _evidence(run, query.get("path", [""])[0]), "text/plain; charset=utf-8")
                 current, events, derived = _snapshot(run)
                 result = {"plan": current, "state": derived,
-                          "ready": graph.available(current or {}, derived), "trace": None if derived["run"].get("plan_error") else trace.trace(run),
+                          "ready": graph.available(current or {}, derived), "trace": trace.trace(run),
                           "view": _view(current, derived, events, store.project_of(run))}
                 return self._json(200, result)
             raise _HTTPError(404, "not_found", "unknown route")

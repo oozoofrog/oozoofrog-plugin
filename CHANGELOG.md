@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- `graph-flow`: status, trace, decision listings and dashboard reads retain available records and recovery advice when plan integrity or the event log fails. Dispatch guards and signing, key and move handling are unchanged.
+
+- `graph-flow`: approved wording-only plan revisions retain consent and dispatch. Revision logs identify nodes whose wording feeds later human questions; existing gate questions still supersede and re-ask through the existing gate path. Structural identity exclusions are unchanged.
+
 - `graph-flow`: add read-only human-answer/wait and failing-check measurements to `trace` and MCP, with P1–P12 observations via `trace --conformance`. Trivially successful command checks produce normalization notices; gate verdicts stay unchanged.
 
 - `graph-flow` 0.3.0 release fixes: persist approval supersession after observed moves/evidence changes and every gate re-ask; protect only approvals still in force. Rejected decisions and exhausted holds can be revised, refused starts preserve state, edited submitted files re-ask without spending attempts, stale waits return recovery advice, and key recovery survives moves. Legacy plan consent remains valid after later result edits. The dashboard separates binding decisions from free questions, names all released downstream work, uses consistent state/check counts, gives plain permission refusals, and locks plan approval until graph cards have been seen. Reading fields, fit/clipping hints, answered-card tense and recovery text are corrected in both languages.

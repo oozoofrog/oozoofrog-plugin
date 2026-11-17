@@ -70,17 +70,15 @@ class PlanApprovalTests(unittest.TestCase):
         self.assertEqual(self.call('ready')['ready'], ['a'])
         self.call('brief', 'a'); self.call('start', 'a')
 
-    def test_every_new_revision_requires_consent_unchanged_work_is_preserved(self):
+    def test_wording_revision_reuses_approval_structure_requires_consent(self):
         first = self.set_plan()['decision']; self.accept(first)
         revised = copy.deepcopy(self.raw)
         revised.update(title='새 안내', context={'why': '설명만 바꿨어요'})
         revised['nodes'][0].update(title='안내 정리', summary='읽기 쉽게 정리해요')
         revised['nodes'][0]['checks'][0]['title'] = '내용이 있어요'
         wording = self.set_plan(revised)['decision']
-        self.assertNotEqual(wording, first)
-        self.call('ready', code=4)
-        self.accept(wording)
-        self.call('ready')
+        self.assertEqual(wording, first)
+        self.assertEqual(self.call('ready')['ready'], ['a'])
         revised['nodes'][0]['checks'][0]['run'] = 'test -s guide.txt && test -r guide.txt'
         second = self.set_plan(revised)['decision']
         self.assertNotEqual(first, second)

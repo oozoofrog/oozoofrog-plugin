@@ -143,6 +143,8 @@ const STRINGS = {
     "showAll": "전체 보기",
     "evStarted": "실행 기록을 만들었어요",
     "evPlanned": "계획을 올렸어요",
+    "evWording": "문구를 바꿨어요 · {rev}번째 계획",
+    "evQuestionWording": "질문에 쓰일 문구가 바뀌었어요 · {nodes}",
     "evReplanned": "계획을 바꿨어요 · {rev}번째 계획",
     "evRunning": "{n}번째 시도 중",
     "evSubmitted": "{n}번째 시도 제출 · 검사를 기다려요",
@@ -646,6 +648,8 @@ const STRINGS = {
     "showAll": "Show all",
     "evStarted": "The run record was created",
     "evPlanned": "Plan posted",
+    "evWording": "Wording updated · plan {rev}",
+    "evQuestionWording": "Wording used in a question changed · {nodes}",
     "evReplanned": "Plan changed · revision {rev}",
     "evRunning": "attempt {n} in progress",
     "evSubmitted": "attempt {n} submitted · waiting to be checked",
@@ -1837,6 +1841,7 @@ function rowSentence(r) {
   if (r.kind === 'started') return t('evStarted');
   if (r.kind === 'repinned') return t(r.verified?'evRepinned':'unverifiedAnswer');
   if (r.kind === 'planned' && r.replaced_unverifiable) return t('planReplaced');
+  if (r.kind === 'planned' && r.wording_only) return t('evWording',{rev:r.revision}) + (r.question_wording_changed?.length ? ' · ' + t('evQuestionWording',{nodes:r.question_wording_changed.map(n=>n.title+' ('+n.node+')').join(', ')}) : '');
   if (r.kind === 'planned') return (r.replaced_unverifiable ? t('planReplaced') : r.revision > 1 ? t('evReplanned', {rev:r.revision}) : t('evPlanned')) + ' · ' + (r.counts ? planCounts(r.counts,language) : t('planItems',{n:r.count}));
   if (r.kind === 'final') return r.result === 'passed' ? t('evFinalPassed') : [t('evFinalFailed'), ...(r.failed || [])].join(' · ');
   if (r.kind === 'learned') return `${t('evLearned')} · ${r.text}`;

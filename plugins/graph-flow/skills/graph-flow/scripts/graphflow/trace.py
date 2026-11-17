@@ -13,9 +13,7 @@ def _duration(first, last):
 
 
 def trace(run_dir):
-    with store.transaction(run_dir) as tx:
-        current, events = tx.plan, tx.events
-        derived = state.derive(current, events)
+    current, events, derived = store.snapshot(run_dir)
     summary = {"nodes": 0, "passed": 0, "attempts": 0, "rejections": 0,
                "duration_ms": None}
     result = {"run": summary, "nodes": {}, "human": human_metrics(events, derived),

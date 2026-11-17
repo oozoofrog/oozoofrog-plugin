@@ -516,6 +516,7 @@ class ServerTests(unittest.TestCase):
         self.assertTrue(all(v is None for v in data["view"].pop("plan_approval").values()))
         data["view"].pop("recovery_identity")
         self.assertEqual(data["view"].pop("run_contract"), {})
+        self.assertEqual(data["view"].pop("integrity"), [])
         self.assertEqual(data["view"], {"title": "", "summary": "", "context": {}, "requirements": [], "language": "en", "nodes": [], "edges": [], "decisions": [], "answered": [],
                                       "lessons": [], "stale_decisions": [], "complete": False, "run": "empty",
                                       "plan_counts": {"work": 0, "review": 0, "decision": 0, "checks": 0, "decisions": 0},
@@ -594,7 +595,7 @@ class ServerTests(unittest.TestCase):
         view = data["view"]
         self.assertEqual(set(view), {"title", "summary", "context", "requirements", "language", "nodes", "edges", "decisions", "answered", "lessons", "counts", "complete",
                                      "run", "project", "timeline", "plan_approval", "plan_counts", "plan_error", "key_mismatch", "location_mismatch", "has_work",
-                                 "goal", "planned_questions", "integration_checks", "promoted_checks", "superseded", "constraints", "key_recovery", "legacy", "replaced_unverifiable", "stale_decisions", "recovery_identity", "run_contract"})
+                                 "goal", "planned_questions", "integration_checks", "promoted_checks", "superseded", "constraints", "key_recovery", "legacy", "replaced_unverifiable", "stale_decisions", "recovery_identity", "run_contract", "integrity"})
         self.assertEqual(view["title"], raw["title"])
         self.assertFalse(view["complete"])
         self.assertEqual([n["id"] for n in view["nodes"]], [n["id"] for n in current["nodes"]])

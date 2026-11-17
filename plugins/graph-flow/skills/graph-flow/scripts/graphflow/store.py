@@ -414,3 +414,34 @@ def transaction(run_dir, timeout_s=LOCK_TIMEOUT_S, replace_invalid=False):
             tx._commit()
         yield tx
         tx._commit()
+
+
+def snapshot(run_dir):
+    """Read available records without treating an unverifiable plan as executable."""
+    from . import state
+    try:
+        with transaction(run_dir, replace_invalid=True) as tx:
+            derived = state.derive(tx.plan, tx.events)
+            if tx.plan_error:
+                derived["run"]["plan_error"] = True
+            problems = []
+            if derived["run"].get("plan_error"):
+                problems.append({"code": "plan_tampered", "recovery":
+                    "Re-post the plan with gf plan set <file> for approval."})
+            if derived["run"].get("location_mismatch"):
+                problems.append({"code": "project_moved", "recovery":
+                    "Re-post the plan with gf plan set <file> for approval."})
+            if derived["run"].get("key_mismatch"):
+                problems.append({"code": "human_key_mismatch", "recovery": state.key_recovery(derived["run"])})
+            if problems:
+                derived["run"]["integrity"] = problems
+            return tx.plan, tx.events, derived
+    except GFError as exc:
+        if exc.code not in ("log_sequence", "log_corrupt"):
+            raise
+        events = EventLog([], run_dir)
+        derived = state.derive(None, events)
+        derived["run"]["plan_error"] = True
+        derived["run"]["integrity"] = [{"code": exc.code, "message": exc.message,
+            "recovery": "Restore an intact events.jsonl from backup; the damaged log cannot be replayed."}]
+        return None, events, derived

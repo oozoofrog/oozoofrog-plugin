@@ -304,7 +304,8 @@ def derive(plan, events):
                 run_id = d["run_id"]
 
         elif t == "plan.set":
-            identity_revision_seq = seq
+            if not d.get("approval_reused") or d.get("plan_identity") != current_identity:
+                identity_revision_seq = seq
             current_identity = d.get("plan_identity")
             last_reset_seq = max(last_reset_seq, seq)
             if d.get("revision") is not None:

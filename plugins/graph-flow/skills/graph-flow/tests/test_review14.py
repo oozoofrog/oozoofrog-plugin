@@ -47,7 +47,7 @@ class ApprovalScopeTests(unittest.TestCase):
                 self.file.write_text(json.dumps(raw))
                 self.assertEqual(self.call('plan','set',str(self.file),code=4)['code'],'active_plan_change')
         self.raw['title']='Reworded plan'
-        self.accept(self.set_plan()['decision'])
+        self.set_plan()
         view=self.view();q=next(q for q in view['planned_questions'] if q['node']=='q')
         self.assertTrue(q['answered']);self.assertEqual(q['answer'],'확인했어요')
         self.assertEqual(view['plan_counts']['decisions'],0)

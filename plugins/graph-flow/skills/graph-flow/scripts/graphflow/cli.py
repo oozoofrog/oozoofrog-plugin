@@ -87,22 +87,26 @@ def _set_plan(args, actor):
                             if decision_nodes else "Reopen the completed review with gf reopen <review> --reason <reason>, then re-post the revised target plan: "
                             if reviews else "Keep completed/running contracts; add a new node instead: ")
                 raise core.GFError("active_plan_change", recovery + ", ".join(protected), core.EXIT_STATE)
-        reuse = (not tx.plan_error and not prior["run"].get("location_mismatch") and approval and normalized == tx.plan and approval.get("plan_identity") == identity
-                 and (approval["status"] == "open" or
+        reuse = (not tx.plan_error and not prior["run"].get("location_mismatch") and approval and approval.get("plan_identity") == identity
+                 and (approval["status"] == "open" and normalized == tx.plan or
                       approval["status"] == "answered" and approval.get("verified")
                       and approval["outcome"] == "approved"))
         ids = [c["id"] for c in normalized["constraints"]]
-        if reuse:
+        if reuse and normalized == tx.plan:
             result = {"revision": tx.revision, "nodes": len(normalized["nodes"]), "decision": approval["id"],
                       "notices": len(notices), "normalization_notices": notices, "constraints_applied": ids}
             if approval["status"] == "open":
                 _show(args, result, approval["id"])
             return result
+        wording_only = bool(tx.plan and state.plan_identity(tx.plan) == identity and normalized != tx.plan)
+        question_wording = plan.question_wording_changes(tx.plan, normalized) if wording_only else []
         revision, sha = tx.write_plan(normalized)
         tx.append("plan.set", {"revision": revision, "plan_sha256": sha,
                                "plan_identity": identity, "plan_title": normalized.get("title") or normalized.get("goal"), "node_counts": plan.node_counts(normalized["nodes"]),
                                "fingerprints": {n["id"]: state.fingerprint(n, normalized) for n in normalized["nodes"]},
-                               "constraints_applied": ids, "replaced_unverifiable": tx.plan_error}, actor)
+                               "constraints_applied": ids, "replaced_unverifiable": tx.plan_error,
+                               "wording_only": wording_only, "approval_reused": approval["id"] if reuse else None,
+                               "question_wording_changed": question_wording}, actor)
         tx.append("constraint.apply", {"ids": ids}, actor)
         if not reuse:
             for previous in prior["decisions"].values():
@@ -151,9 +155,9 @@ def _runs(args):
             continue
         entry = {"id": path.name, "run": str(path)}
         try:
-            with store.transaction(path) as tx:
-                derived = state.derive(tx.plan, tx.events)
-            entry.update(status=derived["run"]["status"], last_event=tx.events[-1]["ts"] if tx.events else None,
+            _, events, derived = store.snapshot(path)
+            entry.update(integrity=derived["run"].get("integrity", []),
+                         status=derived["run"]["status"], last_event=events[-1]["ts"] if events else None,
                          open_decisions=[d["id"] for d in decisions.open_decisions(derived)])
         except core.GFError as exc:
             entry["error"] = exc.message
@@ -165,10 +169,11 @@ def _runs(args):
 def _status(args, actor):
     if not args.run:
         return _runs(args)
-    with store.transaction(args.run) as tx:
-        current_plan = tx.plan
-        derived = state.derive(current_plan, tx.events)
+    current_plan, _, derived = store.snapshot(args.run)
     role, own = actor["role"], actor["node"]
+    if derived["run"].get("plan_error"):
+        visible = derived if role not in ("worker", "reviewer") else {"run": derived["run"], "nodes": {}}
+        return {"state": visible, "ready": [], "integrity": derived["run"].get("integrity", [])}
     if role in ("worker", "reviewer"):
         plan.node_by_id(current_plan, own)
         if role == "worker":
@@ -331,9 +336,10 @@ def _loop(args, actor):
         # How to put this question in front of the person (leader.md).
         return _show(args, asked, asked["id"])
     if path == ("decide", "list"):
-        _, derived = _snapshot(args.run)
+        _, _, derived = store.snapshot(args.run)
         own = actor["node"] if actor["role"] in ("worker", "reviewer") else None
-        return {"decisions": decisions.open_decisions(derived, own)}
+        return {"decisions": decisions.open_decisions(derived, own),
+                "integrity": derived["run"].get("integrity", [])}
     if path == ("decide", "wait"):
         if actor["role"] in ("worker", "reviewer"):
             _, derived = _snapshot(args.run)

@@ -440,3 +440,26 @@ def node_contract(node):
         contract["isolation"] = "shared or worktree, selected at assignment"
         contract["merge"] = "committed submissions must be merged into project HEAD; merge --no-ff"
     return contract
+
+
+def question_wording_changes(previous, current):
+    """Identify presentation fields that feed a later human question."""
+    before = node_index(previous)
+    changed = []
+    for node in current["nodes"]:
+        old = before[node["id"]]
+        fields = []
+        if node["kind"] == "decision" and old.get("context", {}) != node.get("context", {}):
+            fields.append("context")
+        old_checks = {c["id"]: c for c in old.get("checks", [])}
+        for check in node.get("checks", []):
+            if check["type"] != "human":
+                continue
+            prior = old_checks[check["id"]]
+            if not check.get("prompt") and (prior.get("title") or old["goal"]) != (check.get("title") or node["goal"]):
+                fields.append("checks.%s.title" % check["id"])
+            if prior.get("context", {}) != check.get("context", {}):
+                fields.append("checks.%s.context" % check["id"])
+        if fields:
+            changed.append({"node": node["id"], "title": node.get("title") or node["goal"], "fields": fields})
+    return changed

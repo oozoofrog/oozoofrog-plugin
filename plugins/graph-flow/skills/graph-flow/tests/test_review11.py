@@ -196,10 +196,11 @@ class Review11Tests(unittest.TestCase):
         last=copy.deepcopy(next(e for e in store.events(self.run) if e['type']=='plan.set'))
         last['seq']=2
         self.rewrite(lambda es:es.append(last))
-        for read in (store.events,store.read_plan,server._snapshot):
+        for read in (store.events,store.read_plan):
             with self.assertRaises(core.GFError) as caught:read(self.run)
             self.assertEqual(caught.exception.code,'log_sequence');self.assertIn('line ',caught.exception.message)
-        self.assertEqual(self.call('status',code=4)['code'],'log_sequence')
+        self.assertEqual(server._snapshot(self.run)[2]['run']['integrity'][0]['code'], 'log_sequence')
+        self.assertEqual(self.call('status')['integrity'][0]['code'], 'log_sequence')
         self.assertEqual(self.call('gate','a',code=4)['code'],'log_sequence')
 
     def test_a11_docs_state_unsigned_execution_and_cwd(self):

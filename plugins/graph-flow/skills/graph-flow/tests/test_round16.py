@@ -11,6 +11,7 @@ from unittest import mock
 import test_plan_approval as fixture
 from graphflow import checks, cli, core, gate, mcp, plan, server, state, store, trace
 from human_support import human_answer
+from test_review11 import NODE
 
 CAPTURE = os.environ.get('ROUND16_CAPTURE')
 
@@ -125,3 +126,156 @@ class MetricsTests(unittest.TestCase):
                 self.assertEqual(len(notices), int(index < 5))
                 result = self.set_plan()
                 self.assertEqual(result['normalization_notices'], notices)
+
+
+class WordingTests(unittest.TestCase):
+    setUp = fixture.PlanApprovalTests.setUp
+    call = fixture.PlanApprovalTests.call
+    set_plan = fixture.PlanApprovalTests.set_plan
+    snapshot = fixture.PlanApprovalTests.snapshot
+    accept = fixture.PlanApprovalTests.accept
+
+    def test_wording_reuses_approval_updates_dashboard_and_logs_future_question(self):
+        self.raw['nodes'][0]['checks'].append({'id': 'human', 'type': 'human', 'title': 'Accept draft?', 'context': {'why': 'Draft'}})
+        self.raw['nodes'].append({'id': 'q', 'kind': 'decision', 'lane': 1, 'goal': 'Choose',
+                                 'question': 'Which format?', 'decision_kind': 'direction'})
+        approval = self.set_plan()['decision']; self.accept(approval)
+        old_plan, _ = self.snapshot()
+        self.raw['nodes'][0]['checks'][-1].update(title='Accept final draft?', context={'why': 'Updated draft'})
+        self.raw['nodes'][1]['context'] = {'why': 'Choose final format'}
+        self.raw['nodes'][0]['title'] = '새 안내 쓰기'
+        self.raw['nodes'].reverse()
+        before = store.events(self.run)
+        result = self.set_plan()
+        self.assertEqual(result['decision'], approval)
+        self.assertEqual(result['revision'], 2)
+        self.assertNotIn('show', result)
+        current, derived = self.snapshot()
+        self.assertEqual(state.plan_identity(old_plan), state.plan_identity(current))
+        self.assertEqual({e['type'] for e in store.events(self.run)[len(before):]}, {'plan.set', 'constraint.apply'})
+        self.call('ready')
+        view = server._view(current, derived, store.events(self.run), self.project.resolve())
+        self.assertEqual(next(n for n in view['nodes'] if n['id'] == 'a')['title'], '새 안내 쓰기')
+        row = [r for r in view['timeline'] if r['kind'] == 'planned'][-1]
+        self.assertTrue(row['wording_only'])
+        self.assertEqual({r['node']: r['fields'] for r in row['question_wording_changed']},
+                         {'a': ['checks.human.title', 'checks.human.context'], 'q': ['context']})
+        # Execute the existing JS log renderer to check the visible revision line.
+        import subprocess
+        if not NODE:
+            self.skipTest("Node.js unavailable for dashboard log renderer")
+        source = (Path(__file__).parents[1] / 'scripts/graphflow/page.js').read_text()
+        prelude = source[:source.index("if (typeof document !== 'undefined')")]
+        translate = next(line for line in source.splitlines() if line.startswith('const t = '))
+        renderer = 'function rowSentence' + source.split('function rowSentence', 1)[1].split('function rowTone', 1)[0]
+        script = prelude + '\nlet language="ko";\n' + translate + '\n' + renderer + '\nconsole.log(rowSentence('+json.dumps(row, ensure_ascii=False)+'));'
+        rendered = subprocess.run([NODE, '--input-type=module', '-e', script], text=True, capture_output=True, check=True).stdout
+        self.assertIn('질문에 쓰일 문구가 바뀌었어요', rendered)
+        self.assertIn('(a)', rendered); self.assertIn('(q)', rendered)
+
+    def test_explicit_prompt_title_is_only_a_label(self):
+        self.raw['nodes'][0]['checks'].append({'id': 'human', 'type': 'human', 'title': 'Label', 'prompt': 'Accept?'})
+        approval = self.set_plan()['decision']; self.accept(approval)
+        self.raw['nodes'][0]['checks'][-1]['title'] = 'New label'
+        self.assertEqual(self.set_plan()['decision'], approval)
+        event = next(e for e in reversed(store.events(self.run)) if e['type'] == 'plan.set')
+        self.assertEqual(event['data']['question_wording_changed'], [])
+        self.call('ready')
+
+    def test_open_and_answered_gate_questions_keep_text_then_supersede_at_gate(self):
+        for purpose in ('human_title', 'human_context', 'decision_context'):
+            for answered in (False, True):
+                with self.subTest(purpose=purpose, answered=answered):
+                    self.run = store.init_run(self.project, purpose + str(int(answered)), {'role': 'leader'})
+                    if purpose == 'decision_context':
+                        self.raw['nodes'] = [{'id': 'q', 'kind': 'decision', 'lane': 1, 'goal': 'Choose',
+                                              'question': 'Choose format?', 'decision_kind': 'authorization'}]
+                        node = 'q'
+                    else:
+                        self.raw['nodes'] = [{'id': 'a', 'kind': 'work', 'lane': 1, 'grade': 'daily', 'goal': 'Draft',
+                            'owns': ['guide.txt'], 'checks': [{'id': 'cmd', 'type': 'cmd', 'run': 'true'},
+                            {'id': 'human', 'type': 'human', 'title': 'Accept draft?'}]}]
+                        node = 'a'
+                    approval = self.set_plan()['decision']; self.accept(approval)
+                    if node == 'a':
+                        self.call('start', 'a'); self.call('submit', 'a')
+                    old = self.call('gate', node, code=1)['asks'][0]
+                    if answered: self.accept(old)
+                    old_decision = copy.deepcopy(self.snapshot()[1]['decisions'][old])
+                    if purpose == 'human_title': self.raw['nodes'][0]['checks'][-1]['title'] = 'Accept published draft?'
+                    elif purpose == 'human_context': self.raw['nodes'][0]['checks'][-1]['context'] = {'why': 'Publication'}
+                    else: self.raw['nodes'][0]['context'] = {'why': 'Publication'}
+                    self.assertEqual(self.set_plan()['decision'], approval)
+                    retained = self.snapshot()[1]['decisions'][old]
+                    self.assertEqual(retained['question'], old_decision['question'])
+                    self.assertEqual(retained['evidence'], old_decision['evidence'])
+                    new = self.call('gate', node, code=1)['asks'][0]
+                    self.assertNotEqual(new, old)
+                    decisions = self.snapshot()[1]['decisions']
+                    self.assertEqual(decisions[old]['status'], 'superseded')
+                    self.assertEqual(decisions[new]['status'], 'open')
+                    self.assertEqual([e['data']['reason'] for e in store.events(self.run)
+                        if e['type'] == 'decision.superseded' and e['data']['id'] == old], ['evidence_changed'])
+
+
+class IntegrityReadTests(unittest.TestCase):
+    setUp = fixture.PlanApprovalTests.setUp
+    call = fixture.PlanApprovalTests.call
+    set_plan = fixture.PlanApprovalTests.set_plan
+    snapshot = fixture.PlanApprovalTests.snapshot
+    accept = fixture.PlanApprovalTests.accept
+
+    def test_plan_tamper_reads_work_dispatch_refuses_and_repost_recovers(self):
+        self.accept(self.set_plan()['decision'])
+        damaged = self.run / 'plans/0001.json'
+        damaged.write_text('{invalid')
+        before = (self.run / 'events.jsonl').read_bytes()
+        for command in [('status',), ('trace', '--conformance'), ('decide', 'list')]:
+            result = self.call(*command)
+            self.assertEqual(result['integrity'][0]['code'], 'plan_tampered')
+            self.assertIn('gf plan set <file>', result['integrity'][0]['recovery'])
+        for name in ('run_status', 'run_trace', 'decision_list'):
+            result = mcp._call(mcp.TOOLS[name], {'run': str(self.run)})
+            self.assertFalse(result['isError'], result)
+            self.assertIn('plan_tampered', result['content'][0]['text'])
+        for command in [('ready',), ('route', 'a'), ('start', 'a'), ('gate', 'a'), ('gate', '--final')]:
+            self.assertEqual(self.call(*command, code=4)['code'], 'plan_tampered')
+        self.assertEqual((self.run / 'events.jsonl').read_bytes(), before)
+        # Use the real HTTP handler, with resolved registry paths on macOS.
+        import http.client
+        import threading
+        from urllib.parse import urlencode
+        httpd, token = server.make_server()
+        thread = threading.Thread(target=httpd.serve_forever, kwargs={'poll_interval': .01})
+        thread.start()
+        try:
+            connection = http.client.HTTPConnection('127.0.0.1', httpd.server_address[1], timeout=5)
+            try:
+                connection.request('GET', '/api/run?' + urlencode({'project': str(self.project.resolve()), 'run': self.run.name}), headers={'X-GF-Token': token})
+                response = connection.getresponse()
+                result = json.loads(response.read())
+                self.assertEqual(response.status, 200, result)
+                self.assertTrue(result['view']['plan_error'])
+                self.assertEqual(result['view']['integrity'][0]['code'], 'plan_tampered')
+                self.assertIn('gf plan set', result['trace']['integrity'][0]['recovery'])
+            finally: connection.close()
+        finally:
+            httpd.shutdown(); httpd.server_close(); thread.join(5)
+        self.assertFalse(thread.is_alive())
+        new = self.set_plan()['decision']; self.accept(new)
+        self.call('ready')
+
+    def test_damaged_log_reads_report_unavailable_metrics_without_repairing(self):
+        self.set_plan()
+        logfile = self.run / 'events.jsonl'
+        original = logfile.read_bytes()
+        for code, content in [('log_corrupt', b'not json\n{}\n'), ('log_sequence', b'{"seq":7}\n')]:
+            with self.subTest(code=code):
+                logfile.write_bytes(content)
+                for command in [('status',), ('trace', '--conformance'), ('decide', 'list')]:
+                    self.assertEqual(self.call(*command)['integrity'][0]['code'], code)
+                result = self.call('trace', '--conformance')
+                self.assertTrue(all(p['observation'] == 'not measurable from records' for p in result['conformance'].values()))
+                self.assertEqual(server._snapshot(self.run)[2]['run']['integrity'][0]['code'], code)
+                self.assertEqual(logfile.read_bytes(), content)
+        logfile.write_bytes(original)
