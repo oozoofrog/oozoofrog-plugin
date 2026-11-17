@@ -63,7 +63,7 @@ assert.equal(offscreenDirection({x:401,y:20,width:100,height:20},500,300),'offRi
 assert.equal(offscreenDirection({x:400,y:20,width:100,height:20},500,300),null);
 assert(detailCardHeight({})<detailCardHeight({planned_checks:[{}],deliverables:['a']}));
 assert.equal(displayState({status:'submitted',preapproval_submission:true}),'preapprovalSubmitted');
-assert.equal(statusGlyph('preapprovalSubmitted'),'○');
+assert.equal(statusGlyph('preapprovalSubmitted'),'⇥');
 """ % json.dumps(url)
         result=subprocess.run([NODE,'--input-type=module','-e',code],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr[-2000:])

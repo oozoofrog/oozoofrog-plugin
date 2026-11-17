@@ -13,14 +13,14 @@ def _duration(first, last):
 
 
 def trace(run_dir):
-    current = store.read_plan(run_dir)
-    events = store.events(run_dir)
+    with store.transaction(run_dir) as tx:
+        current, events = tx.plan, tx.events
+        derived = state.derive(current, events)
     summary = {"nodes": 0, "passed": 0, "attempts": 0, "rejections": 0,
                "duration_ms": None}
     result = {"run": summary, "nodes": {}}
     if current is None:
         return result
-    derived = state.derive(current, events)
     init = next((e["ts"] for e in events if e["type"] == "run.init"), None)
     if len(events) >= 2:
         summary["duration_ms"] = _duration(init, events[-1]["ts"])

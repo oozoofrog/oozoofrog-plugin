@@ -402,5 +402,15 @@ def transaction(run_dir, timeout_s=LOCK_TIMEOUT_S, replace_invalid=False):
         raise GFError("no_run", "not a run directory: %s" % run_dir, EXIT_STATE)
     with locked(run_dir / ".lock", timeout_s):
         tx = Transaction(run_dir, *_read_log(run_dir), replace_invalid=replace_invalid)
+        # Observed invalidation is durable even if the requested action is refused.
+        # It never changes the node, submission, or pending replacement question.
+        if tx.plan and not tx.plan_error:
+            from . import state
+            derived = state.derive(tx.plan, tx.events)
+            for decision in derived["decisions"].values():
+                if decision["status"] != "superseded" and decision.get("stale_reason") in ("project_moved", "evidence_changed"):
+                    tx.append("decision.superseded", {"id": decision["id"], "reason": decision["stale_reason"]},
+                              {"role": "tool", "node": decision.get("node"), "session": None})
+            tx._commit()
         yield tx
         tx._commit()

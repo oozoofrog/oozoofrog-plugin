@@ -20,7 +20,7 @@ class Browser14Tests(unittest.TestCase):
     call = fixture.PlanApprovalTests.call
     set_plan = fixture.PlanApprovalTests.set_plan
 
-    def test_b1_b9_first_fit_selection_and_polling(self):
+    def test_b1_b9_and_round15_b4_b5_fit_reading_selection_and_polling(self):
         dependencies = [[], [0], [0], [1], [1], [1], [2], [2], [], [6, 7], [3, 4], [9, 10, 8]]
         self.raw['nodes'] = []
         for i, needs in enumerate(dependencies):

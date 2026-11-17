@@ -35,6 +35,20 @@ try {
   assert.deepEqual(await position(),before,'polling keeps the selected view');
   assert.equal(await evaluate('document.activeElement.id'),focus);
   assert.equal(await evaluate("document.querySelector('#panel').scrollTop"),scroll);
+  await evaluate(`[...document.querySelectorAll('.map-toolbar button')].find(b=>b.textContent==='화면에 맞추기').click()`);await delay(150);
+  assert(await evaluate(`(()=>{const v=document.querySelector('.map-viewport').getBoundingClientRect();return [...document.querySelectorAll('#map .node-card')].every(e=>{const r=e.getBoundingClientRect();return r.left>=v.left-.5&&r.right<=v.right+.5&&r.top>=v.top-.5&&r.bottom<=v.bottom+.5;});})()`),'fit with side panel contains every complete card');
+  await evaluate(`document.querySelector('#accessible').open=true`);await delay(100);
+  assert(await evaluate(`document.querySelector('.plan-actions button.primary').disabled`),'list view cannot approve');
+  await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
+  await send('Page.navigate',{url:config.url+'#'+new URLSearchParams({project:config.project,run:config.run})});
+  for(let i=0;i<80;i++){if(await evaluate(`document.querySelectorAll('#phone-flow .node-card').length===13`))break;await delay(100);}
+  assert(await evaluate(`document.querySelector('.plan-actions button.primary').disabled`),'phone starts locked');
+  assert(await evaluate(`!!document.querySelector('.plan-actions .action-hint').textContent`),'lock has a visible reason');
+  const bottom=await evaluate('document.documentElement.scrollHeight');
+  for(let y=0;y<bottom;y+=120){await evaluate(`window.scrollTo(0,${y})`);await delay(50);}
+  assert(await evaluate(`!document.querySelector('.plan-actions button.primary').disabled`),'reading all phone cards unlocks approval');
+  await evaluate(`document.querySelector('#phone-flow [data-node="n0"] .node-header').click()`);await delay(100);
+  assert(await evaluate(`document.querySelector('.plan-actions button.primary').disabled`),'detail overlay cannot approve');
   assert.deepEqual(errors,[]);
 } finally {
   ws?.close();

@@ -88,6 +88,12 @@ def wait(run_dir, decision_id, timeout_s):
             decision = state.derive(tx.plan, tx.events)["decisions"].get(decision_id)
         if decision is None:
             raise core.GFError("unknown_decision", "unknown decision: %s" % decision_id, core.EXIT_STATE)
+        if decision.get("stale"):
+            return dict(decision, message="This question is no longer usable (%s). %s" % (
+                decision.get("stale_reason", "superseded"),
+                "Re-post the plan for approval." if decision.get("purpose") == "plan_approval" else
+                "Run the gate again to ask about current evidence." if decision.get("issuer") == "gate" else
+                "Ask a fresh question with gf decide ask."))
         if decision["status"] in ("answered", "superseded"):
             return decision
         remaining = deadline - time.monotonic()

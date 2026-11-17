@@ -174,4 +174,4 @@ class ApprovalIntegrityTests(unittest.TestCase):
         self.assertEqual(v['integration_checks'][0]['command'],'test -s guide.txt')
         self.assertEqual(node['inputs'],[])
         self.assertEqual(v['planned_questions'],[{'node':'a','kind':'review','question':'순서를 읽어 주세요','when':'after_work'}])
-        self.assertEqual(v['plan_counts'],{'work':1,'review':1,'decision':0,'checks':5,'decisions':1})
+        self.assertEqual(v['plan_counts'],{'work':1,'review':1,'decision':0,'checks':4,'decisions':1})

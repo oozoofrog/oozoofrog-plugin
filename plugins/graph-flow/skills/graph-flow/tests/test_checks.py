@@ -236,21 +236,18 @@ class StartTests(ChecksCase):
         self.submit()
         self.error("shared_busy", self.start, "second")
 
-    def test_attempts_exhausted_records_r2_once(self):
+    def test_attempts_exhausted_refusal_does_not_write_state(self):
         self.set_plan([work(max_attempts=1)])
         self.start()
         sub = self.submit()
         self.append("gate.verdict", {"node": "work", "attempt": 1, "submission": sub["id"],
                                     "verdict": "reject", "rule": "R1", "rejection": None})
+        before = (self.run / "events.jsonl").read_bytes()
         exc = self.error("attempts_exhausted", self.start)
         self.assertEqual(exc.exit_code, core.EXIT_STATE)
-        expected = {"node": "work", "attempt": 1, "submission": None, "verdict": "replan",
-                    "rule": "R2", "rejection": None, "tested_head": None}
-        self.assertEqual(self.results("gate.verdict")[-1]["data"], expected)
-        self.assertEqual(self.status()["status"], "replan")
-        count = len(store.events(self.run))
-        self.error("attempts_exhausted", self.start)
-        self.assertEqual(len(store.events(self.run)), count)
+        self.assertEqual((self.run / "events.jsonl").read_bytes(), before)
+        self.assertEqual(self.status()["status"], "rejected")
+        self.assertIn("max_attempts", exc.message)
 
     def test_git_queries_outside_lock(self):
         original = checks._git

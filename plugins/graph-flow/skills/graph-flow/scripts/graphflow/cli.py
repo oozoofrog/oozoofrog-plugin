@@ -74,11 +74,19 @@ def _set_plan(args, actor):
             protected = [nid for nid, st in prior["nodes"].items()
                          if (st["status"] in ("running", "submitted", "passed") or any(
                              d.get("issuer") == "gate" and d.get("node") == nid and d.get("status") == "answered"
-                             and not d.get("stale") for d in prior["decisions"].values()))
+                             and d.get("outcome") == "approved" and d.get("verified") and not d.get("stale")
+                             and d.get("submission") == (st.get("submission") or {}).get("id")
+                             for d in prior["decisions"].values()))
                          and (nid in changed or deps[nid] & changed)]
             if protected:
-                raise core.GFError("active_plan_change", "Keep completed/running contracts; add new work instead: "
-                                   + ", ".join(protected), core.EXIT_STATE)
+                decision_nodes = [nid for nid in protected if old_nodes[nid]["kind"] == "decision"]
+                reviews = [nid for nid in protected if old_nodes[nid]["kind"] == "review"
+                           and prior["nodes"].get(old_nodes[nid].get("target"), {}).get("status") != "passed"
+                           and prior["nodes"][nid]["status"] == "passed"]
+                recovery = ("Gate the approved decision node, then gf reopen <decision> --reason <reason> before revising its released work: "
+                            if decision_nodes else "Reopen the completed review with gf reopen <review> --reason <reason>, then re-post the revised target plan: "
+                            if reviews else "Keep completed/running contracts; add a new node instead: ")
+                raise core.GFError("active_plan_change", recovery + ", ".join(protected), core.EXIT_STATE)
         reuse = (not tx.plan_error and not prior["run"].get("location_mismatch") and approval and normalized == tx.plan and approval.get("plan_identity") == identity
                  and (approval["status"] == "open" or
                       approval["status"] == "answered" and approval.get("verified")

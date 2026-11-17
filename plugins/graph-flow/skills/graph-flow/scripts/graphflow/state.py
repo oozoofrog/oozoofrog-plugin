@@ -222,13 +222,20 @@ def decision_identity(decision):
             "artifact_hashes": decision.get("artifact_hashes") or {}}
 
 
-def require_submission_binding(derived, node_id):
+def require_submission_binding(derived, node_id, refresh=False):
     sub = (derived["nodes"].get(node_id) or {}).get("submission") or {}
     for dec in derived["decisions"].values():
-        if (dec.get("issuer") == "gate" and not dec.get("stale") and dec.get("status") == "answered" and dec.get("node") == node_id and dec.get("submission") == sub.get("id")
+        if (dec.get("issuer") == "gate" and (not dec.get("stale") or dec.get("stale_reason") == "evidence_changed") and dec.get("outcome") is not None and dec.get("node") == node_id and dec.get("submission") == sub.get("id")
                 and dec.get("purpose") in ("human_check", "lane3", "trajectory", "hold")
-                and (dec.get("binding_changed") or dec.get("status") == "answered" and not dec.get("verified"))):
-            raise core.GFError("approval_changed", "The submission commit or evidence differs from the human approval. Submit again for review.", core.EXIT_STATE)
+                and (dec.get("stale_reason") == "evidence_changed" or dec.get("binding_changed") or dec.get("status") == "answered" and not dec.get("verified"))):
+            if refresh and dec.get("stale_reason") == "evidence_changed":
+                continue
+            newer = any(d.get("node") == node_id and d.get("purpose") == dec.get("purpose")
+                        and d.get("check") == dec.get("check") and d["seq"] > dec["seq"]
+                        and d.get("verified") and not d.get("stale") and d.get("outcome") == "approved"
+                        for d in derived["decisions"].values())
+            if not newer:
+                raise core.GFError("approval_changed", "The submission or evidence differs from the human approval. Run the gate again to request current evidence approval; if the signed record was altered, restore the intact record first.", core.EXIT_STATE)
 
 
 def derive(plan, events):
@@ -256,7 +263,7 @@ def derive(plan, events):
     for e in events:
         d = _data(e)
         if e.get("type") == "human.repin" and d.get("run_nonce") and d.get("human_key_sha256") == core.key_fingerprint():
-            expected = core.human_sig(e.get("run"), "human.repin", "repinned", "", dict(d, location=actual_location)) if actual_location else None
+            expected = core.human_sig(e.get("run"), "human.repin", "repinned", "", d) if d.get("location") else None
             if expected and hmac.compare_digest(expected, str(d.get("sig", ""))):
                 repins.append(e)
     pinned_key = next((_data(e).get("human_key_sha256") for e in events
@@ -462,6 +469,8 @@ def derive(plan, events):
             if dec is not None:
                 dec["status"] = "superseded"
                 dec["stale"] = True
+                if d.get("reason"):
+                    dec["stale_reason"] = d["reason"]
 
         elif t == "decision.answer":
             dec = decisions.get(d.get("id"))
@@ -492,12 +501,12 @@ def derive(plan, events):
                     expected.encode("utf-8"), sig.encode("utf-8"))
         nid = dec["node"]
         if nid is None:
-            if run_dir is not None and not dec["legacy_binding"] and dec.get("artifact_hashes") != artifact_hashes(run_dir, dec.get("evidence")):
+            if not (dec.get("purpose") == "plan_approval" and dec["status"] == "answered") and run_dir is not None and not dec["legacy_binding"] and dec.get("artifact_hashes") != artifact_hashes(run_dir, dec.get("evidence")):
                 dec["binding_changed"] = True
-                dec["verified"] = False
-                if dec["status"] == "open":
+                if dec["status"] == "open" or dec["verified"]:
                     dec["stale"] = True
                     dec["stale_reason"] = "evidence_changed"
+                dec["verified"] = False
             continue
         a = node_acc(nid)
         if a is None:
@@ -508,10 +517,10 @@ def derive(plan, events):
                 dec["binding_changed"] = (dec.get("submission_binding") != submission_binding(sub)
                     or dec.get("artifact_hashes") != artifact_hashes(run_dir, dec.get("evidence"), sub))
                 if dec["binding_changed"]:
-                    dec["verified"] = False
-                    if dec["status"] == "open":
+                    if (dec["status"] == "open" or dec["verified"]) and dec.get("submission_binding") == submission_binding(sub):
                         dec["stale"] = True
                         dec["stale_reason"] = "evidence_changed"
+                    dec["verified"] = False
             dec["stale"] = dec["stale"] or (a["basis"] >= dec["seq"]
                             or (dec["submission"] is not None
                                 and dec["submission"] != _sub_id(a)))
@@ -529,6 +538,16 @@ def derive(plan, events):
             if dec is not latest:
                 dec["stale"] = True
                 dec["status"] = "superseded"
+    latest_gate = {}
+    for dec in decisions.values():
+        if dec.get("issuer") == "gate":
+            key = (dec.get("node"), dec.get("purpose"), dec.get("check"))
+            previous = latest_gate.get(key)
+            if previous:
+                previous["stale"] = True
+                previous["status"] = "superseded"
+            latest_gate[key] = dec
+
     location_mismatch = bool(actual_location and any(
         d.get("recorded_location") and d["recorded_location"] != actual_location
         and d.get("purpose") == "plan_approval" and d is latest

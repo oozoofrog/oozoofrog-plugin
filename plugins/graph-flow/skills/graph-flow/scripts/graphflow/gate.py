@@ -79,7 +79,7 @@ def _approval_rule(state, node, requests, rule):
             continue
         if _answered(decisions, ("rejected", "revision_requested")):
             return {"verdict": "hold", "rule": "R4", "failed": [], "asks": [],
-                    "message": "The person sent this decision back. Revise and re-post the plan, or submit corrected work before asking again."}
+                    "message": "The person sent this decision back. Revise and re-post the plan (raise max_attempts or replace the node if attempts are exhausted), then submit corrected work before asking again."}
         missing = True
         bound = _decisions(state, node["id"], request["submission"], request["check"],
                            request["purpose"], None, request)
@@ -246,7 +246,7 @@ def _preconditions(plan, state, node_id):
     node = planmod.node_by_id(plan, node_id)
     st = state["nodes"][node_id]
     statemod.require_plan_approval(state)
-    statemod.require_submission_binding(state, node_id)
+    statemod.require_submission_binding(state, node_id, refresh=True)
     if not graph.needs_satisfied(plan, state, node_id):
         raise core.GFError("needs_unsatisfied", "node needs are not satisfied", core.EXIT_STATE)
     if node["kind"] != "decision" and not graph.has_current_submission(st):
@@ -292,7 +292,7 @@ def gate(run_dir, node_id, cwd, actor):
     with store.transaction(run_dir) as tx:
         current = statemod.derive(tx.plan, tx.events)
         statemod.require_plan_approval(current)
-        statemod.require_submission_binding(current, node_id)
+        statemod.require_submission_binding(current, node_id, refresh=True)
         current_st = current["nodes"].get(node_id)
         if (current_st is None or _token(tx.revision, current_st) != token or
                 (current_st["status"] == "passed" if node["kind"] == "decision"
@@ -304,7 +304,7 @@ def gate(run_dir, node_id, cwd, actor):
         ask_ids = []
         for request in outcome["asks"]:
             for prior in current["decisions"].values():
-                if (prior.get("issuer") == "gate" and prior.get("status") == "open"
+                if (prior.get("issuer") == "gate" and prior.get("status") != "superseded"
                         and all(prior.get(k) == request.get(k) for k in ("node", "purpose", "check"))):
                     tx.append("decision.superseded", {"id": prior["id"], "reason": "evidence_changed"},
                               {"role": "tool", "node": node_id, "session": None})

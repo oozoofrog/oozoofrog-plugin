@@ -245,16 +245,16 @@ class ServerTests(unittest.TestCase):
         decision = data["view"]["decisions"][0]
         self.assertEqual(decision["purpose"], "human_check")
         self.assertEqual(decision["verified"], ["약속한 결과가 빠짐없이 있어요"])
-        self.assertEqual(len(decision["unverified"]), 2)
+        self.assertEqual(len(decision["unverified"]), 1)
         self.assertTrue(decision["worker_note"])
         current, events, derived = server._snapshot(run)
-        # Untitled checks are omitted, and human prompts supply a readable fallback.
+        # Untitled checks are omitted; the question is not an unresolved finding.
         guide = next(n for n in current["nodes"] if n["id"] == "guide")
         guide["checks"][0].pop("title")
         guide["checks"][1].pop("title")
         presentation = server._view(current, derived, events, project)
         self.assertEqual(presentation["decisions"][0]["verified"], [])
-        self.assertEqual(presentation["decisions"][0]["unverified"][0], "사용 설명서를 통과시킬까요?")
+        self.assertNotIn("사용 설명서를 통과시킬까요?", presentation["decisions"][0]["unverified"])
         guide["checks"][0]["title"] = "Readable check"
         derived["nodes"]["guide"]["attempts"] += 1
         presentation = server._view(current, derived, events, project)
@@ -624,7 +624,7 @@ class ServerTests(unittest.TestCase):
                                             "question": "Does this wording fit?", "kind": "review",
                                         "purpose": "human_check", "commit": None, "artifact_hashes": {},
                                             "context": {}, "has_evidence": False,
-                                            "verified": [], "unverified": ["The wording fits"], "worker_note": None,
+                                            "verified": [], "unverified": [], "worker_note": None,
                                         "record_purpose": "human_check", "files": [], "failed": [], "failed_reviews": 0, "free": False, "author_context": context, "trajectory_reasons": []}])
         self.assertEqual(view["lessons"], [{"text": active["text"], "node_title": "Done"},
                                          {"text": unknown["text"], "node_title": None}])

@@ -295,12 +295,8 @@ def _start_problem(tx, node_id, actor):
     derived = _state.derive(tx.plan, tx.events)
     code = _graph.start_problem(tx.plan, derived, node_id)
     if code is not None:
-        st = derived["nodes"].get(node_id) or {}
-        if code == "attempts_exhausted" and st.get("status") != "replan":
-            tx.append("gate.verdict", {"node": node_id, "attempt": st["attempts"],
-                      "submission": None, "verdict": "replan", "rule": "R2",
-                      "rejection": None, "tested_head": None}, actor)
-        return _error(code, "node %s cannot start: %s" % (node_id, code))
+        recovery = (" Re-post a revised plan with more max_attempts or a replacement node." if code == "attempts_exhausted" else "")
+        return _error(code, "node %s cannot start: %s.%s" % (node_id, code, recovery))
     return None
 
 

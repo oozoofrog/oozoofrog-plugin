@@ -59,7 +59,7 @@ def _runs(root):
 
 
 def _snapshot(run_dir):
-    # Read-only transactions take the existing run lock without appending events.
+    # Transactions record observed stale consent before returning the view.
     try:
         with store.transaction(run_dir) as tx:
             return tx.plan, tx.events, state.derive(tx.plan, tx.events)
@@ -314,7 +314,7 @@ def _timeline(nodes, events, lessons, verified_decisions=None, repin_seq=0):
         elif kind == "decision.ask" and isinstance(data.get("id"), str):
             asked[data["id"]] = data
             add(event, "asked", decision=data["id"], node=nid, node_title=title(nid),
-                question=_text(data.get("question")))
+                question=_text(data.get("question")), purpose=data.get("purpose"))
         elif kind == "decision.answer" and isinstance(data.get("id"), str):
             ask = _mapping(asked.get(data["id"]))
             add(event, "answered", decision=data["id"], node=ask.get("node"),
@@ -325,7 +325,7 @@ def _timeline(nodes, events, lessons, verified_decisions=None, repin_seq=0):
         elif kind == "human.repin":
             add(event, "repinned", verified=event["seq"] == repin_seq)
         elif kind == "decision.superseded":
-            add(event, "superseded", decision=data.get("id"), revision=data.get("revision"), reason=data.get("reason"))
+            add(event, "superseded", decision=data.get("id"), purpose=asked.get(data.get("id"), {}).get("purpose"), revision=data.get("revision"), reason=data.get("reason"))
         elif kind == "gate.final":
             add(event, "final", result=_text(data.get("result")),
                 failed=_strings(data.get("failed_checks")))
@@ -370,7 +370,7 @@ def _plan_summary(plan, derived=None):
             add(node, "trajectory", "trajectory")
     from .plan import node_counts
     counts = node_counts(nodes)
-    counts.update(checks=sum(len(_node_checks(n)) for n in nodes) +
+    counts.update(checks=sum(sum(c.get("type") != "human" for c in _node_checks(n)) for n in nodes) +
                   len(plan.get("integration_checks", [])) + len(plan.get("promoted_checks", [])),
                   decisions=sum(not q.get("answered") for q in questions))
     return counts, questions
@@ -543,11 +543,6 @@ def _view(current, derived, events, project):
                 failed.append(wording or "A check without a description did not pass.")
             elif result.get("result") == "passed" and wording:
                 verified.append(wording)
-        for check in checks:
-            if check.get("type") == "human":
-                wording = _text(check.get("title"), _text(check.get("prompt")))
-                if wording:
-                    unverified.append(wording)
         failed_reviews = 0
         for review in _objects(st.get("reviews")):
             if (submission.get("id") is not None and review.get("target_submission") == submission["id"]
@@ -621,7 +616,7 @@ def _view(current, derived, events, project):
         key: approval.get(key) for key in ("id", "status", "outcome", "answer", "verified", "question", "plan_identity", "reason")}
     if view["plan_approval"] and approval.get("id"):
         view["plan_approval"]["identity"] = state.decision_identity(approval)
-    view["stale_decisions"] = [{"id": d["id"], "reason": d.get("stale_reason")} for d in derived["decisions"].values() if d.get("stale_reason")]
+    view["stale_decisions"] = [{"id": d["id"], "reason": d.get("stale_reason"), "purpose": d.get("purpose")} for d in derived["decisions"].values() if d.get("stale_reason")]
     for node in view["nodes"]:
         node["submitted_files"] = list((derived["nodes"][node["id"]].get("submission") or {}).get("changed_files") or [])
         node["preapproval_submission"] = bool(node["status"] != "passed" and derived["nodes"][node["id"]].get("submission") and
@@ -708,8 +703,8 @@ def _open_project_file(project, target):
 
 def _file(run_dir, decision_id, relative):
     project = store.project_of(run_dir)
-    with store.locked(run_dir / ".lock"):
-        derived = state.derive(store.read_plan(run_dir), store.events(run_dir))
+    with store.transaction(run_dir) as tx:
+        derived = state.derive(tx.plan, tx.events)
         decision = derived["decisions"].get(decision_id)
         if decision is None:
             raise _HTTPError(404, "unknown_decision", "this decision is unavailable")
@@ -919,20 +914,10 @@ try {
                                       query.get("path", [""])[0]), "text/plain; charset=utf-8")
                 if path == "/api/evidence":
                     return self._send(200, _evidence(run, query.get("path", [""])[0]), "text/plain; charset=utf-8")
-                with store.locked(run / ".lock"):
-                    try:
-                        current = store.read_plan(run)
-                    except core.GFError as exc:
-                        if exc.code != "plan_tampered":
-                            raise
-                        current = None
-                    events = store.events(run)
-                    derived = state.derive(current, events)
-                    if current is None and store._last_plan_set(events):
-                        derived["run"]["plan_error"] = True
-                    result = {"plan": current, "state": derived,
-                              "ready": graph.available(current or {}, derived), "trace": None if derived["run"].get("plan_error") else trace.trace(run),
-                              "view": _view(current, derived, events, store.project_of(run))}
+                current, events, derived = _snapshot(run)
+                result = {"plan": current, "state": derived,
+                          "ready": graph.available(current or {}, derived), "trace": None if derived["run"].get("plan_error") else trace.trace(run),
+                          "view": _view(current, derived, events, store.project_of(run))}
                 return self._json(200, result)
             raise _HTTPError(404, "not_found", "unknown route")
 

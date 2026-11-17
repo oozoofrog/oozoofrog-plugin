@@ -75,7 +75,7 @@ Never execute an effective lane 2 or 3 work node inline, even if routing suggest
 
 ## 6. Receive, merge, gate, and correct (P2, P6, P7, P8, P12)
 
-Read the submission and actual evidence. For committed work, run `gf merge <node>` in the leader's project; it requires a tree without modified tracked files. Preserve other sessions' edits instead of cleaning them away. Gate committed work only after its commit is integrated into the tested tree. Shared uncommitted work needs no merge.
+Read the submission and actual evidence. For committed work, run `gf merge <node>` in the leader's project; it requires a tree without modified tracked files. Preserve other sessions' edits instead of cleaning them away. Gate committed work only after its commit is integrated into the project root. Shared uncommitted work needs no merge.
 
 Dispatch and gate required review nodes before gating their targets: `gf gate <review-node> --open`, then `gf gate <work-node> --open`. A review gate executes its command checks and validates citations; its pass does not erase a reviewer's fail verdict. Let deterministic results outrank observations, trajectory/history, and opinion.
 
@@ -122,3 +122,14 @@ If the human key is lost or rotated, ask the person to confirm key recovery on t
 Agents must never read or WRITE `$GF_HOME/human.key`. First-use pinning cannot be made safe against a writer on the same OS account: planting a known key before the first human answer is part of the accepted same-account limit. Human `key repin` always generates a fresh key; agent setup and server startup do not create one.
 
 Gate scope checks compare the frozen file list of the submission, before any integration commands. Integration commands may create files in the tested tree; those outputs do not become worker changes at the next gate. Inspect new edits explicitly and submit again when the submitted work changes. Planned lane-3 and human-check questions are asked after submission, before acceptance; they never authorize work that has already happened.
+
+
+### Recover without losing the current submission
+
+A refusal from `start` changes nothing. If a rejected human check or declined hold uses the last attempt, revise the contract and raise `max_attempts` (or replace the node) with `plan set`, obtain fresh plan approval, then start the revised work. After send-back on a decision node, revise its question and re-post the plan. Rejections do not freeze nodes.
+
+For changed submitted bytes, run `gate` again; it asks about the current evidence without spending an attempt. Staleness is recorded as `decision.superseded` and cannot be reversed by moving the project back or restoring a file. When `decide wait` returns stale, follow its recovery instead of waiting for a hidden question. After a move, re-post the current plan and obtain approval; an earlier key recovery remains valid for pinning.
+
+For `active_plan_change` on an approved decision node, gate it, use `gf reopen <decision> --reason <reason>`, then revise and re-post. Otherwise preserve running/completed contracts and add a new node. Only a verified approval still in force protects a waiting node; an answer alone does not. Old submitted files shown during upgrade are informational after plan approval; later edits still require any gate acceptance specified by the contract.
+
+If a completed review prevents revising rejected work, follow `active_plan_change`: reopen the review with `gf reopen <review> --reason <reason>`, then re-post the target’s revised plan.
