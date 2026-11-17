@@ -78,8 +78,8 @@ def human_sig(run_id, decision_id, outcome, answer_text, decision=None):
     message = "\n".join([str(run_id), str(decision_id), str(outcome), answer_text or ""])
     if decision is not None:
         binding = {k: decision.get(k) for k in
-                   ("kind", "purpose", "plan_identity", "node", "submission", "check", "question", "evidence")}
-        message = json.dumps([2, run_id, decision_id, outcome, answer_text or "", binding],
+                   ("kind", "purpose", "plan_identity", "node", "submission", "check", "question", "evidence", "run_nonce", "human_key_sha256")}
+        message = json.dumps([3, run_id, decision_id, outcome, answer_text or "", binding],
                              sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     signature = hmac.new(key, message.encode("utf-8"), hashlib.sha256).hexdigest()
-    return "v2:" + signature if decision is not None else signature
+    return "v3:" + signature if decision is not None else signature

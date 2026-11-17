@@ -56,9 +56,12 @@ def answer(run_dir, decision_id, outcome, answer_text, source, actor):
         if source not in ("dashboard", "terminal"):
             raise core.GFError("bad_source", "invalid answer source: %s" % source)
         if derived["run"].get("key_mismatch"):
-            raise core.GFError("human_key_mismatch", "This GF_HOME key differs from the run's recorded human key", core.EXIT_STATE)
+            raise core.GFError("human_key_mismatch", state.key_recovery(derived["run"]), core.EXIT_STATE)
+        if not derived["run"].get("run_nonce"):
+            tx.append("run.nonce", {"run_nonce": secrets.token_hex(32)}, actor)
         if not derived["run"].get("human_key_sha256"):
             tx.append("human.key", {"human_key_sha256": core.key_fingerprint()}, actor)
+        decision = state.derive(tx.plan, tx.events)["decisions"][decision_id]
         data = {"id": decision_id, "outcome": outcome, "answer": answer_text,
                 "source": source, "sig": core.human_sig(derived["run"]["id"], decision_id, outcome, answer_text, decision)}
         tx.append("decision.answer", data, actor)
@@ -88,14 +91,37 @@ def open_decisions(state, node_id=None):
 
 def verify(run_id, decision_id, answer_data, decision=None):
     try:
-        modern = answer_data["sig"].startswith("v2:")
-        if modern and decision is None or not modern and decision and decision.get("purpose") == "plan_approval":
+        modern = answer_data["sig"].startswith("v3:")
+        if not modern or not decision or not decision.get("run_nonce"):
             return False
         expected = core.human_sig(run_id, decision_id, answer_data["outcome"], answer_data["answer"], decision if modern else None)
         return expected is not None and hmac.compare_digest(
             expected.encode("utf-8"), answer_data["sig"].encode("utf-8"))
     except Exception:
         return False
+
+
+def repin(run_dir, actor):
+    """Called only after the CLI's human-terminal guard."""
+    if actor.get("role") != "human":
+        raise core.GFError("forbidden", "only a human can re-pin a key", core.EXIT_FORBIDDEN)
+    ensure_key()
+    with store.transaction(run_dir) as tx:
+        derived = state.derive(tx.plan, tx.events)
+        data = {"run_nonce": secrets.token_hex(32), "human_key_sha256": core.key_fingerprint()}
+        data["sig"] = core.human_sig(tx.run_id, "human.repin", "repinned", "", data)
+        tx.append("human.repin", data, actor)
+        for decision in derived["decisions"].values():
+            if decision["status"] == "open" or decision.get("purpose") == "plan_approval":
+                tx.append("decision.superseded", {"id": decision["id"], "reason": "key_repinned"}, actor)
+        identity = derived["run"].get("plan_identity")
+        if tx.plan and identity:
+            ask = {"node": None, "submission": None, "check": None, "purpose": "plan_approval",
+                   "kind": "authorization", "question": "이 계획대로 다시 시작할까요?",
+                   "plan_identity": identity, "evidence": {"command": None, "files": [], "checks": []}}
+            event = tx.append("decision.ask", ask, actor)
+            ask["id"] = "d%d" % event["seq"]
+    return {"repinned": True, "message": "Key re-pinned. Approve the plan again before continuing."}
 
 
 def ensure_key():

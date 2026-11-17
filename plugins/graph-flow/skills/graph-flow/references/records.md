@@ -26,7 +26,7 @@ $GF_HOME/                    default ~/.graph-flow
   .lock                      lock file for the files below
   registry.json              {"projects": [{"root": "<abs path>", "added": "<ts>"}]}
   server.json                {"url", "port", "token", "pid", "started"} of a running dashboard
-  human.key                  32 random bytes, mode 0600, created by `gf init` or `gf serve` (section 7)
+  human.key                  32 random bytes, mode 0600, created on the person’s side by `gf serve`, `gf open`, `gf setup`, or a human terminal answer (section 7)
 ```
 
 `<project>` is the git top level of the working directory unless `--project` is given. A run is always addressed by the absolute path of its directory, so a session working in another git worktree writes to the leader's run. Everything under `.graph-flow/` is tool metadata: no node may own it and scope checks ignore it.
@@ -65,7 +65,7 @@ Roles prevent accidents; they are not a security boundary (P5, P10). An agent th
 | `red`, `check run`, `check record`, `submit` | yes | own node | no | no |
 | `review submit` | no | no | own node | no |
 | `decide ask`, `decide wait`, `decide list` | yes | own node only | own node only | yes |
-| `decide answer` | no | no | no | yes, see section 7 |
+| `decide answer`, `key repin` | no | no | no | yes, see section 7 |
 | `mcp` | yes | yes | yes | no |
 | `serve`, `open`, `setup` | yes | no | no | yes |
 
@@ -202,9 +202,13 @@ Until current approval is answered, verified and approved, `ready`, `assign`, wo
 
 During re-planning, **new starts wait; existing work continues**. Completed nodes retain accepted submissions, running nodes can submit; checks and gates wait for the new approval. To preserve those contracts safely, `plan set` refuses structural edits/removal of a running, submitted or passed node, or a producer it depends on (`active_plan_change`, exit 4). Add a new node for a changed requirement. Unstarted changed nodes and their dependents still follow the basis invalidation rule. Wording-only edits preserve all accepted work. A check already executing across a revision can still return `stale_result` under the existing race guard; rerun that check, not the worker attempt.
 
-**Compatibility:** only histories with neither a schema 2/approval-required run marker nor any non-null plan identity are grandfathered: read/ready/assign/brief/start continue as before. Reading or upgrading never writes a migration. Explicitly setting another plan opts that run into approval, including when its old structure is unchanged. The first such set also preserves existing running/completed contracts.
+**Upgrade from 0.2.x (behaviour change): approval is always required.** No unsigned version/approval marker grants an exemption. Status, trace and dashboard remain readable, including old answers exactly as recorded. An unfinished old run refuses new dispatch/start/check/merge/gate with `plan_not_approved`. Gates for already-submitted work also wait, because they execute checks. The leader posts its current plan file with `gf plan set <file>`; one human plan approval then resumes the run, preserving unchanged running/submitted/completed work. This records a random `run.nonce` for old runs; its value is covered by the new answer signature. Reads never migrate records. Old unprefixed or v2 answers remain visible as unverified history and never authorize new execution; a gate that needs human consent asks a fresh question.
 
-`plan set <file> --open`, `decide ask ... --open`, and `gate [<node>|--final] --open` perform the ordinary mutation and then open the right run/decision with one short output line. Only a waiting decision or successful final gate opens; `GF_NO_OPEN=1` suppresses opening, never approval. An opening failure adds `open_error` and retains `show`; the mutation is already recorded. MCP never opens the browser and returns a human-terminal `graph-flow open` instruction. An approved unchanged plan does not reopen the browser.
+New `run.init` events contain a random 256-bit `run_nonce` and never create or pin a human key. The first verified human answer pins the person’s key with `human.key`. A missing/rotated key or a different GF_HOME yields `human_key_mismatch` and a recovery command in CLI/dashboard. Use the original environment/key, or from the person’s own terminal run `GF_ROLE=human GF_HUMAN_TERMINAL=1 graph-flow --run <run-path> key repin`. This TTY-only command creates a key if necessary, appends a signed `human.repin` event with a new nonce and key fingerprint, supersedes open decisions and earlier plan approvals, and asks for plan approval again. No execution resumes until that fresh approval. For an old run with no posted approval, use `plan set` first.
+
+If the current plan revision is missing or cannot be verified, `plan set` may replace it: treat the old plan as absent, reset every node and dependent, retain the old events as history, and require fresh approval even for the same structural identity. No original file is needed. Review `lens` is an instruction, is shown with the plan, and is part of its approved identity.
+
+`plan set <file> --open`, `decide ask ... --open`, and `gate [<node>|--final] --open` perform the ordinary mutation and then open the right run/decision with one short output line. Only a waiting decision or successful final gate opens; `GF_NO_OPEN=1` suppresses every browser launch, including explicit `gf open` (which reports suppression), never approval. An opening failure adds `open_error` and retains `show`; the mutation is already recorded. MCP never opens the browser and returns a human-terminal `graph-flow open` instruction. An approved unchanged plan does not reopen the browser.
 
 ## 4. Checks and evidence grades
 
@@ -426,7 +430,7 @@ Preconditions (exit 4, no event):
 
 Execution, in phase `gate`, recording `tested_head`:
 
-- `work`: every `cmd` check of the node, then the scope comparison (always, under check id `scope` or the id of the plan's scope check); if `effective_lane >= 2`, also the integration checks (the plan's `integration_checks` followed by the approved plan's frozen `promoted_checks` (live fixed checks only for legacy runs)).
+- `work`: every `cmd` check of the node, then the scope comparison (always, under check id `scope` or the id of the plan's scope check); if `effective_lane >= 2`, also the integration checks (the plan's `integration_checks` followed by the approved plan's frozen `promoted_checks`).
 - `review`: the `cites` check.
 - `host` results are taken from the loop phase of the current attempt.
 
@@ -490,7 +494,7 @@ When a rejection has no log, EVIDENCE names offending paths or citation details,
 
 Who can answer (P10):
 
-- The dashboard server, started by a person with `gf serve`, appends `decision.answer` with `source: "dashboard"` and `sig`: HMAC-SHA256, hex, keyed with `human.key`, over canonical JSON `[2, run_id, decision_id, outcome, answer, binding]`, prefixed `v2:`. Binding includes kind, purpose, plan_identity, node, submission, check, question and evidence. Old unprefixed answers verify only for non-plan decisions.
+- The dashboard server, started by a person with `gf serve`, appends `decision.answer` with `source: "dashboard"` and `sig`: HMAC-SHA256, hex, keyed with `human.key`, over canonical JSON `[3, run_id, decision_id, outcome, answer, binding]`, prefixed `v3:`. Binding includes kind, purpose, plan_identity, node, submission, check, question, evidence, the per-run nonce and pinned key fingerprint. Old unprefixed/v2 answers never authorize new execution.
 - `gf decide answer` on the command line is refused (exit 3) unless the environment has `GF_HUMAN_TERMINAL=1` and stdin is a TTY. It signs the same way with `source: "terminal"`.
 - `decisions.answer` itself refuses any actor whose role is not `human` (exit 3, `forbidden`), so no other entry point (the MCP server, a script) can produce a signed answer for an agent role. The dashboard server and the terminal path call it with a `human` actor.
 - `state.derive` sets `verified` by recomputing the signature with `core.human_sig` (constant-time comparison); it is `false` when the key is unreadable or the signature differs. This is the one place where `derive` reads outside its arguments. Gate rules count only verified answers.
@@ -734,13 +738,13 @@ The MCP tool list and the dashboard's HTTP API are specified by the units that o
 
 The dashboard HTTP contract and fixed public static allowlist are in [dashboard.md](dashboard.md#get-staticname). Only those GET static requests skip token authentication; every request still needs the loopback Host check, and all APIs still require the token.
 
-The dashboard view also exposes `plan_approval` (null for legacy runs; id/status/outcome/answer/verified/question/plan_identity otherwise), `plan_counts` (work nodes, declared checks including integration, scheduled human questions excluding this approval), and node `planned_checks`/`deliverables`. Planned question counts exclude unforeseen free questions and retry approvals. The timeline includes plan set, approval asked, answer text and superseded events.
+The dashboard view also exposes `plan_approval` (id/status/outcome/answer/verified/question/plan_identity; null values when no approval has been posted), `plan_counts` (work nodes, declared checks including integration, scheduled human questions excluding this approval), and node `planned_checks`/`deliverables`. Planned question counts exclude unforeseen free questions and retry approvals. The timeline includes plan set, approval asked, answer text and superseded events.
 
 This protects against mistakes and drift, not against an agent that deliberately forges on the same OS account. Such an agent can impersonate the human terminal or rewrite the log and key fingerprint; a genuine security boundary requires a separate identity or external signing authority.
 
 ### Approval integrity and execution revisions
 
-New `run.init` records use schema version 2, `approval_required: true`, and `human_key_sha256` (the SHA-256 fingerprint, never the key). Plan documents themselves remain schema 1. Legacy runs pin their key at the first signed answer using `human.key`. A later missing/null identity cannot erase approval requirements established anywhere in the history. A different current home's key reports `human_key_mismatch` (exit 4) and cannot verify or sign plan approvals.
+New `run.init` records use schema version 2, `approval_required: true` (informational only), and a random `run_nonce`. Plan documents remain schema 1. All runs pin the person’s key on the first signed answer. Approval is required regardless of version or markers. The signed human-terminal recovery and upgrade rules are in section 3.
 
 Every disk plan load verifies its bytes against the corresponding `plan.set.plan_sha256` and its structural identity against `plan_identity`. A mismatch, unreadable or missing revision refuses with `plan_tampered` (exit 4); the dashboard shows an unavailable plan with no actionable graph. Dispatch also checks the derived structural identity. Hashes are integrity checks against accidental drift, not a protected append-only store against a malicious account owner.
 

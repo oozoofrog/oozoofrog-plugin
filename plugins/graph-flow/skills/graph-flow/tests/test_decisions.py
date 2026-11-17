@@ -30,6 +30,7 @@ class DecisionsTests(unittest.TestCase):
         subprocess.run(["git", "init", "-q", str(self.repo)], check=True)
         self.run = legacy_run(self.repo, "r1", ACTOR)
         self.set_plan()
+        decisions.ensure_key()
 
     def tearDown(self):
         self.env.stop()
@@ -118,6 +119,7 @@ class DecisionsTests(unittest.TestCase):
         data = self.ask()
         answer = self.answer(data["id"])
         self.assertEqual(store.events(self.run)[-1]["data"], answer)
+        data = self.derive()["decisions"][data["id"]]
         self.assertEqual(answer["sig"], core.human_sig("r1", data["id"], "approved", "Yes ✓", data))
         self.assertTrue(decisions.verify("r1", data["id"], answer, data))
         self.assertTrue(self.derive()["decisions"][data["id"]]["verified"])

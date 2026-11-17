@@ -5,6 +5,8 @@ import json
 import os
 import pathlib
 import re
+import secrets
+import shlex
 import sys
 
 from . import assign, checks, core, decisions, gate, graph, merge, plan, route, state, store
@@ -36,7 +38,7 @@ def _validate(args, actor):
 
 
 def _set_plan(args, actor):
-    with store.transaction(args.run) as tx:
+    with store.transaction(args.run, replace_invalid=True) as tx:
         raw = _read_json(args.file)
         problems = plan.validate(raw)
         if problems:
@@ -46,6 +48,8 @@ def _set_plan(args, actor):
         normalized["promoted_checks"] = learn.fixed_checks(store.project_of(args.run))
         normalized["constraints"] = learn.applying(store.project_of(args.run), normalized)
         prior = state.derive(tx.plan, tx.events)
+        if not prior["run"].get("run_nonce"):
+            tx.append("run.nonce", {"run_nonce": secrets.token_hex(32)}, actor)
         identity = state.plan_identity(normalized)
         approval = state.plan_approval(prior)
         # Never relabel an accepted result or change a running worker's contract.
@@ -61,7 +65,7 @@ def _set_plan(args, actor):
             if protected:
                 raise core.GFError("active_plan_change", "Keep completed/running contracts; add new work instead: "
                                    + ", ".join(protected), core.EXIT_STATE)
-        reuse = (approval and approval.get("plan_identity") == identity
+        reuse = (not tx.plan_error and approval and approval.get("plan_identity") == identity
                  and (approval["status"] == "open" or
                       approval["status"] == "answered" and approval.get("verified")
                       and approval["outcome"] == "approved"))
@@ -70,7 +74,7 @@ def _set_plan(args, actor):
         tx.append("plan.set", {"revision": revision, "plan_sha256": sha,
                                "plan_identity": identity, "node_counts": plan.node_counts(normalized["nodes"]),
                                "fingerprints": {n["id"]: state.fingerprint(n) for n in normalized["nodes"]},
-                               "constraints_applied": ids}, actor)
+                               "constraints_applied": ids, "replaced_unverifiable": tx.plan_error}, actor)
         tx.append("constraint.apply", {"ids": ids}, actor)
         if not reuse:
             for previous in prior["decisions"].values():
@@ -203,11 +207,13 @@ def _open(args, actor):
         raise core.GFError("run_required", "--run or GF_RUN is required to open a decision or node")
     opened = server.open_dashboard(target=target) if target else server.open_dashboard()
     shown = args.decision or args.target_node
-    return dict(opened, message="Dashboard opened in the browser%s." % (" on " + shown if shown else ""))
+    return dict(opened, message="Browser launch suppressed by GF_NO_OPEN=1." if opened.get("suppressed") else "Dashboard opened in the browser%s." % (" on " + shown if shown else ""))
 
 
 def _setup(args, actor):
     launcher = _lazy_import("launcher")
+    if not args.remove:
+        decisions.ensure_key()
     return launcher.remove(args.bin_dir) if args.remove else launcher.install(args.bin_dir)
 
 
@@ -307,6 +313,8 @@ def _loop(args, actor):
             if decision is not None and decision["node"] != actor["node"]:
                 raise core.GFError("forbidden", "decision wait is limited to own node", core.EXIT_FORBIDDEN)
         return decisions.wait(args.run, args.id, args.timeout)
+    if path == ("key", "repin"):
+        return decisions.repin(args.run, actor)
     if path == ("decide", "answer"):
         return decisions.answer(args.run, args.id, args.outcome, args.answer, "terminal", actor)
     if path[0] == "learn":
@@ -342,7 +350,7 @@ _register("start", "leader worker reviewer", own_node_only=True)
 _register("red,check run,check record,submit", "leader worker", own_node_only=True)
 _register("review submit", "reviewer", own_node_only=True)
 _register("decide ask,decide wait,decide list", "leader worker reviewer human", own_node_only=True)
-_register("decide answer", "human")
+_register("decide answer,key repin", "human")
 _register("mcp", "leader worker reviewer", needs_run=False)
 _register("serve,open,setup", "leader human", needs_run=False)
 for _path in ("init", "plan validate", "learn list", "learn promote", "learn retire"):
@@ -471,7 +479,7 @@ def main(argv=None):
         if role in ("worker", "reviewer") and not actor["node"]:
             raise core.GFError("node_required", "worker and reviewer roles require a node")
         entry = COMMANDS[identity.command_path]
-        if identity.command_path == ("decide", "answer"):
+        if identity.command_path in (("decide", "answer"), ("key", "repin")):
             _require_human_terminal(actor)
         if role not in entry["roles"]:
             raise core.GFError("forbidden", "role %s cannot run %s" % (role, " ".join(identity.command_path)), 3)
@@ -500,7 +508,10 @@ def main(argv=None):
             output.update(ok=False, code="invalid_plan", message="plan validation failed")
     except core.GFError as exc:
         code = exc.exit_code
-        output = {"ok": False, "code": exc.code, "message": exc.message}
+        message = exc.message
+        if exc.code == "human_key_mismatch":
+            message = message.replace("<run-path>", shlex.quote(str(args.run)))
+        output = {"ok": False, "code": exc.code, "message": message}
     except SystemExit as exc:
         return exc.code
     except Exception as exc:

@@ -150,7 +150,7 @@ class PlanApprovalTests(unittest.TestCase):
         self.assertEqual(self.call('plan', 'set', str(self.file), code=4)['code'], 'active_plan_change')
         self.assertEqual(self.snapshot()[1]['nodes']['a']['status'], 'running')
 
-    def test_grandfathered_record_works_until_explicit_new_plan_set(self):
+    def test_legacy_record_requires_one_explicit_plan_approval(self):
         from human_support import legacy_run
         self.run = legacy_run(self.project, "legacy", core.actor_from_env())
         normalized, _ = plan.normalize(self.raw)
@@ -158,9 +158,10 @@ class PlanApprovalTests(unittest.TestCase):
             rev, sha = tx.write_plan(normalized)
             tx.append('plan.set', {'revision': rev, 'plan_sha256': sha,
                                   'fingerprints': {n['id']: state.fingerprint(n) for n in normalized['nodes']}}, core.actor_from_env())
-        self.assertIsNone(state.plan_approval(self.snapshot()[1]))
-        self.call('ready'); self.call('brief', 'a'); self.call('start', 'a')
-        self.set_plan(); self.call('ready', code=4)
+        self.assertEqual(state.plan_approval(self.snapshot()[1]), {})
+        self.call('ready', code=4); self.call('brief', 'a', code=4); self.call('start', 'a', code=4)
+        did=self.set_plan()['decision']; self.call('ready', code=4)
+        self.accept(did); self.call('start', 'a')
         self.assertEqual(self.snapshot()[1]['nodes']['a']['status'], 'running')
 
     def test_open_is_one_optional_side_effect_and_never_approval(self):

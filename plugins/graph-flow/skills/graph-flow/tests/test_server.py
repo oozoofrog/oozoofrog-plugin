@@ -20,7 +20,7 @@ SCRIPTS = pathlib.Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 from graphflow import assign, checks, core, decisions, gate, learn, plan, server, state, store
 
-from human_support import legacy_run
+from human_support import legacy_run, approve_current_plan
 
 ACTOR = {"role": "leader", "node": None, "session": "server-test"}
 REVIEWER = {"role": "reviewer", "node": "review", "session": "review-test"}
@@ -59,6 +59,7 @@ class ServerTests(unittest.TestCase):
                 tx.append("plan.set", {"revision": revision, "plan_sha256": sha,
                           "fingerprints": {n["id"]: state.fingerprint(n) for n in normalized["nodes"]},
                           "constraints_applied": []}, ACTOR)
+            approve_current_plan(run)
             assign.assign(run, "build", "subagent", "test", "high", "test", "openai", "shared", ACTOR)
             assign.assign(run, "review", "subagent", "test", "high", "test", "claude", "shared", ACTOR)
             with contextlib.redirect_stderr(io.StringIO()):
@@ -505,9 +506,13 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(data["ready"], [])
         self.assertEqual([r["kind"] for r in data["view"].pop("timeline")], ["started"])
         self.assertEqual(data["view"].pop("project"), pathlib.Path(self.projects[0]).name)
+        self.assertIn("key repin", data["view"].pop("key_recovery"))
+        self.assertTrue(data["view"].pop("legacy"))
+        self.assertFalse(data["view"].pop("replaced_unverifiable"))
+        self.assertTrue(all(v is None for v in data["view"].pop("plan_approval").values()))
         self.assertEqual(data["view"], {"title": "", "language": "en", "nodes": [], "edges": [], "decisions": [], "answered": [],
                                       "lessons": [], "complete": False, "run": "empty",
-                                      "plan_approval": None, "plan_counts": {"work": 0, "review": 0, "decision": 0, "checks": 0, "decisions": 0},
+                                      "plan_counts": {"work": 0, "review": 0, "decision": 0, "checks": 0, "decisions": 0},
                                   "plan_error": False, "key_mismatch": False, "goal": "", "planned_questions": [],
                                   "integration_checks": [], "promoted_checks": [], "superseded": [], "constraints": [],
                                       "counts": {"done": 0, "doing": 0, "waiting": 0,
@@ -566,6 +571,7 @@ class ServerTests(unittest.TestCase):
                                  question="Does this wording fit?", purpose="human_check", check="wording",
                                  evidence={"command": None, "files": [], "checks": []})
                     append("gate.verdict", node=nid, attempt=1, submission=sid, verdict="needs_approval")
+        approve_current_plan(run)
         active = learn.add(project, run, "done", "Keep the reader's wording", "When requirements change", [], [], ACTOR)
         promoted = learn.add(project, run, "done", "A fixed check", "When checks change", [], [], ACTOR)
         retired = learn.add(project, run, "done", "Old advice", "When scope changes", [], [], ACTOR)
@@ -582,7 +588,7 @@ class ServerTests(unittest.TestCase):
         view = data["view"]
         self.assertEqual(set(view), {"title", "language", "nodes", "edges", "decisions", "answered", "lessons", "counts", "complete",
                                      "run", "project", "timeline", "plan_approval", "plan_counts", "plan_error", "key_mismatch",
-                                 "goal", "planned_questions", "integration_checks", "promoted_checks", "superseded", "constraints"})
+                                 "goal", "planned_questions", "integration_checks", "promoted_checks", "superseded", "constraints", "key_recovery", "legacy", "replaced_unverifiable"})
         self.assertEqual(view["title"], raw["title"])
         self.assertFalse(view["complete"])
         self.assertEqual([n["id"] for n in view["nodes"]], [n["id"] for n in current["nodes"]])
@@ -603,7 +609,7 @@ class ServerTests(unittest.TestCase):
         asked = view["decisions"][0].pop("asked")
         self.assertRegex(asked, r"^\d{4}-\d\d-\d\dT")
         self.assertEqual(view["decisions"][0].pop("asked_by")["role"], "leader")
-        self.assertEqual(view["answered"], [])
+        self.assertEqual([d["outcome"] for d in view["answered"]], ["approved"])
         for node in view["nodes"]:
             self.assertEqual(set(node) >= {"worker", "session", "started"}, True)
         self.assertEqual(view["decisions"], [{"id": "d%d" % ask, "node": "human", "node_title": "Human",
@@ -628,6 +634,7 @@ class ServerTests(unittest.TestCase):
             tx.append("plan.set", {"revision": revision, "plan_sha256": sha,
                       "fingerprints": {n["id"]: state.fingerprint(n) for n in revised["nodes"]},
                       "constraints_applied": []}, ACTOR)
+        approve_current_plan(run)
         _, data = self.json_request("GET", "/api/run?" + urlencode({"project": str(project), "run": run.name}))
         self.assertEqual(data["view"]["nodes"][1]["laps"], [])
         self.assertEqual(data["view"]["nodes"][1]["returned_reasons"], [])
@@ -913,7 +920,7 @@ class ServerTests(unittest.TestCase):
             thread.join(10)
             self.assertFalse(thread.is_alive())
         self.assertEqual(sorted(code for code, _ in results), [200, 409])
-        self.assertEqual(sum(e["type"] == "decision.answer" for e in store.events(self.runs[0])), 1)
+        self.assertEqual(sum(e["type"] == "decision.answer" and e["data"]["id"] == self.answer_body()["id"] for e in store.events(self.runs[0])), 1)
 
     def test_reads_do_not_write_or_recover_logs(self):
         with (self.runs[0] / "events.jsonl").open("ab") as stream:
@@ -1003,6 +1010,7 @@ class ServerTests(unittest.TestCase):
         store.atomic_write(self.home / "server.json", json.dumps(record) + "\n")
         return record
 
+    @mock.patch.dict(os.environ, GF_NO_OPEN="0")
     def test_open_reuses_a_running_dashboard_without_revealing_the_address(self):
         record, seen = self.running(), []
         result = server.open_dashboard(launch=lambda: self.fail("must not start another"),
@@ -1014,6 +1022,7 @@ class ServerTests(unittest.TestCase):
                               target={"project": "/p q", "run": "r1", "decision": "d4", "node": None})
         self.assertEqual(seen[-1], record["url"] + "#project=%2Fp+q&run=r1&decision=d4")
 
+    @mock.patch.dict(os.environ, GF_NO_OPEN="0")
     def test_open_starts_a_dashboard_when_the_record_is_absent_or_stale(self):
         stale = [None, {"pid": os.getpid(), "port": 1, "token": "x", "url": "http://127.0.0.1:1/?t=x"},
                  "wrong-token"]
@@ -1035,6 +1044,7 @@ class ServerTests(unittest.TestCase):
                 self.assertEqual(result, {"opened": True, "started": True, "port": launched[0]["port"]})
                 self.assertEqual(seen, [launched[0]["url"]])
 
+    @mock.patch.dict(os.environ, GF_NO_OPEN="0")
     def test_open_reports_a_dashboard_that_never_starts_and_a_missing_browser(self):
         with self.assertRaises(core.GFError) as caught:
             server.open_dashboard(launch=lambda: None, browse=lambda url: True, timeout=0.2)
@@ -1059,6 +1069,7 @@ class ServerTests(unittest.TestCase):
             kill.assert_called_with(record["pid"], server.signal.SIGTERM)
         self.assertFalse((self.home / "server.json").exists())
 
+    @mock.patch.dict(os.environ, GF_NO_OPEN="0")
     def test_open_and_stop_with_a_real_detached_process(self):
         result = server.open_dashboard(browse=lambda url: True)
         record = json.loads((self.home / "server.json").read_text())

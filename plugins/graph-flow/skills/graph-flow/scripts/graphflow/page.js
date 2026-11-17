@@ -212,7 +212,7 @@ const STRINGS = {
     "offTop": "↑ 위쪽",
     "offBottom": "↓ 아래쪽",
     "offCount": "{direction} {n}개",
-    "visibleCards": "{summary} · {n}개가 보여요",
+    "visibleCards": "{summary} · 카드 {n}개가 보여요",
     "graphEdges": "화면 밖의 일로 이동해요",
     "history": "이 일의 시도와 검사 기록",
     "currentAttempt": "지금 시도",
@@ -261,13 +261,13 @@ const STRINGS = {
     "readScale": "읽기 크기",
     "planSummary": "일 {work}개 · 검토 {review}개 · 결정 {decision}개",
     "planStart": "시작",
-    "planStartEffect": "시작하면 담당자가 이 계획의 일을 시작할 수 있어요.",
+    "planStartEffect": "담당자가 계획의 일을 시작해요.",
     "planBackEffect": "고칠 내용을 담당자에게 보내요.",
     "planSentBack": "계획을 돌려보냈어요",
     "planWaiting": "계획을 확인해 주세요",
     "planSentNote": "내가 보낸 내용",
     "planWaitingRevision": "담당자가 고친 새 계획을 기다리고 있어요.",
-    "planChecks": "확인할 것",
+    "planChecks": "검사",
     "plannedCommand": "실행할 명령",
     "planDeliverables": "만들 결과",
     "evSuperseded": "새 계획으로 바뀌었어요",
@@ -289,14 +289,13 @@ const STRINGS = {
     "planReturned": "돌려보낸 계획",
     "planUnverified": "답이 확인되지 않았어요",
     "planUnverifiedHelp": "이 답으로는 일을 시작할 수 없어요. 담당자에게 계획을 다시 올려 달라고 한 뒤 새 질문에 답해 주세요.",
-    "planKeyMismatch": "이 창의 확인 키가 실행을 만들 때의 키와 달라요. 원래 실행을 만든 환경에서 대시보드를 다시 열어 주세요.",
+    "planKeyMismatch": "키를 잃어버렸거나 바꿨거나 다른 환경에서 열었어요. 원래 환경과 키를 쓰거나, 본인 터미널에서 아래 명령을 실행한 뒤 계획을 다시 승인해 주세요.",
     "planTampered": "계획 파일이 기록과 달라요",
-    "planTamperedHelp": "안전을 위해 계획과 실행을 잠갔어요. 담당자에게 기록된 원본을 복구하고 계획을 다시 올려 달라고 해 주세요.",
-    "planGoal": "실제로 할 일",
-    "planOwns": "고칠 수 있는 파일",
-    "planNeeds": "먼저 받아야 할 것",
+    "planTamperedHelp": "담당자에게 gf plan set <file>로 계획을 다시 올려 달라고 해 주세요. 모든 일을 새로 확인하고 다시 승인받아요.",
+    "planGoal": "실제 지시",
+    "planOwns": "맡은 파일",
+    "planNeeds": "받는 것",
     "planReads": "읽을 자료",
-    "labelOnly": "이름·요약·검사 제목은 설명용이에요. 아래 지시와 파일, 명령을 기준으로 확인해 주세요.",
     "planIntegration": "전체 결과 검사",
     "planPromoted": "이 계획에 포함된 고정 검사",
     "planQuestions": "예정된 질문 {decisions}번 · 어디에서 물을까요?",
@@ -319,7 +318,30 @@ const STRINGS = {
     "planItems": "전체 항목 {n}개",
     "answeredPlan": "이 계획대로 시작하기로 답했어요",
     "exitSuccess": "정상 종료 (값 {n})",
-    "exitFailure": "확인이 필요해요 (값 {n})"
+    "exitFailure": "확인이 필요해요 (값 {n})",
+    "planKeyHeading": "확인 키가 바뀌었어요",
+    "oldRunApproval": "이전 버전에서 시작한 실행이에요. 계속하려면 계획을 한 번 승인해 주세요.",
+    "planMissing": "계획을 올려 주세요",
+    "planMissingHelp": "담당자가 gf plan set <file>로 현재 계획을 올리면 승인할 수 있어요.",
+    "planReplaced": "확인할 수 없던 계획을 교체했어요. 모든 일을 다시 확인해 주세요.",
+    "unverifiedAnswer": "⚠ 확인되지 않은 답 기록",
+    "unverifiedAuthor": "작성자 확인 안 됨",
+    "planLens": "검토 관점",
+    "planOutputs": "넘기는 것",
+    "runChecksTitle": "전체 결과 확인",
+    "runChecksAfter": "모든 일을 마친 뒤 확인해요",
+    "runChecksGoal": "계획의 목표",
+    "runConstraints": "지켜야 할 조건",
+    "countWork": "일 {n}개",
+    "countReview": "검토 {n}개",
+    "countDecision": "결정 {n}개",
+    "countChecks": "검사 {n}개",
+    "countQuestions": "질문 {n}번",
+    "questionsMark": "? 여기서 물어요",
+    "citesCheck": "인용한 파일과 줄을 확인해요",
+    "humanCheck": "사람이 결과를 확인해요",
+    "hostCheck": "실행 환경에서 확인해요",
+    "evRepinned": "확인 키를 다시 연결했어요. 계획을 다시 승인받아요."
   },
   "en": {
     "flow": "Whole flow",
@@ -582,13 +604,13 @@ const STRINGS = {
     "readScale": "Readable size",
     "planSummary": "Work: {work} · Reviews: {review} · Decisions: {decision}",
     "planStart": "Start",
-    "planStartEffect": "Start lets the coordinator begin this plan’s work.",
-    "planBackEffect": "Send the changes to the coordinator.",
+    "planStartEffect": "Let the coordinator start this work.",
+    "planBackEffect": "Send changes to the coordinator.",
     "planSentBack": "The plan was sent back",
     "planWaiting": "Review the plan",
     "planSentNote": "Your requested changes",
     "planWaitingRevision": "Waiting for the coordinator’s revised plan.",
-    "planChecks": "Planned checks",
+    "planChecks": "Checks",
     "plannedCommand": "Planned command",
     "planDeliverables": "Deliverables",
     "evSuperseded": "Replaced by a new plan",
@@ -610,14 +632,13 @@ const STRINGS = {
     "planReturned": "Returned plan",
     "planUnverified": "Your answer could not be verified",
     "planUnverifiedHelp": "This answer cannot start work. Ask the coordinator to post the plan again, then answer the new question.",
-    "planKeyMismatch": "This window’s verification key differs from the run’s original key. Reopen the dashboard in the original environment.",
+    "planKeyMismatch": "The key was lost, rotated, or you opened a different environment. Use the original environment/key, or run this in your own terminal and approve the plan again.",
     "planTampered": "The plan file differs from its record",
-    "planTamperedHelp": "The plan and execution are locked. Ask the coordinator to restore the recorded original and post the plan again.",
+    "planTamperedHelp": "Ask the coordinator to replace the plan with gf plan set <file>. Every node resets and the replacement needs fresh approval.",
     "planGoal": "Actual instruction",
-    "planOwns": "Files allowed to change",
-    "planNeeds": "Required inputs",
+    "planOwns": "Owned files",
+    "planNeeds": "Inputs",
     "planReads": "Files to read",
-    "labelOnly": "Names, summaries and check titles are labels only. Review the instructions, files and commands below.",
     "planIntegration": "Integration checks",
     "planPromoted": "Fixed checks in this plan",
     "planQuestions": "Planned questions: {decisions} · Where will you be asked?",
@@ -640,7 +661,30 @@ const STRINGS = {
     "planItems": "Items: {n}",
     "answeredPlan": "Agreed to start with this plan",
     "exitSuccess": "Completed successfully (value {n})",
-    "exitFailure": "Needs checking (value {n})"
+    "exitFailure": "Needs checking (value {n})",
+    "planKeyHeading": "The verification key has changed",
+    "oldRunApproval": "This run started with an earlier version. Approve its plan once to continue.",
+    "planMissing": "Post a plan first",
+    "planMissingHelp": "The coordinator can post the current plan with gf plan set <file> for approval.",
+    "planReplaced": "An unverifiable plan was replaced. Review all work again.",
+    "unverifiedAnswer": "⚠ Unverified answer record",
+    "unverifiedAuthor": "Author not verified",
+    "planLens": "Review lens",
+    "planOutputs": "Outputs",
+    "runChecksTitle": "Check the whole result",
+    "runChecksAfter": "After all work is finished",
+    "runChecksGoal": "Plan goal",
+    "runConstraints": "Constraints",
+    "countWork": "Work: {n}",
+    "countReview": "Reviews: {n}",
+    "countDecision": "Decisions: {n}",
+    "countChecks": "Checks: {n}",
+    "countQuestions": "Questions: {n}",
+    "questionsMark": "? A question here",
+    "citesCheck": "Verify cited files and lines",
+    "humanCheck": "A person checks the result",
+    "hostCheck": "Check in the execution environment",
+    "evRepinned": "Verification key re-pinned; the plan needs approval again."
   }
 };
 // UI_STRINGS_END
@@ -738,7 +782,7 @@ export function viewLanguage(view, browser = 'en') {
 }
 export function cometCount(node) { return (node.laps || []).filter(lap => lap === 'returned').length; }
 // Below this the words on a card stop being readable, so a larger graph scrolls instead of shrinking further.
-export const MIN_FIT_SCALE = 2 / 3;
+export const MIN_FIT_SCALE = 6 / 7;
 export function edgeRelationLabel(edge, language = 'en') {
   const words = STRINGS[language];
   if (edge.relation === 'toward_goal') return words.towardGoal;
@@ -764,7 +808,7 @@ export function statusGlyph(state) {
   return {passed:'✓', running:'▶', retrying:'↪', submitted:'◷', awaiting:'◆', returned:'↩', notStarted:'○', exhausted:'!', held:'Ⅱ'}[state];
 }
 export function checkTitle(check, language = 'en') {
-  return (!check.title || check.title === check.id) && check.id === 'scope' ? STRINGS[language].scopeCheck : check.title || STRINGS[language].untitledCheck;
+  return check.title && check.title !== check.id ? check.title : check.command || check.run || check.prompt || STRINGS[language][{scope:'scopeCheck',cites:'citesCheck',human:'humanCheck',host:'hostCheck'}[check.type || check.id]] || check.id;
 }
 export function checkWording(check, language = 'en', attempt = check.attempt) {
   const key = check.result === 'passed' ? 'checkMet' : 'checkNotMet';
@@ -780,8 +824,32 @@ export function offscreenDirection(rect, width, height) {
 const textWidth = (text, wide, narrow) => Array.from(text || '').reduce((sum, c) => sum + (c.charCodeAt(0) > 0x2e80 ? wide : narrow), 0);
 export function fitScale(bounds, width, height, mobile = false) {
   const available = Math.min(width / bounds.width, height / bounds.height);
-  return Math.max(MIN_FIT_SCALE, Math.min(1, available));
+  return available >= MIN_FIT_SCALE ? Math.min(1, available) : 1;
 }
+export function planCounts(counts = {}, language = 'en', details = false) {
+  const keys = [['work','countWork'],['review','countReview'],['decision','countDecision']];
+  if (details) keys.push(['checks','countChecks'],['decisions','countQuestions']);
+  return keys.filter(([key]) => counts[key] > 0).map(([key,word]) => STRINGS[language][word].replace('{n}',counts[key])).join(' · ');
+}
+export function planFlow(data, language = 'en') {
+  if (!data.nodes.length || data.plan_error) return data;
+  const id = '_run_checks', strings = STRINGS[language];
+  const checks = [...(data.integration_checks || []), ...(data.promoted_checks || [])];
+  const node = {id, kind:'goal', title:strings.runChecksTitle, summary:strings.runChecksAfter,
+    goal:data.goal, runLevel:true, status:data.complete?'passed':'pending', attempts:0,
+    owns:[], needs:[], reads:[], declared_outputs:[], inputs:[], outputs:[], deliverables:[],
+    planned_checks:checks, returned_reasons:[], laps:[]};
+  const forward = forwardEdges(data.edges), terminal = data.nodes.filter(n => !forward.some(e => e.from === n.id));
+  return {...data, nodes:[...data.nodes,node], edges:[...data.edges,...terminal.map(n=>({
+    from:n.id,to:id,relation:'hands_over',label:'',gate:n.status==='passed'?'open':'closed',delivered:n.status==='passed'}))]};
+}
+
+export function fitStart(layout, width, height, scale) {
+  if (layout.bounds.width*scale<=width && layout.bounds.height*scale<=height) return {left:0,top:0};
+  const first=layout.positions[layout.order[0]];
+  return first?{left:Math.max(0,first.x*scale-28),top:Math.max(0,first.y*scale-28)}:{left:0,top:0};
+}
+
 export function crossingCount(routes, positions) {
   const cross = (a,b,c) => (b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
   let count=0;
@@ -845,7 +913,7 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
   const widths=layers.map(ids=>Math.max(264,...ids.filter(id=>byId.has(id)).map(id=>Math.min(280,Math.ceil(textWidth(byId.get(id).title,18,9))+40))));
   for(const v of vertices.values()) {
     v.width=widths[v.layer];
-    v.height=v.dummy?44:Math.max(v.node.planned_checks || v.node.deliverables ? 236 : 120,40+14*Math.max(links.filter(e=>e.from===v.id).length,links.filter(e=>e.to===v.id).length))+Math.max(0,Math.ceil(textWidth(v.node.title,18,9)/(v.width-40))-1)*26;
+    v.height=v.dummy?44:Math.max(v.node.planned_checks || v.node.deliverables ? 194 : 120,40+14*Math.max(links.filter(e=>e.from===v.id).length,links.filter(e=>e.to===v.id).length))+Math.max(0,Math.ceil(textWidth(v.node.title,18,9)/(v.width-40))-1)*26;
   }
   const gap=18,margin=20;
   const total=ids=>ids.reduce((s,id)=>s+vertices.get(id).height,0)+Math.max(0,ids.length-1)*gap;
@@ -958,6 +1026,7 @@ function translate() {
 }
 translate();
 let chosen = null, projects = [], view = null, fingerprint = '', mode = 'flow', selected = null;
+function flowNode(id) { return planFlow(view,language).nodes.find(n => n.id === id); }
 let queuedRefresh = false;
 let timer = 0, loading = false, generation = 0, renderer = null;
 const decisionController = createDecisionController();
@@ -1051,14 +1120,29 @@ function plannedChecks(parent, checks) {
   if (!list.children.length) list.append(el('li', t('noPlannedChecks')));
   parent.append(list);
 }
-function planFacts(parent, node) {
-  parent.append(el('p', t('labelOnly'), 'muted'), el('h3', t('planGoal')), el('p', node.goal || node.summary || ''));
-  for (const [key, rows] of [['planOwns',node.owns || []],['planReads',node.reads || []],['planDeliverables',node.deliverables || node.declared_outputs || []]]) {
-    parent.append(el('h3', t(key))); textList(parent, rows);
+function runFacts(parent) {
+  parent.append(el('h3',t('runChecksGoal')),el('p',view.goal));
+  for (const [key, checks] of [['planIntegration',view.integration_checks],['planPromoted',view.promoted_checks]]) {
+    if (checks?.length) { parent.append(el('h3',t(key))); plannedChecks(parent,checks); }
   }
+  if (view.constraints?.length) { parent.append(el('h3',t('runConstraints'))); textList(parent,view.constraints); }
+  if (view.planned_questions?.length) {
+    parent.append(el('h3',t('planQuestions',view.plan_counts)));
+    for (const q of view.planned_questions) { const row=el('p'); row.append(button(otherTitle(flowNode(q.node)?.title),()=>selectNode(q.node),'link'),el('span',' · '+q.question)); parent.append(row); }
+  }
+}
+function planFacts(parent, node) {
+  if (node.runLevel) { runFacts(parent); return; }
+  parent.append(el('h3', t('planGoal')), el('p', node.goal || ''));
+  parent.append(el('h3', t('planOwns'))); textList(parent,node.owns || []);
   parent.append(el('h3', t('planNeeds')));
-  textList(parent, (node.needs || []).map(n => `${n.artifact} · ${t('from')} ${otherTitle(view.nodes.find(p => p.id === n.from)?.title || n.from)} (${n.from})`));
+  const inputs=(node.needs || []).map(n => `${n.artifact} · ${t('from')} ${otherTitle(flowNode(n.from)?.title || n.from)}`);
+  if(node.target && !node.needs?.some(n=>n.from===node.target)) inputs.push(otherTitle(flowNode(node.target)?.title));
+  textList(parent,[...inputs,...(node.reads || [])]);
+  parent.append(el('h3', t('planOutputs')));
+  textList(parent,[...new Set([...(node.declared_outputs || []),...(node.outputs || []).map(n=>n.label).filter(Boolean)])]);
   parent.append(el('h3', t('planChecks'))); plannedChecks(parent, node.planned_checks);
+  if (node.lens) parent.append(el('h3',t('planLens')),el('p',node.lens));
 }
 let planBanner = null;
 function planAttention(box) {
@@ -1068,39 +1152,30 @@ function planAttention(box) {
   box.hidden = false; box.classList.add('plan-banner');
   const key = JSON.stringify([chosen, approval?.id, approval?.status, view.plan_error, view.key_mismatch]);
   if (planBanner?.key === key && box.firstElementChild) {
-    box.querySelector('.plan-summary').textContent = t('planSummary', view.plan_counts);
+    box.querySelector('.plan-summary').textContent = planCounts(view.plan_counts,language,true);
     return true;
   }
   clear(box);
-  const unverified = view.key_mismatch || approval?.status === 'answered' && !approval.verified;
-  const heading = el('h2', view.plan_error ? t('planTampered') : unverified ? t('planUnverified') : approval.status === 'open' ? approval.question : t('planSentBack'));
+  const unverified = approval?.status === 'answered' && !approval.verified;
+  const heading = el('h2', view.key_mismatch ? t('planKeyHeading') : view.plan_error ? t('planTampered') : !approval?.id ? t('planMissing') : unverified ? t('planUnverified') : approval.status === 'open' ? approval.question : t('planSentBack'));
   heading.id = 'plan-question'; box.setAttribute('aria-labelledby', heading.id);
-  box.append(heading, el('p', t('planSummary', view.plan_counts), 'plan-summary'));
+  box.append(heading, el('p', planCounts(view.plan_counts,language,true), 'plan-summary'));
   planBanner = {key};
+  if (view.key_mismatch) { box.append(el('p',t('planKeyMismatch')),el('pre',view.key_recovery)); return true; }
+  if (!approval?.id && !view.plan_error) { box.append(el('p',t(view.legacy?'oldRunApproval':'planMissingHelp'))); return true; }
   if (view.plan_error || unverified) {
     box.append(el('p', t(view.plan_error ? 'planTamperedHelp' : 'planUnverifiedHelp')));
     if (view.key_mismatch) box.append(el('p', t('planKeyMismatch')));
     return true;
   }
   if (approval.status !== 'open') {
-    box.append(el('p', t('planSentNote'), 'eyebrow'), el('p', approval.answer || ''), el('p', t('planWaitingRevision'), 'muted'));
+    const note=el('div',undefined,'plan-return-note');
+    note.append(el('p',t('planSentNote'),'eyebrow'),el('p',approval.answer || ''));
+    box.append(note,el('p',t('planWaitingRevision'),'muted plan-waiting'));
     return true;
   }
-  const facts = el('div', undefined, 'plan-overview');
-  facts.append(el('p', t('planChecklist', view.plan_counts), 'eyebrow'), el('p', view.goal), el('p', t('labelOnly'), 'muted'));
-  if (view.planned_questions?.length) {
-    const qs = el('details'); qs.open = !!rowOpen.get('plan-questions'); qs.addEventListener('toggle',()=>rowOpen.set('plan-questions',qs.open));
-    qs.append(el('summary', t('planQuestions', view.plan_counts)));
-    for (const q of view.planned_questions) {
-      const line=el('p'); line.append(button(`${otherTitle(view.nodes.find(n=>n.id===q.node)?.title)} · ${purposeWording(q.kind,language)}`,()=>selectNode(q.node),'link'),el('span',' · '+q.question)); qs.append(line);
-    }
-    facts.append(qs);
-  }
-  const runChecks=el('div',undefined,'plan-run-checks');
-  for (const [key, checks] of [['planIntegration',view.integration_checks],['planPromoted',view.promoted_checks]]) if (checks?.length) { const group=el('section'); group.append(el('h3',t(key))); plannedChecks(group,checks); runChecks.append(group); }
-  if(runChecks.children.length) facts.append(runChecks);
-  if (view.constraints?.length) textList(facts,view.constraints);
-  box.append(facts);
+  if (view.legacy) box.append(el('p',t('oldRunApproval'),'plan-notice'));
+  if (view.replaced_unverifiable) box.append(el('p',t('planReplaced'),'plan-notice'));
   const session = decisionController.open(approval.id);
   const actions = el('div', undefined, 'plan-actions'), start = button(t('planStart'), () => send('approved'), 'primary');
   const startGroup = el('div'); startGroup.append(start, el('p', t('planStartEffect'), 'muted'));
@@ -1145,11 +1220,11 @@ function attention() {
 let panelFingerprint='',panelNode=null;
 function panel() {
   const p = $('panel');
-  const signature=JSON.stringify([selected,view.nodes.find(n=>n.id===selected),view.decisions.filter(d=>d.node===selected),view.timeline.filter(r=>r.node===selected)]);
+  const signature=JSON.stringify([selected,flowNode(selected),view.decisions.filter(d=>d.node===selected),view.timeline.filter(r=>r.node===selected)]);
   if(signature===panelFingerprint)return;
   panelFingerprint=signature;
   const scroll=selected===panelNode?p.scrollTop:0;panelNode=selected;p.onscroll=null;clear(p);
-  const node = view.nodes.find(n => n.id === selected);
+  const node = flowNode(selected);
   p.hidden = !node; $('flow').classList.toggle('has-selection', !!node);
   if (!node) return;
   p.setAttribute('aria-label', title(node));
@@ -1159,14 +1234,14 @@ function panel() {
   }, 'panel-close'); close.setAttribute('aria-label', t('closeDetails'));
   const reference = el('p', undefined, 'ref-line'); reference.append(refChip(node.id, `${node.id} · ${title(node)}`));
   if(workedBy(node))reference.append(el('span',t('workedBy',{who:workedBy(node)})));
-  const panelBar=el('div',undefined,'panel-bar'); panelBar.append(el('strong',t('aboutWork')),close); p.append(panelBar);
+  const panelBar=el('div',undefined,'panel-bar'); panelBar.append(el('strong',t(node.runLevel?'runChecksTitle':'aboutWork')),close); p.append(panelBar);
   for (const d of view.decisions.filter(d => d.node === node.id)) {
     const ask = card(t('yourTurn'), question(d) || purposeWording(d.purpose, language), true);
     ask.append(refChip(d.id, `${d.id} · ${title(node)}`, true), button(t('read'), () => openDecision(d.id), 'primary')); p.append(ask);
   }
-  p.append(el('p', status(node), 'panel-status '+cardTone(node)), el('h2', title(node)));
-  if (view.plan_approval && !(view.plan_approval.verified && view.plan_approval.outcome === 'approved')) {
-    planFacts(p, node); p.append(reference); p.scrollTop=scroll; return;
+  p.append(el('p', node.runLevel?t('runChecksAfter'):status(node), 'panel-status '+cardTone(node)), el('h2', title(node)));
+  if (node.runLevel || view.plan_approval && !(view.plan_approval.verified && view.plan_approval.outcome === 'approved')) {
+    planFacts(p, node); if(!node.runLevel)p.append(reference); p.scrollTop=scroll; return;
   }
   if (displayState(node,view.decisions)==='returned') p.append(el('p',t('returnedBy',{who:t(node.returned_by?.role==='reviewer'?'roleReviewer':'roleLeader'),reason:node.returned_reason||t('noReason')})));
   p.append(reference, el('p', attempts(node)));
@@ -1198,11 +1273,14 @@ function rowSentence(r) {
   const n = r.attempt || 1;
   if (r.kind === 'superseded') return t('evSuperseded');
   if (r.kind === 'started') return t('evStarted');
-  if (r.kind === 'planned') return (r.revision > 1 ? t('evReplanned', {rev:r.revision}) : t('evPlanned')) + ' · ' + (r.counts ? t('planSummary',r.counts) : t('planItems',{n:r.count}));
+  if (r.kind === 'repinned') return t(r.verified?'evRepinned':'unverifiedAnswer');
+  if (r.kind === 'planned' && r.replaced_unverifiable) return t('planReplaced');
+  if (r.kind === 'planned') return (r.replaced_unverifiable ? t('planReplaced') : r.revision > 1 ? t('evReplanned', {rev:r.revision}) : t('evPlanned')) + ' · ' + (r.counts ? planCounts(r.counts,language) : t('planItems',{n:r.count}));
   if (r.kind === 'final') return r.result === 'passed' ? t('evFinalPassed') : [t('evFinalFailed'), ...(r.failed || [])].join(' · ');
   if (r.kind === 'learned') return `${t('evLearned')} · ${r.text}`;
   if (r.kind === 'reopened') return [t('evReopened'), r.reason].filter(Boolean).join(' · ');
   if (r.kind === 'asked') return [t('evAsked'), r.question].filter(Boolean).join(' · ');
+  if (r.kind === 'answered' && !r.verified) return [t('unverifiedAnswer'),r.answer].filter(Boolean).join(' · ');
   if (r.kind === 'answered' && r.purpose === 'plan_approval' && r.outcome === 'approved') return [t('answeredPlan'),r.answer].filter(Boolean).join(' · ');
   if (r.kind === 'answered') return [t(({approved:'answeredApproval', revision_requested:'answeredRevision', rejected:'answeredRejection'})[r.outcome] || 'evAnswered'), r.answer].filter(Boolean).join(' · ');
   const failed = (r.checks || []).filter(c => c.result === 'failed').map(c => checkTitle(c, language)), passed = (r.checks || []).filter(c => c.result === 'passed').length;
@@ -1247,7 +1325,7 @@ function logRow(r, anchor = true, inline = false) {
   if (r.decision) text.append(refChip(r.decision, `${r.decision} · ${r.node_title || r.question}`, true));
   if (r.node) text.append(el('strong', title({id:r.node, title:r.node_title})), refChip(r.node, `${r.node} · ${r.node_title}`));
   text.append(wording(rowSentence(r))); head.append(text);
-  const by = [who(r.by), r.kind === 'attempt' && r.worker?.model ? t('modelName',{model:r.worker.model}) : ''].filter(Boolean).join(' · ');
+  const by = [['answered','repinned'].includes(r.kind) && !r.verified ? t('unverifiedAuthor') : who(r.by), r.kind === 'attempt' && r.worker?.model ? t('modelName',{model:r.worker.model}) : ''].filter(Boolean).join(' · ');
   if (by) head.append(el('span', by, 'row-who'));
   if (r.kind === 'attempt' && !inline) item.append(el('p',t(view.complete?'endedAttempt':isEarlier?'earlierAttempt':'currentAttempt'),'eyebrow'));
   item.append(head);
@@ -1313,27 +1391,38 @@ function home() {
 }
 // Show one task's entries in the record, where the agent's words about it can be matched by time.
 function showNode(id) { if (!showMode('home')) return; logNode = id; logFilter = 'all'; mark = null; found = 'log'; home(); }
+function wholePhoneCards() {
+  if(!matchMedia('(max-width:760px)').matches || $('flow').hidden)return;
+  for(const card of $('phone-flow').querySelectorAll('.node-card')) {
+    const rect=card.getBoundingClientRect();
+    card.style.visibility=offscreenDirection(rect,innerWidth,innerHeight)?'hidden':'visible';
+  }
+}
+addEventListener('scroll',wholePhoneCards,{passive:true});
+addEventListener('resize',wholePhoneCards);
 function accessible() {
   clear($('node-list')); clear($('edge-list')); clear($('decision-list'));
-  const order = layeredLayout(view.nodes,view.edges,view.decisions).order;
-  [...view.nodes].sort((a,b)=>order.indexOf(a.id)-order.indexOf(b.id)).forEach(n => { const item = el('li', undefined, 'card'); item.append(button(title(n), () => selectNode(n.id)), el('p', status(n)), el('p', attempts(n), 'muted'), el('p', n.summary)); if (n.returned_reasons.length) textList(item, n.returned_reasons.flatMap((reasons,i)=>reasons.map(reason=>t('earlierFailure',{n:i+1,reason}))), 'noReason'); $('node-list').append(item); });
-  forwardEdges(view.edges).forEach(e => { const a = view.nodes.find(n => n.id === e.from), b = view.nodes.find(n => n.id === e.to); $('edge-list').append(el('li', `${title(a)} → ${title(b)} · ${relationText(e)} · ${t(e.delivered ? 'delivered' : 'notDelivered')}`)); });
+  const flow=planFlow(view,language);
+  const order = layeredLayout(flow.nodes,flow.edges,flow.decisions).order;
+  [...flow.nodes].sort((a,b)=>order.indexOf(a.id)-order.indexOf(b.id)).forEach(n => { const item = el('li', undefined, 'card'); item.append(button(title(n), () => selectNode(n.id)), el('p', n.runLevel?t('runChecksAfter'):status(n))); if(!n.runLevel)item.append(el('p', attempts(n), 'muted')); item.append(el('p', n.summary)); if (n.returned_reasons.length) textList(item, n.returned_reasons.flatMap((reasons,i)=>reasons.map(reason=>t('earlierFailure',{n:i+1,reason}))), 'noReason'); $('node-list').append(item); });
+  forwardEdges(flow.edges).forEach(e => { const a = flow.nodes.find(n => n.id === e.from), b = flow.nodes.find(n => n.id === e.to); $('edge-list').append(el('li', `${title(a)} → ${title(b)} · ${relationText(e)} · ${t(e.delivered ? 'delivered' : 'notDelivered')}`)); });
   view.decisions.forEach(d => { const item = el('li'); item.append(button(t('read'), () => openDecision(d.id))); decisionHeading(item, d, 'h3'); failedBlock(item, d); if (d.context.why) item.append(el('p', d.context.why)); $('decision-list').append(item); });
   if (!view.decisions.length) $('decision-list').append(el('li', t('nothingTitle')));
   const phone=$('phone-flow');clear(phone);
   for(const id of order){
-    const n=view.nodes.find(n=>n.id===id),item=el('li');item.append(nodeCard(n,n.id===selected));
-    const edges=forwardEdges(view.edges).filter(e=>e.from===id);
-    for(const e of edges){const handoff=el('p',undefined,'phone-handoff');handoff.append(el('span','↓','status-glyph'),el('span',`${title(n)} → ${title(view.nodes.find(n=>n.id===e.to))} · ${e.relation==='reviews'?t('review'):t(e.delivered?'delivered':'notDelivered')}`));item.append(handoff);}
+    const n=flow.nodes.find(n=>n.id===id),item=el('li');item.append(nodeCard(n,n.id===selected));
+    const edges=forwardEdges(flow.edges).filter(e=>e.from===id);
+    for(const e of edges){const handoff=el('p',undefined,'phone-handoff');handoff.append(el('span','↓','status-glyph'),el('span',`${title(n)} → ${title(flow.nodes.find(n=>n.id===e.to))} · ${e.relation==='reviews'?t('review'):t(e.delivered?'delivered':'notDelivered')}`));item.append(handoff);}
     phone.append(item);
   }
+  wholePhoneCards();
 }
 function showMode(next) {
   if (next !== 'decision' && (mode === 'decision' || next === 'home') && !discardDecision()) return false;
   mode = next; $('home').hidden = next !== 'home'; $('flow').hidden = next !== 'flow'; $('decision').hidden = next !== 'decision'; $('accessible').hidden = next !== 'flow';
   $('home-tab').setAttribute('aria-pressed', String(next === 'home')); $('flow-tab').setAttribute('aria-pressed', String(next === 'flow'));
   // The map can only measure its cards while it is on screen.
-  if (renderer && next === 'flow' && view) renderer.update(view, selected); return true;
+  if (renderer && next === 'flow' && view) renderer.update(view, selected); wholePhoneCards(); return true;
 }
 function discardDecision() {
   if (!decisionController.close()) return false;
@@ -1346,7 +1435,7 @@ function closeInvalidDecision(run, decisions, nextView = {decisions}) {
 }
 function goHome() { if (showMode('home') && view) home(); }
 function showGraph() { if (!showMode('flow')) return; attention(); panel(); }
-function selectNode(id) { const n=view.nodes.find(n=>n.id===id),d=view.decisions.find(d=>d.node===id); if(n?.kind==='decision'&&d){openDecision(d.id);return;} if (!showMode('flow')) return; selected = selected === id ? null : id; panel(); if (renderer) renderer.select(selected); if (selected && matchMedia('(max-width:760px)').matches) $('panel').scrollIntoView({block:'start',behavior:reduced.matches?'auto':'smooth'}); }
+function selectNode(id) { const n=flowNode(id),d=view.decisions.find(d=>d.node===id); if(n?.kind==='decision'&&d){openDecision(d.id);return;} if (!showMode('flow')) return; selected = selected === id ? null : id; panel(); if (renderer) renderer.select(selected); if (selected && matchMedia('(max-width:760px)').matches) $('panel').scrollIntoView({block:'start',behavior:reduced.matches?'auto':'smooth'}); }
 function focusHeading(heading) { heading.tabIndex = -1; heading.focus({preventScroll:true}); }
 function openDecision(id, focus = true) {
   replacementDecision=null; decisionNotice=''; notice('');
@@ -1557,7 +1646,8 @@ function jump(target) {
   }
   if (target.node) {
     const text = target.node.toLowerCase();
-    const node = view.nodes.find(n => n.id.toLowerCase() === text) || view.nodes.find(n => (n.title || '').toLowerCase().includes(text));
+    const nodes=planFlow(view,language).nodes;
+    const node = nodes.find(n => n.id.toLowerCase() === text) || nodes.find(n => (n.title || '').toLowerCase().includes(text));
     if (!node) return miss(target.node);
     decisionNotice = ''; notice(''); selected = null; selectNode(node.id); return true;
   }
@@ -1583,7 +1673,7 @@ function applyView(next) {
   $('title').textContent = view.title || t('brand'); $('where').textContent = '';
   const sent = view.plan_approval?.verified && ['rejected','revision_requested'].includes(view.plan_approval.outcome);
   $('flow').classList.toggle('sent-plan',!!sent); $('flow').classList.toggle('plan-unavailable',!!view.plan_error);
-  $('subtitle').textContent = view.plan_error ? '' : view.plan_approval && !(view.plan_approval.verified && view.plan_approval.outcome==='approved') ? (view.plan_approval.status==='open'?t('planWaiting'):'') : view.complete ? t('complete', {total:view.nodes.length})+' · '+t('planSummary',view.plan_counts || {work:0,review:0,decision:0}) : t('overview', {total:view.nodes.length, done:view.counts.done, doing:view.counts.doing, needs:view.counts.needs_you});
+  $('subtitle').textContent = view.plan_error ? '' : view.plan_approval && !(view.plan_approval.verified && view.plan_approval.outcome==='approved') ? (view.plan_approval.status==='open'?t('planWaiting'):'') : view.complete ? t('complete', {total:view.nodes.length})+' · '+planCounts(view.plan_counts,language) : t('overview', {total:view.nodes.length, done:view.counts.done, doing:view.counts.doing, needs:view.counts.needs_you});
   if(view.complete){const resultNode=[...view.nodes].reverse().find(n=>n.kind==='work'&&view.timeline.some(r=>r.node===n.id&&r.files?.length));if(resultNode)$('subtitle').append(button(t('results'),()=>selectNode(resultNode.id),'link result-action'));}
   accessible(); attention(); panel(); home(); showMode(mode); if (renderer && mode === 'flow') renderer.update(view, selected);
   if (mode === 'decision' && decisionController.session) openDecision(decisionController.session.target.id, false);
@@ -1657,7 +1747,7 @@ function walker() {
 }
 // A rebuilt element joins a looping animation at the phase it would have reached.
 function inPhase(element, period) {element.style.animationDelay=-(performance.now()%period)+'ms';return element;}
-function nodeDescription(n) {return `${t(n.kind||'work')}. ${title(n)}. ${status(n)}. ${attempts(n)}. ${t('returnTimes',{n:cometCount(n)})}`;}
+function nodeDescription(n) {return n.runLevel?`${t('runChecksTitle')}. ${t('runChecksAfter')}`:`${t(n.kind||'work')}. ${title(n)}. ${status(n)}. ${attempts(n)}. ${t('returnTimes',{n:cometCount(n)})}`;}
 function nodeCard(n, expanded = false) {
   const root=el('article',undefined,'node-card '+cardTone(n)+(['running','retrying'].includes(displayState(n,view.decisions))?' working':'')+(expanded?' expanded':''));root.dataset.node=n.id;
   const header=button('',()=>{
@@ -1666,14 +1756,14 @@ function nodeCard(n, expanded = false) {
     else selectNode(n.id);
   },'node-header');
   header.setAttribute('aria-label',nodeDescription(n));header.setAttribute('aria-expanded',String(expanded));
-  const state = displayState(n, view.decisions), statusLine = el('span', status(n), 'node-status');
+  const state = displayState(n, view.decisions), statusLine = el('span', n.runLevel?t('runChecksAfter'):status(n), 'node-status');
   statusLine.prepend(el('span', statusGlyph(state), 'status-glyph'));
   header.append(statusLine);
   const titleLine=el('span',undefined,'node-title-line');
   if(n.kind && n.kind!=='work')titleLine.append(typeIcon(n.kind));
   titleLine.append(el('strong',title(n),'node-title'));header.append(titleLine);
   const reference=el('div',undefined,'ref-line node-reference');
-  reference.append(refChip(n.id, `${n.id} · ${title(n)}`));
+  if(!n.runLevel) reference.append(refChip(n.id, `${n.id} · ${title(n)}`));
   if(n.attempts)reference.append(el('span',t('attemptShort',{n:n.attempts}),'attempt-caption'));
   const decision=view.decisions.find(d=>d.node===n.id);
   const footer=el('div',undefined,'node-footer');
@@ -1684,6 +1774,7 @@ function nodeCard(n, expanded = false) {
   }
   const essentials=el('div',undefined,'node-essentials');
   const files=[...new Set(n.deliverables || [])];
+  if(n.runLevel) essentials.append(el('p',view.goal,'run-goal-preview'));
   if(files.length)essentials.append(el('p',t('planCardDelivery',{files:files.join(', ')})));
   if(n.planned_checks?.length)essentials.append(el('p',t('planCardChecks',{n:n.planned_checks.length,first:checkTitle(n.planned_checks[0],language)})));
   const questions=(view.planned_questions || []).filter(q=>q.node===n.id);
@@ -1701,8 +1792,9 @@ function createMap() {
   let data={nodes:[],edges:[],decisions:[]},chosenNode=null,layout=null,scale=1,automatic=true;
   const nodes=new Map(),chips=new Map(),seen=new Map();let drawing=null,placed=false,layoutKey='',origin={x:0,y:0};
   const zoomText=el('output');zoomText.setAttribute('aria-live','polite');
-  const zoom=amount=>{automatic=false;scale=Math.max(2/3,Math.min(1.6,scale+amount));size();};
-  const fit=()=>{scale=Math.max(2/3,Math.min(1,(viewport.clientWidth-24)/layout.bounds.width,(viewport.clientHeight-24)/layout.bounds.height));automatic=false;size();viewport.scrollLeft=0;viewport.scrollTop=0;};
+  const zoom=amount=>{automatic=false;scale=Math.max(MIN_FIT_SCALE,Math.min(1.6,scale+amount));size();};
+  const start=()=>{const position=fitStart(layout,viewport.clientWidth,viewport.clientHeight,scale);viewport.scrollLeft=position.left;viewport.scrollTop=position.top;outside();};
+  const fit=()=>{scale=fitScale(layout.bounds,viewport.clientWidth-24,viewport.clientHeight-24);automatic=false;size();start();};
   const zoomOut=button('−',()=>zoom(-.1)),zoomIn=button('+',()=>zoom(.1));
   toolbar.append(zoomOut,zoomIn,button(t('fit'),fit),zoomText,overflow);
   zoomOut.dataset.i18nLabel='zoomOut';zoomIn.dataset.i18nLabel='zoomIn';toolbar.children[3].dataset.i18n='fit';viewport.dataset.i18nLabel='mapHelp';
@@ -1716,12 +1808,12 @@ function createMap() {
       const p=layout.positions[n.id],x=p.x*scale+ox-viewport.scrollLeft,y=p.y*scale+oy-viewport.scrollTop;
       const direction=offscreenDirection({x,y,width:p.width*scale,height:p.height*scale},w,h);
       if(direction)groups[direction].push(n);
-      if(x<w && y<h && x+p.width*scale>0 && y+p.height*scale>0)visible++;
-      const element=nodes.get(n.id); if(element)element.style.visibility='visible';
+      if(!direction)visible++;
+      const element=nodes.get(n.id); if(element)element.style.visibility=direction?'hidden':'visible';
     }
     for(const c of layout.chips){const chip=chips.get(c.first);if(chip)chip.hidden=scale<1 || !!chip.dataset.tooWide || !!offscreenDirection({x:c.x*scale+ox-viewport.scrollLeft,y:c.y*scale+oy-viewport.scrollTop,width:c.width*scale,height:c.height*scale},w,h);}
     // The viewport clips routes naturally: an off-screen neighbour leaves a visible continuing stub.
-    visibleCount.textContent=t('visibleCards',{n:visible,summary:t('planSummary',data.plan_counts || {work:0,review:0,decision:0})});
+    visibleCount.textContent=t('visibleCards',{n:visible,summary:planCounts(data.plan_counts,language)});
     for(const [direction,b] of overflowButtons)b.hidden=!groups[direction].length;
     for(const [direction,items] of Object.entries(groups))if(items.length) {
       let b=overflowButtons.get(direction);
@@ -1741,7 +1833,7 @@ function createMap() {
   function size() {
     if(!layout)return;
     if(map.getBoundingClientRect){
-      const available=Math.max(300,innerHeight-map.getBoundingClientRect().top-62);
+      const available=Math.max(300,innerHeight-map.getBoundingClientRect().top-38);
       map.style.height=(data.complete?Math.min(available,layout.bounds.height*scale+100):available)+'px';
       $('panel').style.maxHeight=matchMedia('(max-width:760px)').matches?'none':parseFloat(map.style.height)+'px';
       $('panel').style.height=$('panel').style.maxHeight;
@@ -1753,10 +1845,11 @@ function createMap() {
     stage.style.setProperty('--map-text',Math.max(14,12/scale)+'px');
     Object.assign(spacer.style,{width:layout.bounds.width*scale>w?layout.bounds.width*scale+'px':'100%',height:layout.bounds.height*scale>h?layout.bounds.height*scale+'px':'100%'});
     if(!$('panel').hidden && $('panel').onscroll)$('panel').onscroll();
-    zoomText.textContent=Math.round(scale*100)+'%';zoomOut.disabled=scale<=2/3;zoomOut.title=zoomOut.disabled?t('minZoom'):t('zoomOut');zoomIn.disabled=scale>=1.6;outside();
+    zoomText.textContent=Math.round(scale*100)+'%';zoomOut.disabled=scale<=MIN_FIT_SCALE;zoomOut.title=zoomOut.disabled?t('minZoom'):t('zoomOut');zoomIn.disabled=scale>=1.6;outside();
   }
   const setRect=(element,rect)=>Object.assign(element.style,{left:rect.x+'px',top:rect.y+'px',width:rect.width+'px',height:rect.height+'px'});
   function update(next,id) {
+    next=planFlow(next,language);
     if(layout)size();
     const planKey=JSON.stringify([next.nodes.map(n=>[n.id,n.title,n.kind,n.target]),next.edges.map(e=>[e.from,e.to,e.relation,e.label])]);
     if(planKey!==layoutKey){layoutKey=planKey;placed=false;automatic=true;}
@@ -1779,17 +1872,16 @@ function createMap() {
       seen.set(n.id,{tone:cardTone(n),comets:cometCount(n)});
     }
     layout=layeredLayout(data.nodes,data.edges.map(e=>({...e,label:e.label?label(e.label):''})),data.decisions,true,{language});
-    clear(key); key.append(el('strong',t('lineKinds')));
+    clear(key);
     name.textContent=$('flow').classList.contains('sent-plan')?t('planReturned'):t('graph');mapTitle.classList.toggle('returned-title',$('flow').classList.contains('sent-plan'));
     for(const [state,word] of [['open','lineSampleOpen'],['closed','lineSampleClosed'],['review','lineSampleReview']]){
       if(!layout.routes.some(r=>(r.relation==='reviews'?'review':r.gateState==='open'?'open':'closed')===state))continue;
       const sample=el('span',undefined,'line-sample '+state),caption=el('span',t(word));caption.dataset.i18n=word;sample.append(el('i'),caption);key.append(sample);
     }
-    const states=el('div',undefined,'state-legend'); states.append(el('strong',t('stateKinds')));
+    const states=el('div',undefined,'state-legend');
     for(const state of [...new Set(data.nodes.map(n=>displayState(n,data.decisions)))]) states.append(el('span',`${statusGlyph(state)} ${t(state)}`,'state-key state-'+state));
-    if(data.nodes.some(n=>n.kind==='review') || data.planned_questions?.length)states.append(el('strong',t('markKinds')));
     if(data.nodes.some(n=>n.kind==='review')) { const mark=el('span',undefined,'state-key review-key'); mark.append(typeIcon('review'),el('span',t('review')));states.append(mark); }
-    if(data.planned_questions?.length)states.append(el('span','? '+t('planQuestions',data.plan_counts),'state-key'));
+    if(data.planned_questions?.length)states.append(el('span',t('questionsMark'),'state-key'));
     key.append(states);
     // Reorder existing controls without replacing them: tab order follows the drawing.
     for(const id of layout.order){const e=nodes.get(id);setRect(e,layout.positions[id]);stage.append(e);}
@@ -1821,11 +1913,7 @@ function createMap() {
     // Start at the beginning, with no clipped labels from a preceding column.
     if(!data.nodes.length)placed=false;
     else if(!placed&&viewport.clientWidth){
-      placed=true;viewport.scrollLeft=0;viewport.scrollTop=0;
-      if(layout.bounds.width*scale>viewport.clientWidth||layout.bounds.height*scale>viewport.clientHeight){
-        const first=layout.order.find(id=>!['passed'].includes(displayState(data.nodes.find(n=>n.id===id),data.decisions)));
-        if(first){const p=layout.positions[first];viewport.scrollLeft=Math.max(0,p.x*scale-28);viewport.scrollTop=Math.max(0,p.y*scale-28);}
-      }
+      placed=true;start();
     }
     if(reveal)revealSelection();
     outside();

@@ -20,7 +20,7 @@ S = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(S / 'scripts'))
 from graphflow import checks, decisions, gate, learn, plan, server, state, store
 
-from human_support import legacy_run
+from human_support import legacy_run, approve_current_plan
 
 ACTOR = {'role': 'leader', 'node': None, 'session': 'dashboard-demo'}
 
@@ -79,6 +79,7 @@ def build_demo_run(gf_home, project_dir):
         tx.append('plan.set', {'revision': revision, 'plan_sha256': sha,
                   'fingerprints': {n['id']: state.fingerprint(n) for n in normalized['nodes']},
                   'constraints_applied': []}, ACTOR)
+    approve_current_plan(run)
     with contextlib.redirect_stderr(io.StringIO()):
         for nid in ('promise', 'records'):
             checks.start(run, nid, None, ACTOR)
@@ -171,7 +172,7 @@ import assert from 'node:assert/strict';
 process.on('uncaughtException', error=>{console.error(error.stack.replace(/data:text[^: ]+/g,'page.js'));process.exit(1);});
 import {readFileSync} from 'node:fs';
 const source = readFileSync(process.argv[2], 'utf8');
-const {createDecisionController, decisionQuestion, purposeWording, purposeAction, viewLanguage, edgeRelationLabel, fitScale, MIN_FIT_SCALE, edgeChipText, cometCount, layeredLayout, crossingCount, displayState, statusGlyph, checkWording, checkTitle, offscreenDirection} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+const {createDecisionController, decisionQuestion, purposeWording, purposeAction, viewLanguage, edgeRelationLabel, fitScale, MIN_FIT_SCALE, edgeChipText, cometCount, layeredLayout, crossingCount, displayState, statusGlyph, checkWording, checkTitle, offscreenDirection, planFlow,fitStart, planCounts} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const first = {project:'/project', run:'first'}, second = {project:'/project', run:'second'};
 const decision = {id:'d7', purpose:'lane3', kind:'authorization', failed:[], files:[{name:'Result',path:'result.txt'}]};
 const controller = createDecisionController();
@@ -218,8 +219,29 @@ const cases=[
 for(const [rect,expected] of cases)assert.equal(offscreenDirection(rect,300,300),expected);
 const counts={}; for(const [rect] of cases){const direction=offscreenDirection(rect,300,300);if(direction)counts[direction]=(counts[direction]||0)+1;}
 assert.equal(Object.values(counts).reduce((a,b)=>a+b,0),3);
+assert.equal(offscreenDirection({x:12,y:786,width:350,height:166},390,844),'offBottom');
+assert.equal(offscreenDirection({x:12,y:-80,width:350,height:166},390,844),'offTop');
+assert.equal(offscreenDirection({x:12,y:420,width:350,height:166},390,844),null);
 assert.equal(fitScale({width:900,height:400},855,500),.95);
 assert.equal(fitScale({width:900,height:400},855,500,true),.95);
+""")
+
+    def test_plan_flow_ends_with_recorded_run_contract_and_keeps_counts(self):
+        self.run_controller(r"""
+const original={nodes:[{id:'a',kind:'work'},{id:'b',kind:'work'},{id:'r',kind:'review'}],edges:[{from:'a',to:'b',relation:'hands_over'},{from:'r',to:'b',relation:'reviews'}],goal:'Whole goal',integration_checks:[{id:'all',command:'test -f result'}],promoted_checks:[{id:'fixed',command:'true'}],plan_counts:{work:2,review:1,decision:0}};
+const before=JSON.stringify(original), flow=planFlow(original,'en');
+assert.equal(JSON.stringify(original),before);
+assert.equal(flow.nodes.at(-1).runLevel,true);
+assert.equal(flow.nodes.at(-1).goal,'Whole goal');
+assert.equal(flow.nodes.at(-1).planned_checks.length,2);
+assert.deepEqual(flow.edges.at(-1),{from:'r',to:'_run_checks',relation:'hands_over',label:'',gate:'closed',delivered:false});
+assert.equal(planCounts(flow.plan_counts,'en'),'Work: 2 · Reviews: 1');
+assert.equal(planCounts({work:4,checks:9,decisions:0},'ko',true),'일 4개 · 검사 9개');
+assert.deepEqual(fitStart({bounds:{width:4000,height:1600},order:['a'],positions:{a:{x:20,y:800}}},1200,600,1),{left:0,top:772});
+assert.deepEqual(fitStart({bounds:{width:800,height:400},order:['a'],positions:{a:{x:20,y:80}}},1200,600,1),{left:0,top:0});
+assert.equal(fitScale({width:800,height:400},1200,600),1);
+assert.equal(fitScale({width:4000,height:1600},1200,600),1,'too large opens at a readable start');
+assert.equal(checkTitle({id:'all',type:'cmd',command:'test -s result'},'ko'),'test -s result');
 """)
 
     def test_relation_labels_and_loop_states(self):
@@ -374,6 +396,7 @@ class Element {
   click() { if (!this.disabled) this.dispatchEvent({type:'click'}); }
   focus() { document.activeElement=this; }
   scrollIntoView() {}
+  getBoundingClientRect() { return this.rect || {x:12,y:20,top:20,right:212,bottom:220,width:200,height:200}; }
   querySelectorAll(selector) {
     const matches = c => selector.startsWith('.') ? (c.className||'').split(' ').includes(selector.slice(1)) : selector.startsWith('[data-hint=') ? c.dataset.hint===selector.slice(11,-1) : selector==='[data-effect]' ? !!c.dataset.effect : selector==='button[data-outcome]' ? c.tagName==='button' && !!c.dataset.outcome : selector==='[data-i18n]' ? false : c.tagName===selector || selector===`#${c.id}`;
     return this.children.flatMap(c=>[...(matches(c)?[c]:[]),...c.querySelectorAll(selector)]);
@@ -394,6 +417,7 @@ globalThis.location={href:'http://localhost:5000/?t=demo',port:'5000',hash:'',pa
 globalThis.addEventListener=(type,fn)=>{docEvents['window:'+type]=fn;};
 globalThis.history={replaceState(){}}; globalThis.sessionStorage={getItem(){return 'demo'},setItem(){}};
 globalThis.ResizeObserver=class { observe(){} };
+globalThis.innerWidth=390;globalThis.innerHeight=844;
 globalThis.matchMedia=()=>({matches:true,addEventListener(){}});
 globalThis.setTimeout=()=>0; globalThis.clearTimeout=()=>{};
 const d={...decision,purpose:'hold',kind:'review',node:'work',question:'Approve hold for work?',record_purpose:'hold',
@@ -414,6 +438,9 @@ assert.equal(get('flow').hidden,false); assert.equal(get('home').hidden,true);
 assert.match(get('map').textContent,/d7 · Read and decide/);
 assert.equal(get('panel').hidden,true,'no idle legend occupies the graph');
 assert.equal(get('attention').hidden,false);
+const phoneCard=get('phone-flow').querySelector('.node-card');
+phoneCard.rect={x:12,y:786,width:350,height:166,bottom:952};docEvents['window:scroll']();assert.equal(phoneCard.style.visibility,'hidden');
+phoneCard.rect={x:12,y:420,width:350,height:166,bottom:586};docEvents['window:scroll']();assert.equal(phoneCard.style.visibility,'visible');
 assert.match(get('attention').textContent,/d7/);
 assert.match(get('attention').textContent,/Approve hold for work/);
 const before=get('map').querySelectorAll('article'); docEvents.visibilitychange(); await settle();
@@ -512,7 +539,7 @@ const approval={id:'d20',purpose:'plan_approval',kind:'authorization',status:'op
 live.plan_approval=approval;live.plan_counts={work:1,review:0,decision:0,checks:2,decisions:0};live.decisions=[approval];
 docEvents.visibilitychange();await settle();
 assert.match(get('attention').textContent,/Start this plan\?/);
-assert.match(get('attention').textContent,/Work: 1 · Reviews: 0 · Decisions: 0/);
+assert.match(get('attention').textContent,/Work: 1 · Checks: 2/);
 const planInput=get('plan-changes'),planActions=get('attention').querySelector('.plan-actions').querySelectorAll('button');
 assert.equal(planActions[0].textContent,'Send back');assert.equal(planActions[0].disabled,true);
 assert.equal(planActions[1].textContent,'Start');assert.equal(planActions[1].disabled,false);
@@ -590,7 +617,7 @@ assert.equal(statusGlyph('running'),'▶');
             self.assertTrue(returned[0]['reason'])
             self.assertEqual(len({r['id'] for r in rows}), len(rows))
             asked = [r for r in rows if r['kind'] == 'asked']
-            self.assertEqual([r['decision'] for r in asked], [d['id'] for d in view['decisions']])
+            self.assertEqual([r['decision'] for r in asked if any(d['id']==r['decision'] for d in view['decisions'])], [d['id'] for d in view['decisions']])
             self.assertEqual(view['run'], run.name)
             decision = view['decisions'][0]
             self.assertEqual(decision['purpose'], 'human_check')

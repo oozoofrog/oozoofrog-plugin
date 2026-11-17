@@ -137,12 +137,6 @@ def _allowed_cmd(run_dir, tx, node, check):
         allowed.extend(node.get("checks") or [])
     if check.get("type") == "cmd" and check in allowed:
         return
-    fixed = _store.project_of(run_dir) / ".graph-flow" / "checks.json"
-    try:
-        if not _state.derive(tx.plan, tx.events)["run"].get("approval_required") and fixed.exists():
-            allowed.extend(_json.loads(fixed.read_text(encoding="utf-8")).get("checks", []))
-    except (OSError, ValueError) as exc:
-        raise _error("io_error", "cannot read fixed checks: %s" % exc, _core.EXIT_IO)
     if check.get("type") != "cmd" or check not in allowed:
         raise _error("unknown_check", "command must be a plan or fixed check")
 

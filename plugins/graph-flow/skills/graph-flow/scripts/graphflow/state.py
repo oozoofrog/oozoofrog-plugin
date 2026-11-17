@@ -56,8 +56,6 @@ def plan_identity(plan):
 
 def plan_approval(derived):
     identity = derived.get("run", {}).get("plan_identity")
-    if not derived.get("run", {}).get("approval_required", bool(identity)):
-        return None  # Only histories without a marker or identity are legacy.
     if not identity:
         return {}
     matches = [d for d in derived.get("decisions", {}).values()
@@ -70,14 +68,23 @@ def require_plan_approval(derived):
     run = derived.get("run", {})
     if run.get("plan_error"):
         raise core.GFError("plan_tampered", "Plan differs from the recorded structural identity", core.EXIT_STATE)
-    if run.get("key_mismatch") and run.get("approval_required"):
-        raise core.GFError("human_key_mismatch", "This GF_HOME key differs from the run's recorded human key", core.EXIT_STATE)
+    if run.get("key_mismatch"):
+        raise core.GFError("human_key_mismatch", key_recovery(run), core.EXIT_STATE)
     approval = plan_approval(derived)
     if approval is not None and not (approval.get("status") == "answered"
             and approval.get("verified") and approval.get("outcome") == "approved"):
-        did = approval.get("id", "missing")
+        if not approval.get("id"):
+            raise core.GFError("plan_not_approved", "Set the current plan with gf plan set <file>, then have the person approve it", core.EXIT_STATE)
+        did = approval["id"]
         raise core.GFError("plan_not_approved", "Plan needs human approval (%s); show: gf open --decision %s"
                            % (did, did), core.EXIT_STATE)
+
+
+def key_recovery(run):
+    return ("The human key was lost, rotated, or this process uses a different GF_HOME. "
+            "Use the original GF_HOME/key, or in your own terminal run: "
+            "GF_ROLE=human GF_HUMAN_TERMINAL=1 graph-flow --run <run-path> key repin; "
+            "then approve the plan again.")
 
 
 def _data(ev):
@@ -152,11 +159,23 @@ def derive(plan, events):
     run_id = None
     plan_revision = 0
     current_identity = None
-    approval_required = any(
-        (e.get("type") == "run.init" and (_data(e).get("approval_required") or _data(e).get("schema_version", 1) >= 2))
-        or (e.get("type") == "plan.set" and _data(e).get("plan_identity") is not None) for e in events)
+    approval_required = True
+    run_nonce = next((_data(e).get("run_nonce") for e in events
+                      if e.get("type") in ("run.init", "run.nonce") and _data(e).get("run_nonce")), None)
+    legacy = not any(e.get("type") == "run.init" and _data(e).get("run_nonce") for e in events)
+    repin_seq = 0
+    repins = []
+    for e in events:
+        d = _data(e)
+        if e.get("type") == "human.repin" and d.get("run_nonce") and d.get("human_key_sha256") == core.key_fingerprint():
+            expected = core.human_sig(e.get("run"), "human.repin", "repinned", "", d)
+            if expected and hmac.compare_digest(expected, str(d.get("sig", ""))):
+                repins.append(e)
     pinned_key = next((_data(e).get("human_key_sha256") for e in events
                       if e.get("type") in ("run.init", "human.key") and _data(e).get("human_key_sha256")), None)
+    if repins:
+        repin = repins[-1]
+        pinned_key, run_nonce, repin_seq = (_data(repin)["human_key_sha256"], _data(repin)["run_nonce"], repin["seq"])
     key_mismatch = bool(pinned_key and pinned_key != core.key_fingerprint())
     host = []
     final = None
@@ -196,7 +215,7 @@ def derive(plan, events):
             fps = d.get("fingerprints")
             if not isinstance(fps, dict):
                 continue
-            changed = set()
+            changed = set(nodes) if d.get("replaced_unverifiable") else set()
             for nid, fp in fps.items():
                 if prev_fps is not None and nid in prev_fps:
                     if prev_fps[nid] != fp:
@@ -314,6 +333,8 @@ def derive(plan, events):
                 "check": d.get("check"),
                 "purpose": d.get("purpose"),
                 "plan_identity": d.get("plan_identity"),
+                "run_nonce": run_nonce,
+                "human_key_sha256": pinned_key,
                 "kind": d.get("kind"),
                 "question": d.get("question"),
                 "evidence": copy.deepcopy(d.get("evidence")),
@@ -340,17 +361,18 @@ def derive(plan, events):
             dec["answer"] = d.get("answer")
             dec["source"] = d.get("source")
             sigs[dec["id"]] = d.get("sig")
+            dec["answer_seq"] = seq
         # every other type is ignored
 
     for did, dec in decisions.items():
-        if dec.get("purpose") == "plan_approval" and dec.get("plan_identity") != current_identity:
+        if dec["seq"] < repin_seq or dec.get("purpose") == "plan_approval" and dec.get("plan_identity") != current_identity:
             dec["stale"] = True
         sig = sigs.get(did)
-        if dec["status"] == "answered" and isinstance(sig, str):
-            modern = sig.startswith("v2:")
-            is_plan = dec.get("purpose") == "plan_approval"
-            expected = (core.human_sig(run_id, did, dec["outcome"], dec["answer"], dec if modern else None)
-                        if not is_plan or modern and pinned_key and not key_mismatch else None)
+        if dec.get("answer_seq") is not None and isinstance(sig, str):
+            # Old signatures are history only, never authorization for new execution.
+            modern = sig.startswith("v3:")
+            expected = (core.human_sig(run_id, did, dec["outcome"], dec["answer"], dec)
+                        if modern and run_nonce and pinned_key and not key_mismatch and dec["seq"] > repin_seq else None)
             if expected is not None:
                 dec["verified"] = hmac.compare_digest(
                     expected.encode("utf-8"), sig.encode("utf-8"))
@@ -361,7 +383,7 @@ def derive(plan, events):
         if a is None:
             dec["stale"] = True
         else:
-            dec["stale"] = (a["basis"] >= dec["seq"]
+            dec["stale"] = dec["stale"] or (a["basis"] >= dec["seq"]
                             or (dec["submission"] is not None
                                 and dec["submission"] != _sub_id(a)))
 
@@ -425,6 +447,9 @@ def derive(plan, events):
             "plan_revision": plan_revision,
             "plan_identity": current_identity,
             "approval_required": approval_required,
+            "run_nonce": run_nonce,
+            "legacy": legacy,
+            "repin_seq": repin_seq,
             "human_key_sha256": pinned_key,
             "key_mismatch": key_mismatch,
             "plan_error": bool(current_identity and plan_identity(plan or {}) != current_identity),

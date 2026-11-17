@@ -11,7 +11,7 @@ SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 from graphflow import checks, core, merge, plan, state, store
 
-from human_support import legacy_run
+from human_support import legacy_run, approve_current_plan
 
 ACTOR = {"role": "leader", "node": None, "session": "merge-test"}
 
@@ -65,6 +65,7 @@ class MergeTests(unittest.TestCase):
                       "fingerprints": {n["id"]: state.fingerprint(n) for n in normalized["nodes"]},
                       "constraints_applied": []}, ACTOR)
 
+        approve_current_plan(self.run)
     def append(self, kind, data):
         with store.transaction(self.run) as tx:
             return tx.append(kind, data, ACTOR)

@@ -116,3 +116,5 @@ Brief sub-sessions in English and require English reports, preserving original c
 Never set or change `GF_HOME`, `GF_ROLE=human`, or `GF_HUMAN_TERMINAL`; never run the human answer command (`gf decide answer`). Do not impersonate the person through the dashboard or read signing keys.
 
 A check title states exactly what its command verifies. For `grep -q 안내 guide.txt`, write “'안내'라는 낱말이 들어 있어요”, not “안내 내용이 들어 있어요”. Titles, summaries and context shown as labels are not consent: the person must read the goal, owned files, inputs, outputs and commands. A newly promoted check takes effect only after the next plan is set and approved.
+
+If the human key is lost or rotated, ask the person to use their own terminal for `GF_ROLE=human GF_HUMAN_TERMINAL=1 gf --run <run-path> key repin`, then approve the plan again. Never run this recovery command as the agent. For a 0.2.x run, post its current plan with `gf plan set <file>` and wait for one approval before any new execution, including gates.

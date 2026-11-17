@@ -14,7 +14,7 @@ SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 from graphflow import checks, core, plan, state, store
 
-from human_support import legacy_run
+from human_support import legacy_run, approve_current_plan, refresh_contract
 
 ACTOR = {"role": "leader", "node": None, "session": "checks-test"}
 CMD = {"id": "unit", "type": "cmd", "run": "printf 'out\\n'; printf 'err\\n' >&2"}
@@ -95,6 +95,7 @@ class ChecksCase(unittest.TestCase):
                       "fingerprints": {n["id"]: state.fingerprint(n) for n in self.plan["nodes"]},
                       "constraints_applied": []}, ACTOR)
 
+        approve_current_plan(self.run)
     def append(self, event_type, data):
         with store.transaction(self.run) as tx:
             return tx.append(event_type, data, ACTOR)
@@ -329,6 +330,7 @@ class CmdTests(ChecksCase):
         fixed = dict(CMD, id="fixed", run="true")
         (self.repo / ".graph-flow" / "checks.json").write_text(
             json.dumps({"checks": [fixed]}))
+        refresh_contract(self.run, promoted_checks=[fixed], constraints=[])
         data = self.run_cmd(fixed, node="_run", phase="gate")
         self.assertEqual(data["result"], "passed")
 
@@ -340,6 +342,7 @@ class CmdTests(ChecksCase):
                 fixed = dict(CMD, id="fixed", run="touch '%s'" % marker, cwd=cwd)
                 (self.repo / ".graph-flow" / "checks.json").write_text(
                     json.dumps({"checks": [fixed]}))
+                refresh_contract(self.run, promoted_checks=[fixed], constraints=[])
                 exc = self.error("bad_cwd", self.run_cmd, fixed, "gate", "_run")
                 self.assertEqual(exc.exit_code, core.EXIT_USAGE)
                 self.assertFalse(marker.exists())

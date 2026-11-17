@@ -14,7 +14,7 @@ SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 from graphflow import checks, core, decisions, gate, graph, plan, state, store
 
-from human_support import legacy_run
+from human_support import legacy_run, approve_current_plan, refresh_contract
 
 ACTOR = {"role": "leader", "node": None, "session": "gate-test"}
 HUMAN = {"role": "human", "node": None, "session": None}
@@ -359,6 +359,7 @@ class GateCase(unittest.TestCase):
                       "fingerprints": {n["id"]: state.fingerprint(n) for n in self.plan["nodes"]},
                       "constraints_applied": []}, ACTOR)
 
+        approve_current_plan(self.run)
     def append(self, event_type, data):
         with store.transaction(self.run) as tx:
             return tx.append(event_type, data, ACTOR)
@@ -477,7 +478,7 @@ class ScenarioTests(GateCase):
         first = self.gate()
         self.assertEqual((first["verdict"], len(first["asks"])), ("needs_approval", 1))
         self.assertEqual(self.gate()["asks"], [])
-        self.assertEqual(len(self.events("decision.ask")), 1)
+        self.assertEqual(len([e for e in self.events("decision.ask") if e["data"].get("purpose") != "plan_approval"]), 1)
         self.answer(first["asks"][0])
         self.assertEqual(self.gate()["verdict"], "pass")
         gate.reopen(self.run, "w", "new authorization", ACTOR)
@@ -633,7 +634,7 @@ class ExecutionTests(GateCase):
         with mock.patch.object(gate, "_head", finish_first):
             self.error("stale_result", self.gate, "d")
         self.assertEqual(store.events(self.run), recorded)
-        self.assertEqual(len(self.events("decision.ask")), 1)
+        self.assertEqual(len([e for e in self.events("decision.ask") if e["data"].get("purpose") != "plan_approval"]), 1)
         self.assertEqual(len(self.events("gate.verdict")), 1)
 
     def test_passed_decision_cannot_record_another_verdict(self):
@@ -749,6 +750,7 @@ class ExecutionTests(GateCase):
         learn.fixed_checks = mock.Mock(return_value=[fixed])
         trace = types.ModuleType("graphflow.trace")
         trace.rollbacks = mock.Mock(return_value=0)
+        refresh_contract(self.run, promoted_checks=[fixed], constraints=[])
         with mock.patch.dict(sys.modules, {"graphflow.learn": learn, "graphflow.trace": trace}):
             self.assertEqual(self.gate()["verdict"], "pass")
             data = gate.gate_final(self.run, None, ACTOR)
@@ -759,7 +761,7 @@ class ExecutionTests(GateCase):
                          ["citations", "unit", "scope", "integration", "fixed", "integration", "fixed"])
         self.assertTrue(all(r["attempt"] == 0 and r["phase"] == "gate" for r in run_results))
         trace.rollbacks.assert_called_once_with(self.repo, self.run, ["w.txt"])
-        self.assertEqual(learn.fixed_checks.call_count, 2)
+        learn.fixed_checks.assert_not_called()
 
     def test_rollback_history_requests_signed_trajectory_review(self):
         self.lane_plan()

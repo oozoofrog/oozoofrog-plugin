@@ -191,10 +191,8 @@ def _optional(module, function, default, *args):
 
 
 def _integration(plan, root, derived):
-    # Promotions are frozen by plan set; legacy plans retain their old fixed-check contract.
-    fixed = plan.get("promoted_checks", [] if derived["run"].get("approval_required") else None)
-    return list(plan.get("integration_checks") or []) + (fixed if fixed is not None else
-                                                        _optional("learn", "fixed_checks", [], root))
+    # Only commands frozen into the approved plan can execute.
+    return list(plan.get("integration_checks") or []) + list(plan.get("promoted_checks") or [])
 
 
 def _token(revision, st):

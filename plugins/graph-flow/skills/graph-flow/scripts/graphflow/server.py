@@ -6,6 +6,7 @@ import json
 import os
 import pathlib
 import re
+import shlex
 import secrets
 import signal
 import stat
@@ -237,7 +238,7 @@ def _history(node, st, events):
     return laps, returned
 
 
-def _timeline(nodes, events, lessons):
+def _timeline(nodes, events, lessons, verified_decisions=None, repin_seq=0):
     """What happened, oldest first: one row per attempt instead of one per check."""
     def title(nid):
         return _text(_mapping(nodes.get(nid)).get("title"), nid) if isinstance(nid, str) else ""
@@ -269,7 +270,8 @@ def _timeline(nodes, events, lessons):
             add(event, "started")
         elif kind == "plan.set":
             add(event, "planned", revision=data.get("revision"),
-                count=len(_mapping(data.get("fingerprints"))), counts=data.get("node_counts"))
+                count=len(_mapping(data.get("fingerprints"))), counts=data.get("node_counts"),
+                replaced_unverifiable=bool(data.get("replaced_unverifiable")))
         elif kind == "node.assign" and nid:
             assigned[nid] = {k: v for k, v in data.items()
                              if k in ("executor", "model", "effort", "provider") and _text(v)}
@@ -314,7 +316,11 @@ def _timeline(nodes, events, lessons):
             ask = _mapping(asked.get(data["id"]))
             add(event, "answered", decision=data["id"], node=ask.get("node"),
                 node_title=title(ask.get("node")), question=_text(ask.get("question")),
-                outcome=_text(data.get("outcome")), answer=_text(data.get("answer")), purpose=ask.get("purpose"))
+                outcome=_text(data.get("outcome")), answer=_text(data.get("answer")), purpose=ask.get("purpose"),
+                verified=bool((verified_decisions or {}).get(data["id"], {}).get("verified") and
+                              (verified_decisions or {})[data["id"]].get("answer_seq") == event["seq"]))
+        elif kind == "human.repin":
+            add(event, "repinned", verified=event["seq"] == repin_seq)
         elif kind == "decision.superseded":
             add(event, "superseded", decision=data.get("id"), revision=data.get("revision"))
         elif kind == "gate.final":
@@ -359,7 +365,7 @@ def _planned_check(check):
 def _view(current, derived, events, project):
     current = current or {}
     nodes = {n["id"]: n for n in current.get("nodes", [])}
-    opened = [] if derived["run"].get("plan_error") else decisions.open_decisions(derived)
+    opened = [] if derived["run"].get("plan_error") or derived["run"].get("key_mismatch") else decisions.open_decisions(derived)
     view = {"title": _text(current.get("title"), _text(current.get("goal"))), "nodes": [],
             "language": "ko" if re.search(r"[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]",
                 " ".join([_text(current.get("title"))] +
@@ -404,7 +410,7 @@ def _view(current, derived, events, project):
                               "summary": _text(node.get("summary"), _text(node.get("goal"))), "goal": node.get("goal", ""),
                               "owns": list(node.get("owns", [])), "needs": list(node.get("needs", [])),
                               "reads": list(node.get("reads", [])), "declared_outputs": list(node.get("outputs", [])),
-                              "kind": node["kind"], "target": node.get("target"), "status": st["status"],
+                              "kind": node["kind"], "lens": node.get("lens"), "target": node.get("target"), "status": st["status"],
                               "answered": node["kind"] == "decision" and any(
                                   d.get("node") == nid and d.get("status") == "answered" and not d.get("stale")
                                   for d in derived["decisions"].values()),
@@ -504,7 +510,7 @@ def _view(current, derived, events, project):
                                      "node_title": title(decision.get("node")) if decision.get("node") else "",
                                      "question": _text(decision.get("question")),
                                      "outcome": _text(decision.get("outcome")), "answer": _text(decision.get("answer")),
-                                     "stale": bool(decision.get("stale"))})
+                                     "stale": bool(decision.get("stale")), "verified": bool(decision.get("verified"))})
 
     lesson_texts = {}
     # A malformed learning record must not make the run itself unreadable.
@@ -524,9 +530,12 @@ def _view(current, derived, events, project):
                     and isinstance(source.get("node"), str) and source["node"] in nodes):
                 node_title = title(source["node"])
             view["lessons"].append({"text": constraint["text"], "node_title": node_title})
-    view["timeline"] = _timeline(nodes, events, lesson_texts)
+    view["timeline"] = _timeline(nodes, events, lesson_texts, derived["decisions"], derived["run"].get("repin_seq", 0))
     view["plan_error"] = derived["run"].get("plan_error", False)
     view["key_mismatch"] = derived["run"].get("key_mismatch", False)
+    view["key_recovery"] = "GF_ROLE=human GF_HUMAN_TERMINAL=1 graph-flow --run %s key repin" % shlex.quote(str(pathlib.Path(project) / ".graph-flow" / "runs" / (derived["run"]["id"] or "<run-id>")))
+    view["legacy"] = derived["run"].get("legacy", False)
+    view["replaced_unverifiable"] = bool(next((e["data"].get("replaced_unverifiable") for e in reversed(events) if e["type"] == "plan.set"), False))
     approval = state.plan_approval(derived)
     view["plan_approval"] = None if approval is None else {
         key: approval.get(key) for key in ("id", "status", "outcome", "answer", "verified", "question", "plan_identity")}
@@ -940,6 +949,8 @@ def open_dashboard(launch=None, browse=None, timeout=10.0, target=None):
     The result carries no address or token, so the caller learns neither.
     `target` may name a project, run, decision and node for the page to show.
     """
+    if os.environ.get("GF_NO_OPEN") == "1":
+        return {"opened": False, "started": False, "suppressed": True}
     record, started = _record(), False
     if not (record and _alive(record)):
         (launch or _launch)()

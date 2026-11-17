@@ -12,7 +12,7 @@ SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 from graphflow import assign, core, plan, state, store
 
-from human_support import legacy_run
+from human_support import legacy_run, approve_current_plan, refresh_contract
 
 ACTOR = {"role": "leader", "node": None, "session": "assign-test"}
 
@@ -50,6 +50,7 @@ class AssignTests(unittest.TestCase):
             tx.append("plan.set", {"revision": revision, "plan_sha256": sha,
                       "fingerprints": {n["id"]: state.fingerprint(n) for n in normalized["nodes"]}}, ACTOR)
 
+        approve_current_plan(self.run)
     def append(self, kind, data):
         with store.transaction(self.run) as tx:
             return tx.append(kind, data, ACTOR)
@@ -202,6 +203,7 @@ class AssignTests(unittest.TestCase):
         learn = types.SimpleNamespace(applying=lambda *args: constraints,
                                       all_constraints=lambda *args: constraints + [{"text": "retired", "status": "retired"}],
                                       fixed_checks=lambda *args: [{"id": "fixed", "type": "cmd", "run": "fixed-command"}])
+        refresh_contract(self.run, constraints=constraints[:2])
         with mock.patch.object(assign, "_optional_module", return_value=learn):
             text = assign.brief(self.run, "work")
             self.assertIn("## Constraints", text)

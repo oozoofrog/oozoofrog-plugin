@@ -16,7 +16,7 @@ RUN = "r1"
 ALL_KEYS = {"status", "kind", "lane", "effective_lane", "basis", "attempts", "max_attempts",
             "assignment", "base", "submission", "checks", "red", "reviews", "rejections",
             "verdict", "merged_head", "trajectory_clean", "open_decisions"}
-DECISION_KEYS = {"plan_identity", "id", "seq", "node", "submission", "check", "purpose", "kind", "question",
+DECISION_KEYS = {"run_nonce", "human_key_sha256", "plan_identity", "id", "seq", "node", "submission", "check", "purpose", "kind", "question",
                  "evidence", "status", "outcome", "answer", "source", "verified", "stale"}
 
 
@@ -164,7 +164,13 @@ class Log:
 
     def answer(self, did, outcome="approved", answer="ok", sig=None, run=None):
         if sig is None:
-            sig = core.human_sig(run or self.run, did, outcome, answer) or "x"
+            if core.key_fingerprint():
+                if not any(e['type']=='run.nonce' for e in self.events):
+                    self.add('run.nonce', {'run_nonce':'test-nonce'})
+                if not any(e['type']=='human.key' for e in self.events):
+                    self.add('human.key', {'human_key_sha256':core.key_fingerprint()})
+            dec = state.derive(None, self.events)['decisions'].get(did)
+            sig = core.human_sig(run or self.run, did, outcome, answer, dec) or "x"
         return self.add("decision.answer", {"id": did, "outcome": outcome, "answer": answer,
                                             "source": "dashboard", "sig": sig}, "human")
 
@@ -260,13 +266,13 @@ class ShapeTests(EnvCase):
         s = state.derive(None, log.events)
         self.assertEqual(s["nodes"], {})
         self.assertEqual(s["decisions"], {})
-        self.assertEqual(s["run"], {"id": RUN, "plan_revision": 0, "plan_identity": None, "status": "open", "approval_required": False,
+        self.assertEqual(s["run"], {"id": RUN, "plan_revision": 0, "plan_identity": None, "status": "open", "approval_required": True, "run_nonce": None, "legacy": True, "repin_seq": 0,
                                  "human_key_sha256": None, "key_mismatch": False, "plan_error": False,
                                     "host": ["t3_delegate"], "final": None})
 
     def test_empty_events(self):
         s = state.derive(None, [])
-        self.assertEqual(s, {"run": {"id": None, "plan_revision": 0, "plan_identity": None, "status": "open", "approval_required": False,
+        self.assertEqual(s, {"run": {"id": None, "plan_revision": 0, "plan_identity": None, "status": "open", "approval_required": True, "run_nonce": None, "legacy": True, "repin_seq": 0,
                                  "human_key_sha256": None, "key_mismatch": False, "plan_error": False,
                                      "host": [], "final": None},
                              "nodes": {}, "decisions": {}})
@@ -649,7 +655,7 @@ class DecisionTests(EnvCase):
         did = "d%d" % seq
         self.assertEqual(s["decisions"], {did: {
             "id": did, "seq": seq, "node": "a", "submission": None, "check": "unit",
-            "purpose": "node", "plan_identity": None, "kind": "direction", "question": "q?",
+            "purpose": "node", "plan_identity": None, "run_nonce": None, "human_key_sha256": None, "kind": "direction", "question": "q?",
             "evidence": {"command": None, "files": [], "checks": []}, "status": "open",
             "outcome": None, "answer": None, "source": None, "verified": False,
             "stale": False}})

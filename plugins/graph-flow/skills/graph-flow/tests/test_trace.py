@@ -10,7 +10,7 @@ from unittest import mock
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scripts"))
 from graphflow import checks, gate, plan, state, store, trace
 
-from human_support import legacy_run
+from human_support import legacy_run, approve_current_plan
 
 ACTOR = {"role": "leader", "node": None, "session": "trace-test"}
 
@@ -61,6 +61,7 @@ class TraceTests(unittest.TestCase):
             revision, sha = tx.write_plan(current)
             tx.append("plan.set", {"revision": revision, "plan_sha256": sha,
                       "fingerprints": {n["id"]: state.fingerprint(n) for n in current["nodes"]}}, ACTOR)
+        approve_current_plan(run)
         return current
 
     def test_full_shape(self):

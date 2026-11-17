@@ -14,7 +14,7 @@ SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 from graphflow import assign, core, gate, learn, plan, state, store
 
-from human_support import legacy_run
+from human_support import legacy_run, approve_current_plan, refresh_contract
 
 ACTOR = {"role": "leader", "node": None, "session": "learn-test"}
 
@@ -68,6 +68,7 @@ class LearnTests(unittest.TestCase):
                       "fingerprints": {n["id"]: state.fingerprint(n) for n in self.plan["nodes"]},
                       "constraints_applied": []}, ACTOR)
 
+        approve_current_plan(self.run)
     def append(self, kind, data):
         with store.transaction(self.run) as tx:
             return tx.append(kind, data, ACTOR)
@@ -467,29 +468,22 @@ class LearnTests(unittest.TestCase):
         self.assertFalse(self.constraints_path.exists())
         self.assertEqual(self.events("constraint.add"), [])
 
-    def test_fixed_checks_run_at_final_gate_for_lane_one_and_later_runs(self):
+    def test_fixed_checks_run_only_after_next_approved_plan(self):
         c = self.add()
         promoted = learn.promote(self.repo, c["id"], "false", ACTOR)
-        result = gate.gate_final(self.run, None, ACTOR)
-        self.assertEqual(result["result"], "failed")
-        self.assertEqual(result["failed_checks"], ["fx_" + c["id"]])
-        self.assertEqual(self.events("gate.final")[-1]["data"], result)
-        later = legacy_run(self.repo, "later", ACTOR)
-        self.assertEqual(gate.gate_final(later, None, ACTOR)["failed_checks"], ["fx_c1"])
-        learn.retire(self.repo, c["id"], "Replace failing fixture", ACTOR)
         self.assertEqual(gate.gate_final(self.run, None, ACTOR)["result"], "passed")
-        good = self.add()
-        learn.promote(self.repo, good["id"], "true", ACTOR)
+        refresh_contract(self.run)
         result = gate.gate_final(self.run, None, ACTOR)
-        self.assertEqual((result["result"], result["failed_checks"]), ("passed", []))
-        results = [e["data"] for e in self.events("check.result")
-                   if e["data"].get("node") == "_run"]
-        self.assertEqual([r["check"] for r in results], [promoted["check"]["id"], "fx_c2"])
-        self.assertEqual([r["command"] for r in results], ["false", "true"])
+        self.assertEqual(result["failed_checks"], [promoted["check"]["id"]])
+        learn.retire(self.repo, c["id"], "Replace failing fixture", ACTOR)
+        self.assertEqual(gate.gate_final(self.run, None, ACTOR)["result"], "failed")
+        refresh_contract(self.run)
+        self.assertEqual(gate.gate_final(self.run, None, ACTOR)["result"], "passed")
 
     def test_assign_briefs_include_scoped_learning_and_fixed_checks(self):
         c = self.add(text="Keep the config backwards compatible", paths=["src/config.py"])
         other = self.add(text="Unrelated documentation lesson", paths=["docs/"])
+        refresh_contract(self.run)
         text = assign.brief(self.run, "work")
         self.assertIn(c["text"], text)
         self.assertNotIn(other["text"], text)
@@ -500,6 +494,8 @@ class LearnTests(unittest.TestCase):
         self.assertIn("fx_c1", text)
         self.assertIn("true", text)
         learn.retire(self.repo, c["id"], "No longer relevant", ACTOR)
+        self.assertIn(c["text"], assign.brief(self.run, "work"))
+        refresh_contract(self.run)
         self.assertNotIn(c["text"], assign.brief(self.run, "work"))
 
 

@@ -63,7 +63,7 @@ class ApprovalIntegrityTests(unittest.TestCase):
         self.assertFalse(self.snapshot()[1]['decisions'][other['id']]['verified'])
         self.assertEqual(self.call('ready',code=4)['code'],'plan_not_approved')
 
-    def test_a3_signature_binds_meaning_old_signatures_only_work_for_nonplans(self):
+    def test_a3_signature_binds_meaning_old_signatures_never_authorize(self):
         did=self.set_plan()['decision']; self.accept(did); original=(self.run/'events.jsonl').read_text()
         for field,value in [('kind','review'),('purpose','free'),('node','a'),('question','Changed?'),
                             ('submission',999),('check','text'),('plan_identity','other')]:
@@ -76,7 +76,7 @@ class ApprovalIntegrityTests(unittest.TestCase):
             sig=core.human_sig('approval',did,'approved','확인했어요')))
         self.call('ready',code=4)
         self.rewrite_events(lambda es: next(e['data'] for e in es if e['type']=='decision.ask').update(purpose='free'))
-        self.assertTrue(self.snapshot()[1]['decisions'][did]['verified'])
+        self.assertFalse(self.snapshot()[1]['decisions'][did]['verified'])
 
     def test_a4_missing_identity_never_downgrades_marker_or_identity_history(self):
         self.accept(self.set_plan()['decision'])
@@ -90,7 +90,7 @@ class ApprovalIntegrityTests(unittest.TestCase):
         self.call('ready',code=4); self.assertTrue(self.snapshot()[1]['run']['approval_required'])
 
     def test_a5_second_home_key_cannot_sign_or_verify_plan(self):
-        did=self.set_plan()['decision']; pinned=self.snapshot()[1]['run']['human_key_sha256']
+        self.accept(self.set_plan()['decision']); self.raw['goal']+=' new'; did=self.set_plan()['decision']; pinned=self.snapshot()[1]['run']['human_key_sha256']
         with mock.patch.dict(os.environ,GF_HOME=str(self.root/'second-home')):
             decisions.ensure_key(); self.assertNotEqual(pinned,core.key_fingerprint())
             with self.assertRaises(core.GFError) as error:

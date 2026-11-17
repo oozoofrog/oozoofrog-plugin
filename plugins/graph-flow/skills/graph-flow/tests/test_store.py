@@ -74,7 +74,9 @@ class InitTests(EnvCase):
         self.assertEqual(evs[0]["type"], "run.init")
         self.assertEqual(evs[0]["data"], {"run_id": "r1", "project_root": str(self.repo),
                                           "schema_version": 2, "approval_required": True,
-                                          "human_key_sha256": core.key_fingerprint()})
+                                          "run_nonce": evs[0]["data"]["run_nonce"]})
+        self.assertEqual(len(evs[0]["data"]["run_nonce"]), 64)
+        self.assertFalse((self.home / "human.key").exists())
         reg = json.loads((self.home / "registry.json").read_text())
         self.assertEqual([p["root"] for p in reg["projects"]], [str(self.repo)])
         self.assertRegex(reg["projects"][0]["added"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")

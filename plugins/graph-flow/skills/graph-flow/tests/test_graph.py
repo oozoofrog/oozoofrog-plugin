@@ -25,7 +25,9 @@ def st(status="pending", attempts=0, isolation=None, commit=None, max_attempts=3
 
 
 def state(**nodes):
-    return {"nodes": nodes}
+    return {"nodes": nodes, "run":{"plan_identity":"fixture"}, "decisions":{
+        "approval":{"id":"approval", "seq":1, "purpose":"plan_approval", "plan_identity":"fixture",
+                    "status":"answered", "verified":True, "outcome":"approved"}}}
 
 
 class NeedsTests(unittest.TestCase):

@@ -159,12 +159,10 @@ def init_run(project_root, run_id, actor):
         (run_dir / ".lock").touch()
     except OSError as e:
         raise GFError("io_error", "cannot create run: %s" % e, EXIT_IO)
-    from . import core, decisions
-    decisions.ensure_key()
     with transaction(run_dir) as tx:
         tx.append("run.init", {"run_id": run_id, "project_root": str(root),
                                "schema_version": SCHEMA_VERSION, "approval_required": True,
-                               "human_key_sha256": core.key_fingerprint()}, actor)
+                               "run_nonce": secrets.token_hex(32)}, actor)
     register_project(root)
     return run_dir
 
@@ -270,7 +268,7 @@ def read_plan(run_dir):
 # ---------------------------------------------------------------- transactions
 
 class Transaction(object):
-    def __init__(self, run_dir, evs, good_len, total_len):
+    def __init__(self, run_dir, evs, good_len, total_len, replace_invalid=False):
         self.run_dir = pathlib.Path(run_dir)
         self.run_id = self.run_dir.name
         self.events = evs
@@ -278,13 +276,19 @@ class Transaction(object):
         self._dropped = total_len - good_len
         self._pending = []
         self._written_plans = {}
+        self.plan_error = False
         last = _last_plan_set(evs)
         if last is None:
             self.revision = 0
             self.plan = None
         else:
             self.revision = int(last["data"]["revision"])
-            self.plan = _load_plan(run_dir, self.revision, last["data"])
+            try:
+                self.plan = _load_plan(run_dir, self.revision, last["data"])
+            except GFError as exc:
+                if not replace_invalid or exc.code != "plan_tampered":
+                    raise
+                self.plan, self.plan_error = None, True
 
     def _make(self, type_, data, actor):
         seq = (self.events[-1]["seq"] if self.events else 0) + 1
@@ -347,12 +351,12 @@ class Transaction(object):
 
 
 @contextlib.contextmanager
-def transaction(run_dir, timeout_s=LOCK_TIMEOUT_S):
+def transaction(run_dir, timeout_s=LOCK_TIMEOUT_S, replace_invalid=False):
     """Run lock + log read; pending appends are written (flush, fsync) only if the block succeeds."""
     run_dir = pathlib.Path(run_dir)
     if not _events_path(run_dir).exists():
         raise GFError("no_run", "not a run directory: %s" % run_dir, EXIT_STATE)
     with locked(run_dir / ".lock", timeout_s):
-        tx = Transaction(run_dir, *_read_log(run_dir))
+        tx = Transaction(run_dir, *_read_log(run_dir), replace_invalid=replace_invalid)
         yield tx
         tx._commit()
