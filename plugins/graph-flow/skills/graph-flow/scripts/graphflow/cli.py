@@ -507,6 +507,7 @@ def _parser(authorize_only=False):
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     json_output = "--json" in argv
+    identity = args = None
     try:
         # Authorize the command before requiring its arguments (section 2).
         identity, _ = _parser(authorize_only=True).parse_known_args(argv)
@@ -561,7 +562,8 @@ def main(argv=None):
         output = {"ok": False, "code": "internal", "message": str(exc)}
     if json_output:
         print(json.dumps(output, ensure_ascii=False))
-    elif identity.command_path == ("trace",) and getattr(args, "conformance", False) and output.get("ok"):
+    elif (getattr(identity, "command_path", None) == ("trace",) and getattr(args, "conformance", False)
+          and output.get("ok")):
         print(_lazy_import("trace").render_conformance(output))
     elif "brief" in output:
         print(output["brief"], end="" if output["brief"].endswith("\n") else "\n")

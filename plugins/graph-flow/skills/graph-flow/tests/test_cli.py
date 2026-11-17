@@ -57,6 +57,22 @@ class CLITests(unittest.TestCase):
             self.assertIn('message', data)
         return data
 
+    def test_unparsable_command_reports_usage_in_text_and_json(self):
+        # A command that fails to parse never reaches the output branch that
+        # reads the parsed identity; both output modes must still explain it.
+        for argv in (['--version'], ['nosuch'], ['trace', '--conformance', '--bogus']):
+            for prefix in ([], ['--json']):
+                with self.subTest(argv=prefix + argv):
+                    out = io.StringIO()
+                    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+                        result = cli.main(prefix + argv)
+                    self.assertEqual(result, 2, out.getvalue())
+                    text = out.getvalue().strip()
+                    self.assertTrue(text)
+                    if prefix:
+                        data = json.loads(text)
+                        self.assertEqual((data['ok'], data['code']), (False, 'usage'))
+
     def set_plan(self):
         result = self.call('plan', 'set', str(self.file))
         approve_plan(self.run)
