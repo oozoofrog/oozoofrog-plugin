@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Graph Flow dashboard: name unread cards and their existing reading action; match change and relation lists to graph cards; localize contract changes; remove duplicate questions/checks; clarify counts, evidence, answer outcomes, failure scope and worker roles.
+
 - Graph Flow dashboard: wrap toolbar counts, pin the selected title above the panel scroll area, keep phone layers opaque, reserve scroll gutters, measure card content, and retain the selected card after fit or level changes.
 
 - Graph Flow screen fixtures: distinguish fit/default overviews, mid-flight runs and the problem inbox; use distinct Korean titles, capture expanded answers, and generate all requested grayscale/glance verification images.

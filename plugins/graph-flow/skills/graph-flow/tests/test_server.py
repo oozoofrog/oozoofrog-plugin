@@ -626,7 +626,7 @@ class ServerTests(unittest.TestCase):
                                         "purpose": "human_check", "commit": None, "artifact_hashes": {},
                                             "context": {}, "has_evidence": False,
                                             "verified": [], "unverified": [], "worker_note": None,
-                                        "record_purpose": "human_check", "files": [], "failed": [], "failed_reviews": 0, "free": False, "replaces_refused": None, "author_context": context, "trajectory_reasons": []}])
+                                        "record_purpose": "human_check", "files": [], "failed": [], "failed_reviews": 0, "free": False, "replaces_refused": None, "replaces_outcome": None, "author_context": context, "trajectory_reasons": []}])
         self.assertEqual(view["lessons"], [{"text": active["text"], "node_title": "Done"},
                                          {"text": unknown["text"], "node_title": None}])
         self.assertEqual(view["counts"], {"done": 1, "doing": 1, "waiting": 2, "needs_you": 1, "returned": 1, "returns_total": 1})

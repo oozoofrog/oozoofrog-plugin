@@ -149,6 +149,9 @@ button:disabled,button.primary:disabled,.plan-actions button:disabled{background
  #flow.has-selection #panel{position:fixed;inset:12px 12px var(--plan-actions-height,12px);height:calc(100dvh - 12px - var(--plan-actions-height,12px))!important;max-height:none!important;z-index:11;padding:0;overflow:hidden}
  body:has(#flow.has-selection:not([hidden])) #accessible{visibility:hidden}
 }
+.unread-mark{margin:0;padding:2px 16px;font-size:var(--map-text,14px);color:var(--amber);white-space:normal}
+.node-card.read-status{padding-top:24px}.unread-mark{position:absolute;top:2px;left:0;right:0}
+.node-essentials:has(.answered-result) .planned-question{white-space:normal;overflow:visible;display:block}
 </style>
 <script type="module" nonce="__NONCE__" src="/static/page.js"></script>
 </head>

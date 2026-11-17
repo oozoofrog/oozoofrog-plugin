@@ -29,12 +29,12 @@ try {
   const before=await position();
   await evaluate(`document.querySelector('#map [data-node="n0"] .node-header').click()`);
   assert.deepEqual(await position(),before,'selecting a still-visible card preserves level, scale and position');
-  await evaluate(`document.querySelector('#panel').scrollTop=25;document.querySelector('#find-text').focus()`);
-  const focus=await evaluate('document.activeElement.id'),scroll=await evaluate("document.querySelector('#panel').scrollTop");
+  await evaluate(`document.querySelector('.panel-body').scrollTop=25;document.querySelector('#find-text').focus()`);
+  const focus=await evaluate('document.activeElement.id'),scroll=await evaluate("document.querySelector('.panel-body').scrollTop");
   await evaluate("document.dispatchEvent(new Event('visibilitychange'))");await delay(500);
   assert.deepEqual(await position(),before,'polling keeps the selected view');
   assert.equal(await evaluate('document.activeElement.id'),focus);
-  assert.equal(await evaluate("document.querySelector('#panel').scrollTop"),scroll);
+  assert.equal(await evaluate("document.querySelector('.panel-body').scrollTop"),scroll);
   await evaluate(`[...document.querySelectorAll('.map-toolbar button')].find(b=>b.textContent==='화면에 맞추기').click()`);await delay(150);
   assert(await evaluate(`(()=>{const v=document.querySelector('.map-viewport').getBoundingClientRect();return (Number(document.querySelector('#map').dataset.scale)>=6/7 && [...document.querySelectorAll('.map-overflow button')].some(b=>!b.hidden&&/→|↓|←|↑/.test(b.textContent))) || [...document.querySelectorAll('#map .node-card')].every(e=>{const r=e.getBoundingClientRect();return r.left>=v.left-.5&&r.right<=v.right+.5&&r.top>=v.top-.5&&r.bottom<=v.bottom+.5;});})()`),'fit with side panel contains every complete card or provides directions at the readable floor');
   // E1–E6: actual rectangles, not just stylesheet declarations.

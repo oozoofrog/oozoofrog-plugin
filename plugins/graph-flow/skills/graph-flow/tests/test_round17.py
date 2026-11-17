@@ -61,7 +61,7 @@ assert(durationDiff({field:'title',before:'이전 일',after:null},'ko').include
 
     def test_d3_owned_execution_warning_has_a_slot_and_one_explanation(self):
         self.js(r'''
-assert(STRINGS.ko.ownCheckEffect.includes('작업자가'));
+assert(STRINGS.ko.ownCheckEffect.includes('작업 담당자가'));
 assert(!STRINGS.ko.ownCheckEffect.includes('자신이 검사하는'));
 const n={id:'a',kind:'work',title:'제목',planned_checks:[{type:'cmd',runs_own_files:true}]};
 assert(detailCardHeight(n)>=detailCardHeight({...n,planned_checks:[{type:'cmd'}]})+30);
@@ -83,7 +83,7 @@ assert.equal(titleVisibility({x:0,y:81,width:100,height:20},100,100),false);
 assert.equal(titleVisibility({x:-1,y:0,width:100,height:20},100,100),false);
 assert(STRINGS.ko.countDecision.includes('단계'));assert(STRINGS.ko.countPlannedDecision.includes('응답'));
 assert(STRINGS.ko.visiblePlan.includes('+ 전체 결과 확인 1개'));
-assert(STRINGS.ko.planItemsTable.includes('전체 항목'));
+assert(STRINGS.ko.planItemsTable.includes('일·검토·결정 카드'));
 ''')
         source = PAGE.read_text()
         self.assertIn('tr.left-vr.left', source)
@@ -91,7 +91,7 @@ assert(STRINGS.ko.planItemsTable.includes('전체 항목'));
 
     def test_d5_panels_do_not_claim_absent_handoffs_or_cover_content(self):
         source, html = PAGE.read_text(), HTML.read_text()
-        self.assertIn("if(node.inputs?.length)more.append(handoffsCard", source)
+        self.assertIn("relationFacts(parent,node)", source)
         self.assertIn('.panel-bar{position:static;', html)
         self.assertIn('#node-list>.card>button{position:static;', html)
         self.assertIn('padding-bottom:var(--plan-actions-height', html)
@@ -142,7 +142,7 @@ assert.equal(uniqueChecks([c,{...c,timeout_s:10}]).length,2);
 
     def test_d9_answers_scope_body_and_outputs_are_readable(self):
         self.js(r'''
-assert(STRINGS.ko.replacesRefused.includes('돌려보낸 결정'));
+assert(STRINGS.ko.replacesRefused.includes('허락하지 않은 결정'));
 assert(STRINGS.ko.scopeBody.includes('변경한 파일'));
 assert(STRINGS.ko.answerGiven.includes('{answer}'));
 ''')

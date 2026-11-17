@@ -560,6 +560,7 @@ def _view(current, derived, events, project):
                                   "artifact_hashes": decision.get("artifact_hashes") or {},
                                   "files": _decision_files(decision, derived, project, _strings(_mapping(nodes.get(decision["node"])).get("owns"))),
                                   "free": decision.get("issuer") != "gate" and decision.get("purpose") != "plan_approval",
+                                  "replaces_outcome": previous.get("outcome"),
                                   "replaces_refused": previous.get("id") if previous.get("verified") and
                                       previous.get("outcome") in ("rejected", "revision_requested") else None,
                                   "author_context": author_context,
@@ -579,7 +580,7 @@ def _view(current, derived, events, project):
             view["answered"].append({"id": decision["id"], "node": decision.get("node"),
                                      "node_title": title(decision.get("node")) if decision.get("node") else "",
                                      "question": _text(decision.get("question")),
-                                     "outcome": _text(decision.get("outcome")), "answer": _text(decision.get("answer")),
+                                     "kind": decision.get("kind"), "outcome": _text(decision.get("outcome")), "answer": _text(decision.get("answer")),
                                      "stale": bool(decision.get("stale")), "verified": bool(decision.get("verified"))})
 
     lesson_texts = {}
@@ -612,7 +613,7 @@ def _view(current, derived, events, project):
     view["replaced_unverifiable"] = bool(next((e["data"].get("replaced_unverifiable") for e in reversed(events) if e["type"] == "plan.set"), False))
     approval = state.plan_approval(derived)
     view["plan_approval"] = None if approval is None else {
-        key: approval.get(key) for key in ("id", "status", "outcome", "answer", "verified", "question", "plan_identity", "reason")}
+        key: approval.get(key) for key in ("id", "status", "outcome", "answer", "verified", "question", "plan_identity", "reason", "source")}
     if view["plan_approval"] and approval.get("id"):
         view["plan_approval"]["identity"] = state.decision_identity(approval)
     view["stale_decisions"] = [{"id": d["id"], "reason": d.get("stale_reason"), "purpose": d.get("purpose")} for d in derived["decisions"].values() if d.get("stale_reason")]
