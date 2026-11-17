@@ -24,7 +24,7 @@ class ScreenManifestTests(unittest.TestCase):
             self.assertRegex(row['name'], r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
             self.assertTrue(row['url'].startswith('/?t={token}#project={project}&run={run}'))
             for action in row['interactions']:
-                self.assertIn(action['action'], {'click', 'button', 'scroll', 'into', 'open', 'live-plan', 'change-file'})
+                self.assertIn(action['action'], {'click', 'button', 'scroll', 'into', 'open', 'live-plan', 'change-file', 'lower-rows'})
         plugin = SCREENS.parents[1]
         manifest = json.loads((plugin / '.codex-plugin/plugin.json').read_text())
         self.assertEqual(manifest['skills'], './skills/')
@@ -34,7 +34,7 @@ class ScreenManifestTests(unittest.TestCase):
 
     def test_round17_scenes_distinguish_state_and_fit(self):
         rows = {r['number']:r for r in json.loads((SCREENS / 'screens.json').read_text())}
-        self.assertFalse(rows[27]['interactions'])
+        self.assertEqual(rows[27]['interactions'][0]['selector'], '#home-tab')
         self.assertEqual(rows[50]['interactions'][0]['selector'], '#home-tab')
         self.assertNotEqual(rows[33]['viewport'], rows[41]['viewport'])
         self.assertFalse(rows[41]['interactions'])
@@ -46,3 +46,15 @@ class ScreenManifestTests(unittest.TestCase):
         self.assertIn("'guide':'배포 안내 검토'", builder)
         capture = (SCREENS / 'capture.mjs').read_text()
         self.assertIn('41,44,52,53,58,59,61,62,63', capture)
+
+    def test_e13_named_scenes_and_complete_r18_verification_set(self):
+        rows = {r['number']:r for r in json.loads((SCREENS / 'screens.json').read_text())}
+        self.assertEqual(rows[11]['interactions'][-1]['action'], 'lower-rows')
+        self.assertIn({'action':'button','text':'+'}, rows[11]['interactions'])
+        self.assertEqual(rows[27]['interactions'][-1]['selector'], '#home')
+        self.assertFalse(rows[36]['interactions'])
+        self.assertEqual(rows[56]['interactions'][-1], {'action':'click','selector':'.key-recovery button'})
+        capture = (SCREENS / 'capture.mjs').read_text()
+        self.assertIn('1,3,5,7,15,18,19,20,22,23,24,34,37,38,41,44,52,53,58,59,61,62,63,64,65,66,67,68,69', capture)
+        self.assertIn('lower rows require vertical movement without sideways movement', capture)
+        self.assertIn("f.answer(f.decision, 'rejected',", (SCREENS / 'build_fixtures.py').read_text())

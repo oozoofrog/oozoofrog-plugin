@@ -177,10 +177,11 @@
         "text": "상세 보기"
       },
       {
-        "action": "scroll",
-        "selector": ".map-viewport",
-        "x": 0,
-        "y": 700
+        "action": "button",
+        "text": "+"
+      },
+      {
+        "action": "lower-rows"
       }
     ],
     "group": "EVERYDAY"
@@ -435,7 +436,20 @@
       "width": 1440,
       "height": 900
     },
-    "interactions": [],
+    "interactions": [
+      {
+        "action": "click",
+        "selector": "#home-tab"
+      },
+      {
+        "action": "open",
+        "selector": "#tasks"
+      },
+      {
+        "action": "into",
+        "selector": "#home"
+      }
+    ],
     "group": "RARE"
   },
   {
@@ -939,8 +953,8 @@
         "selector": ".key-recovery"
       },
       {
-        "action": "into",
-        "selector": ".key-recovery"
+        "action": "click",
+        "selector": ".key-recovery button"
       }
     ],
     "group": "RARE"

@@ -20,7 +20,7 @@ for(const level of ['detail','overview']) {
     def test_e7_every_change_kind_hides_internal_check_tokens(self):
         self.js(r"""
 const checks=['cmd','scope','cites','human','host'].map((type,i)=>({id:'internal_'+i,type,...(type==='cmd'?{run:'test -s guide.txt',timeout_s:600,cwd:'.',shell:'/bin/sh',environment:'inherited'}:type==='human'?{prompt:'Does it read well?'}:type==='host'?{tool:'browser',expect:'page opens'}:{})}));
-for(const check of checks)for(const [before,after] of [[{}, {checks:[check]}],[{checks:[check]},{}],[{checks:[check]},{checks:[{...check,title:'A named check'}]}]])for(const lang of ['ko','en']){
+for(const check of checks)for(const [before,after] of [[{}, {checks:[check]}],[{checks:[check]},{}],[{checks:[check]},{checks:[{...check,title:'A named check'}]}],[{checks:[check]},{checks:[{...check,type:'host',tool:'browser',expect:'ready'}]}]])for(const lang of ['ko','en']){
  const changes=contractDiff(before,after);assert(changes.length);
  const text=changes.map(f=>contractDiffText(f,lang)).join('\n');
  assert(!/internal_|\b(?:cmd|scope|cites|human|host)\b|\[object Object\]/.test(text),text);
@@ -34,11 +34,11 @@ assert(!contractDiffText(changed[0],'ko').includes('text'));
 
     def test_e7_contract_field_and_enum_sweep(self):
         self.js(r"""
-const before={kind:'work',grade:'daily',decision_kind:'authorization',status:'active',isolation:'shared or worktree, selected at assignment',merge:'committed submissions must be merged into project HEAD; merge --no-ff',checks:[{id:'x',type:'cmd',run:'echo exact-command',cwd:'docs',timeout_s:600,shell:'/bin/sh',environment:'inherited'}],needs:[{from:'node_id',artifact:'document'}],target:'node_id',requirement:'req_id',context:{why:'Reason',if_approved:'Proceed',if_rejected:'Revise',undo:'Revert'},summary:'Summary',goal:'Goal',owns:['guide.txt'],outputs:['document'],reads:['readme.md'],lane:1,effective_lane:1,max_attempts:3,requirements:[{id:'req_id',text:'Requirement'}],constraints:[{id:'c',text:'Constraint',status:'promoted',scope:{paths:['docs'],tags:['docs']},review_when:'Later',created:'2026-11-17'}]};
+const before={kind:'work',grade:'daily',decision_kind:'authorization',status:'active',isolation:'shared or worktree, selected at assignment',merge:'committed submissions must be merged into project HEAD; merge --no-ff',checks:[{id:'x',type:'cmd',run:'echo exact-command',cwd:'docs',timeout_s:600,shell:'/bin/sh',environment:'inherited'}],needs:[{from:'node_id',artifact:'document'}],target:'node_id',requirement:'req_id',context:{why:'Reason',if_approved:'Proceed',if_rejected:'Revise',undo:'Revert'},summary:'Summary',goal:'Goal',owns:['guide.txt'],outputs:['document'],reads:['readme.md'],lane:1,effective_lane:1,max_attempts:3,requirements:[{id:'req_id',text:'Requirement'}],constraints:[{id:'c',text:'Constraint',status:'promoted',scope:{paths:['docs'],tags:['docs']},derived_from:{run:'run_internal',node:'node_id',attempt:1,evidence:'evidence/check.log'},review_when:'Later',created:'2026-11-17'}]};
 const names={node_id:'A named task',req_id:'A requirement',c:'A constraint'};
 for(const lang of ['ko','en'])for(const [a,b] of [[{},before],[before,{}],[before,{...before,grade:'security',decision_kind:'direction',status:'promoted'}]]){
  const text=contractDiff(a,b).map(f=>contractDiffText(f,lang,names)).join('\n');
- assert(!/node_id|req_id|effective_lane|max_attempts|timeout_s|decision_kind|if_approved|if_rejected|\bdaily\b|\bsecurity\b|\bauthorization\b|\binherited\b|shared or worktree|merge --no-ff/.test(text),text);
+ assert(!/run_internal|node_id|req_id|effective_lane|max_attempts|timeout_s|decision_kind|if_approved|if_rejected|\bdaily\b|\bsecurity\b|\bauthorization\b|\binherited\b|shared or worktree|merge --no-ff/.test(text),text);
  assert(!text.includes(STRINGS[lang].diffOther),text);
  assert(text.includes('echo exact-command')||a===before&&b.grade==='security');
 }

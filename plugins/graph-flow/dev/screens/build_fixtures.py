@@ -45,7 +45,7 @@ SCENARIOS = {
     'changed-live': '열린 승인 화면에서 검사 계약을 바꾸는 계획',
     'check-options': '검사의 작업 폴더와 제한 시간이 있는 계획',
     'file-changed-live': '열린 판단 화면에서 첨부 파일의 내용이 달라짐',
-    'key-recovery-live': '현재 화면에서 키 복구 확인을 펼침',
+    'key-recovery-live': '현재 화면에서 키 복구를 확인하고 새 계획 승인으로 진행함',
     'hold': '검토 실패 후 게이트가 요청하는 보류 판단',
     'outcomes': '후속 작업을 허용하는 허가 결정',
     'own-files': '소유한 검사 스크립트를 실행하는 계획',
@@ -88,7 +88,7 @@ class Fixture:
         self.project = self.root / 'project'
         self.project.mkdir()
         self.env = {k: v for k, v in os.environ.items() if not k.startswith('GF_')}
-        self.env.update(GF_HOME=str(self.home), GF_NO_OPEN='1', GF_ROLE='leader', GF_SESSION='screens-r17',
+        self.env.update(GF_HOME=str(self.home), GF_NO_OPEN='1', GF_ROLE='leader', GF_SESSION='screens-r18',
                         GIT_AUTHOR_DATE='2026-11-17T00:00:00+0000', GIT_COMMITTER_DATE='2026-11-17T00:00:00+0000')
         self.commands = []
         self.git('init', '-q')
@@ -269,7 +269,7 @@ def build(root, scenario):
             f.call('gate', 'q')
             f.call('start', 'a')
         if scenario == 'revised':
-            f.answer(f.decision, 'revision_requested', '전체 공개 전에 시험 환경에서 먼저 확인해 주세요.')
+            f.answer(f.decision, 'rejected', '전체 공개 전에 시험 환경에서 먼저 확인해 주세요.')
             f.call('gate', 'q', code=1)
             f.raw['nodes'][0]['question'] = '전체 공개 대신 내부 시험 환경에만 안내를 공개할까요?'
             f.post(True)

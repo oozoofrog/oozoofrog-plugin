@@ -26,7 +26,7 @@ const runtime = mkdtempSync(path.join(output, 'capture-'));
 const profile = path.join(runtime, 'chrome-profile');
 const delay = ms => new Promise(r => setTimeout(r, ms));
 const baseEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GF_')));
-const envFor = fixture => ({...baseEnv, GF_HOME:fixture.home, GF_NO_OPEN:'1', GF_ROLE:'leader', GF_SESSION:'screens-r17'});
+const envFor = fixture => ({...baseEnv, GF_HOME:fixture.home, GF_NO_OPEN:'1', GF_ROLE:'leader', GF_SESSION:'screens-r18'});
 const evidence = path.join(output, 'screen-status.json');
 let records = only && existsSync(evidence) ? JSON.parse(readFileSync(evidence)) : [];
 const owned = [], lifecycle = [];
@@ -98,6 +98,10 @@ async function interaction(action, fixture) {
     await until("document.querySelector('#decision').classList.contains('decision-changed')");
   } else if (action.action === 'button') {
     await evaluate(`(()=>{const b=[...document.querySelectorAll('.map-toolbar button')].find(e=>e.textContent===${JSON.stringify(action.text)});if(!b)throw Error('missing toolbar button');b.click()})()`);
+  } else if (action.action === 'lower-rows') {
+    const moved=await evaluate("(()=>{const v=document.querySelector('.map-viewport'),before={left:v.scrollLeft,top:v.scrollTop};v.scrollTo(before.left,v.scrollHeight-v.clientHeight);return {before,after:{left:v.scrollLeft,top:v.scrollTop}}})()");
+    action.observedScroll=moved;
+    assert(moved.after.top>moved.before.top&&moved.after.left===moved.before.left,'lower rows require vertical movement without sideways movement');
   } else if (action.action === 'scroll') {
     await evaluate(action.selector === 'window' ? `window.scrollTo(${action.x},${action.y})` : `document.querySelector(${selector}).scrollTo(${action.x},${action.y})`);
   } else {
@@ -108,9 +112,10 @@ async function interaction(action, fixture) {
     else throw Error('unknown action '+action.action);
   }
   await delay(350);
+  if(action.selector === '.key-recovery button')await until("!document.querySelector('.key-recovery') && !!document.querySelector('.plan-actions')");
   if(action.selector === '.file-choices button') await until("!!document.querySelector('.file-choices button[data-opened=true]')");
 }
-const derivedNumbers = new Set([1,3,5,7,15,20,22,23,24,41,44,52,53,58,59,61,62,63,64,65,66,67,68,69]);
+const derivedNumbers = new Set([1,3,5,7,15,18,19,20,22,23,24,34,37,38,41,44,52,53,58,59,61,62,63,64,65,66,67,68,69]);
 try {
   chrome = start(chromePath, ['--headless=new','--remote-debugging-port=0','--user-data-dir='+profile,'--no-first-run','--no-default-browser-check','--lang=ko','about:blank']);
   const endpoint = (await lineMatching(chrome, chrome.stderr, /DevTools listening on (ws:\/\/\S+)/))[1];
@@ -158,6 +163,43 @@ try {
       if(screen.number === 64) assert.equal(dom.text.split('이 답만으로는 아무것도 통과되지 않아요').length-1,1,'free-answer limit is stated once');
       if(screen.number === 69) assert(dom.text.includes('질문에 쓰일 문구가 바뀌었어요'), 'wording-only log line missing');
       if(screen.number === 68) assert(await evaluate("document.querySelector('.plan-actions button.primary').disabled"), 'phone plan must remain locked');
+      const audit=await evaluate(`(()=>{
+        const map=document.querySelector('#map'),v=document.querySelector('.map-viewport'),vr=v.getBoundingClientRect();
+        const shown=map.getBoundingClientRect().width>0&&!map.closest('[hidden]');
+        const count=document.querySelector('.map-visible'),toolbar=document.querySelector('.map-toolbar');
+        const panel=document.querySelector('#panel'),body=panel.querySelector('.panel-body'),bar=panel.querySelector('.panel-bar');
+        const cards=[...document.querySelectorAll('#map .node-card')];
+        const selected=cards.find(c=>c.classList.contains('expanded'));
+        const relation=direction=>[...panel.querySelectorAll('[data-relations="'+direction+'"] [data-other-node]')].map(e=>e.dataset.otherNode).sort();
+        const routes=[...map.querySelectorAll('.edge-path')];
+        const leafRects=body?[...body.querySelectorAll('p,li,summary,h3,pre')].filter(e=>e.getClientRects().length&&!e.querySelector('p,li,summary,h3,pre')).map(e=>{const range=document.createRange();range.selectNodeContents(e);return {text:e.textContent,rect:range.getBoundingClientRect().toJSON()}}):[];
+        const visibleTitles=cards.filter(c=>{const t=c.querySelector('.node-title'),r=t.getBoundingClientRect();return r.left>=vr.left-.5&&r.right<=vr.left+v.clientWidth+.5&&r.top>=vr.top-.5&&r.bottom<=vr.top+v.clientHeight+.5}).map(c=>c.querySelector('.node-title').textContent);
+        return {shown,scroll:{left:v.scrollLeft,top:v.scrollTop},visibleTitles,
+          toolbar:!shown||count.scrollWidth<=count.clientWidth+1&&count.getBoundingClientRect().left>=toolbar.getBoundingClientRect().left,
+          panel:panel.hidden||bar.getBoundingClientRect().bottom<=body.getBoundingClientRect().top+.5,
+          panelTitle:bar?.querySelector('strong')?.textContent,
+          panelFirstLines:leafRects.filter(r=>r.rect.bottom>body.getBoundingClientRect().top&&r.rect.top<body.getBoundingClientRect().top),
+          contentFits:!shown||cards.every(c=>c.scrollHeight<=c.clientHeight+1&&c.getBoundingClientRect().height<=c.parentElement.getBoundingClientRect().height+1),
+          selectedVisible:!selected||(()=>{const r=selected.getBoundingClientRect();return r.left>=vr.left-.5&&r.right<=vr.right+.5&&r.top>=vr.top-.5&&r.bottom<=vr.bottom+.5})(),
+          relations:!selected||panel.hidden?null:{incoming:relation('from'),outgoing:relation('to'),drawnIn:routes.filter(e=>e.dataset.to===selected.dataset.node).map(e=>e.dataset.from).sort(),drawnOut:routes.filter(e=>e.dataset.from===selected.dataset.node).map(e=>e.dataset.to).sort()},
+          changeTitles:[...document.querySelectorAll('.plan-change-list>details>summary')].map(e=>e.textContent.split(' · ').slice(1).join(' · ')).sort(),
+          markedTitles:cards.filter(c=>c.querySelector('.change-mark')).map(c=>c.querySelector('.node-title').textContent).sort()};
+      })()`);
+      assert(audit.toolbar,'E1 count phrases must not be clipped');
+      assert(audit.panel,'E2 panel body starts below its pinned title');
+      assert.equal(audit.panelFirstLines.length,0,'E2 no text is sliced at the top of the panel scroll area');
+      assert(audit.contentFits,'E6 content must fit the measured card');
+      if(audit.relations){assert.deepEqual(audit.relations.incoming,audit.relations.drawnIn,'E10 incoming panel relations');assert.deepEqual(audit.relations.outgoing,audit.relations.drawnOut,'E10 outgoing panel relations');}
+      if(audit.changeTitles.length)assert.deepEqual(audit.changeTitles,audit.markedTitles,'E8 change list names the marked cards');
+      if(screen.number===11){assert(audit.scroll.top>0);audit.lowerRows=screen.interactions.find(a=>a.action==='lower-rows').observedScroll;assert.equal(audit.scroll.left,audit.lowerRows.before.left);assert(audit.visibleTitles.includes('접근성 확인'),'E13 lower branch is visible');}
+      if(screen.number===27)assert(await evaluate("!document.querySelector('#home').hidden && document.querySelector('#flow').hidden"),'E13 answer record view');
+      if(screen.number===36)assert(await evaluate("!document.querySelector('#flow').hidden && document.querySelector('#home').hidden"),'E13 graph banner view');
+      if(screen.number===56)assert(dom.text.includes('확인 키를 새로 만들었어요'),'E13 recovery advances to new consent');
+      if(screen.number===66){assert(dom.text.includes('허락하지 않은 결정'));assert(!dom.text.includes('내가 돌려보낸 결정'));}
+      if(screen.number===67)assert(audit.selectedVisible,'E3 fit keeps selected card visible');
+      if(screen.number===63){assert(/허락하기로 답했어요|받아들이기로 답했어요|받아들이지 않기로 답했어요/.test(dom.text));assert(dom.text.includes('이 안내를 시험 환경에 공개할까요?'));}
+      if(screen.number===19)assert(await evaluate("getComputedStyle(document.querySelector('#accessible')).visibility==='hidden' && !!document.querySelector('#panel .planned-command')?.textContent"),'E4 opaque overlay and a real command');
+      dom.audit=audit;
       const shot = await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true});
       const bytes = Buffer.from(shot.data,'base64');
       writeFileSync(path.join(final,filename),bytes);
@@ -188,8 +230,12 @@ try {
   ws?.close();
   for(const child of [...owned].reverse()) await stop(child);
   // Check the dedicated profile too: Chrome may have spawned helper processes.
-  const processes = spawnSync('/bin/ps',['-axo','pid=,command='],{encoding:'utf8'}).stdout;
-  const remaining = processes.split('\n').filter(line=>line.includes(profile));
+  let remaining=[];
+  for(let attempt=0;attempt<20;attempt++) {
+    remaining=spawnSync('/bin/ps',['-axo','pid=,command='],{encoding:'utf8'}).stdout.split('\n').filter(line=>line.includes(profile));
+    if(!remaining.length)break;
+    await delay(100); // Helpers can finish just after the owned browser exits.
+  }
   for(const item of lifecycle) {const child=owned.find(c=>c.pid===item.pid);item.stopped=child.exitCode!==null || child.signalCode!==null;item.exitCode=child.exitCode;item.signal=child.signalCode;}
   writeFileSync(path.join(runtime,'processes.json'),JSON.stringify({lifecycle,remaining},null,2)+'\n');
   assert(remaining.length===0,'Chrome profile still running: '+remaining.join('\n'));

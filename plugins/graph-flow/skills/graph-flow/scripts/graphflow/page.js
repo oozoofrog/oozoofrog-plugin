@@ -595,7 +595,10 @@ const STRINGS = {
     "decisionKind_direction": "방향 선택",
     "decisionKind_information": "정보 응답",
     "field_shell": "실행 셸",
-    "field_environment": "실행 환경"
+    "field_environment": "실행 환경",
+    "field_attempt": "시도 횟수",
+    "field_evidence": "근거 파일",
+    "otherRun": "다른 실행의 기록"
   },
   "en": {
     "flow": "Whole flow",
@@ -1192,7 +1195,10 @@ const STRINGS = {
     "decisionKind_direction": "Direction",
     "decisionKind_information": "Information",
     "field_shell": "Shell",
-    "field_environment": "Environment"
+    "field_environment": "Environment",
+    "field_attempt": "Attempt",
+    "field_evidence": "Evidence file",
+    "otherRun": "A record from another run"
   }
 };
 // UI_STRINGS_END
@@ -1226,12 +1232,12 @@ export function checkTypeName(check,language='en') {
 }
 export function contractNames(data) {
   const items=[...(data.nodes||[]),...(data.run_contract?.requirements||[]),...(data.run_contract?.constraints||[])];
-  return Object.fromEntries(items.map(n=>[n.id,n.title||n.text||n.goal]));
+  return {...Object.fromEntries(items.map(n=>[n.id,n.title||n.text||n.goal])),sourceRun:{id:data.run,title:data.title}};
 }
 export function contractDiffText(field,language='en',names={}) {
   const words=STRINGS[language],parts=field.field.split('.');
   const group=parts.findIndex(k=>['checks','integration_checks','promoted_checks'].includes(k));
-  const labelParts=group<0?parts:[...parts.slice(0,group+1),...(field.check?[checkTypeName(field.check,language)]:[]),...parts.slice(group+2)];
+  const labelParts=group<0?parts.map(k=>parts.includes('derived_from')&&k==='run'?'run_id':k):[...parts.slice(0,group+1),...(field.check?[checkTypeName(field.check,language)]:[]),...parts.slice(group+2)];
   const name=labelParts.filter(k=>!/^\d+$/.test(k)).map(k=>words['field_'+k]||names[k]||(field.check&&k===checkTypeName(field.check,language)?k:words.diffOther)).join(' · ');
   return name+' · '+durationDiff(field,language,names);
 }
@@ -1385,6 +1391,7 @@ export function durationDiff(field, language='en', names={}) {
   const format=value=>{
     if(value==null||value==='')return words.diffEmpty;
     if(typeof value==='object')return [checkTypeName(value,language),value.run||value.command,value.timeout_s!=null?words.field_timeout_s+' '+words.durationSeconds.replace('{value}',value.timeout_s):'',value.prompt,value.tool?words.field_tool+' '+value.tool:'',value.expect?words.field_expect+' '+value.expect:''].filter(Boolean).join(' · ');
+    if(key==='run'&&field.field.split('.').includes('derived_from'))return names.sourceRun?.id===value?names.sourceRun.title:words.otherRun;
     if(key==='timeout_s')return words.durationSeconds.replace('{value}',value);
     if(key==='type')return words['checkType_'+value]||words.field_checks;
     if(key==='kind')return words[value]||words.diffOther;

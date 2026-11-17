@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Graph Flow panel scrolling: snap text to the body edge so earlier lines cannot peek above the first complete line.
+
+- Graph Flow screen evidence: distinguish lower rows, unverified answer records, graph banners and completed on-page recovery; capture all 69 r18 scenes with relation/content assertions and the requested 29 grayscale/glance pairs.
+
 - Graph Flow dashboard: name unread cards and their existing reading action; match change and relation lists to graph cards; localize contract changes; remove duplicate questions/checks; clarify counts, evidence, answer outcomes, failure scope and worker roles.
 
 - Graph Flow dashboard: wrap toolbar counts, pin the selected title above the panel scroll area, keep phone layers opaque, reserve scroll gutters, measure card content, and retain the selected card after fit or level changes.
