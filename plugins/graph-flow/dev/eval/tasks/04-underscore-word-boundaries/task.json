@@ -1,0 +1,9 @@
+{
+  "id": "04-underscore-word-boundaries",
+  "category": "single",
+  "title": "Treat underscores as word separators",
+  "prompt": "Search terms separated by underscores should count as separate words. Please make word_counts follow its docstring for underscores as well as punctuation, while keeping lowercase Unicode letters and numbers and the first-seen order of distinct words.",
+  "parts": [
+    "Count Unicode alphanumeric runs without underscores."
+  ]
+}

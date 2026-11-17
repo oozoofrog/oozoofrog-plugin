@@ -1,0 +1,9 @@
+{
+  "id": "01-compatibility-slugs",
+  "category": "single",
+  "title": "Slugs for compatibility characters",
+  "prompt": "Our imported titles include full-width letters, ligatures, and accented text. Please make textkit.words.slugify produce the ASCII lowercase slugs described by its docstring for these titles, while retaining its existing separator and empty-input behavior.",
+  "parts": [
+    "Restore compatibility folding in slugify."
+  ]
+}

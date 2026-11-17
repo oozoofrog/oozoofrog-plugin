@@ -1,0 +1,10 @@
+{
+  "id": "05-slugged-config-export",
+  "category": "chain",
+  "title": "Export configuration with normalized keys",
+  "prompt": "I need to export imported configuration labels as ASCII slugs. First make slugify handle compatibility characters such as full-width letters and ligatures according to its existing docstring. Then add textkit.config.slug_config(values), returning configuration text whose keys are those slugs and whose string values are unchanged. Keep input order and leave the mapping untouched; reject empty or colliding slugs and values format_config cannot represent. Empty input should return an empty string.",
+  "parts": [
+    "Normalize compatibility characters through slugify.",
+    "Export slug_config using the normalized keys, rejecting collisions and unrepresentable entries."
+  ]
+}

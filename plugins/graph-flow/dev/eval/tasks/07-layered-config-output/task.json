@@ -1,0 +1,10 @@
+{
+  "id": "07-layered-config-output",
+  "category": "chain",
+  "title": "Combine configuration layers into reusable text",
+  "prompt": "Please add configuration layering. textkit.config.merge_configs(texts) should accept a finite stream of config strings, let later values win, and retain each case-sensitive key in its original insertion position. Malformed lines should retain their line number within the offending text. Then add merged_config(texts) to export that merged mapping with format_config, preserving literal values, validation, and its no-trailing-newline convention. Empty input should give {} or an empty string.",
+  "parts": [
+    "Merge parsed layers with stable key order and later-value precedence.",
+    "Format the merged configuration while retaining parser and formatter contracts."
+  ]
+}

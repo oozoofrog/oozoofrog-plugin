@@ -1,0 +1,9 @@
+{
+  "id": "02-config-equals-values",
+  "category": "single",
+  "title": "Keep equals signs in configuration values",
+  "prompt": "Configuration values sometimes contain several equals signs, for example token=a=b=c. Please make parse_config retain the entire value after the first equals sign. Keep the documented whitespace, comments, duplicate-key, and malformed-line behavior.",
+  "parts": [
+    "Preserve equals signs inside configuration values."
+  ]
+}

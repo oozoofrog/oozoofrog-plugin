@@ -1,0 +1,11 @@
+{
+  "id": "10-independent-contract-fixes",
+  "category": "parallel",
+  "title": "Restore three independent textkit behaviors",
+  "prompt": "Please fix three independent regressions in textkit. In words.slugify, separators at either edge should disappear. In config.parse_config, the last occurrence of a duplicate key should supply its value without moving the key or merging case variants. In sequences.chunked, retain a final incomplete chunk, including when the entire input is smaller than the requested size. Preserve each function's remaining documented behavior.",
+  "parts": [
+    "Remove edge separators from slugs in words.py.",
+    "Restore last-value precedence and stable key order in config.py.",
+    "Retain final partial chunks in sequences.py."
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "id": "03-chunk-size-validation",
+  "category": "single",
+  "title": "Reject noninteger chunk sizes",
+  "prompt": "Please make textkit.sequences.chunked enforce its documented size contract consistently, including empty inputs: accept positive integers, reject booleans and all other invalid sizes with ValueError, and keep the final partial chunk and original item objects.",
+  "parts": [
+    "Enforce the positive-int size contract before chunking."
+  ]
+}

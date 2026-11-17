@@ -1,0 +1,9 @@
+{
+  "id": "08-projected-unique-review",
+  "category": "review",
+  "title": "Deduplicate shared callers by a selected value",
+  "prompt": "The title catalog and config-value catalog already call unique with a key function. Please extend textkit.sequences.unique(items, key=None) so these callers work, while preserving its documented equality, order, original-object, and finite-iterable guarantees. Without key, behavior stays the same; with key, retain the first original item for each equal projected value. Projected values may be unhashable. Keep slug_catalog and value_catalog working according to their docstrings.",
+  "parts": [
+    "Extend the shared unique helper with optional equality-based projection for both catalog callers."
+  ]
+}

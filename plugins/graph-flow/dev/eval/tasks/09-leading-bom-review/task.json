@@ -1,0 +1,9 @@
+{
+  "id": "09-leading-bom-review",
+  "category": "review",
+  "title": "Read BOM-prefixed configuration in shared consumers",
+  "prompt": "Our config word counter and item batcher need to accept BOM-prefixed text. Please add keyword-only strip_bom=False to the shared parse_config function. When enabled, ignore exactly one U+FEFF at the absolute start, keeping every other character literal and retaining original line numbers. Default parsing and format_config round trips must stay unchanged. The existing config_word_counts and config_batches consumers already request this option and should follow their docstrings.",
+  "parts": [
+    "Add opt-in leading-BOM parsing for both consumers while preserving literal content and default parsing."
+  ]
+}

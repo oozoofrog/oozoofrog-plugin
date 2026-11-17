@@ -1,0 +1,1 @@
+{"id": "sound-parallel", "category": "parallel", "title": "Three independent arithmetic changes", "prompt": "Fix bump, twice, and negate.", "parts": ["bump", "twice", "negate"]}

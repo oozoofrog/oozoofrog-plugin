@@ -1,0 +1,10 @@
+{
+  "id": "06-vocabulary-batches",
+  "category": "chain",
+  "title": "Collect and batch a vocabulary across documents",
+  "prompt": "I want one vocabulary across a stream of documents. Add textkit.words.word_counts_many(texts) to total occurrences using word_counts rules and retain global first-seen word order, including for one-shot iterables. Then add textkit.sequences.word_batches(texts, size) to group those distinct words in that order using chunked size validation and final-partial-group behavior. Empty streams should give {} and [] respectively; invalid sizes must still raise ValueError.",
+  "parts": [
+    "Aggregate document word counts in global first-seen order.",
+    "Batch the resulting distinct vocabulary with chunked size semantics."
+  ]
+}
