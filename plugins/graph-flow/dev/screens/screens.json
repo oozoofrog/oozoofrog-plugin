@@ -1610,5 +1610,31 @@
     "interactions": [],
     "group": "DECISIONS",
     "decision_screen": true
+  },
+  {
+    "number": 98,
+    "name": "plan-notices-desktop",
+    "scenario": "notices",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "DECISIONS"
+  },
+  {
+    "number": 99,
+    "name": "plan-notices-phone",
+    "scenario": "notices",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "DECISIONS"
   }
 ]

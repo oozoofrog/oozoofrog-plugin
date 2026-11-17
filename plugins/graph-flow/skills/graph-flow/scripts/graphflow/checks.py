@@ -182,13 +182,29 @@ def _execute(run_dir, node_id, check, attempt, phase, cwd):
     return data
 
 
+def _before_work(run_dir, node, st, cwd):
+    if not node or not st.get("base"):
+        return False
+    changed = _changed(_cwd(run_dir, cwd), st["base"])
+    return not _plan.overlaps(changed, node.get("owns", []))
+
+
+def _first_observation(events, node_id, st, check_id):
+    start = max((e["seq"] for e in events if e["type"] == "node.start" and e["data"].get("node") == node_id), default=0)
+    return not any(e["seq"] > start and e["type"] in ("check.result", "check.red")
+                   and e["data"].get("node") == node_id and e["data"].get("check") == check_id for e in events)
+
+
 def run_cmd(run_dir, node_id, check, phase, cwd, actor):
-    _, st, token = _capture(run_dir, node_id, phase, check=check)
+    node, st, token = _capture(run_dir, node_id, phase, check=check)
+    before_work = phase == "loop" and _before_work(run_dir, node, st, cwd)
     data = _execute(run_dir, node_id, check, st["attempts"], phase, _cwd(run_dir, cwd))
     with _store.transaction(run_dir) as tx:
         _recheck(tx, node_id, phase, token)
         if data["result"] == "passed":
             data["failed_before"] = failure_observed(tx.events, node_id, check["run"], run_dir)
+            if before_work and _first_observation(tx.events, node_id, st, check["id"]):
+                data["passes_before_work"] = True
         tx.append("check.result", data, actor)
     return data
 
@@ -279,14 +295,19 @@ def red(run_dir, node_id, check_id, cwd, actor):
                 [c for c in node["checks"] if c["type"] == "cmd"])
     results, notices = [], []
     for check in selected:
+        before_work = _before_work(run_dir, node, st, cwd)
         outcome = _execute(run_dir, node_id, check, st["attempts"], "loop", _cwd(run_dir, cwd))
         data = {"node": node_id, "check": check["id"], "exit_code": outcome["exit_code"],
                 "failed_first": outcome["result"] == "failed", "log": outcome["log"],
-                "command": check["run"]}
+                "command": check["run"], "attempt": st["attempts"]}
+        if before_work and outcome["result"] == "passed":
+            data["passes_before_work"] = True
         results.append(data)
         if not data["failed_first"]:
             notices.append({"code": "red_already_green", "node": node_id,
                             "message": "check %s already passes" % check["id"]})
+        if data.get("passes_before_work"):
+            notices.append({"code": "passes_before_work", "node": node_id, "check": check["id"], "message": "check %s passes before any observed owned-file work" % check["id"]})
     with _store.transaction(run_dir) as tx:
         _recheck(tx, node_id, "loop", token)
         for data in results:

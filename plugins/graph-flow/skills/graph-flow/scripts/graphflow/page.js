@@ -667,7 +667,11 @@ const STRINGS = {
     "qSeverity_medium": "고칠 문제",
     "qSeverity_low": "참고할 점",
     "qRunFailed": "전체 검사에서 통과하지 못했어요: {title}",
-    "qNodeFailed": "이 일의 검사에서 통과하지 못했어요: {title}"
+    "qNodeFailed": "이 일의 검사에서 통과하지 못했어요: {title}",
+    "qNotice": "참고해 주세요",
+    "qCircular": "「{gate}」 일을 확인할 때 쓰는 「{check}」 검사가 뒤의 「{later}」 일이 만들 파일을 가리켜요.",
+    "qBeforeWork": "「{title}」 검사는 {n}번째 시도의 작업 전에 이미 통과했어요.",
+    "qBeforeWorkCount": "작업 전에 이미 통과한 검사 {n}개가 있어요."
   },
   "en": {
     "flow": "Whole flow",
@@ -1336,7 +1340,11 @@ const STRINGS = {
     "qSeverity_medium": "Medium severity",
     "qSeverity_low": "Low severity",
     "qRunFailed": "Run-level check failed: {title}",
-    "qNodeFailed": "This step’s own check failed: {title}"
+    "qNodeFailed": "This step’s own check failed: {title}",
+    "qNotice": "Please note",
+    "qCircular": "Check “{check}” at “{gate}” references files produced later by “{later}”.",
+    "qBeforeWork": "“{title}” passed before observed work on attempt {n}.",
+    "qBeforeWorkCount": "{n} checks passed before observed work."
   }
 };
 // UI_STRINGS_END
@@ -2012,7 +2020,14 @@ function relationFacts(parent,node) {
     if(!rows.length)list.append(el('li',t('noHandoffs')));parent.append(list);
   }
 }
+function planNotices(parent, notices) {
+  if(!notices?.length)return;
+  const box=el('section',undefined,'plan-notices');box.append(el('h3',t('qNotice')));
+  for(const n of notices)box.append(el('p',n.code==='circular_run_check'?t('qCircular',{gate:n.gate_title,check:n.title,later:n.later_title}):t('qBeforeWork',{title:n.title,n:n.attempt})));
+  parent.append(box);
+}
 function runFacts(parent) {
+  planNotices(parent,view.notices);
   relationFacts(parent,flowNode('_run_checks'));
   contractDetails(parent,view.run_contract);
   if(view.summary)parent.append(el('p',view.summary));authorNote(parent,view.context);
@@ -2036,6 +2051,7 @@ function groupFacts(parent,start=0) {
   }
 }
 function planFacts(parent, node) {
+  planNotices(parent,node.notices);
   const start=parent.children.length;
   if (node.runLevel) { runFacts(parent); groupFacts(parent,start); return; }
   if(node.goal && node.goal!==title(node))parent.append(el('h3', t('planGoal')), el('p', node.goal));
@@ -2223,7 +2239,7 @@ function planAttention(box) {
   const changeEvidence=[...box.children].filter(item=>item.classList.contains('plan-change-list')||item.classList.contains('change-notice'));
   for(const change of view.plan_changes||[])history.append(el('p',t(change.kind==='added'?'qPlanAdded':change.kind==='removed'?'qPlanRemoved':'qPlanChanged',{title:change.title,fields:change.fields.map(f=>STRINGS[language]['field_'+f]||t('diffOther')).join(', ')})));
   const verified=el('section');verified.dataset.questionBlock='verified';verified.append(el('h3',t('qVerified')),el('p',t('qPlanChecks')));
-  box.append(history,verified,...changeEvidence,message);heading.append(refChip(approval.id,approval.question,true));update();
+  box.append(history,verified,...changeEvidence,message);planNotices(box,view.notices);heading.append(refChip(approval.id,approval.question,true));update();
   return true;
 }
 function attention() {
@@ -2884,6 +2900,7 @@ function nodeCard(n, expanded = false, level = 'detail') {
   const questions=(view.planned_questions || []).filter(q=>q.node===n.id);
   if(questions.length)essentials.append(el('p',t('planCardQuestion',{n:questions.length,question:questions.map(q=>answered?q.question:plannedQuestion(q)).join(' · ')}),'planned-question'));
   if(answered){const answer=el('details',undefined,'answered-result');answer.append(el('summary',t('answerExpand')),el('p',t('answerOutcome',{outcome:t(answered.outcome==='approved'?(answered.kind==='authorization'?'answeredPermission':'answeredApproval'):answered.outcome==='rejected'?'answeredRejection':answered.outcome==='revision_requested'?'answeredRevision':'evAnswered'),answer:answered.answer||''})));essentials.append(answer);}
+  if(n.notices?.some(item=>item.code==='passes_before_work'))essentials.append(el('p',t('qBeforeWorkCount',{n:n.notices.filter(item=>item.code==='passes_before_work').length}),'check-notice'));
   root.append(header,essentials,footer,reference);
   const answer=essentials.querySelector('.answered-result');if(answer)answer.addEventListener('toggle',()=>{if(root.isConnected&&!root.classList.contains('card-measure'))renderer?.remeasure();});
   return root;

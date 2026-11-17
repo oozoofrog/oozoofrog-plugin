@@ -216,6 +216,25 @@ def command_metrics(node, events, run_dir):
     return result
 
 
+def before_work_notices(current, events):
+    nodes = plan.node_index(current or {})
+    notices, seen = [], set()
+    for event in events:
+        data = event["data"]
+        if event["type"] not in ("check.red", "check.result") or not data.get("passes_before_work"):
+            continue
+        key = (data.get("node"), data.get("attempt"), data.get("check"))
+        if key in seen:
+            continue
+        seen.add(key)
+        node = nodes.get(data.get("node"), {})
+        check = next((c for c in node.get("checks", []) if c.get("id") == data.get("check")), {})
+        notices.append(dict(code="passes_before_work", node=data.get("node"), check=data.get("check"),
+                            attempt=data.get("attempt"), title=check.get("title") or data.get("check"),
+                            node_title=node.get("title") or data.get("node")))
+    return notices
+
+
 def conformance(current, events, metrics):
     nodes = (current or {}).get("nodes", [])
     work = [n for n in nodes if n["kind"] == "work"]
@@ -229,11 +248,12 @@ def conformance(current, events, metrics):
             max_attempts = max(max_attempts, event["data"].get("attempt", starts[nid]))
     counts = {"work_nodes": len(work), "work_nodes_with_cmd": sum(any(c["type"] == "cmd" for c in n["checks"]) for n in work),
               "checks_never_observed_failing": sum(not c["failure_observed"] for c in cmd),
+              "checks_passing_before_work": len(before_work_notices(current, events)),
               "passed_checks_never_observed_failing": sum(c["passed"] and not c["failure_observed"] for c in cmd)}
     applied = {cid for e in events if e["type"] == "constraint.apply" for cid in e["data"].get("ids", [])}
     unknown = {"measurable": False, "observation": "not measurable from records"}
     observations = {
-        "P1": dict(counts, observation="work nodes with a cmd check: %(work_nodes_with_cmd)d/%(work_nodes)d; checks never observed failing: %(checks_never_observed_failing)d; passed checks never observed failing: %(passed_checks_never_observed_failing)d" % counts),
+        "P1": dict(counts, observation="work nodes with a cmd check: %(work_nodes_with_cmd)d/%(work_nodes)d; checks never observed failing: %(checks_never_observed_failing)d; passed checks never observed failing: %(passed_checks_never_observed_failing)d; checks passing before work: %(checks_passing_before_work)d" % counts),
         "P2": {"max_attempts": max_attempts, "replan": metrics["stuck"]["replan"]},
         "P3": {"edges": sum(len(n.get("needs", [])) for n in nodes),
                "edges_with_named_artifact": sum(bool(e.get("artifact")) for n in nodes for e in n.get("needs", []))},

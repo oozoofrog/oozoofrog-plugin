@@ -32,7 +32,12 @@ def _init(args, actor):
 def _validate(args, actor):
     raw = _read_json(args.file)
     problems = plan.validate(raw)
-    _, notices = plan.normalize(raw)
+    normalized, notices = plan.normalize(raw)
+    if args.run:
+        try:
+            notices.extend(_lazy_import("trace").before_work_notices(normalized, store.events(args.run)))
+        except core.GFError:
+            pass  # A notice must not prevent standalone validation.
     return {"problems": problems, "notices": notices}, 1 if problems else 0
 
 
@@ -53,6 +58,7 @@ def _set_plan(args, actor):
         if problems:
             raise core.GFError("invalid_plan", json.dumps(problems), core.EXIT_NEGATIVE)
         normalized, notices = plan.normalize(raw)
+        notices.extend(_lazy_import("trace").before_work_notices(normalized, tx.events))
         learn = importlib.import_module("graphflow.learn")
         normalized["promoted_checks"] = _merge_plan_records(normalized.get("promoted_checks", []), learn.fixed_checks(store.project_of(args.run)), "promoted_checks")
         normalized["constraints"] = _merge_plan_records(normalized.get("constraints", []), learn.applying(store.project_of(args.run), normalized), "constraints")

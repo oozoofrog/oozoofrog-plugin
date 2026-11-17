@@ -13,7 +13,7 @@ class ScreenManifestTests(unittest.TestCase):
         tree = ast.parse((SCREENS / 'build_fixtures.py').read_text())
         scenarios = next(ast.literal_eval(node.value) for node in tree.body
                          if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'SCENARIOS' for t in node.targets))
-        self.assertEqual(list(range(1, 98)), [row['number'] for row in rows])
+        self.assertEqual(list(range(1, 100)), [row['number'] for row in rows])
         self.assertEqual(len(rows), len({row['name'] for row in rows}))
         self.assertEqual(set(scenarios), {row['scenario'] for row in rows})
         for row in rows:

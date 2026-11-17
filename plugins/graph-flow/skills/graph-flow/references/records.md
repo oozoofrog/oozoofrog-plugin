@@ -472,3 +472,6 @@ Dashboard question facts (attempt histories, previous review findings, current r
 Trace nodes include `rejection_history[].checks` with `origin: run|node`, check id and title, derived from the failed gate observations and the existing rejection evidence. Dashboard attempt history uses the same attribution. R5 is unchanged: for a work node with effective lane 2, after R1–R4 are satisfied, it asks for trajectory approval when `trajectory_clean` is false or recorded cross-run rollbacks are positive. Clean means at most two attempts, no timeout in the current attempt and no loop-phase scope violation in the current attempt. Two attempts alone do not trigger R5; three do, even with a passing independent review and checks. A valid current trajectory approval satisfies that request.
 
 The P10 text observation includes nonzero unplanned categories (for example, `unplanned 2: plan_reapproval 1, trajectory 1`), matching the existing JSON `by_kind` counts.
+
+
+`check.red` and `check.result` may carry `passes_before_work: true`; new red records also include the attempt number. This is diagnostic display data and does not affect red/green results, grade, retry limits, `trajectory_clean`, approval identity or signatures.

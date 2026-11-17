@@ -20,6 +20,7 @@ from test_review11 import Review11Tests
 from graphflow import cli
 
 SCENARIOS = {
+    'notices': '뒤 작업의 파일을 쓰는 전체 검사와 작업 전 통과 알림',
     'trajectory': '세 번째 제출: 전체 검사 반려, 자체 검사 반려, 실패 후 통과한 검토',
     'lane3': '제출 결과 사용 허가',
     'decision-review': '검토 결정',
@@ -171,6 +172,16 @@ def branching(count):
 
 def build(root, scenario):
     f = Fixture(root, scenario)
+    if scenario == 'notices':
+        f.raw['nodes'] += [review(), work('b', '안내 묶음 만들기', ['a'])]
+        f.raw['nodes'][0]['lane'] = 2
+        f.raw['nodes'][0]['checks'].append(dict(id='empty', type='cmd', title='빈 안내는 통과하지 않아요', run='test ! -e guide.txt'))
+        f.raw['integration_checks'] = [dict(id='all', type='cmd', title='전체 안내 묶음이 준비됐어요', run='test -s b.txt')]
+        f.post(True)
+        f.call('start','a');f.call('red','a','empty')
+        f.raw['nodes'].append(work('c','그림 설명 쓰기'))
+        f.decision=f.post()
+        return f.metadata()
     if scenario in ('trajectory', 'lane3'):
         f.raw['nodes'] += [review(), work('b', '안내 전달', ['a'])]
         f.raw['nodes'][0]['lane'] = 2 if scenario == 'trajectory' else 3

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Graph Flow: add advisory notices for literal later-owned paths in run checks and checks already passing before observed work. Show the notices on plans/nodes and count pre-work passes in conformance output without changing verdicts.
+
 - Graph Flow: carry failed review findings into the next work brief, distinguish run-level and node check rejections in history, and name unplanned answer kinds on the P10 text line. Gate rules are unchanged.
 
 - Graph Flow: every dashboard question uses choices with state-specific consequences, reasons, attempt/review history and current verification. Plan changes survive reloads; free questions can supply repeated `--option` answers. Existing reading and signing rules are unchanged.

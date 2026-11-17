@@ -714,6 +714,9 @@ def _view(current, derived, events, project):
         node["review_needs_correction"] = bool(node.get("kind") == "review" and node["status"] == "rejected")
         node["waiting_for_review_correction"] = any(n.get("target") == node["id"] and n.get("status") == "rejected" for n in view["nodes"])
     view["plan_counts"], view["planned_questions"] = _plan_summary(current, derived)
+    view["notices"] = planning.circular_run_checks(current) + trace.before_work_notices(current, events)
+    for node in view["nodes"]:
+        node["notices"] = [n for n in view["notices"] if n.get("node") == node["id"]]
     view["summary"] = current.get("summary", "")
     view["context"] = current.get("context", {})
     view["requirements"] = current.get("requirements", [])

@@ -157,3 +157,11 @@ All binding decisions carry a gate/plan issuer in the signed binding. Agent `dec
 
 
 Trivially successful cmd checks (`true`, `:`, `exit 0`, or an empty/whitespace-only command) produce `unfalsifiable_check` normalization notices in `plan validate` and `plan set`, without changing validation success or gate verdicts. `plan set` returns the notice count and the full `normalization_notices` list.
+
+
+### Diagnostic notices
+
+Notices are advisory: they add no validation problem, refusal, gate rule or required answer. `plan validate` and `plan set` include them, and the plan screen names the affected work and check.
+
+- `circular_run_check`: a literal command path (including `--option=path`, quoted paths and relative `cwd`) is owned by a later node that directly or transitively depends on a work node with effective lane 2 or 3. The notice names the run check, gate node, later owner and path. It does not inspect script code or infer default inputs, variable expansion or arbitrary shell behavior. In the first real run, `all-tasks-sound` named only `run_task.py`; its default `tasks/` input was hidden inside that script, so path-token detection alone cannot diagnose that exact command. Spell the input path in the command to expose this dependency at planning time.
+- `passes_before_work`: a passing `red` observation, or the first observation of a command check in an attempt, records that no owned-file change from the attempt's Git snapshot was observed before executing it. It is not proof that no thinking or unrecorded external work happened. The node and plan show this notice; `trace --conformance` counts unique node/attempt/check observations as `checks passing before work: N`. Repeated observations of the same check in the same attempt count once. Historical records lacking this observation are not relabelled. With a run selected, validation also displays its recorded notices.

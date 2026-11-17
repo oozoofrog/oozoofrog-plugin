@@ -3,6 +3,7 @@ import copy
 import math
 import pathlib
 import re
+import shlex
 
 from graphflow import core
 
@@ -92,6 +93,41 @@ def node_by_id(plan, node_id):
     raise core.GFError("unknown_node", "unknown node: %s" % node_id, core.EXIT_STATE)
 
 
+def circular_run_checks(plan):
+    """Notice literal later-owned paths; never infer a script's hidden inputs."""
+    notices, nodes = [], _nodes(plan)
+    for check in _list(plan.get("integration_checks")):
+        if not isinstance(check, dict) or check.get("type") != "cmd" or not isinstance(check.get("run"), str):
+            continue
+        try:
+            tokens = shlex.split(check["run"])
+        except ValueError:
+            continue
+        paths = set()
+        for token in tokens:
+            # Options and quoted literal paths, including a relative working directory.
+            value = token.split("=", 1)[-1] if token.startswith("--") and "=" in token else token
+            if any(char in value for char in "$`\\") or not value or value.startswith("-"):
+                continue
+            candidate = pathlib.PurePosixPath(str(check.get("cwd", "."))) / value
+            if not candidate.is_absolute() and ".." not in candidate.parts:
+                paths.add(str(candidate))
+        for gate_node in nodes:
+            if gate_node.get("kind") != "work" or gate_node.get("effective_lane", gate_node.get("lane", 0)) not in (2, 3):
+                continue
+            for later in nodes:
+                if not depends(plan, later.get("id"), gate_node.get("id")):
+                    continue
+                hits = [path for path in sorted(paths) if any(_under(path, own) for own in _list(later.get("owns")) if isinstance(own, str))]
+                if hits:
+                    notices.append(dict(code="circular_run_check", check=check.get("id"), node=gate_node.get("id"),
+                        later=later.get("id"), paths=hits, title=check.get("title") or check.get("id"),
+                        gate_title=gate_node.get("title") or gate_node.get("id"), later_title=later.get("title") or later.get("id"),
+                        message="check %s at gate %s references %s owned by later node %s" %
+                                (check.get("id"), gate_node.get("id"), ", ".join(hits), later.get("id"))))
+    return notices
+
+
 def normalize(plan):
     """Copy the plan, fill node defaults and escalate work without a cmd check."""
     result, notices = copy.deepcopy(plan), []
@@ -128,6 +164,8 @@ def normalize(plan):
                     and check["run"].strip() in ("true", ":", "exit 0", "")):
                 notices.append({"code": "unfalsifiable_check", "node": nid, "check": check.get("id"),
                                 "message": "command always succeeds; use a check that can fail"})
+    if isinstance(result, dict):
+        notices.extend(circular_run_checks(result))
     return result, notices
 
 
