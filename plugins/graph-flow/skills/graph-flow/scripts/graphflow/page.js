@@ -3036,8 +3036,10 @@ function createMap() {
       const selectedHeight=(layout.positions[chosenNode]?.height||0)*scale;
       const available=Math.max(300,selectedHeight+(toolbar.offsetHeight||60)+50,innerHeight-map.getBoundingClientRect().top-38);
       map.style.height=available+'px';
-      $('panel').style.maxHeight=matchMedia('(max-width:760px)').matches?'none':available+'px';
-      $('panel').style.height=$('panel').style.maxHeight;
+      const panel=$('panel');
+      const headingHeight=panel.querySelector('.panel-bar')?.offsetHeight||0;
+      // Leave room for body padding and a line of text below the pinned heading.
+      panel.style.height=Math.max(available,headingHeight+80)+'px';
     }
     const w=viewport.clientWidth||900,h=viewport.clientHeight||600;
     if(!placed)origin={x:Math.max(0,(w-layout.bounds.width*scale)/2),y:Math.max(0,(h-layout.bounds.height*scale)/2)};

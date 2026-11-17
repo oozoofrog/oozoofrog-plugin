@@ -211,6 +211,11 @@ try {
           return {blocks,options,question:root.querySelector('[data-question-block=question]').textContent,why:root.querySelector('[data-question-block=why]').textContent};
         })()`);
         assert.deepEqual(questionAudit.blocks.slice(0,5),['question','why','choices','history','verified'],'Q1–Q5 reading order');
+        if(screen.viewport.width>760)assert(await evaluate(`(()=>{
+          const root=document.querySelector('#decision:not([hidden])')||document.querySelector('#attention');
+          const rect=name=>root.querySelector('[data-question-block='+name+']').getBoundingClientRect();
+          return rect('question').bottom<=rect('why').top+1&&rect('why').bottom<=rect('choices').top+1;
+        })()`),'question, reason and choices follow the visual reading order');
         assert(questionAudit.options.length>=2,'multiple choices');
         assert(questionAudit.options.every(o=>o.effect&&o.inside),JSON.stringify(questionAudit));
         assert.equal(new Set(questionAudit.options.map(o=>o.effect)).size,questionAudit.options.length,'each consequence differs');

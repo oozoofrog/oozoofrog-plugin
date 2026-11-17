@@ -206,13 +206,13 @@ button:disabled,button.primary:disabled,.plan-actions button:disabled{background
  .plan-actions .action-hint{font-size:12px}.plan-actions .remaining-cards{display:none}
 }
 
-@media(min-width:761px){#flow.has-selection #panel{position:fixed;top:100px;bottom:24px;right:32px;width:420px;max-height:none!important;height:calc(100dvh - 124px);z-index:11;overflow:hidden}}
-
 @media(min-width:761px){
+ #flow.has-selection #panel{position:sticky;top:12px;width:auto;max-height:calc(100dvh - 24px);overflow:hidden}
+ #panel .panel-intro{scroll-margin-block:12px}
  #attention.plan-banner:has(.plan-actions){display:grid;grid-template-columns:1fr 1.3fr;gap:8px 20px;padding:16px 20px}
- #attention.plan-banner>[data-question-block=question]{grid-column:1;grid-row:1;margin:0;font-size:24px}
- #attention.plan-banner>[data-question-block=why]{grid-column:1;grid-row:2;margin:0;padding:0;border:0}
- #attention.plan-banner>.plan-actions{grid-column:2;grid-row:1/3;margin:0}
+ #attention.plan-banner>[data-question-block=question]{grid-column:1/-1;grid-row:1;margin:0;font-size:24px}
+ #attention.plan-banner>[data-question-block=why]{grid-column:1/-1;grid-row:2;margin:0;padding:0;border:0}
+ #attention.plan-banner>.plan-actions{grid-column:1/-1;grid-row:3;margin:0}
  #attention.plan-banner>[data-question-block=history]{grid-column:1}
  #attention.plan-banner>[data-question-block=verified]{grid-column:2}
  #attention.plan-banner section h3{font-size:14px;margin:4px 0}#attention.plan-banner section p{font-size:13px;margin:4px 0}

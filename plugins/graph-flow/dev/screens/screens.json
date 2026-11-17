@@ -1634,7 +1634,12 @@
       "width": 390,
       "height": 844
     },
-    "interactions": [],
+    "interactions": [
+      {
+        "action": "into",
+        "selector": ".plan-notices"
+      }
+    ],
     "group": "DECISIONS"
   },
   {
