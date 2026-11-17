@@ -54,12 +54,14 @@ class PlanApprovalTests(unittest.TestCase):
     def test_blocks_every_dispatch_surface_but_planning_remains_available(self):
         result = self.set_plan()
         did = result['decision']
-        commands = [('ready',), ('start', 'a'), ('brief', 'a'),
+        commands = [('ready',), ('start', 'a'), ('brief', 'a'), ('gate', '--final'),
                     ('assign', 'a', '--executor', 'inline', '--model', 'test', '--effort', 'high', '--provider', 'test', '--family', 'openai', '--isolation', 'shared')]
         for command in commands:
             error = self.call(*command, code=4)
             self.assertEqual(error['code'], 'plan_not_approved')
             self.assertIn('gf open --decision ' + did, error['message'])
+        for role in ('worker', 'reviewer'):
+            self.assertEqual(self.call('--role', role, '--node', 'a', 'start', 'a', code=4)['code'], 'plan_not_approved')
         self.call('brief', '--plan'); self.call('status'); self.call('trace')
         self.call('plan', 'validate', str(self.file)); self.call('decide', 'list')
         self.call('decide', 'wait', did, '--timeout', '0', code=1)
@@ -182,8 +184,14 @@ class PlanApprovalTests(unittest.TestCase):
         self.accept(data['decision']); self.assertFalse(call('ready_nodes', {})[0]['isError'])
 
     def test_structural_identity_ignores_labels_and_order_not_checks(self):
+        extra = copy.deepcopy(self.raw['nodes'][0])
+        extra.update(id='b', owns=['b.txt'], needs=[{'from':'a','artifact':'file','label':'안내'}])
+        self.raw['nodes'][0]['outputs'] = ['file']
+        self.raw['nodes'].append(extra)
         original, _ = plan.normalize(self.raw)
         revised = copy.deepcopy(original)
+        revised['nodes'][1]['needs'][0]['label'] = '정리한 안내'
+        revised['nodes'].reverse()
         revised['nodes'][0]['context'] = {'why': '설명'}
         self.assertEqual(state.plan_identity(original), state.plan_identity(revised))
         revised['integration_checks'] = [{'id': 'all', 'type': 'cmd', 'run': 'test -s guide.txt'}]

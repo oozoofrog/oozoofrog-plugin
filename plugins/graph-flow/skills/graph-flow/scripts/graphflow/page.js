@@ -39,7 +39,7 @@ const STRINGS = {
     "why": "왜 내가 봐야 하나요",
     "verified": "이미 확인된 것",
     "unverified": "아직 확인 안 된 것",
-    "workerNote": "쓴 쪽의 메모",
+    "workerNote": "작업자 메모",
     "notRecorded": "따로 기록되지 않았어요.",
     "questionOnly": "이 결정에는 질문만 기록되어 있어요. 설명, 근거, 읽을 파일은 남겨지지 않았어요.",
     "writeFirst": "답을 적으면 보낼 수 있어요.",
@@ -85,8 +85,8 @@ const STRINGS = {
     "complete": "모든 일이 끝났어요 · 일 {total}개",
     "unnamed": "이 일",
     "handoff": "넘길 결과",
-    "overview": "내가 할 일 {needs} · 진행 중 {doing} · 끝남 {done}/{total}",
-    "runOption": "{project} · {run}",
+    "overview": "진행 중 {doing} · 끝남 {done}/{total}",
+    "runOption": "{run}",
     "purposeReview": "사람이 직접 살펴봐야 하는 결과를 받아들일지 정해 주세요.",
     "purposeAuthorization": "되돌리기 어려운 일을 허락할지 정해 주세요.",
     "purposeTrajectory": "평소와 다르게 진행된 일을 받아들일지 정해 주세요.",
@@ -192,7 +192,7 @@ const STRINGS = {
     "sessionDashboard": "대시보드",
     "selectHint": "일을 누르면 그 일의 시도와 검사 결과가 여기에 나와요.",
     "attemptsOf": "시도와 검사",
-    "runOptionNeeds": "{project} · {run} · 내가 할 일 {n}",
+    "runOptionNeeds": "{run}",
     "since": "{time}부터",
     "returnTimes": "이전에 {n}번 돌아왔어요",
     "allDone": "이 흐름이 끝났어요",
@@ -200,7 +200,7 @@ const STRINGS = {
     "lineOpen": "넘겨줬어요",
     "lineClosed": "아직 넘기지 않았어요",
     "lineWaiting": "내가 할 일을 기다려요",
-    "lineReturned": "되돌아온 일에서 나와요",
+    "lineReturned": "전달을 기다려요",
     "lineReview": "검토해요",
     "tries": "시도 {n}/{max}",
     "closeDetails": "자세한 내용 닫기",
@@ -233,9 +233,9 @@ const STRINGS = {
     "answeredApproval": "결과를 받아들이기로 답했어요",
     "answeredRevision": "고쳐 달라고 답했어요",
     "answeredRejection": "받아들이지 않기로 답했어요",
-    "lineSampleOpen": "넘겼어요",
-    "lineSampleClosed": "아직 기다려요",
-    "lineSampleReview": "검토를 맡겼어요",
+    "lineSampleOpen": "결과 전달",
+    "lineSampleClosed": "전달 대기",
+    "lineSampleReview": "검토 관계",
     "attemptShort": "{n}번째 시도",
     "earlierHistory": "이전 시도 기록",
     "failureUnknownAttempt": "✕ 기록된 시도에서 “{names}” 확인이 통과하지 못했어요",
@@ -244,15 +244,12 @@ const STRINGS = {
     "showDiagram": "선으로 된 그래프 보기",
     "showFlowList": "읽기 쉬운 목록 보기",
     "mapDown": "위에서 아래로",
-    "panelEnd": "상세 내용 끝이에요",
-    "moreDetails": "아래로 내려서 나머지 내용을 읽어요 ↓",
     "pastReturn": "이전 시도 {n}번 되돌아옴",
     "nothingToJudge": "판단할 자료가 없어요",
     "nothingToJudgeBody": "읽을 파일도, 지금 시도의 검사 결과도 없어요. 결과를 보여 달라고 돌려보내거나 채팅에서 다시 물어봐 주세요.",
     "confirmBlind": "파일과 검사 결과 없이 받아들일게요",
     "blindHint": "자료 없이 받아들이려면 위 내용을 확인해 주세요.",
     "acceptBlind": "자료 없이 받아들이기",
-    "lineSampleReturned": "되돌아왔어요",
     "minZoom": "글자를 읽을 수 있는 최소 크기예요",
     "readGateHint": "파일이나 근거를 먼저 열어 주세요",
     "approveEffect": "받아들이기로 한 답이 리더 세션에 전달돼요",
@@ -269,12 +266,25 @@ const STRINGS = {
     "planSentBack": "계획을 돌려보냈어요",
     "planWaiting": "계획을 확인해 주세요",
     "planSentNote": "내가 보낸 내용",
+    "planWaitingRevision": "리더가 계획을 고치면 여기에 보여요.",
     "planChecks": "확인할 것",
     "plannedCommand": "실행할 명령",
     "planDeliverables": "만들 결과",
     "evSuperseded": "새 계획으로 바뀌었어요",
     "purposePlan": "시작하기 전에 계획을 확인해 주세요.",
-    "untitledCheck": "설명이 아직 없는 검사예요"
+    "untitledCheck": "설명이 아직 없는 검사예요",
+    "ranCommand": "실행한 명령",
+    "returnedBy": "{who}에서 돌려보냈어요 · 통과하지 못한 내용: {reason}",
+    "returnedShort": "{who} · 미통과: {reason}",
+    "returnLeader": "리더",
+    "returnReviewer": "검토자",
+    "recordOrder": "기록 {n}",
+    "results": "결과 보기",
+    "resultLocations": "결과 파일",
+    "checkingKey": "◷ 검사받는 중",
+    "reviewKey": "⌕ 검토 작업",
+    "returnedKey": "↩ 고치러 돌아옴",
+    "pendingKey": "○ 시작 전"
   },
   "en": {
     "flow": "Whole flow",
@@ -315,7 +325,7 @@ const STRINGS = {
     "why": "Why you are needed",
     "verified": "Already verified",
     "unverified": "Not yet verified",
-    "workerNote": "The worker’s note",
+    "workerNote": "Worker note",
     "notRecorded": "Not recorded.",
     "questionOnly": "Only the question was recorded for this decision. No explanation, evidence or files were left.",
     "writeFirst": "Write an answer to send it.",
@@ -361,8 +371,8 @@ const STRINGS = {
     "complete": "Everything is done · {total} tasks",
     "unnamed": "This task",
     "handoff": "Handoff",
-    "overview": "Your turn {needs} · In progress {doing} · Finished {done}/{total}",
-    "runOption": "{project} · {run}",
+    "overview": "In progress {doing} · Finished {done}/{total}",
+    "runOption": "{run}",
     "purposeReview": "Decide whether to accept a result that needs a human look.",
     "purposeAuthorization": "Decide whether to allow work that is hard to undo.",
     "purposeTrajectory": "Decide whether to accept work with an unclean path.",
@@ -468,7 +478,7 @@ const STRINGS = {
     "sessionDashboard": "dashboard",
     "selectHint": "Select a task to see its attempts and check results here.",
     "attemptsOf": "Attempts and checks",
-    "runOptionNeeds": "{project} · {run} · Your turn {n}",
+    "runOptionNeeds": "{run}",
     "since": "since {time}",
     "returnTimes": "Came back {n} times before",
     "allDone": "This flow is complete",
@@ -476,7 +486,7 @@ const STRINGS = {
     "lineOpen": "handed over",
     "lineClosed": "not handed over yet",
     "lineWaiting": "Waiting for your turn",
-    "lineReturned": "from work that came back",
+    "lineReturned": "Waiting for handoff",
     "lineReview": "reviews",
     "tries": "attempt {n}/{max}",
     "closeDetails": "Close details",
@@ -509,9 +519,9 @@ const STRINGS = {
     "answeredApproval": "Answered: accept the result",
     "answeredRevision": "Answered: request changes",
     "answeredRejection": "Answered: reject the result",
-    "lineSampleOpen": "Handed over",
-    "lineSampleClosed": "Waiting",
-    "lineSampleReview": "Reviewed by",
+    "lineSampleOpen": "Handoff",
+    "lineSampleClosed": "Handoff pending",
+    "lineSampleReview": "Review",
     "attemptShort": "Attempt {n}",
     "earlierHistory": "Earlier attempt history",
     "failureUnknownAttempt": "✕ In the recorded attempt, “{names}” did not pass",
@@ -520,15 +530,12 @@ const STRINGS = {
     "showDiagram": "Show diagram",
     "showFlowList": "Show readable list",
     "mapDown": "Top to bottom",
-    "panelEnd": "End of details",
-    "moreDetails": "Scroll to read the remaining details ↓",
     "pastReturn": "Earlier attempt {n} returned",
     "nothingToJudge": "There is nothing here to judge by",
     "nothingToJudgeBody": "No file or current check result is recorded. Send it back to request the result, or ask the agent session in chat.",
     "confirmBlind": "I choose to accept without a file or check result",
     "blindHint": "To accept without evidence, confirm the statement above.",
     "acceptBlind": "Accept without evidence",
-    "lineSampleReturned": "Returned",
     "minZoom": "Minimum zoom for readable text",
     "readGateHint": "Open a file or the evidence first",
     "approveEffect": "Your acceptance is sent to the leader session",
@@ -545,12 +552,25 @@ const STRINGS = {
     "planSentBack": "The plan was sent back",
     "planWaiting": "Review the plan",
     "planSentNote": "Your requested changes",
+    "planWaitingRevision": "The revised plan will appear here.",
     "planChecks": "Planned checks",
     "plannedCommand": "Planned command",
     "planDeliverables": "Deliverables",
     "evSuperseded": "Replaced by a new plan",
     "purposePlan": "Review the plan before work starts.",
-    "untitledCheck": "A check without a description"
+    "untitledCheck": "A check without a description",
+    "ranCommand": "Command run",
+    "returnedBy": "Returned by {who} · Did not pass: {reason}",
+    "returnedShort": "{who} · Failed: {reason}",
+    "returnLeader": "Leader",
+    "returnReviewer": "Reviewer",
+    "recordOrder": "Record {n}",
+    "results": "View results",
+    "resultLocations": "Result files",
+    "checkingKey": "◷ Being checked",
+    "reviewKey": "⌕ Review work",
+    "returnedKey": "↩ Returned for changes",
+    "pendingKey": "○ Not started"
   }
 };
 // UI_STRINGS_END
@@ -648,7 +668,7 @@ export function viewLanguage(view, browser = 'en') {
 }
 export function cometCount(node) { return (node.laps || []).filter(lap => lap === 'returned').length; }
 // Below this the words on a card stop being readable, so a larger graph scrolls instead of shrinking further.
-export const MIN_FIT_SCALE = 13 / 14;
+export const MIN_FIT_SCALE = 2 / 3;
 export function edgeRelationLabel(edge, language = 'en') {
   const words = STRINGS[language];
   if (edge.relation === 'toward_goal') return words.towardGoal;
@@ -671,10 +691,10 @@ export function displayState(node, decisions = []) {
   return 'notStarted';
 }
 export function statusGlyph(state) {
-  return {passed:'✓', running:'▶', retrying:'↪', submitted:'⌕', awaiting:'◆', returned:'↩', notStarted:'○', exhausted:'!', held:'Ⅱ'}[state];
+  return {passed:'✓', running:'▶', retrying:'↪', submitted:'◷', awaiting:'◆', returned:'↩', notStarted:'○', exhausted:'!', held:'Ⅱ'}[state];
 }
 export function checkTitle(check, language = 'en') {
-  return (!check.title || check.title === check.id) && check.id === 'scope' ? STRINGS[language].scopeCheck : check.title || check.id;
+  return (!check.title || check.title === check.id) && check.id === 'scope' ? STRINGS[language].scopeCheck : check.title || STRINGS[language].untitledCheck;
 }
 export function checkWording(check, language = 'en', attempt = check.attempt) {
   const key = check.result === 'passed' ? 'checkMet' : attempt ? 'checksFailed' : 'failureUnknownAttempt';
@@ -708,7 +728,7 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
   const byId = new Map(nodes.map(n => [n.id, n])), vertices = new Map(), links = [];
   const routes = forwardEdges(edges).filter(e => byId.has(e.from) && byId.has(e.to)).map((e,index) => {
     const waiting = decisions.find(d => d.node === e.from);
-    return {...e,index,bundle:index,text:edgeChipText(e),chip:null,gateState:waiting?'waiting_for_you':e.gate||'closed',decision:waiting?.id};
+    return {...e,index,bundle:index,text:edgeChipText(e),chip:null,gateState:waiting?'waiting_for_you':e.gate==='returned'?'closed':e.gate||'closed',decision:waiting?.id};
   });
   const parents = id => routes.filter(e => e.to === id).map(e => e.from);
   const depths = new Map();
@@ -755,9 +775,9 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
   const widths=layers.map(ids=>Math.max(208,...ids.filter(id=>byId.has(id)).map(id=>Math.min(280,Math.ceil(textWidth(byId.get(id).title,18,9))+40))));
   for(const v of vertices.values()) {
     v.width=widths[v.layer];
-    v.height=v.dummy?24:148+Math.max(0,Math.ceil(textWidth(v.node.title,18,9)/(v.width-40))-1)*26;
+    v.height=v.dummy?44:Math.max(120,40+14*Math.max(links.filter(e=>e.from===v.id).length,links.filter(e=>e.to===v.id).length))+Math.max(0,Math.ceil(textWidth(v.node.title,18,9)/(v.width-40))-1)*26;
   }
-  const gap=28,margin=28;
+  const gap=18,margin=20;
   const total=ids=>ids.reduce((s,id)=>s+vertices.get(id).height,0)+Math.max(0,ids.length-1)*gap;
   const tallest=Math.max(0,...layers.map(total));
   for(const ids of layers){let y=margin+(tallest-total(ids))/2;for(const id of ids){vertices.get(id).y=y;y+=vertices.get(id).height+gap;}}
@@ -781,8 +801,8 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
   const usedY=[];
   const ordinate=(ideal,low,high,edge,channels)=>{
     for(let step=0;step<10000;step++){
-      const y=ideal+(step%2?1:-1)*Math.ceil(step/2)*6;
-      if(y>=low && y<=high && usedY.every(n=>n.edge===edge||!n.channels.some(c=>channels.includes(c))||Math.abs(n.y-y)>=6)){usedY.push({y,edge,channels});return y;}
+      const y=ideal+(step%2?1:-1)*Math.ceil(step/2)*14;
+      if(y>=low && y<=high && usedY.every(n=>n.edge===edge||!n.channels.some(c=>channels.includes(c))||Math.abs(n.y-y)>=14)){usedY.push({y,edge,channels});return y;}
     }
     throw new Error('Graph ports exceed card capacity');
   };
@@ -965,13 +985,13 @@ function planAttention(box) {
   box.append(heading, el('p', t('planSummary', view.plan_counts), 'plan-summary'));
   planBanner = {key};
   if (approval.status !== 'open') {
-    box.append(el('p', t('planSentNote'), 'eyebrow'), el('p', approval.answer || ''), el('p', t('planBackEffect'), 'muted'));
+    box.append(el('p', t('planSentNote'), 'eyebrow'), el('p', approval.answer || ''), el('p', t('planWaitingRevision'), 'muted'));
     return true;
   }
   const session = decisionController.open(approval.id);
   const actions = el('div', undefined, 'plan-actions'), start = button(t('planStart'), () => send('approved'), 'primary');
   const startGroup = el('div'); startGroup.append(start, el('p', t('planStartEffect'), 'muted'));
-  const backGroup = el('div'), label = el('label', t('backReason')), input = el('textarea');
+  const backGroup = el('div'), changes = el('details',undefined,'plan-change-form'), label = el('label', t('backReason')), input = el('textarea');
   input.id = 'plan-changes'; label.htmlFor = input.id; input.rows = 2; input.value = session?.draft || '';
   const back = button(t('sendBack'), () => send('revision_requested'));
   const message = el('p', undefined, 'muted'); message.setAttribute('role', 'status');
@@ -985,8 +1005,8 @@ function planAttention(box) {
     message.textContent = t(result.notice); update();
     if (result.refresh) refresh(true);
   }
-  backGroup.append(label, input, back, el('p', t('planBackEffect'), 'muted'));
-  actions.append(startGroup, backGroup); box.append(actions, message, refChip(approval.id, approval.question, true)); update();
+  changes.append(el('summary',t('sendBack')), label, input, back); backGroup.append(changes, el('p', t('planBackEffect'), 'muted'));
+  actions.append(backGroup, startGroup); box.append(actions, message); heading.append(refChip(approval.id, approval.question, true)); update();
   return true;
 }
 function attention() {
@@ -1044,6 +1064,7 @@ function panel() {
     }
     p.append(list, reference); p.scrollTop=scroll; return;
   }
+  if (displayState(node,view.decisions)==='returned') p.append(el('p',t('returnedBy',{who:t(node.returned_by?.role==='reviewer'?'roleReviewer':'roleLeader'),reason:node.returned_reason||t('noReason')})));
   p.append(reference, el('p', attempts(node)));
   const rows = view.timeline.filter(r => r.node === node.id && r.kind === 'attempt').sort((a,b)=>b.seq-a.seq);
   if (rows.length) p.append(el('p', t('attemptsOf'), 'eyebrow'));
@@ -1061,9 +1082,10 @@ function panel() {
   const more=el('details');more.open=!!rowOpen.get('panel:'+node.id);more.addEventListener('toggle',()=>rowOpen.set('panel:'+node.id,more.open));more.append(el('summary',t('workerDetails')));
   if(node.summary)more.append(el('p',node.summary));
     more.append(handoffsCard('received',node.inputs,'from'),handoffsCard('outputs',node.outputs,'to'));
-  p.append(more,button(t('showInLog'),()=>showNode(node.id),'small'),el('p',t('moreDetails'),'panel-end'));
+  if(view.complete){const files=[...new Set(rows.flatMap(r=>r.state==='passed'?r.files||[]:[]))];if(files.length){p.append(el('h3',t('resultLocations')));textList(p,files);}}
+  p.append(more,button(t('showInLog'),()=>showNode(node.id),'small'));
   p.scrollTop=scroll;
-  p.onscroll=()=>{p.querySelector('.panel-end').textContent=t(p.scrollTop+p.clientHeight>=p.scrollHeight-2?'panelEnd':'moreDetails');};
+
 
 }
 // One entry of the record. An attempt carries its real checks; the rest are single sentences.
@@ -1097,7 +1119,7 @@ function checkLine(c, attempt) {
   const result = c.timed_out ? t('checkTimedOut') : t(c.result === 'failed' ? 'checkFailed' : 'checkPassed');
   item.append(wording(checkWording(c, language, attempt),'strong'));
   if(c.timed_out)item.append(el('span', ' · '+result));
-  if (c.command) { const run = el('p', undefined, 'muted'); run.append(el('code', c.command), el('span', [c.exit_code === null || c.exit_code === undefined ? '' : ' → ' + t('exitCode', {n:c.exit_code}), typeof c.duration_ms === 'number' ? t('seconds', {n:(c.duration_ms / 1000).toFixed(2)}) : ''].filter(Boolean).join(' · '))); item.append(run); }
+  if (c.command) { const run = el('p', undefined, 'muted'); run.append(el('span', t('ranCommand')+': '), el('code', c.command), el('span', [c.exit_code === null || c.exit_code === undefined ? '' : ' → ' + t('exitCode', {n:c.exit_code}), typeof c.duration_ms === 'number' ? t('seconds', {n:(c.duration_ms / 1000).toFixed(2)}) : ''].filter(Boolean).join(' · '))); item.append(run); }
   if (c.violations?.length) item.append(el('p', t('outside', {files:c.violations.join(', ')})));
   if (c.log) {
     const output = el('pre'); output.hidden = true; output.tabIndex = 0;
@@ -1111,19 +1133,23 @@ function checkLine(c, attempt) {
   return item;
 }
 function logRow(r, anchor = true, inline = false) {
-  const item = el('li', undefined, rowTone(r)); if (anchor) item.id = r.id;
+  const isEarlier=r.kind==='attempt' && view.timeline.some(row=>row.kind==='attempt'&&row.node===r.node&&row.seq>r.seq);
+  const item = el('li', undefined, rowTone(r)+(isEarlier?' earlier-history':' current-history')); if (anchor) item.id = r.id;
   const head = el('div', undefined, 'row-head'), text = el('span', undefined, 'row-text');
-  head.append(el('span', clock(r.ts, true), 'row-time'));
+  const stamp=el('span', clock(r.ts, true), 'row-time');
+  if(view.timeline.filter(row=>row.ts===r.ts).length>1)stamp.append(el('span', ' · '+t('recordOrder',{n:r.seq})));
+  head.append(stamp);
   if (r.decision) text.append(refChip(r.decision, `${r.decision} · ${r.node_title || r.question}`, true));
   if (r.node) text.append(el('strong', title({id:r.node, title:r.node_title})), refChip(r.node, `${r.node} · ${r.node_title}`));
   text.append(wording(rowSentence(r))); head.append(text);
   const by = [who(r.by), r.kind === 'attempt' && r.worker?.model ? t('modelName',{model:r.worker.model}) : ''].filter(Boolean).join(' · ');
   if (by) head.append(el('span', by, 'row-who'));
+  if (r.kind === 'attempt' && !inline) item.append(el('p',t(isEarlier?'earlierAttempt':'currentAttempt'),'eyebrow'));
   item.append(head);
   if (r.kind !== 'attempt') return item;
   const extra = [['reason', r.reason && !r.checks.some(c => c.result === 'failed') ? [r.reason] : []], ['findings', r.findings || []], ['workerNote', r.notes ? [r.notes] : []], ['unsure', r.unsure || []], ['changedFiles', r.files || []]].filter(([, values]) => values.length);
   if (!r.checks.length && !extra.length) return item;
-  const details = el(inline ? 'div' : 'details'); details.open = rowOpen.has(r.id) ? rowOpen.get(r.id) : r.state === 'returned' || r.state === 'replan';
+  const details = el(inline ? 'div' : 'details'); details.open = rowOpen.has(r.id) ? rowOpen.get(r.id) : !isEarlier && (r.state === 'returned' || r.state === 'replan');
   details.addEventListener('toggle', () => rowOpen.set(r.id, details.open));
   if (!inline) details.append(el('summary', t('rowDetails')));
   if (r.checks.length) { const checks = el('ul', undefined, 'checks'); r.checks.forEach(c => checks.append(checkLine(c, r.attempt))); details.append(checks); }
@@ -1144,10 +1170,10 @@ function logList(rows, empty, anchor = true) {
 let logFilter = 'all', logNode = null, found = null, mark = null;
 function home() {
   const box = $('home'); clear(box);
-  const inbox = el('section'); inbox.append(el('p', t('yourTurn'), 'eyebrow'), el('h2', t(view.decisions.length ? 'needsYou' : 'nothingTitle')));
+  const inbox = el('section'); inbox.append(el('h2', t(view.decisions.length ? 'needsYou' : 'nothingTitle')));
   view.decisions.forEach(d => inbox.append(decisionCard(d)));
   if (!view.decisions.length) inbox.append(el('p', t('nothing'), 'muted'));
-  box.append(inbox);
+  if(!view.complete || view.decisions.length)box.append(inbox);
   if (!view.complete) {
     const now = el('section'), list = el('ul', undefined, 'now'); now.append(el('h2', t('doingNow')));
     const active = view.nodes.filter(n => !needs(n) && !['passed','pending','ready','blocked'].includes(n.status) && n.attempts);
@@ -1193,7 +1219,7 @@ function accessible() {
   for(const id of order){
     const n=view.nodes.find(n=>n.id===id),item=el('li');item.append(nodeCard(n,n.id===selected));
     const edges=forwardEdges(view.edges).filter(e=>e.from===id);
-    for(const e of edges){const handoff=el('p',undefined,'phone-handoff');handoff.append(el('span','↓','status-glyph'),el('span',`${relationText(e)} → ${title(view.nodes.find(n=>n.id===e.to))}`));item.append(handoff);}
+    for(const e of edges){const handoff=el('p',undefined,'phone-handoff');handoff.append(el('span','↓','status-glyph'),el('span',`${title(n)} → ${title(view.nodes.find(n=>n.id===e.to))} · ${e.relation==='reviews'?t('review'):t(e.delivered?'delivered':'notDelivered')}`));item.append(handoff);}
     phone.append(item);
   }
 }
@@ -1206,7 +1232,7 @@ function showMode(next) {
 }
 function discardDecision() {
   if (!decisionController.close()) return false;
-  decisionUI = null; clear($('decision')); return true;
+  decisionUI = null; planBanner = null; clear($('decision')); return true;
 }
 function closeInvalidDecision(run, decisions, nextView = {decisions}) {
   const reason = decisionController.refresh(nextView, run);
@@ -1214,9 +1240,9 @@ function closeInvalidDecision(run, decisions, nextView = {decisions}) {
   if (mode === 'decision') leaveDecision(); decisionNotice = reason; notice(decisionNotice); return true;
 }
 function goHome() { if (showMode('home') && view) home(); }
-function showGraph() { if (!showMode('flow')) return; panel(); }
+function showGraph() { if (!showMode('flow')) return; attention(); panel(); }
 function selectNode(id) { const n=view.nodes.find(n=>n.id===id),d=view.decisions.find(d=>d.node===id); if(n?.kind==='decision'&&d){openDecision(d.id);return;} if (!showMode('flow')) return; selected = selected === id ? null : id; panel(); if (renderer) renderer.select(selected); if (selected && matchMedia('(max-width:760px)').matches) $('panel').scrollIntoView({block:'start',behavior:reduced.matches?'auto':'smooth'}); }
-function focusHeading(heading) { heading.tabIndex = -1; heading.focus(); }
+function focusHeading(heading) { heading.tabIndex = -1; heading.focus({preventScroll:true}); }
 function openDecision(id, focus = true) {
   if (view.decisions.find(d => d.id === id)?.purpose === 'plan_approval') {
     showGraph(); attention(); if (focus) $('plan-question')?.focus({preventScroll:true}); return;
@@ -1231,7 +1257,7 @@ function openDecision(id, focus = true) {
   const reading = card(t('yourTurn'), null, true); reading.firstElementChild.remove(); reading.classList.add('reading');
   const introduction = el('div'); reading.append(introduction);
   const report = el('div', undefined, 'worker-report'), note = el('div', undefined, 'speech');
-  report.append(note); reading.append(report);
+  report.append(el('p',t('workerNote'),'eyebrow'),note); reading.append(report);
   const isQuestion = ['direction','information'].includes(d.kind);
   const answerLabel = el('label', t(isQuestion ? 'answerLabel' : 'backReason')); answerLabel.htmlFor = 'answer-text';
   const phoneHistory=el('details',undefined,'phone-history');reading.append(phoneHistory);
@@ -1259,9 +1285,9 @@ function openDecision(id, focus = true) {
     reminder.querySelector('button').classList.toggle('primary',!isQuestion&&!empty&&!read&&(!fileButtons.length||!fileCanUnlock));
     backButton.disabled = !!decisionController.session?.busy;
     blindCheck.disabled = !!session.busy;
-    if (current() && session.nothingToJudge && !session.busy) message.textContent = !input.value.trim() ? t('revisionHint') : !session.blindConfirmed ? t('blindHint') : '';
+    if (current() && !session.busy) message.textContent = '';
     // Say why sending is unavailable instead of leaving a silent disabled button.
-    if (current() && !session.busy && (!message.textContent || [t('writeFirst'),t('revisionHint')].includes(message.textContent))) message.textContent = input.value.trim() ? '' : t(isQuestion ? 'writeFirst' : 'revisionHint');
+    // The action's own hint is the single explanation for a disabled button.
     input.disabled = !current() || session.busy; $('picker').disabled = !!decisionController.session?.busy;
   };
   const send = async outcome => {
@@ -1286,7 +1312,7 @@ function openDecision(id, focus = true) {
     copy.append(effect,hint);row.append(b,copy);actions.append(row);return b;
   };
   if (isQuestion) actionButton('answered', t('answer'), 'primary');
-  else { approveButton = actionButton('approved', '', 'primary'); revisionButton=actionButton('revision_requested', t('sendBack')); }
+  else { revisionButton=actionButton('revision_requested', t('sendBack')); approveButton = actionButton('approved', '', 'primary'); }
   const backButton = button(t('leaveUnanswered'), leaveDecision); actions.append(backButton); reading.append(actions);
   const right = el('div'), surrounding = el('div'), history = el('section', undefined, 'decision-history'); right.append(history, surrounding);
   const files = card(t('readThis'), null, true), fileChoices = el('div', undefined, 'file-choices'), reader = el('pre', undefined, 'file-reader');
@@ -1305,10 +1331,11 @@ function openDecision(id, focus = true) {
         try {
           const text = await api(query('/api/file', {decision:session.target.id,path:file.path}, session.target), null, true);
           if (!current() || request !== fileRequest) return;
+          reader.classList.toggle('code-file', /\.(?:py|js|ts|jsx|tsx|json|css|html|sh|swift|rs|go|c|h|cpp|yaml|yml|toml|xml)$/i.test(file.path));
           reader.textContent = text; reader.hidden = false; fileStatus.textContent = ''; reader.setAttribute('aria-label',file.name);
           decisionController.openFile(); updateActions();
         } catch { if (current() && request === fileRequest) fileStatus.textContent = t('fileFailed'); }
-      }), el('small',file.path,'file-path')); fileChoices.append(entry);
+      })); if(file.path!==file.name)entry.append(el('small',file.path,'file-path')); fileChoices.append(entry);
     }
   };
   const details = el('details', undefined, 'evidence'); details.append(el('summary', t('details'))); const raw = el('pre');
@@ -1338,6 +1365,7 @@ function openDecision(id, focus = true) {
     const decision = session.decision;
     clear(introduction); decisionHeading(introduction, decision, 'h2'); const heading = introduction.querySelector('h2'); heading.id = 'decision-title';
     const node = view.nodes.find(n => n.id === decision.node);
+    introduction.append(card(t('why'), decision.context.why || purposeWording(decision.purpose, language)));
     updateFiles(decision);
     clear(history);
     const rows = node ? view.timeline.filter(r => r.node === node.id && r.kind === 'attempt') : [];
@@ -1354,20 +1382,20 @@ function openDecision(id, focus = true) {
     if(approveButton){
       approveButton.classList.toggle('primary',!nothingToInspect);
       revisionButton.classList.toggle('primary',nothingToInspect);
-      const first=(nothingToInspect?revisionButton:approveButton).parentElement;if(actions.firstElementChild!==first)actions.prepend(first);
+      // Action order is stable; emphasis changes, position does not.
     }
     if(missing.children.length) introduction.append(missing);
     history.hidden = !rows.length;phoneHistory.hidden=!rows.length;clear(phoneHistory);
     const previous=rows.filter(r=>r.attempt<node?.attempts && r.checks?.some(c=>c.result==='failed')).sort((a,b)=>b.seq-a.seq)[0];
     phoneHistory.append(el('summary',t('history')));
-    const phoneRows=el('ol',undefined,'log');[...rows].sort((a,b)=>b.seq-a.seq).forEach(r=>{const row=logRow(r,false,true);row.prepend(el('p',t(r.attempt===node.attempts?'currentAttempt':'earlierAttempt'),'eyebrow'));phoneRows.append(row);});phoneHistory.append(phoneRows);
+    const phoneRows=el('ol',undefined,'log');[...rows].sort((a,b)=>b.seq-a.seq).forEach(r=>{const row=logRow({...r,notes:r.attempt===node.attempts?null:r.notes,files:r.attempt===node.attempts?(r.files||[]).filter(f=>!decision.files?.some(file=>file.path===f)):r.files},false,true);row.prepend(el('p',t(r.attempt===node.attempts?'currentAttempt':'earlierAttempt'),'eyebrow'));phoneRows.append(row);});phoneHistory.append(phoneRows);
     phoneHistory.open=!!rowOpen.get('decision:'+decision.id);phoneHistory.ontoggle=()=>rowOpen.set('decision:'+decision.id,phoneHistory.open);
     if (rows.length) {
       history.append(el('h3', t('history')));
       const list = el('ol', undefined, 'log');
       let earlier=false;
       [...rows].sort((a,b) => b.seq-a.seq).forEach(r => {
-        const item = logRow(r, false, true);
+        const item = logRow({...r,notes:r.attempt===node.attempts?null:r.notes,files:r.attempt===node.attempts?(r.files||[]).filter(f=>!decision.files?.some(file=>file.path===f)):r.files}, false, true);
         if(r.attempt===node.attempts || !earlier)item.prepend(el('p', t(r.attempt === node.attempts ? 'currentAttempt' : 'earlierAttempt'), 'eyebrow'));if(r.attempt!==node.attempts)earlier=true;
         if (!r.checks.length) item.append(el('p', t('noAttemptChecks'), 'muted'));
         list.append(item);
@@ -1381,7 +1409,7 @@ function openDecision(id, focus = true) {
     loadEvidence.hidden = !decision.has_evidence;
     note.textContent = decision.worker_note || ''; report.hidden = !decision.worker_note;
     const effects = [['if_approved','ifApproved'],['if_rejected','ifRejected'],['undo','undo']].filter(([key]) => decision.context[key]);
-    clear(surrounding); if (decision.context.why) surrounding.append(card(t('why'), decision.context.why));
+    clear(surrounding);
     failedBlock(surrounding, decision);
     for (const key of ['verified','unverified']) { if (!decision[key]?.length) continue; const c = card(t(key)); textList(c, decision[key]); surrounding.append(c); }
     files.hidden = !decision.files?.length;
@@ -1440,12 +1468,13 @@ function applyView(next) {
   const languageChanged=language!==viewLanguage(next,navigator.language);
   language = viewLanguage(next, navigator.language); translate();
   if(languageChanged && projects.length)chooseRuns({projects});
-  view = next; fingerprint = nextFingerprint; if (!view.nodes.some(n => n.id === selected)) selected = null; if (!view.nodes.some(n => n.id === logNode)) logNode = null; showMode(mode);
+  view = next; fingerprint = nextFingerprint; if (!view.nodes.some(n => n.id === selected)) selected = null; if (!view.nodes.some(n => n.id === logNode)) logNode = null;
   const firstDecision=view.decisions[0]?.id || view.timeline.find(r=>r.decision)?.decision;
   $('find-text').placeholder=firstDecision?t('findDecisionHint',{id:firstDecision}):t('findHint');
   $('title').textContent = view.title || t('brand'); $('where').textContent = [view.project, view.run].filter(Boolean).join(' · ');
-  $('subtitle').textContent = view.complete ? t('complete', {total:view.nodes.length}) : t('overview', {total:view.nodes.length, done:view.counts.done, doing:view.counts.doing, needs:view.counts.needs_you});
-  accessible(); attention(); panel(); home(); if (renderer && mode === 'flow') renderer.update(view, selected);
+  $('subtitle').textContent = view.plan_approval && !(view.plan_approval.verified && view.plan_approval.outcome==='approved') ? (view.plan_approval.status==='open'?t('planWaiting'):'') : view.complete ? t('complete', {total:view.nodes.length}) : t('overview', {total:view.nodes.length, done:view.counts.done, doing:view.counts.doing, needs:view.counts.needs_you});
+  if(view.complete){const resultNode=[...view.nodes].reverse().find(n=>n.kind==='work'&&view.timeline.some(r=>r.node===n.id&&r.files?.length));if(resultNode)$('subtitle').append(button(t('results'),()=>selectNode(resultNode.id),'link result-action'));}
+  accessible(); attention(); panel(); home(); showMode(mode); if (renderer && mode === 'flow') renderer.update(view, selected);
   if (mode === 'decision' && decisionController.session) openDecision(decisionController.session.target.id, false);
   if(active && active.isConnected===false){
     const scope=phoneFocus?$('phone-flow'):document;
@@ -1464,7 +1493,7 @@ function chooseRuns(data) {
   runs.sort((a,b) => Number(b.status === 'open') - Number(a.status === 'open') || (b.last_event || '').localeCompare(a.last_event || ''));
   if (!chosen || !runs.some(r => r.project === chosen.project && r.id === chosen.run)) { const first = runs.find(r => !r.error) || runs[0]; setChosen(first ? {project:first.project,run:first.id} : null); }
   const picker = $('picker'); picker.disabled = !!decisionController.session?.busy; clear(picker);
-  runs.forEach((r, i) => { const option = el('option', t(r.open_decisions && !matchMedia('(max-width:760px)').matches ? 'runOptionNeeds' : 'runOption', {project:r.projectName, run:r.id, n:r.open_decisions})); option.value = String(i); option.selected = !!chosen && r.project === chosen.project && r.id === chosen.run; picker.append(option); });
+  runs.forEach((r, i) => { const option = el('option', t('runOption', {project:r.projectName, run:r.id, n:r.open_decisions})); option.value = String(i); option.selected = !!chosen && r.project === chosen.project && r.id === chosen.run; picker.append(option); });
   $('picker-label').hidden = runs.length < 2;
   picker.onchange = () => { if (decisionController.session?.busy) return; const r = runs[Number(picker.value)]; setChosen({project:r.project,run:r.id}); refresh(true); };
   return runs.find(r => chosen && r.project === chosen.project && r.id === chosen.run);
@@ -1510,7 +1539,7 @@ function typeIcon(kind) {
   icon.append(svg('path',{d:paths[kind]||paths.work,fill:'none',stroke:'currentColor','stroke-width':1.6,'stroke-linejoin':'round','stroke-linecap':'round'}));
   return icon;
 }
-function cardTone(n) {return needs(n)||['held','awaiting_approval'].includes(n.status)?'waiting_for_you':n.status==='passed'||n.answered?'passed':['running','submitted','unverified'].includes(n.status)?'current':'unused';}
+function cardTone(n) {if(n.status==='rejected')return 'returned-card';return needs(n)||['held','awaiting_approval'].includes(n.status)?'waiting_for_you':n.status==='passed'||n.answered?'passed':['running','submitted','unverified'].includes(n.status)?'current':'unused';}
 // A stable play mark is legible in a still frame and without colour.
 function walker() {
   const mark=el('span','▶','walker');mark.setAttribute('aria-hidden','true');return mark;
@@ -1528,16 +1557,21 @@ function nodeCard(n, expanded = false) {
   header.setAttribute('aria-label',nodeDescription(n));header.setAttribute('aria-expanded',String(expanded));
   const state = displayState(n, view.decisions), statusLine = el('span', status(n), 'node-status');
   statusLine.prepend(el('span', statusGlyph(state), 'status-glyph'));
-  if(n.kind && n.kind!=='work')header.append(typeIcon(n.kind));
-  header.append(el('strong',title(n),'node-title'),statusLine);
+  header.append(statusLine);
+  const titleLine=el('span',undefined,'node-title-line');
+  if(n.kind && n.kind!=='work')titleLine.append(typeIcon(n.kind));
+  titleLine.append(el('strong',title(n),'node-title'));header.append(titleLine);
   const reference=el('div',undefined,'ref-line node-reference');
   reference.append(refChip(n.id, `${n.id} · ${title(n)}`));
   if(n.attempts)reference.append(el('span',t('attemptShort',{n:n.attempts}),'attempt-caption'));
   const decision=view.decisions.find(d=>d.node===n.id);
   const footer=el('div',undefined,'node-footer');
   if(decision)footer.append(button(t('answerHere',{id:decision.id}),()=>openDecision(decision.id),'node-decision'));
-  else if(cometCount(n))footer.append(el('span',t('returnTimes',{n:cometCount(n)})));
-  root.append(header,reference,footer);
+  else if(displayState(n,view.decisions)==='returned') {
+    const reason=n.returned_reason || t('noReason');
+    const line=el('span',t('returnedShort',{who:t(n.returned_by?.role==='reviewer'?'returnReviewer':'returnLeader'),reason}));line.title=line.textContent;footer.append(line);
+  }
+  root.append(header,footer,reference);
   return root;
 }
 function createMap() {
@@ -1565,8 +1599,9 @@ function createMap() {
       const p=layout.positions[n.id],x=p.x*scale+ox-viewport.scrollLeft,y=p.y*scale+oy-viewport.scrollTop;
       const direction=offscreenDirection({x,y,width:p.width*scale,height:p.height*scale},w,h);
       if(direction)groups[direction].push(n);else visible++;
+      const element=nodes.get(n.id); if(element)element.style.visibility=direction?'hidden':'visible';
     }
-    for(const c of layout.chips){const chip=chips.get(c.first);if(chip)chip.hidden=scale<MIN_FIT_SCALE || !!chip.dataset.tooWide || !!offscreenDirection({x:c.x*scale+ox-viewport.scrollLeft,y:c.y*scale+oy-viewport.scrollTop,width:c.width*scale,height:c.height*scale},w,h);}
+    for(const c of layout.chips){const chip=chips.get(c.first);if(chip)chip.hidden=scale<1 || !!chip.dataset.tooWide || !!offscreenDirection({x:c.x*scale+ox-viewport.scrollLeft,y:c.y*scale+oy-viewport.scrollTop,width:c.width*scale,height:c.height*scale},w,h);}
     // The viewport clips routes naturally: an off-screen neighbour leaves a visible continuing stub.
     visibleCount.textContent=t('visibleCards',{n:visible,total:data.nodes.length});
     for(const [direction,b] of overflowButtons)b.hidden=!groups[direction].length;
@@ -1588,7 +1623,8 @@ function createMap() {
   function size() {
     if(!layout)return;
     if(map.getBoundingClientRect){
-      map.style.height=Math.max(300,innerHeight-map.getBoundingClientRect().top-62)+'px';
+      const available=Math.max(300,innerHeight-map.getBoundingClientRect().top-62);
+      map.style.height=(data.complete?Math.min(available,layout.bounds.height*scale+100):available)+'px';
       $('panel').style.maxHeight=matchMedia('(max-width:760px)').matches?'none':parseFloat(map.style.height)+'px';
       $('panel').style.height=$('panel').style.maxHeight;
     }
@@ -1612,7 +1648,7 @@ function createMap() {
     for(const [key,element] of nodes)if(!activeIds.has(key)){element.remove();nodes.delete(key);}
     for(const n of data.nodes) {
       const expanded=n.id===chosenNode;
-      const signature=JSON.stringify([n,expanded,data.decisions.filter(d=>d.node===n.id)]);
+      const signature=JSON.stringify([n,data.decisions.filter(d=>d.node===n.id)]);
       let element=nodes.get(n.id);
       if(!element){element=el('div',undefined,'node-position');nodes.set(n.id,element);stage.append(element);}
       if(element.dataset.signature!==signature) {
@@ -1626,15 +1662,19 @@ function createMap() {
     }
     layout=layeredLayout(data.nodes,data.edges.map(e=>({...e,label:e.label?label(e.label):''})),data.decisions,true,{language});
     clear(key);
-    for(const [state,word] of [['open','lineSampleOpen'],['closed','lineSampleClosed'],['review','lineSampleReview'],['returned','lineSampleReturned']]){
-      if(!layout.routes.some(r=>(r.gateState==='returned'?'returned':r.relation==='reviews'?'review':r.gateState==='open'?'open':'closed')===state))continue;
+    for(const [state,word] of [['open','lineSampleOpen'],['closed','lineSampleClosed'],['review','lineSampleReview']]){
+      if(!layout.routes.some(r=>(r.relation==='reviews'?'review':r.gateState==='open'?'open':'closed')===state))continue;
       const sample=el('span',undefined,'line-sample '+state),caption=el('span',t(word));caption.dataset.i18n=word;sample.append(el('i'),caption);key.append(sample);
     }
+    for(const [state,word] of [['submitted','checkingKey'],['returned','returnedKey'],['notStarted','pendingKey']]) {
+      if(data.nodes.some(n=>displayState(n,data.decisions)===state))key.append(el('span',t(word),'state-key'));
+    }
+    if(data.nodes.some(n=>n.kind==='review')) { const mark=el('span',undefined,'state-key review-key'); mark.append(typeIcon('review'),el('span',t('review')));key.append(mark); }
     // Reorder existing controls without replacing them: tab order follows the drawing.
     for(const id of layout.order){const e=nodes.get(id);setRect(e,layout.positions[id]);stage.append(e);}
     if(drawing)drawing.remove();drawing=svg('svg',{width:layout.bounds.width,height:layout.bounds.height,class:'edge-layer','aria-hidden':'true'});
     const defs=svg('defs');
-    for(const state of ['open','closed','returned','waiting_for_you']) {
+    for(const state of ['open','closed','waiting_for_you']) {
       const marker=svg('marker',{id:'arrow-'+state,viewBox:'0 0 10 10',refX:10,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'});marker.append(svg('path',{d:'M0 0 10 5 0 10Z',class:state}));defs.append(marker);
     }
     drawing.append(defs);stage.prepend(drawing);
@@ -1645,7 +1685,6 @@ function createMap() {
       const flowing=route.gateState==='open'&&['running','retrying'].includes(displayState(data.nodes.find(n=>n.id===route.to)||{}, data.decisions));
       const line=svg('path',{d,'data-from':route.from,'data-to':route.to,class:'edge-path '+route.gateState+(route.relation==='reviews'?' review':'')+(flowing?' flowing':''),'marker-end':`url(#arrow-${route.gateState})`});
       drawing.append(svg('path',{d,class:'edge-underlay'}),flowing?inPhase(line,2000):line);
-      if(route.gateState==='returned'){const p=route.end;drawing.append(svg('path',{d:`M${p.x-16} ${p.y-6} v12 m-4 -4 l4 4 4 -4`,class:'return-mark'}));}
       if(!c||chips.has(c.first))continue;
       const chip=el('div',undefined,'edge-chip '+route.gateState);
       const source=data.nodes.find(n=>n.id===route.from),targets=layout.routes.filter(r=>r.chip===c).map(r=>title(data.nodes.find(n=>n.id===r.to))).join(', ');

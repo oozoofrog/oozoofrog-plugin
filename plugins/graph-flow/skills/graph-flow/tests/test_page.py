@@ -467,8 +467,8 @@ assert.match(get('decision').textContent,/a.py/);
 assert.equal(get('flow-tab')['aria-pressed'],'false','reading must not claim to be the graph');
 const input=get('answer-text'), actions=get('answer-actions'), buttons=actions.querySelectorAll('button[data-outcome]');
 assert(input, 'fallback must open the decision');
-assert.equal(buttons[0].textContent,'Accept anyway'); assert.equal(buttons[0].disabled,true, 'real affirmative button must use controller.canSubmit');
-buttons[0].dispatchEvent({type:'click'}); await settle();
+assert.equal(buttons[1].textContent,'Accept anyway'); assert.equal(buttons[1].disabled,true, 'real affirmative button must use controller.canSubmit');
+buttons[1].dispatchEvent({type:'click'}); await settle();
 assert.equal(posts.length,0,'even a programmatic click must pass through buildRequest');
 input.value='고쳐 주세요'; input.dispatchEvent({type:'input'}); input.focus(); input.selectionStart=2; input.selectionEnd=4;
 input.dispatchEvent({type:'compositionstart'});
@@ -484,11 +484,11 @@ input.dispatchEvent({type:'compositionend'});
 const fileButton=get('decision').querySelectorAll('button').find(b=>b.textContent==='guide.md');
 assert(fileButton);fileButton.click();await settle();
 assert.match(get('decision').querySelectorAll('pre').find(p=>!p.hidden).textContent,/<script>literal Markdown<\/script>/);
-assert.equal(buttons[0].disabled,true,'a worker-chosen file cannot unlock failed or held work');
+assert.equal(buttons[1].disabled,true,'a worker-chosen file cannot unlock failed or held work');
 get('decision').querySelectorAll('details').find(e=>e.className==='evidence').open=true;
 get('decision').querySelectorAll('details').find(e=>e.className==='evidence').dispatchEvent({type:'toggle'});
-assert.equal(buttons[0].disabled,false);
-buttons[0].click(); await settle();
+assert.equal(buttons[1].disabled,false);
+buttons[1].click(); await settle();
 assert.deepEqual(posts,[{...first,id:'d7',outcome:'approved',answer:'고쳐 주세요'}],'real POST must use the controller request');
 assert.equal(get('picker').disabled,true);
 live.decisions=[]; docEvents.visibilitychange(); get('flow-tab').click(); await settle();
@@ -505,6 +505,29 @@ location.hash='#project=%2Fproject&run=second';docEvents['window:hashchange']();
 assert.equal(get('title').textContent,'Another run','cross-run navigation updates the header');
 assert.equal(get('where').textContent,'Project · second');
 assert.equal(get('panel').hidden,true);assert.equal(get('panel').onscroll,null);
+// Consent stays on the graph and keeps the person's draft through polling.
+const approval={id:'d20',purpose:'plan_approval',kind:'authorization',status:'open',question:'Start this plan?',files:[],failed:[],context:{}};
+live.plan_approval=approval;live.plan_counts={work:1,checks:2,decisions:1};live.decisions=[approval];
+docEvents.visibilitychange();await settle();
+assert.match(get('attention').textContent,/Start this plan\?/);
+assert.match(get('attention').textContent,/1 pieces of work · 2 checks · 1 planned questions/);
+const planInput=get('plan-changes'),planActions=get('attention').querySelector('.plan-actions').querySelectorAll('button');
+assert.equal(planActions[0].textContent,'Send back');assert.equal(planActions[0].disabled,true);
+assert.equal(planActions[1].textContent,'Start');assert.equal(planActions[1].disabled,false);
+planInput.value='Explain the check';planInput.dispatchEvent({type:'input'});planInput.focus();planInput.selectionStart=4;
+live.title='Plan wording changed';docEvents.visibilitychange();await settle();
+assert.equal(get('plan-changes'),planInput);assert.equal(document.activeElement,planInput);assert.equal(planInput.selectionStart,4);
+assert.equal(planActions[0].disabled,false);
+get('home-tab').click();get('flow-tab').click();
+assert.equal(get('attention').querySelector('.plan-actions').querySelectorAll('button')[1].disabled,false);
+live.plan_approval={...approval,status:'answered',outcome:'revision_requested',verified:true,answer:'Explain the check'};live.decisions=[];
+docEvents.visibilitychange();await settle();
+assert.match(get('attention').textContent,/The plan was sent back/);assert.match(get('attention').textContent,/Explain the check/);
+assert.equal(get('plan-changes'),null);
+live.plan_approval={...approval,id:'d21'};live.decisions=[live.plan_approval];docEvents.visibilitychange();await settle();
+assert.equal(get('plan-changes').value,'');
+live.plan_approval={...live.plan_approval,status:'answered',verified:true,outcome:'approved'};live.decisions=[];
+docEvents.visibilitychange();await settle();assert.equal(get('attention').hidden,true);
 """)
 
 
@@ -541,10 +564,10 @@ assert.equal(statusGlyph('running'),'▶');
     def test_card_history_never_competes_with_current_status(self):
         js=(S / 'scripts/graphflow/page.js').read_text()
         card=js.split('function nodeCard(',1)[1].split('function createMap()',1)[0]
-        self.assertIn("t('returnTimes'",card)
+        self.assertIn("t('returnedShort'",card)
         self.assertNotIn('checkWording',card)
         self.assertNotIn('failure-mark',card)
-        self.assertLess(card.index('statusLine'),card.index("t('returnTimes'"))
+        self.assertLess(card.index('statusLine'),card.index("t('returnedShort'"))
 
     def test_real_demo_and_decision_view(self):
         with tempfile.TemporaryDirectory() as directory, mock.patch.dict(os.environ):

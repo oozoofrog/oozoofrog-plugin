@@ -281,6 +281,7 @@ def gate_final(run_dir, cwd, actor):
     directory = pathlib.Path(cwd if cwd is not None else root).resolve()
     with store.transaction(run_dir) as tx:
         plan, revision = tx.plan, tx.revision
+        statemod.require_plan_approval(statemod.derive(plan, tx.events))
     tested_head = _head(directory)
     results = [checks.run_cmd(run_dir, "_run", c, "gate", directory, actor)
                for c in _integration(plan or {}, root)]

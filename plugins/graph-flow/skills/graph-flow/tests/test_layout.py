@@ -37,6 +37,8 @@ for(const r of layout.routes){
 }
 // No shared trunks are used: even relations between the same pair have separate ports.
 layout.routes.forEach((r,i)=>layout.routes.slice(i+1).forEach(other=>{
+ if(r.from===other.from)assert(Math.abs(r.start.y-other.start.y)>=14,'outgoing tracks need 14px');
+ if(r.to===other.to)assert(Math.abs(r.end.y-other.end.y)>=14,'incoming tracks need 14px');
  for(const [a,b] of segments(r))for(const [c,d] of segments(other)){
   if(a.x===b.x&&c.x===d.x&&a.x===c.x)assert(Math.min(Math.max(a.y,b.y),Math.max(c.y,d.y))<=Math.max(Math.min(a.y,b.y),Math.min(c.y,d.y)),'vertical overlap');
   if(a.y===b.y&&c.y===d.y&&a.y===c.y)assert(Math.min(Math.max(a.x,b.x),Math.max(c.x,d.x))<=Math.max(Math.min(a.x,b.x),Math.min(c.x,d.x)),'horizontal overlap');

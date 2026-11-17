@@ -22,8 +22,8 @@ If a brief sets `GF_ROLE=worker` or `GF_ROLE=reviewer`, read [worker.md](referen
 3. Read `gf brief --plan`; write checks before work, split by blast radius, and use `gf plan validate` followed by `gf plan set <file> --open`. This always asks the person to approve the plan before any dispatch.
 4. Do not print or restate the plan in chat. Say one sentence in the person’s language: “계획을 대시보드에 올렸어요. 보시고 시작을 눌러 주세요. (<decision id>)” Then `gf decide wait <id> --timeout 30`. On timeout end the turn; the dashboard cannot wake a session. Resume when the person says they answered. After approval, select `gf ready` nodes, inspect `gf route`, record `gf assign`, and deliver each `gf brief` to its executor.
 5. Inside a work node, use `gf start`, optionally `gf red`, then produce, run `gf check run`, correct, and `gf submit`.
-6. Integrate committed work with `gf merge`; receive `gf review submit` from independent reviewers and run `gf gate` on the review and its target.
-7. On rejection, read its scope, use `gf assign` and a fresh `gf brief` for that node only; on `replan`, change the plan with `gf plan set <file> --open`. This always asks the person to approve the plan before any dispatch.
+6. Integrate committed work with `gf merge`; receive `gf review submit` from independent reviewers and run `gf gate <node> --open` on the review and its target.
+7. On rejection, read its scope, use `gf assign` and a fresh `gf brief` for that node only; on `replan`, change the plan with `gf plan set <file> --open`. A structural change needs fresh approval; wording-only changes keep existing approval.
 8. Close with `gf gate --final --open` and `gf trace`; report checks, attempts, open decisions, and unverified work.
 9. Derive a few constraints with `gf learn add`, promote executable ones with `gf learn promote`, and retire stale ones with `gf learn retire`.
 

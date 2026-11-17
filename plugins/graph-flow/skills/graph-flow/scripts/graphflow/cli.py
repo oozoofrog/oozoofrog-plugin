@@ -285,8 +285,10 @@ def _loop(args, actor):
             passed = result["verdict"] == "pass"
         _, derived = _snapshot(args.run)
         waiting = decisions.open_decisions(derived)
-        if waiting:
-            _show(args, result, waiting[0]["id"])
+        if result.get("asks"):
+            _show(args, result, result["asks"][0])
+        elif waiting:
+            result["show"] = "gf open --decision " + waiting[0]["id"]
         elif args.final and passed:
             _show(args, result)
         return result, core.EXIT_OK if passed else core.EXIT_NEGATIVE
