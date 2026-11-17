@@ -49,7 +49,8 @@ class MetricsTests(unittest.TestCase):
         with contextlib.redirect_stdout(output):
             self.assertEqual(cli.main(['--run', str(self.run), 'trace', '--conformance']), 0)
         self.assertEqual(len(output.getvalue().splitlines()), 12)
-        self.assertIn('human answers 2 (planned 1, unplanned 1); waited 0m40s', output.getvalue())
+        self.assertIn('P10 human answers 2 (planned 1, unplanned 1: free 1); waited 0m40s; longest 0m30s; open 1',
+                      output.getvalue().splitlines())
         called = mcp._call(mcp.TOOLS['run_trace'], {'run': str(self.run), 'conformance': True})
         self.assertFalse(called.get('isError'))
         self.assertEqual(json.loads(called['content'][0]['text'])['conformance'], result['conformance'])
