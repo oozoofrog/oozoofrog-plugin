@@ -36,7 +36,7 @@ try {
   assert.equal(await evaluate('document.activeElement.id'),focus);
   assert.equal(await evaluate("document.querySelector('#panel').scrollTop"),scroll);
   await evaluate(`[...document.querySelectorAll('.map-toolbar button')].find(b=>b.textContent==='화면에 맞추기').click()`);await delay(150);
-  assert(await evaluate(`(()=>{const v=document.querySelector('.map-viewport').getBoundingClientRect();return [...document.querySelectorAll('#map .node-card')].every(e=>{const r=e.getBoundingClientRect();return r.left>=v.left-.5&&r.right<=v.right+.5&&r.top>=v.top-.5&&r.bottom<=v.bottom+.5;});})()`),'fit with side panel contains every complete card');
+  assert(await evaluate(`(()=>{const v=document.querySelector('.map-viewport').getBoundingClientRect();return (Number(document.querySelector('#map').dataset.scale)>=6/7 && [...document.querySelectorAll('.map-overflow button')].some(b=>!b.hidden&&/→|↓|←|↑/.test(b.textContent))) || [...document.querySelectorAll('#map .node-card')].every(e=>{const r=e.getBoundingClientRect();return r.left>=v.left-.5&&r.right<=v.right+.5&&r.top>=v.top-.5&&r.bottom<=v.bottom+.5;});})()`),'fit with side panel contains every complete card or provides directions at the readable floor');
   await evaluate(`document.querySelector('#accessible').open=true`);await delay(100);
   assert(await evaluate(`document.querySelector('.plan-actions button.primary').disabled`),'list view cannot approve');
   await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});

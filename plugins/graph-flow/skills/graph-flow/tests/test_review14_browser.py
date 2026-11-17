@@ -38,7 +38,7 @@ class Browser14Tests(unittest.TestCase):
         try:
             config = self.root / 'browser.json'
             config.write_text(json.dumps({'url': 'http://127.0.0.1:%d/?t=%s' % (httpd.server_address[1], token),
-                'project': str(self.project), 'run': self.run.name, 'chrome': CHROME,
+                'project': str(self.project.resolve()), 'run': self.run.name, 'chrome': CHROME,
                 'profile': str(self.root / 'chrome-profile')}))
             result = subprocess.run([NODE, str(Path(__file__).with_name('review14_browser.mjs')), str(config)],
                                     capture_output=True, text=True, timeout=45)

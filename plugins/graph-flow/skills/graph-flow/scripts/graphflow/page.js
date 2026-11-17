@@ -1430,6 +1430,8 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
 }
 
 export function compactOverview(layout,width) {
+  // Only a genuine single chain may use the compact row router.
+  if(layout.routes.length!==layout.order.length-1 || layout.order.some(id=>layout.routes.filter(r=>r.from===id).length>1 || layout.routes.filter(r=>r.to===id).length>1))return layout;
   if(layout.bounds.width*MIN_FIT_SCALE<=width)return layout;
   const margin=20,gap=36,cardWidth=156,columns=Math.max(1,Math.floor((width/MIN_FIT_SCALE-margin*2+gap)/(cardWidth+gap)));
   const height=80,rowHeight=height+36;
