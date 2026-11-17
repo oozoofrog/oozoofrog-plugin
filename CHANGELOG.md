@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Graph Flow: unify unread card marks and Start reasons, use the same plan/final-card count, show neutral completed-reading notes, reserve scroll gutters, and name scrollable views truthfully when Fit reaches the readable minimum. Phone action bars summarize remaining cards with an expandable list.
+
 - Graph Flow: selected cards start with their full summary (then goal or review/question fallback), pinned beneath the title in every mode. Cards wrap complete titles, summaries and check names at both levels; measured heights keep dependencies and plan order intact.
 
 - Graph Flow panel scrolling: snap text to the body edge so earlier lines cannot peek above the first complete line.

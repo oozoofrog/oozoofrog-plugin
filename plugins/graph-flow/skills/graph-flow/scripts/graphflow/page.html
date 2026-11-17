@@ -165,6 +165,12 @@ button:disabled,button.primary:disabled,.plan-actions button:disabled{background
 .node-card:has(.change-mark) .node-header{padding-right:16px}
 @media(min-width:761px){#flow.has-selection{grid-template-columns:minmax(0,1fr) 360px}}
 @media(max-width:760px){#phone-view-toggle{display:block;grid-row:1}}
+.plan-actions .action-hint.read-done{color:var(--muted)}
+.remaining-cards>summary{font-size:12px;padding:0 0 0 16px;min-height:24px}
+.remaining-cards[open]{position:fixed;bottom:20dvh;right:12px;max-width:calc(100vw - 24px);max-height:60dvh;overflow:auto;background:white;border:1px solid var(--line);border-radius:8px;padding:12px;z-index:25;scrollbar-gutter:stable}
+.remaining-cards ul{font-size:13px;overflow-wrap:anywhere}.remaining-cards li{margin:6px 0}
+#phone-flow,.panel-body,#node-list,.table-wrap{scrollbar-gutter:stable both-edges}
+@media(max-width:760px){.plan-actions{align-items:start}.plan-actions .muted{display:none}.plan-actions .action-hint{font-size:12px;line-height:1.4}.remaining-cards[open]>summary{min-height:32px}}
 </style>
 <script type="module" nonce="__NONCE__" src="/static/page.js"></script>
 </head>

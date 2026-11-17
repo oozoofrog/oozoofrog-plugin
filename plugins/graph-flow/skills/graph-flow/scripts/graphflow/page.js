@@ -224,7 +224,7 @@ const STRINGS = {
     "gateReview": "답하기 전에 이 결정의 기록을 확인해 주세요.",
     "noAttemptChecks": "이 시도의 검사 결과는 아직 기록되지 않았어요.",
     "previousReason": "이전에 돌아온 까닭: {reason}",
-    "offWorking": " · 진행 {n}",
+    "offWorking": " · 진행 중 {n}개",
     "offNeeds": " · 내가 할 일 {n}",
     "workerDetails": "담당자 · 받는 것 · 넘기는 것",
     "attemptRecord": "{n}번째 시도의 검사와 메모",
@@ -510,8 +510,8 @@ const STRINGS = {
     "yourTurnCount": "내가 할 일 {n}개",
     "authorWhy": "작성자가 적은 이유",
     "scopeBody": "변경한 파일이 이 일에 맡긴 범위 안에 있는지 검사해요.",
-    "graphReadDone": "이 계획의 카드 {n}개를 모두 읽었어요. 지금 화면 밖의 카드도 포함해요.",
-    "changesReadReason": "아직 열지 않은 카드: {names}. 카드나 아래 변경 항목을 모두 열어 주세요.",
+    "graphReadDone": "계획 카드 {n}개와 전체 결과 확인 1개를 모두 읽었어요.",
+    "changesReadReason": "아직 읽지 않은 카드: {names}. 카드나 변경 항목을 펼쳐 읽어 주세요.",
     "oldReadReason": "이전 제출물과 파일을 모두 읽고 계속해 주세요.",
     "diffAdded": "{value} 추가",
     "diffRemoved": "{value} 삭제",
@@ -527,7 +527,7 @@ const STRINGS = {
     "genericOutput": "결과",
     "plannedHumanCheck": "내가 확인할 내용 · {title}",
     "cardUnread": "아직 읽지 않음",
-    "cardOpenNeeded": "열어 보기",
+    "cardOpenNeeded": "아직 읽지 않음",
     "planUnverifiedSource": "{source}에서 보낸 내 답이에요. 결정 {id} · {question}",
     "sourceUnknown": "출처가 기록되지 않은 곳",
     "evidenceTextOnly": "읽을 파일은 없어요. 자세한 근거를 열어 설명과 기록을 확인해 주세요.",
@@ -600,7 +600,13 @@ const STRINGS = {
     "field_environment": "실행 환경",
     "field_attempt": "시도 횟수",
     "field_evidence": "근거 파일",
-    "otherRun": "다른 실행의 기록"
+    "otherRun": "다른 실행의 기록",
+    "readOffscreen": " 지금 화면 밖의 카드도 포함해요.",
+    "scrollView": "전체 보기 · 스크롤",
+    "scrollViewHelp": "글자 크기를 유지했어요. 화면 밖의 카드는 스크롤해서 볼 수 있어요.",
+    "remainingCount": "읽을 카드 {n}개가 남았어요.",
+    "seeRemaining": "남은 카드 보기",
+    "remainingMore": "외 {n}개"
   },
   "en": {
     "flow": "Whole flow",
@@ -826,7 +832,7 @@ const STRINGS = {
     "gateReview": "Review this decision’s record before answering.",
     "noAttemptChecks": "No check results are recorded for this attempt yet.",
     "previousReason": "Earlier return reason: {reason}",
-    "offWorking": " · working {n}",
+    "offWorking": " · {n} in progress",
     "offNeeds": " · Your turn {n}",
     "workerDetails": "Worker · inputs · outputs",
     "attemptRecord": "Checks and notes for attempt {n}",
@@ -1112,8 +1118,8 @@ const STRINGS = {
     "yourTurnCount": "Your turn: {n}",
     "authorWhy": "Author’s reason",
     "scopeBody": "Checks that changed files stay within this task’s assigned paths.",
-    "graphReadDone": "All {n} cards of this plan have been read, including cards now outside the viewport.",
-    "changesReadReason": "Unopened cards: {names}. Open each card or its change entry below.",
+    "graphReadDone": "Read all {n} plan cards and the 1 whole-result card.",
+    "changesReadReason": "Unread cards: {names}. Open each card or change entry to read it.",
     "oldReadReason": "Read each earlier submission and its files before continuing.",
     "diffAdded": "Added {value}",
     "diffRemoved": "Removed {value}",
@@ -1129,7 +1135,7 @@ const STRINGS = {
     "genericOutput": "result",
     "plannedHumanCheck": "Your review question · {title}",
     "cardUnread": "Unread",
-    "cardOpenNeeded": "Open to read",
+    "cardOpenNeeded": "Unread",
     "planUnverifiedSource": "Your answer came from {source}. Decision {id} · {question}",
     "sourceUnknown": "an unrecorded source",
     "evidenceTextOnly": "There is no file. Open the evidence to read the explanation and records.",
@@ -1202,7 +1208,13 @@ const STRINGS = {
     "field_environment": "Environment",
     "field_attempt": "Attempt",
     "field_evidence": "Evidence file",
-    "otherRun": "A record from another run"
+    "otherRun": "A record from another run",
+    "readOffscreen": " This includes cards now outside the viewport.",
+    "scrollView": "Whole graph · scroll",
+    "scrollViewHelp": "Text stays readable. Scroll to see cards outside the viewport.",
+    "remainingCount": "{n} cards left to read.",
+    "seeRemaining": "Show remaining cards",
+    "remainingMore": "and {n} more"
   }
 };
 // UI_STRINGS_END
@@ -1911,10 +1923,18 @@ function returnedLine(n) {
 let planBanner = null, planSeen=null, planChanges=null, planChangeIds=null;
 const planRead = new Set();
 const graphRead = new Set(),graphReadSpans=new Map();let graphReadIdentity='';
+function unreadCards() {
+  return planFlow(view,language).nodes.filter(n=>!graphRead.has(n.id)||planChanges?.some(c=>c.id===n.id&&!planRead.has(c.id)));
+}
+function graphReadDone() {
+  const phone=matchMedia('(max-width:760px)').matches,viewport=phone?{left:0,top:0,right:innerWidth,bottom:innerHeight-(document.querySelector('.plan-actions')?.offsetHeight||0)}:document.querySelector('.map-viewport')?.getBoundingClientRect();
+  const outside=viewport&&[...document.querySelectorAll(phone?'#phone-flow .node-card':'#map .node-card')].some(e=>{const r=e.getBoundingClientRect();return r.left<viewport.left||r.right>viewport.right||r.top<viewport.top||r.bottom>viewport.bottom;});
+  return t('graphReadDone',{n:view.nodes.length})+(outside?t('readOffscreen'):'');
+}
 function graphReadReason() {
   if(mode!=='flow'||$('accessible').open||(matchMedia('(max-width:760px)').matches&&selected))return t('planGraphReason',{action:t(view.has_work?'planContinue':'planStart')});
-  const remaining=planFlow(view,language).nodes.filter(n=>!graphRead.has(n.id));
-  return remaining.length?t('planRemainingReason',{names:remaining.map(title).join(', ')}):'';
+  const remaining=unreadCards();
+  return remaining.length?t(remaining.some(n=>planChanges?.some(c=>c.id===n.id&&!planRead.has(c.id)))?'changesReadReason':'planRemainingReason',{names:remaining.map(title).join(', ')}):'';
 }
 function recordGraphRead() {
   if(!view||!planBlocked()||mode!=='flow'||$('accessible').open||(matchMedia('(max-width:760px)').matches&&selected))return;
@@ -1936,11 +1956,11 @@ function recordGraphRead() {
   updateUnreadMarks();planBanner?.update?.();
 }
 function updateUnreadMarks(){
+  const remaining=new Set(planBlocked()?unreadCards().map(n=>n.id):[]);
   for(const card of document.querySelectorAll('.node-card')){
-    const unopened=planChanges?.some(c=>c.id===card.dataset.node&&!planRead.has(c.id));
-    const unread=planBlocked()&&!graphRead.has(card.dataset.node);
+    const unread=remaining.has(card.dataset.node);
     let mark=card.querySelector('.unread-mark');
-    if(unopened||unread){if(!mark){mark=el('p',undefined,'unread-mark');card.append(mark);}mark.textContent=t(unopened?'cardOpenNeeded':'cardUnread');}
+    if(unread){if(!mark){mark=el('p',undefined,'unread-mark');card.append(mark);}mark.textContent=t('cardUnread');}
     else mark?.remove();
   }
 }
@@ -2025,11 +2045,15 @@ function planAttention(box) {
   const session = decisionController.open(approval.id);
   const actions = el('div', undefined, 'plan-actions'), start = button(t(view.has_work?'planContinue':'planStart'), () => send('approved'), 'primary');
   const startGroup = el('div'), graphReason=el('p',undefined,'action-hint'); startGroup.append(start,graphReason, el('p', t(view.has_work?'planContinueEffect':'planStartEffect'), 'muted'));
+  const remainingList=el('ul'),remainingDetails=el('details',undefined,'remaining-cards'),remainingButton=el('summary',t('seeRemaining'));remainingDetails.append(remainingButton,remainingList);startGroup.append(remainingDetails);
   const backGroup = el('div'), changes = el('details',undefined,'plan-change-form'), label = el('label', t('backReason')), input = el('textarea');
   input.id = 'plan-changes'; label.htmlFor = input.id; input.rows = 2; input.value = session?.draft || '';
   const back = button(t('sendBack'), () => send('revision_requested'));
   const message = el('p', undefined, 'muted'); message.setAttribute('role', 'status');
-  const update = () => { const changed=box.querySelector('.change-notice');if(changed)changed.textContent=t(planChangeIds?.old?(unreadPlanChanges()?'planChangeIds':'planChangesRead'):(unreadPlanChanges()?'newPlanDecision':'newPlanRead'),planChangeIds||{}); const reason=graphReadReason() || (unreadPlanChanges()?t('changesReadReason',{names:planChanges.filter(c=>!planRead.has(c.id)).map(c=>c.title).join(', ')}):'') || (!oldResults.every(n=>planRead.has('result:'+n.id))?t('oldReadReason'):'');graphReason.textContent=reason||t('graphReadDone',{n:planFlow(view,language).nodes.length});graphReason.hidden=false;start.disabled = !!reason || !decisionController.canSubmit('approved'); back.disabled = unreadPlanChanges() || !decisionController.canSubmit('revision_requested'); input.disabled = !!session?.busy; $('picker').disabled = !!session?.busy; };
+  const update = () => { const changed=box.querySelector('.change-notice');if(changed)changed.textContent=t(planChangeIds?.old?(unreadPlanChanges()?'planChangeIds':'planChangesRead'):(unreadPlanChanges()?'newPlanDecision':'newPlanRead'),planChangeIds||{}); const reason=graphReadReason() || (unreadPlanChanges()?t('changesReadReason',{names:planChanges.filter(c=>!planRead.has(c.id)).map(c=>c.title).join(', ')}):'') || (!oldResults.every(n=>planRead.has('result:'+n.id))?t('oldReadReason'):'');const remaining=unreadCards(),phone=matchMedia('(max-width:760px)').matches;
+    graphReason.textContent=reason?(phone&&remaining.length>2?t('remainingCount',{n:remaining.length}):reason):graphReadDone();
+    graphReason.classList.toggle('read-done',!reason);remainingButton.hidden=!reason||remaining.length<=2||!phone;
+    remainingList.replaceChildren(...remaining.map(n=>el('li',title(n))));graphReason.hidden=false;start.disabled = !!reason || !decisionController.canSubmit('approved'); back.disabled = unreadPlanChanges() || !decisionController.canSubmit('revision_requested'); input.disabled = !!session?.busy; $('picker').disabled = !!session?.busy; };
   planBanner.update=()=>{update();document.body.style.setProperty('--plan-actions-height',(actions.offsetHeight+24)+'px');};
   input.addEventListener('input', () => { decisionController.setDraft(input.value); update(); });
   async function send(outcome) {
@@ -2756,10 +2780,11 @@ function createMap() {
   };
   const fit=()=>{
     const next=fitGraph(layouts,viewport.clientWidth-24,viewport.clientHeight-24);
+    origin={x:0,y:0};
     level=next.level;scale=next.scale;automatic=true;
     placed=false;update(rawData,chosenNode);size();start();
   };
-  const zoomOut=button('−',()=>zoom(-.1)),zoomIn=button('+',()=>zoom(.1)),fitButton=button(t('fit'),fit);
+  const zoomOut=button('−',()=>zoom(-.1)),zoomIn=button('+',()=>zoom(.1)),fitButton=button(t('fit'),fit);fitButton.dataset.action='fit';
   const overviewNote=el('span',undefined,'overview-note'),overviewLabel=button(t('overviewLevel'),()=>{automatic=true;level='overview';scale=fitScale(layouts.overview.bounds,viewport.clientWidth-24,viewport.clientHeight-24);update(rawData,chosenNode);start();}),detailButton=button(t('detailLevel'),()=>{automatic=false;level='detail';scale=1;update(rawData,chosenNode);start();});
   overviewLabel.dataset.i18n='overviewLevel';detailButton.dataset.i18n='detailLevel';
   overviewNote.append(overviewLabel,detailButton);overflow.append(button(t('listAll'),()=>{$('accessible').open=true;$('accessible').scrollIntoView({block:'start'});},'small'));
@@ -2773,7 +2798,7 @@ function createMap() {
     const groups={offLeft:[],offRight:[],offTop:[],offBottom:[]}; let visible=0;
     for(const n of data.nodes) {
       const p=layout.positions[n.id],x=p.x*scale+ox-viewport.scrollLeft,y=p.y*scale+oy-viewport.scrollTop;
-      const element=nodes.get(n.id),title=element?.querySelector('.node-title'),vr=viewport.getBoundingClientRect(),tr=titleTextRect(title);
+      const element=nodes.get(n.id),title=element?.querySelector('.node-title'),vr=viewport.getBoundingClientRect(),tr=title?.getBoundingClientRect();
       const rect=tr?{x:tr.left-vr.left,y:tr.top-vr.top,width:tr.width,height:tr.height}:{x,y,width:p.width*scale,height:p.height*scale};
       const direction=offscreenDirection(rect,w,h);
       if(direction)groups[direction].push(n);
@@ -2814,7 +2839,7 @@ function createMap() {
   });
   function updateReadout() {
     const fits=layout && layout.bounds.width*scale<=viewport.clientWidth && layout.bounds.height*scale<=viewport.clientHeight;
-    fitButton.textContent=t('fit');
+    fitButton.textContent=t(fits?'fit':'scrollView');fitButton.title=t(fits?'fit':'scrollViewHelp');
     fitButton.removeAttribute('aria-pressed');
     overviewNote.title=t('overviewHelp');overviewNote.hidden=false;overviewLabel.setAttribute('aria-pressed',String(level==='overview'));detailButton.setAttribute('aria-pressed',String(level==='detail'));map.dataset.level=level;map.dataset.fitted=String(automatic&&fits);map.dataset.scale=String(scale);
   }

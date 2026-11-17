@@ -465,7 +465,7 @@ globalThis.fetch=async (path,options)=>{
   return {ok:true,json:async()=>path==='/api/projects'?{projects:[{root:first.project,name:'Project',runs:[{id:first.run,status:'open'},{id:second.run,status:'open'}]}]}:{plan:{},view:structuredClone(live),state:{decisions:{}}}};
 };
 const settle=async()=>{ for(let i=0;i<12;i++) await new Promise(setImmediate); };
-await import('data:text/javascript;base64,'+Buffer.from(source.replace(/}\s*$/, 'globalThis.surfaceTest={applyView,nodeCard,panel,rowSentence,stateWords,selectNode,planCounts,planFacts,runFacts,graphRead,graphReadReason,updateUnreadMarks,showChangedDecision};\n}')).toString('base64')+'#dom'); await settle();
+await import('data:text/javascript;base64,'+Buffer.from(source.replace(/}\s*$/, 'globalThis.surfaceTest={applyView,nodeCard,panel,rowSentence,stateWords,selectNode,planCounts,planFacts,runFacts,graphRead,graphReadReason,graphReadDone,unreadCards,recordGraphRead,updateUnreadMarks,showChangedDecision};\n}')).toString('base64')+'#dom'); await settle();
 const get=id=>document.getElementById(id);
 """ + body)
 

@@ -97,7 +97,7 @@ async function interaction(action, fixture) {
     await evaluate("document.querySelector('.file-choices button').click()");
     await until("document.querySelector('#decision').classList.contains('decision-changed')");
   } else if (action.action === 'button') {
-    await evaluate(`(()=>{const b=[...document.querySelectorAll('.map-toolbar button')].find(e=>e.textContent===${JSON.stringify(action.text)});if(!b)throw Error('missing toolbar button');b.click()})()`);
+    await evaluate(`(()=>{const b=[...document.querySelectorAll('.map-toolbar button')].find(e=>(e.textContent===${JSON.stringify(action.text)}||(${JSON.stringify(action.text)}==='화면에 맞추기'&&e.dataset.action==='fit')));if(!b)throw Error('missing toolbar button');b.click()})()`);
   } else if (action.action === 'lower-rows') {
     const moved=await evaluate("(()=>{const v=document.querySelector('.map-viewport'),before={left:v.scrollLeft,top:v.scrollTop};v.scrollTo(before.left,v.scrollHeight-v.clientHeight);return {before,after:{left:v.scrollLeft,top:v.scrollTop}}})()");
     action.observedScroll=moved;
