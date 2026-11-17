@@ -148,7 +148,7 @@ class CLITests(unittest.TestCase):
     def test_optional_constraints(self):
         learn = types.ModuleType('graphflow.learn')
         learn.fixed_checks = mock.Mock(return_value=[])
-        learn.applying = mock.Mock(return_value=[{'id': 'c1'}])
+        learn.applying = mock.Mock(return_value=[{'id': 'c1', 'text':'constraint'}])
         with mock.patch.dict(sys.modules, {'graphflow.learn': learn}):
             self.assertEqual(self.set_plan()['constraints_applied'], ['c1'])
         self.assertEqual(next(e['data'] for e in store.events(self.run) if e['type'] == 'constraint.apply'), {'ids': ['c1']})
@@ -479,7 +479,7 @@ class CLITests(unittest.TestCase):
         actor = core.actor_from_env()
         learn = types.SimpleNamespace(
             add=mock.Mock(return_value={'id': 'c1'}),
-            all_constraints=mock.Mock(return_value=[{'id': 'c1'}]),
+            all_constraints=mock.Mock(return_value=[{'id': 'c1', 'text':'constraint'}]),
             promote=mock.Mock(return_value={'constraint': {'id': 'c1'}, 'check': {}}),
             retire=mock.Mock(return_value={'constraint': {'id': 'c1'}}))
         trace = types.SimpleNamespace(trace=mock.Mock(return_value={'run': {'attempts': 1}, 'nodes': {}}))
@@ -487,7 +487,7 @@ class CLITests(unittest.TestCase):
             self.assertEqual(self.call('learn', 'add', '--from', 'a', '--text', 'rule',
                                        '--review-when', 'later', '--paths', 'a.py', '--tags', 'python')['id'], 'c1')
             learn.add.assert_called_once_with(self.repo, str(self.run), 'a', 'rule', 'later', ['a.py'], ['python'], actor)
-            self.assertEqual(self.call('learn', 'list')['constraints'], [{'id': 'c1'}])
+            self.assertEqual(self.call('learn', 'list')['constraints'], [{'id': 'c1', 'text':'constraint'}])
             learn.all_constraints.assert_called_once_with(self.repo)
             self.call('learn', 'promote', 'c1', '--run', 'true')
             learn.promote.assert_called_once_with(self.repo, 'c1', 'true', actor, str(self.run))

@@ -230,8 +230,19 @@ def _read_log(run_dir):
     return out, good, n
 
 
+class EventLog(list):
+    """Trusted read context, never serialized into or taken from the event log."""
+    def __init__(self, values, run_dir):
+        super().__init__(values)
+        self.run_dir = pathlib.Path(run_dir).resolve()
+
+
+def location(run_dir):
+    return {"project_root": str(project_of(run_dir)), "run_directory": pathlib.Path(run_dir).resolve().name}
+
+
 def events(run_dir):
-    return _read_log(run_dir)[0]
+    return EventLog(_read_log(run_dir)[0], run_dir)
 
 
 def _last_plan_set(evs):
@@ -242,7 +253,7 @@ def _last_plan_set(evs):
 
 
 def _load_plan(run_dir, revision, recorded=None):
-    from . import state
+    from . import state, plan as planning
     path = _plan_path(run_dir, revision)
     if recorded is None:
         recorded = next((e["data"] for e in reversed(events(run_dir))
@@ -252,6 +263,9 @@ def _load_plan(run_dir, revision, recorded=None):
         plan = json.loads(raw.decode("utf-8"))
     except (OSError, ValueError) as e:
         raise GFError("plan_tampered", "Cannot verify plan revision %d: %s" % (revision, e), EXIT_STATE)
+    problems = planning.validate(plan)
+    if problems:
+        raise GFError("plan_tampered", "Invalid plan revision %d: %s" % (revision, json.dumps(problems)), EXIT_STATE)
     if (hashlib.sha256(raw).hexdigest() != recorded.get("plan_sha256") or
             recorded.get("plan_identity") and state.plan_identity(plan) != recorded["plan_identity"]):
         raise GFError("plan_tampered", "Plan revision %d differs from its recorded hash or identity" % revision, EXIT_STATE)
@@ -271,7 +285,7 @@ class Transaction(object):
     def __init__(self, run_dir, evs, good_len, total_len, replace_invalid=False):
         self.run_dir = pathlib.Path(run_dir)
         self.run_id = self.run_dir.name
-        self.events = evs
+        self.events = EventLog(evs, run_dir)
         self._good_len = good_len
         self._dropped = total_len - good_len
         self._pending = []
@@ -300,6 +314,13 @@ class Transaction(object):
         return ev
 
     def append(self, type_, data, actor):
+        if type_ == "decision.ask":
+            from . import state
+            data["location"] = location(self.run_dir)
+            derived = state.derive(self.plan, self.events)
+            sub = (derived["nodes"].get(data.get("node")) or {}).get("submission")
+            data["submission_binding"] = state.submission_binding(sub) if sub else None
+            data["artifact_hashes"] = state.artifact_hashes(self.run_dir, data.get("evidence"), sub)
         if self._dropped and not self._pending:
             self._make("log.recovered", {"dropped_bytes": self._dropped}, actor)
         if type_ == "plan.set":

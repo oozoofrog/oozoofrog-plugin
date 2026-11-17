@@ -42,3 +42,5 @@ Write the findings JSON to a session scratch artifact outside project source. Ev
 Report at most 20 lines: node and submission id, commit/branch if present, changed artifacts, actual commands with exit codes (host tools have no exit code), remaining uncertainty, and decision ids/blockers. Reviewers also report their verdict and cited findings. Do not claim acceptance before the leader's gate.
 
 Never set or change `GF_HOME`, `GF_ROLE=human`, or `GF_HUMAN_TERMINAL`; never run the human answer command (`gf decide answer`). Do not impersonate the person through the dashboard or read signing keys.
+
+Agents must never read or WRITE `$GF_HOME/human.key`. First-use pinning cannot be made safe against a writer on the same OS account: planting a known key before the first human answer is part of the accepted same-account limit. Human `key repin` always generates a fresh key; agent setup and server startup do not create one.

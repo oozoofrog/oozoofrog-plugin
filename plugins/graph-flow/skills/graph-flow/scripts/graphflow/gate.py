@@ -196,13 +196,14 @@ def _integration(plan, root, derived):
 
 
 def _token(revision, st):
-    return (revision, st["basis"], st["attempts"], (st.get("submission") or {}).get("id"))
+    return (revision, st["basis"], st["attempts"], statemod.submission_binding(st.get("submission")))
 
 
 def _preconditions(plan, state, node_id):
     node = planmod.node_by_id(plan, node_id)
     st = state["nodes"][node_id]
     statemod.require_plan_approval(state)
+    statemod.require_submission_binding(state, node_id)
     if not graph.needs_satisfied(plan, state, node_id):
         raise core.GFError("needs_unsatisfied", "node needs are not satisfied", core.EXIT_STATE)
     if node["kind"] != "decision" and not graph.has_current_submission(st):
@@ -244,6 +245,8 @@ def gate(run_dir, node_id, cwd, actor):
                  if node["kind"] == "work" else 0)
     with store.transaction(run_dir) as tx:
         current = statemod.derive(tx.plan, tx.events)
+        statemod.require_plan_approval(current)
+        statemod.require_submission_binding(current, node_id)
         current_st = current["nodes"].get(node_id)
         if (current_st is None or _token(tx.revision, current_st) != token or
                 (current_st["status"] == "passed" if node["kind"] == "decision"

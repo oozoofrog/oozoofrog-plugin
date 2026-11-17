@@ -65,10 +65,21 @@ def depends(plan, a, b):
             a != b and _reaches(_edges(plan), a, b))
 
 
-def node_by_id(plan, node_id):
+def node_index(plan):
+    """The single executable node lookup; ambiguity is never resolved by order."""
+    result = {}
     for node in _nodes(plan):
-        if node.get("id") == node_id:
-            return node
+        nid = node.get("id")
+        if not isinstance(nid, str) or nid in result:
+            raise core.GFError("plan_tampered", "Ambiguous node id: %s" % nid, core.EXIT_STATE)
+        result[nid] = node
+    return result
+
+
+def node_by_id(plan, node_id):
+    node = node_index(plan).get(node_id)
+    if node is not None:
+        return node
     raise core.GFError("unknown_node", "unknown node: %s" % node_id, core.EXIT_STATE)
 
 
@@ -113,6 +124,11 @@ def validate(plan):
     def problem(code, node, message):
         problems.append({"code": code, "node": node, "message": message})
 
+    def known(obj, allowed, node):
+        for key in obj:
+            if key not in allowed.split():
+                problem("V1", node, "unknown field: %s" % key)
+
     def field(obj, key, expected, node, required=True):
         if key not in obj and not required:
             return
@@ -149,6 +165,7 @@ def validate(plan):
             if not isinstance(check, dict):
                 problem("V1", node, "check must be an object")
                 continue
+            known(check, "id type title context run cwd timeout_s tool expect prompt from_constraint added", node)
             check_id = check.get("id")
             if not isinstance(check_id, str) or not _ID.fullmatch(check_id):
                 problem("V2", node, "malformed check id: %r" % check_id)
@@ -183,6 +200,7 @@ def validate(plan):
     if not isinstance(plan, dict):
         problem("V1", None, "plan must be an object")
         return problems
+    known(plan, "schema_version goal title summary context requirements tags integration_checks promoted_checks constraints nodes", None)
     if type(plan.get("schema_version")) is not int or plan.get("schema_version") != 1:
         problem("V1", None, "schema_version must be 1")
     field(plan, "goal", str, None)
@@ -192,7 +210,7 @@ def validate(plan):
         problem("V1", None, "goal must be non-empty")
     if isinstance(plan.get("nodes"), list) and not plan["nodes"]:
         problem("V1", None, "nodes must be non-empty")
-    for key in ("requirements", "tags", "integration_checks"):
+    for key in ("requirements", "tags", "integration_checks", "promoted_checks", "constraints"):
         field(plan, key, list, None, required=False)
     for requirement in _list(plan.get("requirements")):
         if not isinstance(requirement, dict):
@@ -202,8 +220,31 @@ def validate(plan):
             field(requirement, "text", str, None)
     if any(not isinstance(tag, str) for tag in _list(plan.get("tags"))):
         problem("V1", None, "tags must contain strings")
-    checks(plan.get("integration_checks"), None)
-    for check in _list(plan.get("integration_checks")):
+    run_checks = _list(plan.get("integration_checks")) + _list(plan.get("promoted_checks"))
+    checks(run_checks, None)
+    for field_name in ("requirements", "constraints"):
+        ids = set()
+        for item in _list(plan.get(field_name)):
+            if not isinstance(item, dict) or not isinstance(item.get("id"), str):
+                problem("V2", None, "%s needs unique string ids" % field_name)
+                continue
+            if item["id"] in ids:
+                problem("V2", None, "duplicate %s id: %s" % (field_name, item["id"]))
+            ids.add(item["id"])
+            known(item, "id text" if field_name == "requirements" else
+                  "id text status scope derived_from review_when created", None)
+            field(item, "text", str, None)
+            if field_name == "constraints" and "scope" in item:
+                scope = item["scope"]
+                field(item, "scope", dict, None)
+                if isinstance(scope, dict):
+                    known(scope, "paths tags", None)
+                    for key in ("paths", "tags"):
+                        field(scope, key, list, None, required=False)
+                        if any(not isinstance(v, str) for v in _list(scope.get(key))):
+                            problem("V1", None, "constraint scope %s must contain strings" % key)
+                    paths(scope.get("paths"), None)
+    for check in run_checks:
         # The gate executes integration checks itself, so only cmd checks make sense here.
         if isinstance(check, dict) and check.get("type") != "cmd":
             problem("V5", None, "integration checks must be cmd checks")
@@ -220,6 +261,7 @@ def validate(plan):
         elif node_id in seen:
             problem("V2", node_id, "duplicate node id: %s" % node_id)
         seen.add(node_id)
+        known(node, "id kind goal title summary context needs owns outputs reads checks lane effective_lane grade max_attempts target lens question decision_kind requirement", node_id)
         kind = node.get("kind")
         if kind not in ("work", "review", "decision"):
             problem("V1", node_id, "unknown node kind: %r" % kind)
@@ -264,10 +306,17 @@ def validate(plan):
         if kind in ("review", "decision") and _list(node.get("owns")):
             problem("V1", node_id, "%s node must own nothing" % kind)
 
+        need_ids = set()
         for need in _list(node.get("needs")):
             if not isinstance(need, dict):
                 problem("V1", node_id, "needs entry must be an object")
                 continue
+            known(need, "from artifact label", node_id)
+            pair = (need.get("from"), need.get("artifact"))
+            if all(isinstance(v, str) for v in pair):
+                if pair in need_ids:
+                    problem("V2", node_id, "duplicate need: %s/%s" % pair)
+                need_ids.add(pair)
             field(need, "from", str, node_id)
             field(need, "artifact", str, node_id)
             text(need, "label", 60, node_id)
@@ -298,7 +347,9 @@ def validate(plan):
 
     normalized, _ = normalize(plan)
     reviewed = {n["target"] for n in nodes if n.get("kind") == "review" and isinstance(n.get("target"), str)}
-    for node in _nodes(normalized):
+    for original, node in zip(_nodes(plan), _nodes(normalized)):
+        if "effective_lane" in original and original["effective_lane"] != node["effective_lane"]:
+            problem("V6", node.get("id"), "effective_lane differs from normalized lane")
         if node.get("kind") == "work" and node.get("effective_lane") in (2, 3):
             node_id = node.get("id")
             if not isinstance(node_id, str) or node_id not in reviewed:

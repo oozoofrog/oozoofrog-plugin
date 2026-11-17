@@ -30,7 +30,7 @@ class DecisionsTests(unittest.TestCase):
         subprocess.run(["git", "init", "-q", str(self.repo)], check=True)
         self.run = legacy_run(self.repo, "r1", ACTOR)
         self.set_plan()
-        decisions.ensure_key()
+        decisions.ensure_key({'role': 'human'})
 
     def tearDown(self):
         self.env.stop()
@@ -38,7 +38,7 @@ class DecisionsTests(unittest.TestCase):
 
     def set_plan(self, goal="a"):
         raw = {"schema_version": 1, "goal": "test", "nodes": [
-            {"id": n, "goal": goal, "kind": "work", "lane": 1,
+            {"id": n, "goal": goal, "kind": "work", "lane": 1, "grade": "daily",
              "owns": [n + ".py"], "checks": [{"id": "unit", "type": "cmd", "run": "true"}]}
             for n in ("a", "b")]}
         normalized, _ = plan.normalize(raw)
@@ -184,24 +184,24 @@ class DecisionsTests(unittest.TestCase):
     def test_ensure_key_mode_stability_and_atomic_install(self):
         (self.home / "human.key").unlink()
         with mock.patch.object(store.os, "replace", wraps=store.os.replace) as replace:
-            path = decisions.ensure_key()
+            path = decisions.ensure_key({'role': 'human'})
             self.assertEqual(replace.call_count, 1)
         original = path.read_bytes()
         self.assertEqual(len(original), 32)
         self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
         with mock.patch.object(store, "atomic_write") as write:
-            self.assertEqual(decisions.ensure_key(), path)
+            self.assertEqual(decisions.ensure_key({'role': 'human'}), path)
             write.assert_not_called()
         self.assertEqual(path.read_bytes(), original)
         path.write_bytes(b'preserve existing even if empty')
-        decisions.ensure_key()
+        decisions.ensure_key({'role': 'human'})
         self.assertEqual(path.read_bytes(), b'preserve existing even if empty')
 
     def test_ensure_key_concurrent_processes(self):
         home = self.root / "fresh-home"
         code = ("import sys; sys.path.insert(0, sys.argv[1]); "
                 "from graphflow import decisions; "
-                "print(decisions.ensure_key().read_bytes().hex())")
+                "print(decisions.ensure_key({'role': 'human'}).read_bytes().hex())")
         env = dict(os.environ, GF_HOME=str(home))
         procs = [subprocess.Popen([sys.executable, "-I", "-S", "-B", "-c", code, str(SCRIPTS)],
                  env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE) for _ in range(2)]

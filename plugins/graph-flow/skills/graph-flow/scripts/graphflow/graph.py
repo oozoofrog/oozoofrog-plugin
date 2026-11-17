@@ -102,6 +102,6 @@ def available(plan, state):
     try:
         return ready(plan, state)
     except GFError as exc:
-        if exc.code not in ("plan_not_approved", "human_key_mismatch", "plan_tampered"):
+        if exc.code not in ("plan_not_approved", "human_key_mismatch", "plan_tampered", "project_moved"):
             raise
         return []

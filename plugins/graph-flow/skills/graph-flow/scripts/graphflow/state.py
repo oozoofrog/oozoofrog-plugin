@@ -1,14 +1,14 @@
 """Replay of the event log into state (records.md sections 3, 5, 6, 7).
 
-`derive(plan, events)` reads only its arguments and, through `core.human_sig`,
-$GF_HOME/human.key. It never reads the run directory.
+`derive(plan, events)` verifies filesystem-bound consent using store.EventLog context.
+Recorded fingerprints and recorded filesystem locations are never trusted.
 """
 import copy
 import hashlib
 import hmac
 import json
 
-from . import core
+from . import core, plan as planning, store
 
 VERDICT_STATUS = {
     "pass": "passed",
@@ -46,7 +46,7 @@ def plan_identity(plan):
     value = copy.deepcopy(plan)
     for key in ("title", "summary", "context"):
         value.pop(key, None)
-    value["nodes"] = {n["id"]: fingerprint(n) for n in value.get("nodes", [])}
+    value["nodes"] = sorted(fingerprint(n) for n in value.get("nodes", []))
     for check in value.get("integration_checks", []):
         check.pop("title", None)
         check.pop("context", None)
@@ -68,6 +68,9 @@ def require_plan_approval(derived):
     run = derived.get("run", {})
     if run.get("plan_error"):
         raise core.GFError("plan_tampered", "Plan differs from the recorded structural identity", core.EXIT_STATE)
+    if run.get("location_mismatch"):
+        raise core.GFError("project_moved", "Moving or renaming a project directory or run invalidates approvals. "
+                           "Re-post this run's plans/NNNN.json with gf plan set, then approve once more.", core.EXIT_STATE)
     if run.get("key_mismatch"):
         raise core.GFError("human_key_mismatch", key_recovery(run), core.EXIT_STATE)
     approval = plan_approval(derived)
@@ -75,6 +78,9 @@ def require_plan_approval(derived):
             and approval.get("verified") and approval.get("outcome") == "approved"):
         if not approval.get("id"):
             raise core.GFError("plan_not_approved", "Set the current plan with gf plan set <file>, then have the person approve it", core.EXIT_STATE)
+        if approval.get("verified") and approval.get("outcome") in ("rejected", "revision_requested"):
+            raise core.GFError("plan_not_approved", "The person sent the plan back: %s. Revise it and run gf plan set <file>."
+                               % approval.get("answer", ""), core.EXIT_STATE)
         did = approval["id"]
         raise core.GFError("plan_not_approved", "Plan needs human approval (%s); show: gf open --decision %s"
                            % (did, did), core.EXIT_STATE)
@@ -141,13 +147,61 @@ def _sub_id(acc):
     return sub["id"] if sub is not None else None
 
 
+def submission_binding(submission):
+    return copy.deepcopy(submission)
+
+
+def artifact_hashes(run_dir, evidence, submission=None):
+    """Hash the files shown by the dashboard and the check evidence in the question."""
+    if run_dir is None:
+        return {}
+    import pathlib
+    import os
+    import stat
+    root = store.project_of(run_dir)
+    evidence = evidence if isinstance(evidence, dict) else {}
+    files = [p for values in (evidence.get("files"), (submission or {}).get("changed_files"))
+             if isinstance(values, list) for p in values if isinstance(p, str)]
+    paths = [("file:" + p, root, p) for p in files if isinstance(p, str)]
+    for slots in (evidence.get("checks") or {}).values() if isinstance(evidence.get("checks"), dict) else []:
+        for result in (slots or {}).values():
+            if isinstance(result, dict) and isinstance(result.get("log"), str):
+                paths.append(("log:" + result["log"], pathlib.Path(run_dir), result["log"]))
+    hashes = {}
+    for name, base, relative in paths:
+        try:
+            path = (base / relative).resolve()
+            path.relative_to(base.resolve())
+            if any(p in (".git", ".graph-flow", "human.key") for p in pathlib.PurePosixPath(relative).parts):
+                raise ValueError("private path")
+            digest = hashlib.sha256()
+            fd = os.open(str(path), os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+            with os.fdopen(fd, "rb") as stream:
+                info = os.fstat(stream.fileno())
+                if not stat.S_ISREG(info.st_mode) or info.st_size > 16 * 1024 * 1024:
+                    raise ValueError("not a readable attachment")
+                for chunk in iter(lambda: stream.read(65536), b""):
+                    digest.update(chunk)
+            hashes[name] = digest.hexdigest()
+        except (OSError, ValueError):
+            hashes[name] = None
+    return hashes
+
+
+def require_submission_binding(derived, node_id):
+    sub = (derived["nodes"].get(node_id) or {}).get("submission") or {}
+    for dec in derived["decisions"].values():
+        if (not dec.get("stale") and dec.get("node") == node_id and dec.get("submission") == sub.get("id")
+                and dec.get("purpose") in ("human_check", "lane3", "trajectory", "hold")
+                and (dec.get("binding_changed") or dec.get("status") == "answered" and not dec.get("verified"))):
+            raise core.GFError("approval_changed", "The submission commit or evidence differs from the human approval. Submit again for review.", core.EXIT_STATE)
+
+
 def derive(plan, events):
+    run_dir = getattr(events, "run_dir", None)
+    actual_location = store.location(run_dir) if run_dir is not None else None
     events = [ev for ev in (events or []) if isinstance(ev, dict)]
-    nodes = {}
-    if isinstance(plan, dict):
-        for n in plan.get("nodes") or []:
-            if isinstance(n, dict) and isinstance(n.get("id"), str):
-                nodes[n["id"]] = n
+    nodes = planning.node_index(plan)
 
     deps = _closure(nodes)
     acc = {nid: _fresh(n, 0) for nid, n in nodes.items()}
@@ -168,7 +222,7 @@ def derive(plan, events):
     for e in events:
         d = _data(e)
         if e.get("type") == "human.repin" and d.get("run_nonce") and d.get("human_key_sha256") == core.key_fingerprint():
-            expected = core.human_sig(e.get("run"), "human.repin", "repinned", "", d)
+            expected = core.human_sig(e.get("run"), "human.repin", "repinned", "", dict(d, location=actual_location)) if actual_location else None
             if expected and hmac.compare_digest(expected, str(d.get("sig", ""))):
                 repins.append(e)
     pinned_key = next((_data(e).get("human_key_sha256") for e in events
@@ -183,6 +237,7 @@ def derive(plan, events):
     sigs = {}
     prev_fps = None
     ever_seen = set()
+    identity_revision_seq = 0
     last_reset_seq = 0  # latest plan.set, node.reopen or gate.verdict
 
     def invalidate(nid, seq):
@@ -208,13 +263,25 @@ def derive(plan, events):
                 run_id = d["run_id"]
 
         elif t == "plan.set":
+            identity_revision_seq = seq
             current_identity = d.get("plan_identity")
             last_reset_seq = max(last_reset_seq, seq)
             if d.get("revision") is not None:
                 plan_revision = d["revision"]
-            fps = d.get("fingerprints")
-            if not isinstance(fps, dict):
-                continue
+            if run_dir is not None:
+                try:
+                    revision_plan = store._load_plan(run_dir, int(d["revision"]), d)
+                    fps = {nid: fingerprint(n) for nid, n in planning.node_index(revision_plan).items()}
+                except (core.GFError, KeyError, ValueError, TypeError):
+                    fps = {}
+                    for nid in nodes:
+                        invalidate(nid, seq)
+            else:
+                # Pure replay has no file authority: it cannot preserve work across a revision.
+                fps = {nid: fingerprint(n) for nid, n in nodes.items()}
+                if prev_fps is not None:
+                    for nid in nodes:
+                        invalidate(nid, seq)
             changed = set(nodes) if d.get("replaced_unverifiable") else set()
             for nid, fp in fps.items():
                 if prev_fps is not None and nid in prev_fps:
@@ -333,6 +400,11 @@ def derive(plan, events):
                 "check": d.get("check"),
                 "purpose": d.get("purpose"),
                 "plan_identity": d.get("plan_identity"),
+                "location": actual_location,
+                "recorded_location": copy.deepcopy(d.get("location")),
+                "submission_binding": copy.deepcopy(d.get("submission_binding")),
+                "artifact_hashes": copy.deepcopy(d.get("artifact_hashes")),
+                "binding_changed": False,
                 "run_nonce": run_nonce,
                 "human_key_sha256": pinned_key,
                 "kind": d.get("kind"),
@@ -365,14 +437,14 @@ def derive(plan, events):
         # every other type is ignored
 
     for did, dec in decisions.items():
-        if dec["seq"] < repin_seq or dec.get("purpose") == "plan_approval" and dec.get("plan_identity") != current_identity:
+        if dec["seq"] < repin_seq or dec.get("purpose") == "plan_approval" and dec["seq"] < identity_revision_seq or dec.get("purpose") == "plan_approval" and dec.get("plan_identity") != current_identity:
             dec["stale"] = True
         sig = sigs.get(did)
         if dec.get("answer_seq") is not None and isinstance(sig, str):
             # Old signatures are history only, never authorization for new execution.
             modern = sig.startswith("v3:")
             expected = (core.human_sig(run_id, did, dec["outcome"], dec["answer"], dec)
-                        if modern and run_nonce and pinned_key and not key_mismatch and dec["seq"] > repin_seq else None)
+                        if modern and actual_location and run_nonce and pinned_key and not key_mismatch and dec["seq"] > repin_seq else None)
             if expected is not None:
                 dec["verified"] = hmac.compare_digest(
                     expected.encode("utf-8"), sig.encode("utf-8"))
@@ -383,9 +455,27 @@ def derive(plan, events):
         if a is None:
             dec["stale"] = True
         else:
+            sub = a.get("submission")
+            if dec.get("submission") is not None and dec.get("submission") == _sub_id(a):
+                dec["binding_changed"] = (dec.get("submission_binding") != submission_binding(sub)
+                    or dec.get("artifact_hashes") != artifact_hashes(run_dir, dec.get("evidence"), sub))
+                if dec["binding_changed"]:
+                    dec["verified"] = False
             dec["stale"] = dec["stale"] or (a["basis"] >= dec["seq"]
                             or (dec["submission"] is not None
                                 and dec["submission"] != _sub_id(a)))
+
+    # Supersession remains derivable if a writer deletes the convenience events.
+    plan_decisions = [d for d in decisions.values() if d.get("purpose") == "plan_approval"]
+    if plan_decisions:
+        latest = max(plan_decisions, key=lambda d: d["seq"])
+        for dec in plan_decisions:
+            if dec is not latest:
+                dec["stale"] = True
+                dec["status"] = "superseded"
+    location_mismatch = bool(actual_location and any(
+        d.get("recorded_location") and d["recorded_location"] != actual_location
+        and not d.get("stale") for d in decisions.values()))
 
     out_nodes = {}
     for nid, node in nodes.items():
@@ -452,6 +542,8 @@ def derive(plan, events):
             "repin_seq": repin_seq,
             "human_key_sha256": pinned_key,
             "key_mismatch": key_mismatch,
+            "location_mismatch": location_mismatch,
+            "location": actual_location,
             "plan_error": bool(current_identity and plan_identity(plan or {}) != current_identity),
             "status": "complete" if complete else "open",
             "host": host,

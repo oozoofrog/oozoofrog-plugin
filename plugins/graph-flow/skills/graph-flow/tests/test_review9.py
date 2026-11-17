@@ -68,7 +68,7 @@ class Review9Tests(unittest.TestCase):
         with store.transaction(self.run) as tx:
             tx.append('decision.answer',{'id':did,'outcome':'approved','answer':'','sig':sig,'source':'terminal'},{'role':'human'})
         self.assertFalse(self.snapshot()[1]['decisions'][did]['verified'])
-        self.assertEqual(self.call('gate','a',code=1)['verdict'],'needs_approval')
+        self.assertEqual(self.call('gate','a',code=4)['code'],'approval_changed')
         self.assertFalse(decisions.verify('approval',did,{'sig':sig,'outcome':'approved','answer':''},self.snapshot()[1]['decisions'][did]))
 
     def test_n3_same_id_and_plan_other_project_cannot_replay(self):

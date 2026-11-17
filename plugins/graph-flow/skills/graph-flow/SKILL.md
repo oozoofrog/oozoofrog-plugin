@@ -23,7 +23,7 @@ If a brief sets `GF_ROLE=worker` or `GF_ROLE=reviewer`, read [worker.md](referen
 4. Do not print or restate the plan in chat. Say one sentence in the person’s language: “계획을 대시보드에 올렸어요. 보시고 시작을 눌러 주세요. (<decision id>)” Then `gf decide wait <id> --timeout 30`. On timeout end the turn; the dashboard cannot wake a session. Resume when the person says they answered. After approval, select `gf ready` nodes, inspect `gf route`, record `gf assign`, and deliver each `gf brief` to its executor.
 5. Inside a work node, use `gf start`, optionally `gf red`, then produce, run `gf check run`, correct, and `gf submit`.
 6. Integrate committed work with `gf merge`; receive `gf review submit` from independent reviewers and run `gf gate <node> --open` on the review and its target.
-7. On rejection, read its scope, use `gf assign` and a fresh `gf brief` for that node only; on `replan`, change the plan with `gf plan set <file> --open`. A structural change needs fresh approval; wording-only changes keep existing approval.
+7. On rejection, read its scope, use `gf assign` and a fresh `gf brief` for that node only; on `replan`, change the plan with `gf plan set <file> --open`. A structural change needs fresh approval; every new revision needs approval; posting an identical plan creates no revision.
 8. Close with `gf gate --final --open` and `gf trace`; report checks, attempts, open decisions, and unverified work.
 9. Derive a few constraints with `gf learn add`, promote executable ones with `gf learn promote`, and retire stale ones with `gf learn retire`.
 
@@ -43,4 +43,4 @@ If a brief sets `GF_ROLE=worker` or `GF_ROLE=reviewer`, read [worker.md](referen
 - [MCP](references/mcp.md): invoke commands through tool access.
 - [Dashboard](references/dashboard.md): show recorded progress and let a person answer decisions. Open without asking at exactly three moments: plan approval (`plan set --open`), a waiting decision (`decide ask --open` or `gate <node> --open`), and completion (`gate --final --open`). Use `GF_NO_OPEN=1` only to suppress the browser in headless use; it never skips approval. On MCP-only hosts, relay the returned `graph-flow open` command.
 
-Never set or change `GF_HOME`, `GF_ROLE=human`, or `GF_HUMAN_TERMINAL`; never run the human answer command (`gf decide answer`). Do not impersonate the person through the dashboard, read signing keys, or edit files under `.graph-flow/runs/**`. These rules prevent accidental impersonation, not a malicious process running as the same OS account.
+Never set or change `GF_HOME`, `GF_ROLE=human`, or `GF_HUMAN_TERMINAL`; never run the human answer command (`gf decide answer`). Do not impersonate the person through the dashboard, read or WRITE `human.key`, or edit files under `.graph-flow/runs/**`. These rules prevent accidental impersonation, not a malicious process running as the same OS account.

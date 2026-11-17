@@ -92,7 +92,7 @@ class ApprovalIntegrityTests(unittest.TestCase):
     def test_a5_second_home_key_cannot_sign_or_verify_plan(self):
         self.accept(self.set_plan()['decision']); self.raw['goal']+=' new'; did=self.set_plan()['decision']; pinned=self.snapshot()[1]['run']['human_key_sha256']
         with mock.patch.dict(os.environ,GF_HOME=str(self.root/'second-home')):
-            decisions.ensure_key(); self.assertNotEqual(pinned,core.key_fingerprint())
+            decisions.ensure_key({'role': 'human'}); self.assertNotEqual(pinned,core.key_fingerprint())
             with self.assertRaises(core.GFError) as error:
                 decisions.answer(self.run,did,'approved','','dashboard',{'role':'human'})
             self.assertEqual(error.exception.code,'human_key_mismatch')
@@ -121,8 +121,8 @@ class ApprovalIntegrityTests(unittest.TestCase):
         self.assertFalse((self.project/'PROMOTED_RAN').exists()); self.accept(did); self.call('gate','--final')
         self.assertTrue((self.project/'PROMOTED_RAN').exists())
 
-    def test_a7_approved_wording_reset_has_no_show_or_mcp_open_instruction(self):
-        did=self.set_plan()['decision']; self.accept(did); self.raw['title']='다듬은 이름'
+    def test_a7_identical_repost_has_no_revision_or_mcp_open_instruction(self):
+        did=self.set_plan()['decision']; self.accept(did)
         self.assertNotIn('show',self.set_plan())
         data=json.loads(mcp._call(mcp.TOOLS['plan_set'],{'run':str(self.run),'plan':self.raw})['content'][0]['text'])
         self.assertNotIn('show',data); self.assertNotIn('graph-flow open',data.get('message',''))

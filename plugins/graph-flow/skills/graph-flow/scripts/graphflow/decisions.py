@@ -36,12 +36,16 @@ def answer(run_dir, decision_id, outcome, answer_text, source, actor):
     """Sign a human answer; the CLI also enforces terminal checks."""
     if actor.get("role") != "human":
         raise core.GFError("forbidden", "only a human can answer decisions", core.EXIT_FORBIDDEN)
-    ensure_key()
+    ensure_key(actor)
     with store.transaction(run_dir) as tx:
         derived = state.derive(tx.plan, tx.events)
         decision = derived["decisions"].get(decision_id)
         if decision is None:
             raise core.GFError("unknown_decision", "unknown decision: %s" % decision_id, core.EXIT_STATE)
+        if decision.get("recorded_location") != store.location(run_dir):
+            raise core.GFError("project_moved", "Moving or renaming a project directory or run invalidates approvals. Re-post the plan and approve once more.", core.EXIT_STATE)
+        if decision.get("binding_changed"):
+            raise core.GFError("approval_changed", "Submission or evidence changed; submit again before approval.", core.EXIT_STATE)
         if decision["stale"]:
             raise core.GFError("stale_decision", "decision is stale: %s" % decision_id, core.EXIT_STATE)
         if decision["status"] == "answered":
@@ -105,10 +109,11 @@ def repin(run_dir, actor):
     """Called only after the CLI's human-terminal guard."""
     if actor.get("role") != "human":
         raise core.GFError("forbidden", "only a human can re-pin a key", core.EXIT_FORBIDDEN)
-    ensure_key()
+    ensure_key(actor, fresh=True)
     with store.transaction(run_dir) as tx:
         derived = state.derive(tx.plan, tx.events)
-        data = {"run_nonce": secrets.token_hex(32), "human_key_sha256": core.key_fingerprint()}
+        data = {"run_nonce": secrets.token_hex(32), "human_key_sha256": core.key_fingerprint(),
+                "location": store.location(run_dir)}
         data["sig"] = core.human_sig(tx.run_id, "human.repin", "repinned", "", data)
         tx.append("human.repin", data, actor)
         for decision in derived["decisions"].values():
@@ -124,10 +129,13 @@ def repin(run_dir, actor):
     return {"repinned": True, "message": "Key re-pinned. Approve the plan again before continuing."}
 
 
-def ensure_key():
+def ensure_key(actor=None, fresh=False):
+    actor = actor or core.actor_from_env()
+    if actor.get("role") != "human":
+        raise core.GFError("forbidden", "only a human entry point creates the signing key", core.EXIT_FORBIDDEN)
     path = core.gf_home() / "human.key"
     with store.locked(path.parent / ".lock"):
-        if not path.exists():
+        if fresh or not path.exists():
             # atomic_write uses mkstemp, whose mode is 0600 before installation.
             store.atomic_write(path, secrets.token_bytes(32))
     return path

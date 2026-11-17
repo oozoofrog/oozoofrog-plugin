@@ -203,7 +203,7 @@ class PlanTests(unittest.TestCase):
         self.assertProblem(document(node), "V9", "work")
         self.assertEqual([], plan.validate(document(node, review())))
         self.assertProblem(document(work(effective_lane=1, lane=2)), "V9", "work")
-        self.assertEqual([], plan.validate(document(work(effective_lane=3, lane=1))))
+        self.assertProblem(document(work(effective_lane=3, lane=1)), "V6", "work")
 
     def test_all_problems_and_no_mutation(self):
         value = document(work(goal=17, owns=["../x"], lane=4,

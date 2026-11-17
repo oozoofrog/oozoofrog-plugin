@@ -36,7 +36,7 @@ class ServerTests(unittest.TestCase):
         env = mock.patch.dict(os.environ, {"GF_HOME": str(self.home)})
         env.start()
         self.addCleanup(env.stop)
-        decisions.ensure_key()
+        decisions.ensure_key({'role': 'human'})
         self.projects, self.runs, self.asks = [], [], []
         for index in range(2):
             root = self.root / ("project%d" % index)
@@ -386,7 +386,7 @@ class ServerTests(unittest.TestCase):
         for index, project in enumerate(data["projects"]):
             self.assertEqual(project["name"], self.projects[index].name)
             run = project["runs"][0]
-            self.assertEqual(set(run), {"id", "status", "nodes", "passed", "open_decisions", "last_event", "plan_error"})
+            self.assertEqual(set(run), {"id", "title", "status", "nodes", "passed", "open_decisions", "last_event", "plan_error"})
             self.assertEqual((run["id"], run["status"], run["nodes"], run["passed"], run["open_decisions"]),
                              (self.runs[index].name, "open", 2, 1, 1))
             self.assertEqual(run["last_event"], store.events(self.runs[index])[-1]["ts"])
@@ -513,7 +513,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(data["view"], {"title": "", "language": "en", "nodes": [], "edges": [], "decisions": [], "answered": [],
                                       "lessons": [], "complete": False, "run": "empty",
                                       "plan_counts": {"work": 0, "review": 0, "decision": 0, "checks": 0, "decisions": 0},
-                                  "plan_error": False, "key_mismatch": False, "goal": "", "planned_questions": [],
+                                  "plan_error": False, "key_mismatch": False, "location_mismatch":False, "has_work":False, "goal": "", "planned_questions": [],
                                   "integration_checks": [], "promoted_checks": [], "superseded": [], "constraints": [],
                                       "counts": {"done": 0, "doing": 0, "waiting": 0,
                                                  "needs_you": 0, "returned": 0, "returns_total": 0}})
@@ -587,7 +587,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         view = data["view"]
         self.assertEqual(set(view), {"title", "language", "nodes", "edges", "decisions", "answered", "lessons", "counts", "complete",
-                                     "run", "project", "timeline", "plan_approval", "plan_counts", "plan_error", "key_mismatch",
+                                     "run", "project", "timeline", "plan_approval", "plan_counts", "plan_error", "key_mismatch", "location_mismatch", "has_work",
                                  "goal", "planned_questions", "integration_checks", "promoted_checks", "superseded", "constraints", "key_recovery", "legacy", "replaced_unverifiable"})
         self.assertEqual(view["title"], raw["title"])
         self.assertFalse(view["complete"])
@@ -614,7 +614,7 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(set(node) >= {"worker", "session", "started"}, True)
         self.assertEqual(view["decisions"], [{"id": "d%d" % ask, "node": "human", "node_title": "Human",
                                             "question": "Does this wording fit?", "kind": "review",
-                                        "purpose": "human_check",
+                                        "purpose": "human_check", "commit": None, "artifact_hashes": {},
                                             "context": context, "has_evidence": False,
                                             "verified": [], "unverified": ["The wording fits"], "worker_note": None,
                                         "record_purpose": "human_check", "files": [], "failed": [], "trajectory_reasons": []}])

@@ -47,6 +47,9 @@ def _set_plan(args, actor):
         learn = importlib.import_module("graphflow.learn")
         normalized["promoted_checks"] = learn.fixed_checks(store.project_of(args.run))
         normalized["constraints"] = learn.applying(store.project_of(args.run), normalized)
+        problems = plan.validate(normalized)
+        if problems:
+            raise core.GFError("invalid_plan", json.dumps(problems), core.EXIT_NEGATIVE)
         prior = state.derive(tx.plan, tx.events)
         if not prior["run"].get("run_nonce"):
             tx.append("run.nonce", {"run_nonce": secrets.token_hex(32)}, actor)
@@ -54,8 +57,8 @@ def _set_plan(args, actor):
         approval = state.plan_approval(prior)
         # Never relabel an accepted result or change a running worker's contract.
         if tx.plan:
-            old_nodes = {n["id"]: n for n in tx.plan["nodes"]}
-            new_nodes = {n["id"]: n for n in normalized["nodes"]}
+            old_nodes = plan.node_index(tx.plan)
+            new_nodes = plan.node_index(normalized)
             changed = {nid for nid, n in old_nodes.items()
                        if nid not in new_nodes or state.fingerprint(n) != state.fingerprint(new_nodes[nid])}
             deps = state._closure(old_nodes)
@@ -65,11 +68,17 @@ def _set_plan(args, actor):
             if protected:
                 raise core.GFError("active_plan_change", "Keep completed/running contracts; add new work instead: "
                                    + ", ".join(protected), core.EXIT_STATE)
-        reuse = (not tx.plan_error and approval and approval.get("plan_identity") == identity
+        reuse = (not tx.plan_error and not prior["run"].get("location_mismatch") and approval and normalized == tx.plan and approval.get("plan_identity") == identity
                  and (approval["status"] == "open" or
                       approval["status"] == "answered" and approval.get("verified")
                       and approval["outcome"] == "approved"))
         ids = [c["id"] for c in normalized["constraints"]]
+        if reuse:
+            result = {"revision": tx.revision, "nodes": len(normalized["nodes"]), "decision": approval["id"],
+                      "notices": len(notices), "constraints_applied": ids}
+            if approval["status"] == "open":
+                _show(args, result, approval["id"])
+            return result
         revision, sha = tx.write_plan(normalized)
         tx.append("plan.set", {"revision": revision, "plan_sha256": sha,
                                "plan_identity": identity, "node_counts": plan.node_counts(normalized["nodes"]),
@@ -212,18 +221,18 @@ def _open(args, actor):
 
 def _setup(args, actor):
     launcher = _lazy_import("launcher")
-    if not args.remove:
-        decisions.ensure_key()
+    if not args.remove and actor["role"] == "human":
+        decisions.ensure_key(actor)
     return launcher.remove(args.bin_dir) if args.remove else launcher.install(args.bin_dir)
 
 
-def _require_human_terminal(actor):
+def _require_human_terminal(actor, command="decide answer"):
     if actor["role"] != "human":
-        raise core.GFError("forbidden", "decide answer requires role human", core.EXIT_FORBIDDEN)
+        raise core.GFError("forbidden", command + " requires role human", core.EXIT_FORBIDDEN)
     if os.environ.get("GF_HUMAN_TERMINAL") != "1":
-        raise core.GFError("forbidden", "decide answer requires GF_HUMAN_TERMINAL=1", core.EXIT_FORBIDDEN)
+        raise core.GFError("forbidden", command + " requires GF_HUMAN_TERMINAL=1", core.EXIT_FORBIDDEN)
     if not sys.stdin.isatty():
-        raise core.GFError("forbidden", "decide answer requires stdin to be a TTY", core.EXIT_FORBIDDEN)
+        raise core.GFError("forbidden", command + " requires stdin to be a TTY", core.EXIT_FORBIDDEN)
 
 
 def _loop(args, actor):
@@ -480,7 +489,7 @@ def main(argv=None):
             raise core.GFError("node_required", "worker and reviewer roles require a node")
         entry = COMMANDS[identity.command_path]
         if identity.command_path in (("decide", "answer"), ("key", "repin")):
-            _require_human_terminal(actor)
+            _require_human_terminal(actor, " ".join(identity.command_path))
         if role not in entry["roles"]:
             raise core.GFError("forbidden", "role %s cannot run %s" % (role, " ".join(identity.command_path)), 3)
         parser = _parser()

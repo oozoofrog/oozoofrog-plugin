@@ -97,9 +97,9 @@ def _project_list():
                 item = {"id": run.name}
                 entry["runs"].append(item)
                 try:
-                    _, events, derived = _snapshot(run)
+                    current, events, derived = _snapshot(run)
                     nodes = derived["nodes"].values()
-                    item.update(status=derived["run"]["status"], plan_error=derived["run"].get("plan_error", False), nodes=len(derived["nodes"]),
+                    item.update(title=(current or {}).get("title") or (current or {}).get("goal"), status=derived["run"]["status"], plan_error=derived["run"].get("plan_error", False), nodes=len(derived["nodes"]),
                                 passed=sum(n["status"] == "passed" for n in nodes),
                                 open_decisions=len(decisions.open_decisions(derived)),
                                 last_event=events[-1]["ts"] if events else None)
@@ -119,7 +119,7 @@ def _queue():
             continue
         for run in runs:
             try:
-                _, events, derived = _snapshot(run)
+                current, events, derived = _snapshot(run)
                 asked = {e["seq"]: e["ts"] for e in events if e["type"] == "decision.ask"}
                 for decision in decisions.open_decisions(derived):
                     node = derived["nodes"].get(decision["node"]) or {}
@@ -364,8 +364,8 @@ def _planned_check(check):
 
 def _view(current, derived, events, project):
     current = current or {}
-    nodes = {n["id"]: n for n in current.get("nodes", [])}
-    opened = [] if derived["run"].get("plan_error") or derived["run"].get("key_mismatch") else decisions.open_decisions(derived)
+    nodes = planning.node_index(current)
+    opened = [] if derived["run"].get("plan_error") or derived["run"].get("key_mismatch") or derived["run"].get("location_mismatch") else decisions.open_decisions(derived)
     view = {"title": _text(current.get("title"), _text(current.get("goal"))), "nodes": [],
             "language": "ko" if re.search(r"[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]",
                 " ".join([_text(current.get("title"))] +
@@ -498,6 +498,8 @@ def _view(current, derived, events, project):
                                   "purpose": (_text(decision.get("kind")) if decision.get("purpose") in (None, "node", "free")
                                               else _text(decision.get("purpose"))),
                                   "record_purpose": _text(decision.get("purpose")),
+                                  "commit": (decision.get("submission_binding") or {}).get("commit"),
+                                  "artifact_hashes": decision.get("artifact_hashes") or {},
                                   "files": _decision_files(decision, derived, project, _strings(_mapping(nodes.get(decision["node"])).get("owns"))),
                                   "context": context, "verified": verified, "unverified": unverified,
                                   "failed": failed, "trajectory_reasons": _trajectory_reasons(st, observations),
@@ -533,7 +535,9 @@ def _view(current, derived, events, project):
     view["timeline"] = _timeline(nodes, events, lesson_texts, derived["decisions"], derived["run"].get("repin_seq", 0))
     view["plan_error"] = derived["run"].get("plan_error", False)
     view["key_mismatch"] = derived["run"].get("key_mismatch", False)
-    view["key_recovery"] = "GF_ROLE=human GF_HUMAN_TERMINAL=1 graph-flow --run %s key repin" % shlex.quote(str(pathlib.Path(project) / ".graph-flow" / "runs" / (derived["run"]["id"] or "<run-id>")))
+    view["location_mismatch"] = derived["run"].get("location_mismatch", False)
+    view["has_work"] = any(e.get("type") in ("node.start", "node.submit", "review.submit", "check.result") for e in events)
+    view["key_recovery"] = "GF_ROLE=human GF_HUMAN_TERMINAL=1 graph-flow --run .graph-flow/runs/%s key repin" % shlex.quote(pathlib.Path((derived["run"].get("location") or {}).get("run_directory") or derived["run"]["id"] or "run").name)
     view["legacy"] = derived["run"].get("legacy", False)
     view["replaced_unverifiable"] = bool(next((e["data"].get("replaced_unverifiable") for e in reversed(events) if e["type"] == "plan.set"), False))
     approval = state.plan_approval(derived)
@@ -621,8 +625,7 @@ def _file(run_dir, decision_id, relative):
         if decision["status"] != "open" or decision["stale"]:
             raise _HTTPError(403, "unavailable_decision", "this decision is no longer open")
         target = _file_path(project, relative)
-        owner = next((n for n in _objects(_mapping(store.read_plan(run_dir)).get("nodes"))
-                      if n.get("id") == decision.get("node")), {})
+        owner = planning.node_index(store.read_plan(run_dir)).get(decision.get("node"), {})
         if relative not in [f["path"] for f in _decision_files(decision, derived, project,
                                                                 _strings(owner.get("owns")))]:
             raise _HTTPError(403, "forbidden_path", "this file is not part of this decision")
@@ -876,7 +879,6 @@ def serve(host="127.0.0.1", port=0):
     """Publish a person-started dashboard and serve until interrupted."""
     if host not in ("127.0.0.1", "localhost"):
         raise core.GFError("bad_host", "dashboard must bind 127.0.0.1 or localhost", core.EXIT_USAGE)
-    decisions.ensure_key()
     httpd, token = make_server(port)
     home = core.gf_home()
     path = home / "server.json"

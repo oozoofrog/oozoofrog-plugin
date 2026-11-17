@@ -10,13 +10,13 @@ import unittest
 SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-from graphflow import core, plan as planmod, state  # noqa: E402
+from graphflow import core, plan as planmod, state, store  # noqa: E402
 
 RUN = "r1"
 ALL_KEYS = {"status", "kind", "lane", "effective_lane", "basis", "attempts", "max_attempts",
             "assignment", "base", "submission", "checks", "red", "reviews", "rejections",
             "verdict", "merged_head", "trajectory_clean", "open_decisions"}
-DECISION_KEYS = {"run_nonce", "human_key_sha256", "plan_identity", "id", "seq", "node", "submission", "check", "purpose", "kind", "question",
+DECISION_KEYS = {"location", "recorded_location", "submission_binding", "artifact_hashes", "binding_changed", "run_nonce", "human_key_sha256", "plan_identity", "id", "seq", "node", "submission", "check", "purpose", "kind", "question",
                  "evidence", "status", "outcome", "answer", "source", "verified", "stale"}
 
 
@@ -45,7 +45,7 @@ def work(nid, needs=(), lane=1, checks=None, **extra):
     n = {
         "id": nid, "kind": "work", "goal": "g " + nid,
         "needs": [{"from": f, "artifact": "a"} for f in needs],
-        "owns": [nid + ".py"], "outputs": [], "reads": [],
+        "owns": [nid + ".py"], "outputs": ["a"], "reads": [],
         "checks": checks if checks is not None else [
             {"id": "unit", "type": "cmd", "run": "true"}, {"id": "scope", "type": "scope"}],
         "lane": lane, "effective_lane": lane, "grade": "scoped", "max_attempts": 3,
@@ -57,7 +57,7 @@ def work(nid, needs=(), lane=1, checks=None, **extra):
 def review(nid, target):
     return {
         "id": nid, "kind": "review", "goal": "refute", "target": target, "lens": "bugs",
-        "needs": [{"from": target, "artifact": "a"}], "owns": [], "outputs": ["findings"],
+        "needs": [{"from": target, "artifact": "a"}], "owns": [], "outputs": ["findings", "a"],
         "reads": [], "checks": [{"id": "cites", "type": "cites"}],
         "lane": 1, "effective_lane": 1, "grade": "daily", "max_attempts": 3,
     }
@@ -84,12 +84,20 @@ class Log:
 
     def __init__(self, run=RUN, init=True):
         self.run = run
-        self.events = []
+        self.temp = tempfile.TemporaryDirectory()
+        self.run_dir = pathlib.Path(self.temp.name) / '.graph-flow' / 'runs' / run
+        (self.run_dir / 'plans').mkdir(parents=True)
+        self.events = store.EventLog([], self.run_dir)
         self.rev = 0
         if init:
             self.add("run.init", {"run_id": run, "project_root": "/p", "schema_version": 1})
 
+    def __del__(self):
+        self.temp.cleanup()
+
     def add(self, type_, data, role="leader", node=None):
+        if type_ == "decision.ask":
+            data = dict(data, location=store.location(self.run_dir))
         seq = len(self.events) + 1
         ev = {"seq": seq, "ts": "2026-11-15T09:%02d:%02dZ" % divmod(seq % 3600, 60),
               "run": self.run, "plan_revision": self.rev,
@@ -101,7 +109,9 @@ class Log:
     def plan_set(self, plan):
         self.rev += 1
         fps = {n["id"]: state.fingerprint(n) for n in plan["nodes"]}
-        self.add("plan.set", {"revision": self.rev, "plan_sha256": "0" * 64,
+        raw = json.dumps(plan).encode()
+        (self.run_dir / 'plans' / ('%04d.json' % self.rev)).write_bytes(raw)
+        self.add("plan.set", {"revision": self.rev, "plan_sha256": hashlib.sha256(raw).hexdigest(),
                               "fingerprints": fps, "constraints_applied": []})
         return plan
 
@@ -249,7 +259,7 @@ class FingerprintTests(unittest.TestCase):
                 before = state.derive(first, log.events)["nodes"]
                 log.plan_set(planmod.normalize(second)[0])
                 after = state.derive(second, log.events)["nodes"]
-                changed = {"b"} if field in ("artifact", "need_extension") else {"a", "b", "v", "d"}
+                changed = set(after) if planmod.validate(second) else {"b"} if field in ("artifact", "need_extension") else {"a", "b", "v", "d"}
                 for nid in after:
                     if nid in changed:
                         self.assertEqual(after[nid]["basis"], log.events[-1]["seq"])
@@ -267,13 +277,13 @@ class ShapeTests(EnvCase):
         self.assertEqual(s["nodes"], {})
         self.assertEqual(s["decisions"], {})
         self.assertEqual(s["run"], {"id": RUN, "plan_revision": 0, "plan_identity": None, "status": "open", "approval_required": True, "run_nonce": None, "legacy": True, "repin_seq": 0,
-                                 "human_key_sha256": None, "key_mismatch": False, "plan_error": False,
+                                 "human_key_sha256": None, "key_mismatch": False, "location": store.location(log.run_dir), "location_mismatch": False, "plan_error": False,
                                     "host": ["t3_delegate"], "final": None})
 
     def test_empty_events(self):
         s = state.derive(None, [])
         self.assertEqual(s, {"run": {"id": None, "plan_revision": 0, "plan_identity": None, "status": "open", "approval_required": True, "run_nonce": None, "legacy": True, "repin_seq": 0,
-                                 "human_key_sha256": None, "key_mismatch": False, "plan_error": False,
+                                 "human_key_sha256": None, "key_mismatch": False, "location": None, "location_mismatch": False, "plan_error": False,
                                      "host": [], "final": None},
                              "nodes": {}, "decisions": {}})
 
@@ -655,6 +665,8 @@ class DecisionTests(EnvCase):
         did = "d%d" % seq
         self.assertEqual(s["decisions"], {did: {
             "id": did, "seq": seq, "node": "a", "submission": None, "check": "unit",
+            "location": store.location(log.run_dir), "recorded_location": store.location(log.run_dir),
+            "submission_binding": None, "artifact_hashes": None, "binding_changed": False,
             "purpose": "node", "plan_identity": None, "run_nonce": None, "human_key_sha256": None, "kind": "direction", "question": "q?",
             "evidence": {"command": None, "files": [], "checks": []}, "status": "open",
             "outcome": None, "answer": None, "source": None, "verified": False,
@@ -1077,40 +1089,40 @@ class ScenarioTests(EnvCase):
 
     def s1(self):
         log = Log()
-        p = log.plan_set(plan_of(work("W", lane=2), review("V", "W")))
-        log.assign("W", family="claude")
-        log.start("W", 1)
-        log.assign("V", family="openai")  # after the target's start (point 2c)
-        s1 = log.submit("W", 1)
-        log.start("V", 1)
-        vs = log.review("V", 1, "W", s1)
-        log.verdict("V", 1, "pass", submission=vs, rule="R7")
+        p = log.plan_set(plan_of(work("w", lane=2), review("v", "w")))
+        log.assign("w", family="claude")
+        log.start("w", 1)
+        log.assign("v", family="openai")  # after the target's start (point 2c)
+        s1 = log.submit("w", 1)
+        log.start("v", 1)
+        vs = log.review("v", 1, "w", s1)
+        log.verdict("v", 1, "pass", submission=vs, rule="R7")
         return log, p, s1
 
     def test_s1_review_passed(self):
         log, p, s1 = self.s1()
         s = derive(log, p)["nodes"]
-        self.assertEqual(s["V"]["status"], "passed")
-        self.assertEqual(s["W"]["status"], "submitted")
-        self.assertEqual(s["W"]["reviews"], [
-            {"node": "V", "status": "passed", "target_submission": s1, "verdict": "pass",
+        self.assertEqual(s["v"]["status"], "passed")
+        self.assertEqual(s["w"]["status"], "submitted")
+        self.assertEqual(s["w"]["reviews"], [
+            {"node": "v", "status": "passed", "target_submission": s1, "verdict": "pass",
              "findings": [], "family": "openai"}])
 
     def test_s2_reject_and_restart(self):
         log, p, s1 = self.s1()
-        bound = "d%d" % log.ask("W", s1, purpose="trajectory")
-        unbound = "d%d" % log.ask("W", None, purpose="free", kind="direction")
-        log.verdict("W", 1, "reject", submission=s1, rejection=rejection("W", 1))
-        self.assertEqual(derive(log, p)["nodes"]["W"]["status"], "rejected")
-        restart = log.start("W", 2)
+        bound = "d%d" % log.ask("w", s1, purpose="trajectory")
+        unbound = "d%d" % log.ask("w", None, purpose="free", kind="direction")
+        log.verdict("w", 1, "reject", submission=s1, rejection=rejection("w", 1))
+        self.assertEqual(derive(log, p)["nodes"]["w"]["status"], "rejected")
+        restart = log.start("w", 2)
         s = derive(log, p)
-        v, w = s["nodes"]["V"], s["nodes"]["W"]
+        v, w = s["nodes"]["v"], s["nodes"]["w"]
         self.assertEqual((v["status"], v["attempts"], v["basis"]),
                          ("assigned" if v["assignment"] else "pending", 0, restart))
         self.assertIsNone(v["submission"])
         self.assertEqual(w["reviews"], [])
         self.assertEqual((w["status"], w["attempts"], w["basis"]), ("running", 2, 0))
-        self.assertEqual(w["rejections"], [rejection("W", 1)])
+        self.assertEqual(w["rejections"], [rejection("w", 1)])
         self.assertTrue(s["decisions"][bound]["stale"])
         self.assertFalse(s["decisions"][unbound]["stale"])
         self.assertEqual(w["open_decisions"], [unbound])
@@ -1118,26 +1130,26 @@ class ScenarioTests(EnvCase):
     def build_pwvd(self):
         self.write_key()
         log = Log()
-        p = log.plan_set(plan_of(work("P"), work("W", ["P"], lane=2), review("V", "W"),
-                                 decision("D", ["W"])))
-        log.assign("P")
-        log.start("P", 1)
-        sp = log.submit("P", 1)
-        log.verdict("P", 1, "pass", submission=sp, rule="R7")
-        log.assign("W", family="claude")
-        log.start("W", 1)
-        log.assign("V", family="openai")
-        sw = log.submit("W", 1)
-        log.start("V", 1)
-        sv = log.review("V", 1, "W", sw)
-        log.verdict("V", 1, "pass", submission=sv, rule="R7")
-        log.verdict("W", 1, "pass", submission=sw, rule="R7")
-        did = "d%d" % log.ask("D", None, purpose="node", kind="authorization")
+        p = log.plan_set(plan_of(work("p"), work("w", ["p"], lane=2), review("v", "w"),
+                                 decision("d", ["w"])))
+        log.assign("p")
+        log.start("p", 1)
+        sp = log.submit("p", 1)
+        log.verdict("p", 1, "pass", submission=sp, rule="R7")
+        log.assign("w", family="claude")
+        log.start("w", 1)
+        log.assign("v", family="openai")
+        sw = log.submit("w", 1)
+        log.start("v", 1)
+        sv = log.review("v", 1, "w", sw)
+        log.verdict("v", 1, "pass", submission=sv, rule="R7")
+        log.verdict("w", 1, "pass", submission=sw, rule="R7")
+        did = "d%d" % log.ask("d", None, purpose="node", kind="authorization")
         log.answer(did, outcome="approved")
-        log.verdict("D", 0, "pass", rule="R7")
+        log.verdict("d", 0, "pass", rule="R7")
         s = derive(log, p)
-        self.assertEqual({n: s["nodes"][n]["status"] for n in "PWVD"},
-                         {n: "passed" for n in "PWVD"})
+        self.assertEqual({n: s["nodes"][n]["status"] for n in "pwvd"},
+                         {n: "passed" for n in "pwvd"})
         self.assertTrue(s["decisions"][did]["verified"])
         self.assertFalse(s["decisions"][did]["stale"])
         return log, p, did
@@ -1146,9 +1158,9 @@ class ScenarioTests(EnvCase):
         log, p, did = self.build_pwvd()
         log.final("passed")
         self.assertEqual(derive(log, p)["run"]["status"], "complete")
-        seq = log.reopen("P")
+        seq = log.reopen("p")
         s = derive(log, p)
-        for nid in "PWVD":
+        for nid in "pwvd":
             n = s["nodes"][nid]
             self.assertEqual((n["status"], n["basis"], n["attempts"]),
                              ("assigned" if n["assignment"] else "pending", seq, 0), nid)
@@ -1156,8 +1168,8 @@ class ScenarioTests(EnvCase):
             self.assertIsNone(n["verdict"])
         self.assertTrue(s["decisions"][did]["stale"])
         self.assertEqual(s["run"]["status"], "open")
-        log.start("P", 1)
-        self.assertEqual(derive(log, p)["nodes"]["P"]["attempts"], 1)
+        log.start("p", 1)
+        self.assertEqual(derive(log, p)["nodes"]["p"]["attempts"], 1)
 
     def test_s4_plan_change_of_one_node(self):
         log, p, did = self.build_pwvd()
@@ -1166,8 +1178,8 @@ class ScenarioTests(EnvCase):
         p2 = log.plan_set(plan_of(*nodes))
         seq = log.events[-1]["seq"]
         s = derive(log, p2)
-        self.assertEqual((s["nodes"]["P"]["status"], s["nodes"]["P"]["basis"]), ("passed", 0))
-        for nid in "WVD":
+        self.assertEqual((s["nodes"]["p"]["status"], s["nodes"]["p"]["basis"]), ("passed", 0))
+        for nid in "wvd":
             n = s["nodes"][nid]
             self.assertEqual((n["status"], n["basis"], n["attempts"]),
                              ("assigned" if n["assignment"] else "pending", seq, 0), nid)

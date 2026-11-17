@@ -197,8 +197,8 @@ class AssignTests(unittest.TestCase):
             self.assertIn("ide_build", text)
 
     def test_learning_constraints_filtered_and_fixed_checks(self):
-        constraints = [{"text": "global", "scope": {}, "status": "active"},
-                       {"text": "owned", "scope": {"paths": ["work.py"]}},
+        constraints = [{"id":"c1", "text": "global", "scope": {}, "status": "active"},
+                       {"id":"c2", "text": "owned", "scope": {"paths": ["work.py"]}},
                        {"text": "unrelated", "scope": {"paths": ["elsewhere.py"]}}]
         learn = types.SimpleNamespace(applying=lambda *args: constraints,
                                       all_constraints=lambda *args: constraints + [{"text": "retired", "status": "retired"}],

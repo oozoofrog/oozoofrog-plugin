@@ -257,7 +257,7 @@ class PlanTests(EnvCase):
     def test_write_plan_and_read(self):
         run = self.new_run()
         self.assertIsNone(store.read_plan(run))
-        plan = {"schema_version": 1, "goal": "g", "nodes": [{"id": "a"}]}
+        plan = {"schema_version": 1, "goal": "g", "nodes": [{"id":"a", "kind":"decision", "goal":"choose", "lane":1, "question":"Continue?", "decision_kind":"authorization"}]}
         with store.transaction(run) as tx:
             rev, sha = tx.write_plan(plan)
             ev = tx.append("plan.set", {"revision": rev, "plan_sha256": sha, "fingerprints": {},
@@ -284,7 +284,7 @@ class PlanTests(EnvCase):
 
     def test_orphan_plan_file_ignored(self):
         run = self.new_run()
-        plan = {"goal": "one"}
+        plan = {"schema_version":1, "goal":"one", "nodes":[{"id":"a", "kind":"decision", "goal":"choose", "lane":1, "question":"Continue?", "decision_kind":"authorization"}]}
         with store.transaction(run) as tx:
             rev, sha = tx.write_plan(plan)
             tx.append("plan.set", {"revision": rev, "plan_sha256": sha}, ACTOR)

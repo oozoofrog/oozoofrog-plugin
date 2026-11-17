@@ -17,7 +17,7 @@ const source=readFileSync(process.argv[2],'utf8');
 const {layeredLayout,roundedRoute}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 const data=JSON.parse(process.argv[3]);
 for(const level of ['detail','overview']) {
-const options={level};
+const options={level,wrapLongChains:!!data.wrapLongChains};
 const layout=layeredLayout(data.nodes,data.edges,[],true,options);
 const portGap=level==='overview'?8:14;
 const overlap=(a,b)=>a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y;
@@ -95,3 +95,9 @@ if(level==='overview')assert.equal(layout.chips.length,0);
     def test_long_chain_reuses_ports_in_unrelated_channels(self):
         ids=['n'+str(i) for i in range(60)]
         self.check_graph(self.graph(ids,list(zip(ids,ids[1:]))))
+
+    def test_thirty_piece_overview_wraps_without_collisions(self):
+        ids=["step"+str(i) for i in range(31)]
+        data=self.graph(ids,list(zip(ids,ids[1:])))
+        data["wrapLongChains"]=True
+        self.check_graph(data)

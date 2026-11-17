@@ -26,7 +26,7 @@ $GF_HOME/                    default ~/.graph-flow
   .lock                      lock file for the files below
   registry.json              {"projects": [{"root": "<abs path>", "added": "<ts>"}]}
   server.json                {"url", "port", "token", "pid", "started"} of a running dashboard
-  human.key                  32 random bytes, mode 0600, created on the person’s side by `gf serve`, `gf open`, `gf setup`, or a human terminal answer (section 7)
+  human.key                  32 random bytes, mode 0600, created only by a human dashboard/terminal answer, human-role setup, or human key re-pin (section 7)
 ```
 
 `<project>` is the git top level of the working directory unless `--project` is given. A run is always addressed by the absolute path of its directory, so a session working in another git worktree writes to the leader's run. Everything under `.graph-flow/` is tool metadata: no node may own it and scope checks ignore it.
@@ -53,7 +53,7 @@ All locks are exclusive `fcntl.flock` locks on the named `.lock` file, blocking 
 
 An unset `node` or `session` is JSON `null`. An unknown role raises `GFError("bad_role", ..., EXIT_USAGE)`.
 
-Roles prevent accidents; they are not a security boundary (P5, P10). An agent that deliberately sets another role or reads `human.key` is outside what this tool defends against; the skill text forbids it.
+Roles prevent accidents; they are not a security boundary (P5, P10). An agent that deliberately sets another role or reads or WRITES `human.key` is outside what this tool defends against; the skill text forbids it.
 
 | Command | leader | worker | reviewer | human |
 | --- | --- | --- | --- | --- |
@@ -153,7 +153,7 @@ A leader may also do a node's work itself (`inline`). That is allowed for lane 1
 | Check `title` | Optional string on any check type (including integration checks), at most 120 characters, saying what the check confirms in plain words |
 | Decision node / `human` check `context` | Optional object with optional string keys `why`, `if_approved`, `if_rejected`, `undo`, each at most 300 characters; no other keys |
 
-All presentation strings above are written in the user's language. When present they must be non-empty (whitespace alone is empty); limits count Unicode characters. Missing presentation fields and empty `context` objects are valid. Unknown fields are preserved and ignored, except unknown keys inside decision-node or human-check `context`.
+All presentation strings above are written in the user's language. When present they must be non-empty (whitespace alone is empty); limits count Unicode characters. Missing presentation fields and empty `context` objects are valid. Unknown execution fields are rejected at every plan load. Node/check ids, requirements, constraints, needs pairs and the combined integration/promoted check ids must be unique. A stored effective lane must agree with normalization.
 
 ### Validation
 
@@ -189,22 +189,22 @@ Required top-level fields: `schema_version` (must be `1`), `goal` (non-empty str
 - `gf plan set <file>` validates, normalizes, writes `plans/NNNN.json`, then appends `plan.set`, all in one transaction (section 5). `store.read_plan` loads the revision named by the last `plan.set` event; a plan file without its event is ignored and its number is never reused (the next revision is the highest existing file number plus one, so numbers may have gaps).
 - A plan file is JSON with sorted keys, two-space indent, and a trailing newline; `plan_sha256` is the SHA-256 of exactly those bytes.
 - The `plan.set` event itself, and every later event, carries the new `plan_revision`.
-- A node's fingerprint is the SHA-256 hex of `json.dumps(node, sort_keys=True, separators=(",", ":"), ensure_ascii=False)` encoded as UTF-8, computed on a copy of the normalized node with presentation fields excluded as specified under "Basis". `plan.set` records every node's fingerprint.
+- A node's fingerprint is the SHA-256 hex of `json.dumps(node, sort_keys=True, separators=(",", ":"), ensure_ascii=False)` encoded as UTF-8, computed on a copy of the normalized node with presentation fields excluded as specified under "Basis". `plan.set` records every node's fingerprint for inspection, but replay always recomputes it from validated plan files. Logged fingerprints never authorize preservation of work.
 - A changed fingerprint invalidates the node and everything that depends on it (section 5, "Basis"). A node removed from the plan disappears from the state.
 
 ### Plan approval (0.3)
 
-`plan set` atomically appends `plan.set` with `plan_identity`, then a `decision.ask` with purpose `plan_approval`, kind `authorization`, no node/submission/check, that identity and a question in the plan language. The identity hashes the normalized plan with nodes represented by id/fingerprint; node order is irrelevant. Plan title/summary/context, node title/summary/context, need labels and check title/context are excluded. Goals, ownership, dependencies, checks, lane and other structural fields are included.
+`plan set` atomically appends `plan.set` with `plan_identity`, then a `decision.ask` with purpose `plan_approval`, kind `authorization`, no node/submission/check, that identity and a question in the plan language. The identity hashes the normalized plan with nodes represented by a sorted complete list of fingerprints (including each id), without collapsing duplicates; node order is irrelevant. Plan title/summary/context, node title/summary/context, need labels and check title/context are excluded. Goals, ownership, dependencies, checks, lane and other structural fields are included.
 
-An open or verified-approved decision is reused for the same identity, including wording-only revisions. Otherwise a fresh approval is asked; old plan decisions receive `decision.superseded` (`id`, replacement `revision`), retain their answer/text, and are closed and stale. `decide wait` returns superseded immediately. Sending back requires nonempty text on both dashboard and terminal paths. The normal human-role and signature requirements apply; there is no skip flag, environment bypass or agent-answer tool.
+An identical re-post creates no revision and reuses the current open or verified-approved decision. Every new revision, including wording-only revisions, asks fresh approval; old plan decisions receive `decision.superseded` (`id`, replacement `revision`), retain their answer/text, and are closed and stale. `decide wait` returns superseded immediately. Sending back requires nonempty text on both dashboard and terminal paths. The normal human-role and signature requirements apply; there is no skip flag, environment bypass or agent-answer tool.
 
 Until current approval is answered, verified and approved, `ready`, `assign`, work/review `brief`, `start` (including worker/reviewer starts), `route`, `red`, `check run`, `merge`, every node gate, and the final gate refuse with exit 4, `plan_not_approved`, the decision id and `gf open --decision <id>`. MCP calls the same checks. `status`/dashboard return an empty ready list without failing. Planning briefs, validation, plan set, status, trace, decision list/wait remain usable.
 
 During re-planning, **new starts wait; existing work continues**. Completed nodes retain accepted submissions, running nodes can submit; checks and gates wait for the new approval. To preserve those contracts safely, `plan set` refuses structural edits/removal of a running, submitted or passed node, or a producer it depends on (`active_plan_change`, exit 4). Add a new node for a changed requirement. Unstarted changed nodes and their dependents still follow the basis invalidation rule. Wording-only edits preserve all accepted work. A check already executing across a revision can still return `stale_result` under the existing race guard; rerun that check, not the worker attempt.
 
-**Upgrade from 0.2.x (behaviour change): approval is always required.** No unsigned version/approval marker grants an exemption. Status, trace and dashboard remain readable, including old answers exactly as recorded. An unfinished old run refuses new dispatch/start/check/merge/gate with `plan_not_approved`. Gates for already-submitted work also wait, because they execute checks. The leader posts its current plan file with `gf plan set <file>`; one human plan approval then resumes the run, preserving unchanged running/submitted/completed work. This records a random `run.nonce` for old runs; its value is covered by the new answer signature. Reads never migrate records. Old unprefixed or v2 answers remain visible as unverified history and never authorize new execution; a gate that needs human consent asks a fresh question.
+**Upgrade from 0.2.x (behaviour change): approval is always required.** No unsigned version/approval marker grants an exemption. Status, trace and dashboard remain readable, including old answers exactly as recorded. An unfinished old run refuses new dispatch/start/check/merge/gate with `plan_not_approved`. Gates for already-submitted work also wait, because they execute checks. The leader re-posts the run's own `plans/NNNN.json` with `gf plan set <run-path>/plans/NNNN.json`; one human plan approval then resumes the run, preserving unchanged running/submitted/completed work. This records a random `run.nonce` for old runs; its value is covered by the new answer signature. Reads never migrate records. Old unprefixed or v2 answers remain visible as unverified history and never authorize new execution; a gate that needs human consent must obtain a fresh bound answer. Old submission answers lacking the new binding can be retired with human key re-pin followed by fresh plan approval; their recorded work is retained and the gate asks again.
 
-New `run.init` events contain a random 256-bit `run_nonce` and never create or pin a human key. The first verified human answer pins the person’s key with `human.key`. A missing/rotated key or a different GF_HOME yields `human_key_mismatch` and a recovery command in CLI/dashboard. Use the original environment/key, or from the person’s own terminal run `GF_ROLE=human GF_HUMAN_TERMINAL=1 graph-flow --run <run-path> key repin`. This TTY-only command creates a key if necessary, appends a signed `human.repin` event with a new nonce and key fingerprint, supersedes open decisions and earlier plan approvals, and asks for plan approval again. No execution resumes until that fresh approval. For an old run with no posted approval, use `plan set` first.
+New `run.init` events contain a random 256-bit `run_nonce` and never create or pin a human key. The first verified human answer pins the person’s key with `human.key`. A missing/rotated key or a different GF_HOME yields `human_key_mismatch` and a recovery command in CLI/dashboard. Use the original environment/key, or from the person’s own terminal run `GF_ROLE=human GF_HUMAN_TERMINAL=1 graph-flow --run <run-path> key repin`. This TTY-only command always generates a fresh random key itself (never adopts existing bytes), appends a signed `human.repin` event with a new nonce and key fingerprint, supersedes open decisions and earlier plan approvals, and asks for plan approval again. No execution resumes until that fresh approval. For an old run with no posted approval, use `plan set` first.
 
 If the current plan revision is missing or cannot be verified, `plan set` may replace it: treat the old plan as absent, reset every node and dependent, retain the old events as history, and require fresh approval even for the same structural identity. No original file is needed. Review `lens` is an instruction, is shown with the plan, and is part of its approved identity.
 
@@ -293,7 +293,7 @@ The `seq` of a `node.submit` or `review.submit` event is that submission's **id*
 
 ### Basis: what invalidates a node
 
-Fingerprinting excludes node `title`, `summary`, and `context`; `label` within every `needs` entry; and `title` and `context` within every check. All other fields, including unknown extension fields, retain their existing fingerprint behavior. The plan-level `title` is outside node fingerprints. Adding, editing, or removing only presentation fields in a new revision leaves every node's basis, status, attempts, submission, and evidence untouched, including dependents. A new plan revision still requires a fresh final gate for run completion.
+Fingerprinting excludes node `title`, `summary`, and `context`; `label` within every `needs` entry; and `title` and `context` within every check. All other allowed fields affect the fingerprint; unknown execution fields are invalid. The plan-level `title` is outside node fingerprints. Adding, editing, or removing only presentation fields in a new revision leaves every node's basis, status, attempts, submission, and evidence untouched, including dependents. A new plan revision still requires a fresh final gate for run completion.
 
 For every node the state keeps `basis`: the `seq` of the latest event that invalidated it, or 0. **Events about a node with `seq <= basis` are ignored for that node**, with one exception: its latest assignment is kept. After an invalidation the node is `pending` (or `assigned`, if it had an assignment) with zero attempts, no submission, no check results, and no verdict. Invalidating events:
 
@@ -307,7 +307,7 @@ Decisions are bound, not counted: a decision is **stale** when its node's `basis
 
 ### Derived state
 
-`state.derive(plan, events)` is deterministic for a given plan, event list, and `human.key`, and returns:
+`state.derive(plan, events)` uses the trusted `store.EventLog` filesystem context, validated revision files, current attachment bytes, and `human.key`, and returns:
 
 ```json
 {
@@ -494,10 +494,10 @@ When a rejection has no log, EVIDENCE names offending paths or citation details,
 
 Who can answer (P10):
 
-- The dashboard server, started by a person with `gf serve`, appends `decision.answer` with `source: "dashboard"` and `sig`: HMAC-SHA256, hex, keyed with `human.key`, over canonical JSON `[3, run_id, decision_id, outcome, answer, binding]`, prefixed `v3:`. Binding includes kind, purpose, plan_identity, node, submission, check, question, evidence, the per-run nonce and pinned key fingerprint. Old unprefixed/v2 answers never authorize new execution.
+- The dashboard server, started by a person with `gf serve`, appends `decision.answer` with `source: "dashboard"` and `sig`: HMAC-SHA256, hex, keyed with `human.key`, over canonical JSON `[3, run_id, decision_id, outcome, answer, binding]`, prefixed `v3:`. Binding includes kind, purpose, plan_identity, node, submission, check, question, evidence, the per-run nonce, pinned key fingerprint, filesystem location, full submission binding and attachment/evidence hashes. Old unprefixed/v2 answers never authorize new execution.
 - `gf decide answer` on the command line is refused (exit 3) unless the environment has `GF_HUMAN_TERMINAL=1` and stdin is a TTY. It signs the same way with `source: "terminal"`.
 - `decisions.answer` itself refuses any actor whose role is not `human` (exit 3, `forbidden`), so no other entry point (the MCP server, a script) can produce a signed answer for an agent role. The dashboard server and the terminal path call it with a `human` actor.
-- `state.derive` sets `verified` by recomputing the signature with `core.human_sig` (constant-time comparison); it is `false` when the key is unreadable or the signature differs. This is the one place where `derive` reads outside its arguments. Gate rules count only verified answers.
+- `state.derive` sets `verified` by recomputing the signature with `core.human_sig` (constant-time comparison); it is `false` when the key is unreadable or the signature differs. Verification recomputes the resolved project root and run directory name from the filesystem context, never from the log; signatures without that context cannot authorize work. Gate rules count only verified answers.
 
 ## 8. Constraints and fixed checks (P11)
 
@@ -640,7 +640,7 @@ def answer(run_dir, decision_id, outcome, answer_text, source, actor): ...     #
 def wait(run_dir, decision_id, timeout_s): ...  # decision dict, or GFError(exit_code=EXIT_NEGATIVE) on timeout
 def open_decisions(state, node_id=None): ...    # list
 def verify(run_id, decision_id, answer_data, decision=None): ...   # bool; compares answer_data["sig"] with core.human_sig
-def ensure_key(): ...                           # creates human.key (mode 0600) if absent; called by `gf serve` and the terminal answer path
+def ensure_key(actor=None, fresh=False): ...    # human-only; fresh always replaces the key (mode 0600)
 
 # learn.py
 def add(project_root, run_dir, node_id, text, review_when, paths, tags, actor): ...   # returns the constraint dict
@@ -750,8 +750,20 @@ Every disk plan load verifies its bytes against the corresponding `plan.set.plan
 
 During a structural re-plan, running work can continue editing and submit its result, and finished results remain accepted. Checks, routing, worker briefs, merge and all gates refuse with `plan_not_approved` until the new plan is approved. They never combine preserved work with unapproved integration commands. Replanning cannot rewrite running/submitted/passed node contracts or their inputs.
 
-`plan set` snapshots the project's promoted checks into `promoted_checks` and applicable constraints into `constraints` before computing identity. Worker briefs use that frozen constraint snapshot; planning briefs can inspect newer constraints. Promotions and retirements affect the next approved plan only; existing approvals keep their exact snapshot. The dashboard lists these commands alongside integration checks. `brief --plan` may show pending promotions for planning, but does not dispatch or execute them. Legacy runs keep their original live fixed-check behavior until explicitly opted in.
+`plan set` snapshots the project's promoted checks into `promoted_checks` and applicable constraints into `constraints` before computing identity. Worker briefs use that frozen constraint snapshot; planning briefs can inspect newer constraints. Promotions and retirements affect the next approved plan only; existing approvals keep their exact snapshot. The dashboard lists these commands alongside integration checks. `brief --plan` may show pending promotions for planning, but does not dispatch or execute them. Legacy runs cannot execute before re-posting their plan; that revision freezes fixed checks and constraints too.
 
 An answered but unverified approval stays blocked and is shown separately from a sent-back plan. Return to the original key/home if it differs; ask the coordinator to re-post the plan and answer its new question. `plan set` returns `show` (and MCP's open instruction) only when that approval is open. SIGTERM and SIGHUP close the dashboard and remove only its own `server.json`.
 
 New `plan.set` events also record `node_counts` from `plan.node_counts`, the same function used by dashboard totals. Historical events without those counts show a neutral total item count. Plan approval answers in the timeline say that the plan was authorized, rather than describing them as acceptance of a completed result.
+
+### Approval integrity and same-account limits
+
+Every executable plan load validates the full schema, uniqueness, dependencies and effective lanes before any CLI, brief, check, gate, MCP or dashboard use. Invalid plans fail with `plan_tampered`; the dashboard shows a warning and no executable cards. All executable node lookups share `plan.node_index` / `node_by_id`. Run-level integration checks, promoted checks and constraints are included in the structural identity.
+
+Both answer and re-pin signatures bind the resolved project root path and run directory name computed at verification time. Moving or renaming a project directory invalidates approvals; the person approves once more after the leader re-posts the run's current plan. Copying the log and plan to another project or run cannot transfer consent. The CLI reports `project_moved`; the dashboard explains the same recovery.
+
+For human-check, lane-3, trajectory and hold decisions, the signed question includes the complete submission (including commit) and SHA-256 hashes of the files and check evidence shown to the person. Gate and merge recheck those bindings and refuse `approval_changed` if they differ. With worktree isolation, the recorded commit is the commit that can be merged under that approval. **Shared-tree mode cannot bind file contents beyond the recorded evidence hashes.** Unattached files, commands reading the environment, and changes after a check are not made immutable by an approval. File hashes are not a filesystem snapshot or a defense against a concurrent malicious writer.
+
+Only the latest current plan question may authorize execution. A later `plan.set` revision or later send-back prevents reuse even if `decision.superseded` lines are removed. An identical re-post does not append `plan.set`. Log truncation or rollback of the entire run to an older, genuinely approved state is still possible: there is no external monotonic counter or tamper-proof audit log. A writer without a forged signature can delete history, falsify unsigned work/check/gate events, alter display-only wording, deny service, change unbound files, or roll back to an earlier approved contract at the same location. They cannot obtain a verified approval for a different executable contract, moved run, or changed bound submission merely by editing its logged hash, identity or fingerprint. Deleting bound questions/answers removes that binding history; unsigned work events and direct Git or shell commands are not a security boundary. Merge integrates submitted work before its final gate, so it is not proof that every result has passed human review. An adversarial file writer can also replace the program itself.
+
+Agents must never read or WRITE `human.key`, including planting bytes without reading the old key. First-use pinning cannot be made safe on a shared account; a key planted before the first human answer is an accepted same-account limit. `key repin` repairs that case by generating new random bytes, which also invalidates approvals in other runs pinned to the prior global key. `setup` under an agent role and dashboard startup do not create the key. The key is created at the human answer entry point or by an explicitly human setup/re-pin.

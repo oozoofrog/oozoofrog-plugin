@@ -41,7 +41,7 @@ def build_demo_run(gf_home, project_dir):
     git('-c', 'user.name=Dashboard demo', '-c', 'user.email=demo@example.invalid',
         '-c', 'commit.gpgsign=false', 'commit', '-q', '--allow-empty', '-m', 'Demo foundation')
     head = git('rev-parse', 'HEAD').decode().strip()
-    decisions.ensure_key()
+    decisions.ensure_key({'role': 'human'})
     run = legacy_run(project, 'dashboard-demo', ACTOR)
     context = {'why': '처음 읽는 사람이 따라 할 수 있는지는 직접 읽어 주셔야 해요.',
                'if_approved': '읽기 쉬운 설명으로 받아들이고 내보내기를 준비해요.',
@@ -295,9 +295,9 @@ for(const status of ['running','submitted','awaiting_approval','replan']) {
 assert.equal(displayState({id:'work',status:'running',attempts:2},[]),'retrying');
 for(const language of ['en','ko']) {
   const failed=checkWording({id:'screen',title:'A screen exists',result:'failed'},language);
-  assert(failed.includes('—')); assert(failed.includes('A screen exists'));
+  assert(failed.startsWith(language==='ko'?'통과 못 함 · ':'Did not pass · ')); assert(failed.includes('A screen exists'));
   assert(checkWording({id:'screen',title:'A screen exists',result:'passed'},language).startsWith('✓'));
-  assert(checkWording({id:'screen',title:'A screen exists',result:'failed'},language,2).includes('—'));
+  assert(checkWording({id:'screen',title:'A screen exists',result:'failed'},language,2).includes(' · '));
   assert(!checkTitle({id:'scope',title:'scope'},language).includes('scope'));
 }
 """)
@@ -466,14 +466,14 @@ const settle=async()=>{ for(let i=0;i<12;i++) await new Promise(setImmediate); }
 await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64')+'#dom'); await settle();
 const get=id=>document.getElementById(id);
 assert.equal(document.documentElement.lang,'en','plan language must override Korean browser');
-assert.match(get('map').querySelector('.overview-note').textContent,/Overview\s+Show details/,'semantic controls follow the plan language');
+assert.match(get('map').querySelector('.overview-note').textContent,/Compact\s+Show details/,'semantic controls follow the plan language');
 // The graph opens first, and a waiting decision is answered from its card.
 assert.equal(get('flow').hidden,false); assert.equal(get('home').hidden,true);
-assert.match(get('map').textContent,/d7 · Read and decide/);
+assert.match(get('attention').textContent,/d7/);
 assert.equal(get('panel').hidden,true,'no idle legend occupies the graph');
 assert.equal(get('attention').hidden,false);
 const phoneCard=get('phone-flow').querySelector('.node-card');
-phoneCard.rect={x:12,y:786,width:350,height:166,bottom:952};docEvents['window:scroll']();assert.equal(phoneCard.style.visibility,'hidden');
+phoneCard.rect={x:12,y:786,width:350,height:166,bottom:952};docEvents['window:scroll']();assert.equal(phoneCard.style.visibility,'visible');
 phoneCard.rect={x:12,y:420,width:350,height:166,bottom:586};docEvents['window:scroll']();assert.equal(phoneCard.style.visibility,'visible');
 assert.match(get('attention').textContent,/d7/);
 assert.match(get('attention').textContent,/Approve hold for work/);
@@ -484,15 +484,15 @@ docEvents.visibilitychange(); await settle();
 assert.match(get('attention').textContent,/Which language\?/,'unbound decisions are visible above the graph');
 get('attention').querySelectorAll('button').at(-1).click();
 assert(get('answer-text'),'unbound decision opens in one click');
-get('answer-actions').children.at(-1).click();
+get('decision').querySelector('button').click();
 live.decisions.pop();
 live.decisions.push({...d,id:'d8',node:null,node_title:null,question:'Which language?',kind:'direction',purpose:'direction',failed:[],files:[],verified:[],worker_note:null});
 docEvents.visibilitychange();await settle();get('attention').querySelectorAll('button').at(-1).click();
-assert.equal(get('decision').querySelectorAll('details').find(e=>e.className==='evidence').hidden,true,'a question without evidence must not advertise an empty disclosure');
-get('answer-actions').children.at(-1).click();live.decisions.pop();
+assert.equal(!get('decision').querySelectorAll('details').find(e=>e.className==='evidence') || get('decision').querySelectorAll('details').find(e=>e.className==='evidence').hidden,true,'a question without evidence must not advertise an empty disclosure');
+get('decision').querySelector('button').click();live.decisions.pop();
 const saved=structuredClone(live);
 live.decisions[0]={...d,purpose:'human_check',failed:[],files:[],has_evidence:false};live.timeline=[];
-docEvents.visibilitychange();await settle();get('decision-list').querySelector('button').click();
+docEvents.visibilitychange();await settle();get('attention').querySelectorAll('button').at(-1).click();
 const emptyActions=get('answer-actions').querySelectorAll('button[data-outcome]');
 assert.equal(emptyActions[0].dataset.outcome,'revision_requested','request evidence first');
 assert.equal(emptyActions[1].className,'','acceptance is secondary');
@@ -500,7 +500,7 @@ assert.equal(emptyActions[1].disabled,true,'empty acceptance needs explicit conf
 assert.match(get('decision').textContent,/There is nothing here to judge by/);
 get('blind-confirm').checked=true;get('blind-confirm').dispatchEvent({type:'change'});
 assert.equal(emptyActions[1].disabled,false,'explicit confirmation retains the ability to accept');
-get('answer-actions').children.at(-1).click();live=saved;docEvents.visibilitychange();await settle();
+get('decision').querySelector('button').click();live=saved;docEvents.visibilitychange();await settle();
 
 const originalNode=structuredClone(live.nodes[0]);
 live.nodes[0].attempts=2;live.nodes[0].laps=['returned','current'];live.nodes[0].returned_reasons=[['Unit passes']];
@@ -519,13 +519,13 @@ get('home-tab').click(); assert.equal(get('home').hidden,false); assert.equal(ge
 const entries=get('home').querySelectorAll('li').filter(e=>e.id);
 assert.deepEqual(entries.map(e=>e.id),['e9','e3']);
 const words=e=>e.textContent;
-assert.match(words(entries[1]),/attempt 1 came back/); assert.match(words(entries[1]),/Unit passes/); assert.match(words(entries[1]),/run tests/); assert.match(words(entries[1]),/T3 thread 01234567/);
+assert.match(words(entries[1]),/attempt 1 came back/); assert.match(words(entries[1]),/Unit passes/); assert.match(words(entries[1]),/run tests/); assert.match(words(entries[1]),/Linked conversation/);
 assert.equal(entries[1].querySelector('details').open,true,'a returned attempt shows its checks without a click');
 get('flow-tab').click(); assert.equal(get('flow').hidden,false); assert.equal(get('home').hidden,true);
 // Open through the HTML fallback; map and panel route to the same openDecision.
-get('decision-list').querySelector('button').click();
+get('attention').querySelectorAll('button').at(-1).click();
 assert.match(get('decision').textContent,/attempt 1 came back/);
-assert.match(get('decision').textContent,/Unit passes — did not pass/);
+assert.match(get('decision').textContent,/Did not pass · Unit passes/);
 assert.match(get('decision').textContent,/a.py/);
 assert.equal(get('flow-tab')['aria-pressed'],'false','reading must not claim to be the graph');
 const input=get('answer-text'), actions=get('answer-actions'), buttons=actions.querySelectorAll('button[data-outcome]');
@@ -600,6 +600,12 @@ live.plan_approval={...approval,id:'d21'};live.decisions=[live.plan_approval];do
 assert.equal(get('plan-changes').value,'');
 live.plan_approval={...live.plan_approval,status:'answered',verified:true,outcome:'approved'};live.decisions=[];
 docEvents.visibilitychange();await settle();assert.equal(get('attention').hidden,true);
+// A problem is actionable on the record tab too, and existing work asks to continue.
+live.location_mismatch=true;docEvents.visibilitychange();await settle();get('home-tab').click();
+assert.equal(get('attention').hidden,false);assert.match(get('home').textContent,/project/i);
+live.location_mismatch=false;live.plan_approval={...approval,id:'d30'};live.decisions=[live.plan_approval];live.has_work=true;
+docEvents.visibilitychange();await settle();assert.match(get('attention').textContent,/Continue/);
+assert.match(get('attention').querySelector('.plan-actions').textContent,/Continue/);
 """)
 
 
@@ -636,10 +642,11 @@ assert.equal(statusGlyph('running'),'▶');
     def test_card_history_never_competes_with_current_status(self):
         js=(S / 'scripts/graphflow/page.js').read_text()
         card=js.split('function nodeCard(',1)[1].split('function createMap()',1)[0]
-        self.assertIn("t('returnedShort'",card)
+        self.assertIn("t('returnedActor'",card)
+        self.assertIn('returnedLine(n)',card)
         self.assertNotIn('checkWording',card)
         self.assertNotIn('failure-mark',card)
-        self.assertLess(card.index('statusLine'),card.index("t('returnedShort'"))
+        self.assertLess(card.index('statusLine'),card.index('returnedLine(n)'))
 
     def test_real_demo_and_decision_view(self):
         with tempfile.TemporaryDirectory() as directory, mock.patch.dict(os.environ):

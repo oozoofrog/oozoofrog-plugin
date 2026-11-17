@@ -18,7 +18,7 @@ def _git(project, *args, check=True):
 
 
 def _token(st):
-    return (st["basis"], st["attempts"], (st["submission"] or {}).get("id"))
+    return (st["basis"], st["attempts"], state.submission_binding(st["submission"]))
 
 
 def _identity(project):
@@ -45,6 +45,7 @@ def merge(run_dir, node_ids, actor):
         nodes = {nid: plan.node_by_id(tx.plan, nid) for nid in node_ids}
         captured = {}
         for nid in node_ids:
+            state.require_submission_binding(derived, nid)
             st = derived["nodes"][nid]
             if not graph.has_current_submission(st) or not (st["submission"] or {}).get("commit"):
                 raise core.GFError("no_commit", "%s has no current committed submission" % nid,
@@ -90,7 +91,11 @@ def merge(run_dir, node_ids, actor):
 
     _before_commit(run_dir)
     with store.transaction(run_dir) as tx:
-        current = state.derive(tx.plan, tx.events)["nodes"]
+        current_state = state.derive(tx.plan, tx.events)
+        state.require_plan_approval(current_state)
+        for nid in node_ids:
+            state.require_submission_binding(current_state, nid)
+        current = current_state["nodes"]
         for nid in node_ids:
             if (tx.revision != revision or nid not in current or
                     _token(current[nid]) != _token(captured[nid])):

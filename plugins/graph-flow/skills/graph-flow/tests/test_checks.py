@@ -342,6 +342,11 @@ class CmdTests(ChecksCase):
                 fixed = dict(CMD, id="fixed", run="touch '%s'" % marker, cwd=cwd)
                 (self.repo / ".graph-flow" / "checks.json").write_text(
                     json.dumps({"checks": [fixed]}))
+                if cwd in ("../..", "/"):
+                    from graphflow import plan
+                    self.assertTrue(plan.validate(dict(store.read_plan(self.run), promoted_checks=[fixed])))
+                    self.assertFalse(marker.exists())
+                    continue
                 refresh_contract(self.run, promoted_checks=[fixed], constraints=[])
                 exc = self.error("bad_cwd", self.run_cmd, fixed, "gate", "_run")
                 self.assertEqual(exc.exit_code, core.EXIT_USAGE)
