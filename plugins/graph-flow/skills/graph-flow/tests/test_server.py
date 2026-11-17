@@ -291,7 +291,7 @@ class ServerTests(unittest.TestCase):
         view = server._view(current, derived, events, project)
         for decision in view["decisions"]:
             self.assertEqual(decision["failed"], ["The result is complete",
-                "A check without a description did not pass.", "A case is missing"])
+                "A check without a description did not pass.", "A case is missing (review · correctness)"])
             self.assertEqual(decision["verified"], [])
             self.assertEqual(decision["trajectory_reasons"], ["timed_out", "left_its_files"])
         # A later successful result replaces that failure, but not the timeout fact.
@@ -302,7 +302,7 @@ class ServerTests(unittest.TestCase):
         view = server._view(current, derived, events, project)
         self.assertEqual(view["decisions"][0]["verified"], ["The result is complete"])
         self.assertEqual(view["decisions"][0]["failed"], [
-            "A check without a description did not pass.", "A case is missing"])
+            "A check without a description did not pass.", "A case is missing (review · correctness)"])
         derived["nodes"]["build"]["reviews"][0]["target_submission"] = -1
         self.assertNotIn("A case is missing", server._view(current, derived, events, project)["decisions"][0]["failed"])
 
@@ -322,8 +322,8 @@ class ServerTests(unittest.TestCase):
                     d = body["view"]["decisions"][0]
                     self.assertIsNone(d["worker_note"])
                     expected = [uncertainty] if isinstance(uncertainty, str) else ["Readable note"] if isinstance(uncertainty, list) else []
-                    self.assertEqual(d["unverified"], expected)
-                    self.assertEqual(d["failed"], ["Readable finding"] if isinstance(findings, list) else [])
+                    self.assertEqual(d["unverified"], [])  # Free questions never inherit gate evidence.
+                    self.assertEqual(d["failed"], [])
                     with store.transaction(run) as tx:
                         tx.append("gate.verdict", {"node": "build", "attempt": "bad", "submission": event["seq"],
                                   "verdict": "reject"}, ACTOR)
@@ -516,7 +516,7 @@ class ServerTests(unittest.TestCase):
         self.assertTrue(all(v is None for v in data["view"].pop("plan_approval").values()))
         data["view"].pop("recovery_identity")
         self.assertEqual(data["view"].pop("run_contract"), {})
-        self.assertEqual(data["view"], {"title": "", "language": "en", "nodes": [], "edges": [], "decisions": [], "answered": [],
+        self.assertEqual(data["view"], {"title": "", "summary": "", "context": {}, "requirements": [], "language": "en", "nodes": [], "edges": [], "decisions": [], "answered": [],
                                       "lessons": [], "stale_decisions": [], "complete": False, "run": "empty",
                                       "plan_counts": {"work": 0, "review": 0, "decision": 0, "checks": 0, "decisions": 0},
                                   "plan_error": False, "key_mismatch": False, "location_mismatch":False, "has_work":False, "goal": "", "planned_questions": [],
@@ -573,7 +573,7 @@ class ServerTests(unittest.TestCase):
                 else:
                     append("decision.ask", node=nid, submission=sid + 999, kind="review",
                            question="Stale?", purpose="human_check", check="wording")
-                    ask = append("decision.ask", node=nid, submission=sid, kind="review",
+                    ask = append("decision.ask", issuer="gate", node=nid, submission=sid, kind="review",
                                  question="Does this wording fit?", purpose="human_check", check="wording",
                                  evidence={"command": None, "files": [], "checks": []})
                     append("gate.verdict", node=nid, attempt=1, submission=sid, verdict="needs_approval")
@@ -592,7 +592,7 @@ class ServerTests(unittest.TestCase):
         status, data = self.json_request("GET", "/api/run?" + urlencode({"project": str(project), "run": run.name}))
         self.assertEqual(status, 200)
         view = data["view"]
-        self.assertEqual(set(view), {"title", "language", "nodes", "edges", "decisions", "answered", "lessons", "counts", "complete",
+        self.assertEqual(set(view), {"title", "summary", "context", "requirements", "language", "nodes", "edges", "decisions", "answered", "lessons", "counts", "complete",
                                      "run", "project", "timeline", "plan_approval", "plan_counts", "plan_error", "key_mismatch", "location_mismatch", "has_work",
                                  "goal", "planned_questions", "integration_checks", "promoted_checks", "superseded", "constraints", "key_recovery", "legacy", "replaced_unverifiable", "stale_decisions", "recovery_identity", "run_contract"})
         self.assertEqual(view["title"], raw["title"])
@@ -623,9 +623,9 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(view["decisions"], [{"id": "d%d" % ask, "node": "human", "node_title": "Human",
                                             "question": "Does this wording fit?", "kind": "review",
                                         "purpose": "human_check", "commit": None, "artifact_hashes": {},
-                                            "context": context, "has_evidence": False,
+                                            "context": {}, "has_evidence": False,
                                             "verified": [], "unverified": ["The wording fits"], "worker_note": None,
-                                        "record_purpose": "human_check", "files": [], "failed": [], "trajectory_reasons": []}])
+                                        "record_purpose": "human_check", "files": [], "failed": [], "failed_reviews": 0, "free": False, "author_context": context, "trajectory_reasons": []}])
         self.assertEqual(view["lessons"], [{"text": active["text"], "node_title": "Done"},
                                          {"text": unknown["text"], "node_title": None}])
         self.assertEqual(view["counts"], {"done": 1, "doing": 1, "waiting": 2, "needs_you": 1, "returned": 1, "returns_total": 1})
@@ -672,13 +672,13 @@ class ServerTests(unittest.TestCase):
              "question": "Proceed?", "decision_kind": "direction", "context": {"why": "The direction matters"}}]}
         current, _ = plan.normalize(raw)
         events = [{"seq": 1, "type": "decision.ask", "data": {
-            "node": "choice", "kind": "direction", "question": "Proceed?", "purpose": "node"}},
+            "issuer": "gate", "node": "choice", "kind": "direction", "question": "Proceed?", "purpose": "node"}},
                   {"seq": 2, "type": "decision.ask", "data": {
                       "node": None, "kind": "information", "question": "Which audience?", "purpose": "free"}},
                   {"seq": 3, "type": "decision.answer", "data": {"id": "d2"}}]
         derived = state.derive(current, events)
         view = server._view(current, derived, events, self.projects[0])
-        self.assertEqual(view["decisions"][0]["context"], raw["nodes"][0]["context"])
+        self.assertEqual(view["decisions"][0]["author_context"], raw["nodes"][0]["context"])
         self.assertEqual(view["decisions"][0]["node_title"], "choice")
         self.assertEqual(view["decisions"][0]["purpose"], "direction")
         self.assertEqual(view["nodes"][0]["laps"], [])
@@ -706,8 +706,13 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(view["counts"], {"done": 1, "doing": 0, "waiting": 0, "needs_you": 0, "returned": 0, "returns_total": 0})
 
     def file_decision(self, paths):
-        return recorded_question(self.runs[0], "review", "Read the files", "build", None,
-                             "free", {"files": paths}, ACTOR)["id"]
+        # A gate-owned reader includes the submitted files; free questions only list explicit attachments.
+        with store.transaction(self.runs[0]) as tx:
+            sub = state.derive(tx.plan, tx.events)["nodes"]["build"]["submission"]
+            event = tx.append("decision.ask", {"issuer": "gate", "kind": "review",
+                "question": "Read the files", "node": "build", "submission": sub["id"],
+                "purpose": "human_check", "evidence": {"files": paths}}, ACTOR)
+        return "d%d" % event["seq"]
 
     def test_file_reader_happy_path_and_view_list(self):
         project, run = self.projects[0], self.runs[0]

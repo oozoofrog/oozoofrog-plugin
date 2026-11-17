@@ -30,6 +30,9 @@ def _ask(node, node_state, purpose, check=None, kind="review", question=None, ro
     submission = node_state.get("submission") or {}
     human = next((c for c in node.get("checks", []) if c.get("id") == check), {})
     context = human.get("context", {}) if purpose == "human_check" else node.get("context", {})
+    author_context = copy.deepcopy(context)
+    if purpose in ("hold", "trajectory", "lane3"):
+        context = {}
     prompt = human.get("prompt") or human.get("title") or node.get("goal", "")
     question = (node.get("question") if purpose == "node" else prompt if purpose == "human_check"
                 else question or "Approve %s: %s?" % (purpose, node.get("goal", node["id"])))
@@ -59,6 +62,7 @@ def _ask(node, node_state, purpose, check=None, kind="review", question=None, ro
                 "checks": {cid: {"loop": copy.deepcopy(slots["loop"])}
                            for cid, slots in node_state.get("checks", {}).items() if slots.get("loop")},
                 "context": copy.deepcopy(context),
+                "author_context": author_context,
                 "contract": planmod.node_contract(node),
                 "records": records, "rollbacks": rollbacks,
                 "trajectory_clean": node_state.get("trajectory_clean", True)}}
@@ -122,6 +126,11 @@ def evaluate(plan, state, node_id, gate_results, integration_results, rollbacks)
             host_results.append(result)
     reviews = [r for r in st.get("reviews", [])
                if r.get("status") == "passed" and r.get("target_submission") == submission]
+    awaited = [n for n in plan.get("nodes", []) if n.get("kind") == "review" and n.get("target") == node_id
+               and not any(r.get("node") == n["id"] for r in reviews)]
+    if awaited:
+        return dict(verdict("unverified", "R3"), message="Awaiting planned review: " +
+                    ", ".join("%s (%s)" % (n.get("title") or n.get("goal"), n["id"]) for n in awaited))
     lane = node.get("effective_lane", node["lane"])
     if node["kind"] == "work" and lane >= 2:
         family = (st.get("assignment") or {}).get("family")
@@ -350,6 +359,9 @@ def gate_final(run_dir, cwd, actor):
             if commit and (not st.get("merged_head") or
                            _git(root, "merge-base", "--is-ancestor", commit, "HEAD").returncode):
                 raise core.GFError("not_merged", "%s is not merged into project HEAD" % nid, core.EXIT_STATE)
+        pending = [nid for nid, st in current["nodes"].items() if st["status"] != "passed"]
+        if pending and data["result"] == "passed":
+            data.update(result="unverified", message="Awaiting planned work, reviews or decisions: " + ", ".join(pending))
         tx.append("gate.final", data, actor)
     return data
 

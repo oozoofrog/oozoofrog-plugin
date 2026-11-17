@@ -183,7 +183,7 @@ def validate(plan):
             if not isinstance(check_id, str) or not _ID.fullmatch(check_id):
                 problem("V2", node, "malformed check id: %r" % check_id)
             elif check_id in seen:
-                problem("V2", node, "duplicate check id: %s" % check_id)
+                problem("V2", node, "duplicate check id: %s (check integration_checks and .graph-flow/checks.json; use distinct ids)" % check_id)
             if isinstance(check_id, str):
                 seen.add(check_id)
             kind = check.get("type")
@@ -260,6 +260,8 @@ def validate(plan):
             known(item, "id text" if field_name == "requirements" else
                   "id text status scope derived_from review_when created", None)
             field(item, "text", str, None)
+            if field_name == "constraints" and "status" in item and item["status"] not in ("active", "promoted"):
+                problem("V1", None, "plan constraints must be active or promoted; remove retired constraints")
             if field_name == "constraints" and "scope" in item:
                 scope = item["scope"]
                 field(item, "scope", dict, None)
@@ -315,6 +317,7 @@ def validate(plan):
         for check in _list(node.get("checks")):
             if isinstance(check, dict) and check.get("type") not in allowed_checks.get(str(kind), ()):
                 problem("V5", node_id, "checks type %s is not enforced on %s nodes" % (check.get("type"), kind))
+        field(node, "requirement", str, node_id, required=False)
         if "context" in node:
             context(node, node_id)
         if kind == "work" and not _list(node.get("checks")):

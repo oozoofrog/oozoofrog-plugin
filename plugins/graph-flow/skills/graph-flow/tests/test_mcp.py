@@ -159,6 +159,10 @@ class MCPTests(unittest.TestCase):
             (self.repo / 'a.py').write_text('value = 1\n')
             self.assertEqual(self.call('check_run', {'node': 'a', 'check': 'unit'})['result'], 'passed')
             self.call('node_submit', {'node': 'a'})
+        self.call('node_start', {'node': 'r'})
+        with mock.patch.dict(os.environ, GF_ROLE='reviewer', GF_NODE='r'):
+            self.call('review_submit', {'node': 'r', 'verdict': 'pass', 'findings': []})
+        self.call('gate_node', {'node': 'r'})
         self.assertEqual(self.call('gate_node', {'node': 'a'})['verdict'], 'pass')
         self.assertEqual(self.call('run_status', {'node': 'a'})['node']['status'], 'passed')
         self.call('gate_node', {'final': True})

@@ -69,8 +69,8 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;font:13px/1.7 
 #map[data-level="overview"] .map-toolbar{grid-template-columns:32px 32px max-content 40px max-content minmax(0,1fr)}
 .overview-note{display:inline-flex;gap:8px;align-items:center;margin-left:auto;color:var(--ink);font-size:12px}.overview-note button{min-height:26px;padding:1px 8px;font-size:12px}
 .overview-card{padding:0}.overview-card .node-header{height:100%;padding:10px;grid-template-columns:18px minmax(0,1fr);align-content:center;align-items:center;gap:4px 6px}
-.overview-card .node-title{font-size:14px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.overview-card .status-glyph{font-size:16px}
-.overview-marks{grid-column:1/-1;font-size:14px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
+.overview-card .node-title{font-size:var(--map-text,14px);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.overview-card .status-glyph{font-size:16px}
+.overview-marks{grid-column:1/-1;font-size:var(--map-text,14px);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
 #panel{min-height:0;overflow-y:auto;padding-bottom:40px}#panel::after{content:"";display:block;height:8px;flex:none}.node-essentials code{font-family:ui-monospace,monospace}.checks code{font:inherit;font-family:ui-monospace,monospace;overflow-wrap:anywhere}
 
 /* Common interaction and warning treatments, shared across views. */
@@ -101,7 +101,7 @@ button:disabled,button.primary:disabled,.plan-actions button:disabled{background
 .node-card:has(.preapproval-note){border-color:#71839b}.preapproval-note{color:#46576e}
 #node-list{display:block;max-width:960px;margin:auto}#node-list>.card{margin-bottom:16px}#node-list>.card>button{position:sticky;top:105px;background:white;z-index:2;font-weight:600}#node-list h3{font-size:13px;color:var(--muted)}
 .plan-diff{overflow-wrap:anywhere;max-height:220px;overflow:auto;font-size:14px}.plan-change-list,.old-results{grid-column:1/-1;max-height:220px;overflow:auto}
-.change-preview{font-size:13px!important;color:#244e8a;white-space:normal!important}.own-check-note{border-left:3px solid #536174;padding-left:10px}
+.change-preview{font-size:13px!important;color:#244e8a;white-space:normal!important}.own-check-note{border-left:3px solid var(--amber);padding:8px 10px;background:#fff9ed;color:var(--amber)}.own-check-mark{color:var(--amber);font-size:14px}.overview-card .own-check-mark{position:absolute;right:5px;top:4px}.repeated-note{list-style:none}
 @media(min-width:761px){#decision .reading{max-height:calc(100dvh - 130px);overflow:auto}#answer-actions{position:sticky;bottom:-24px;background:white;padding:12px 0;z-index:3}#decision .reading{scroll-padding-bottom:150px}}
 @media(max-width:760px){.plan-actions .muted{display:block;font-size:12px;margin:3px 0;line-height:1.4}.plan-actions{padding:8px 12px}body:has(.plan-actions){padding-bottom:125px}}
 .node-card.working{border-color:#7ea4c8}.node-card.working .overview-marks{color:#245b8e}

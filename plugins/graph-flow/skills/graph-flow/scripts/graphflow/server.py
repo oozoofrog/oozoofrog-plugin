@@ -342,23 +342,37 @@ def _node_checks(node):
     return checks
 
 
-def _plan_summary(plan):
+def _plan_summary(plan, derived=None):
     nodes = plan.get("nodes", [])
     questions = []
     from .gate import _ask
+    def add(node, when, purpose, kind="review", check=None):
+        request = _ask(node, {}, purpose, kind=kind, check=check)
+        question = {"node": node["id"], "when": when, "kind": kind, "question": request["question"]}
+        matches = [d for d in (derived or {}).get("decisions", {}).values()
+                   if d.get("node") == node["id"] and d.get("issuer") == "gate"
+                   and d.get("purpose") == purpose and d.get("check") == check
+                   and d.get("status") == "answered" and d.get("verified") and not d.get("stale")]
+        if matches:
+            answer = max(matches, key=lambda d: d["seq"])
+            question.update(answered=True, answer=answer.get("answer"), outcome=answer.get("outcome"))
+        questions.append(question)
+
     for node in nodes:
         if node.get("kind") == "decision":
-            questions.append({"node": node["id"], "when": "node", "kind": node.get("decision_kind"), "question": node.get("question")})
+            add(node, "node", "node", node.get("decision_kind"))
         for check in node.get("checks", []):
             if check.get("type") == "human":
-                questions.append({"node": node["id"], "when": "after_work", "kind": "review", "question": _ask(node, {}, "human_check", check=check["id"])["question"]})
+                add(node, "after_work", "human_check", check=check["id"])
         if node.get("effective_lane", node.get("lane")) == 3 and node.get("kind") != "decision":
-            questions.append({"node": node["id"], "when": "after_work", "kind": "authorization", "question": _ask(node, {}, "lane3", kind="authorization")["question"]})
+            add(node, "after_work", "lane3", "authorization")
+        if node.get("effective_lane", node.get("lane")) == 2 and node.get("kind") == "work":
+            add(node, "trajectory", "trajectory")
     from .plan import node_counts
     counts = node_counts(nodes)
     counts.update(checks=sum(len(_node_checks(n)) for n in nodes) +
                   len(plan.get("integration_checks", [])) + len(plan.get("promoted_checks", [])),
-                  decisions=len(questions))
+                  decisions=sum(not q.get("answered") for q in questions))
     return counts, questions
 
 
@@ -448,6 +462,7 @@ def _view(current, derived, events, project):
                        and r.get("status") == "passed" and submission is not None
                        and r.get("target_submission") == submission for r in _objects(st["reviews"]))
         view["nodes"].append({"id": nid, "title": title(nid),
+                              "context": node.get("context", {}), "requirement": node.get("requirement"),
                               "summary": _text(node.get("summary"), _text(node.get("goal"))), "goal": node.get("goal", ""),
                               "owns": list(node.get("owns", [])), "needs": list(node.get("needs", [])),
                               "reads": list(node.get("reads", [])), "declared_outputs": list(node.get("outputs", [])),
@@ -513,6 +528,9 @@ def _view(current, derived, events, project):
                    if k in ("why", "if_approved", "if_rejected", "undo") and _text(v)}
         evidence = _mapping(decision.get("evidence"))
         context = evidence.get("context", context)
+        author_context = evidence.get("author_context") or context
+        if decision.get("issuer") == "gate":
+            context = {}
         st = derived["nodes"].get(decision["node"]) or {}
         submission = _mapping(st.get("submission"))
         verified, unverified, failed = [], [], []
@@ -530,10 +548,12 @@ def _view(current, derived, events, project):
                 wording = _text(check.get("title"), _text(check.get("prompt")))
                 if wording:
                     unverified.append(wording)
+        failed_reviews = 0
         for review in _objects(st.get("reviews")):
             if (submission.get("id") is not None and review.get("target_submission") == submission["id"]
                     and review.get("verdict") == "fail"):
-                failed.extend(_finding_text(review))
+                failed_reviews += len(_finding_text(review))
+                failed.extend("%s (%s · %s)" % (text, nodes.get(review.get("node"), {}).get("title") or nodes.get(review.get("node"), {}).get("goal") or review.get("node"), nodes.get(review.get("node"), {}).get("lens", "")) for text in _finding_text(review))
         unverified.extend(_strings(submission.get("low_confidence")))
         view["decisions"].append({"id": decision["id"], "node": decision["node"],
                                   "asked": _text(_mapping(asks.get(decision.get("seq"))).get("ts"), None),
@@ -548,10 +568,18 @@ def _view(current, derived, events, project):
                                   "commit": (decision.get("submission_binding") or {}).get("commit"),
                                   "artifact_hashes": decision.get("artifact_hashes") or {},
                                   "files": _decision_files(decision, derived, project, _strings(_mapping(nodes.get(decision["node"])).get("owns"))),
+                                  "free": decision.get("issuer") != "gate" and decision.get("purpose") != "plan_approval",
+                                  "author_context": author_context,
                                   "context": context, "verified": verified, "unverified": unverified,
-                                  "failed": failed, "trajectory_reasons": _trajectory_reasons(st, observations),
+                                  "failed": failed, "failed_reviews": failed_reviews, "trajectory_reasons": _trajectory_reasons(st, observations),
                                   "worker_note": _text(submission.get("notes"), None),
                                   "has_evidence": any(evidence.get(k) for k in ("command", "files", "checks"))})
+    for decision in view["decisions"]:
+        if decision["free"]:
+            original = derived["decisions"][decision["id"]]
+            decision.update(verified=[], unverified=[], failed=[], contract=None, worker_note=None,
+                            context=_mapping(original.get("evidence")).get("context", {}), author_context={},
+                            files=_decision_files(dict(original, node=None), derived, project))
     view["counts"]["needs_you"] = len(opened)
     for decision in derived["decisions"].values():
         if decision.get("status") == "answered":
@@ -600,7 +628,10 @@ def _view(current, derived, events, project):
             not (approval and approval.get("verified") and approval.get("outcome") == "approved"))
         node["review_needs_correction"] = bool(node.get("kind") == "review" and node["status"] == "rejected")
         node["waiting_for_review_correction"] = any(n.get("target") == node["id"] and n.get("status") == "rejected" for n in view["nodes"])
-    view["plan_counts"], view["planned_questions"] = _plan_summary(current)
+    view["plan_counts"], view["planned_questions"] = _plan_summary(current, derived)
+    view["summary"] = current.get("summary", "")
+    view["context"] = current.get("context", {})
+    view["requirements"] = current.get("requirements", [])
     view["goal"] = current.get("goal", "")
     view["constraints"] = [c["text"] for c in current.get("constraints", [])]
     view["run_contract"] = {k:v for k,v in current.items() if k != "nodes"}

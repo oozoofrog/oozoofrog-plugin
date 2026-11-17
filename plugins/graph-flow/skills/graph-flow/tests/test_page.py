@@ -409,10 +409,11 @@ for (const question of ['Approve deploy for prod?','Approve hold for another?','
 }
 """)
 
-    def test_dom_uses_controller_and_preserves_composing_input_on_refresh(self):
+    def run_dom(self, body):
         self.run_controller(r"""
 class Element {
   constructor(tag) { this.tagName=tag; this.children=[]; this.dataset={}; this.listeners={}; this.hidden=false; this.disabled=false; this.value=''; this._text=''; this.style={setProperty(){}}; this.classList={contains:name=>(this.className||'').split(' ').includes(name),remove:name=>{this.className=(this.className||'').split(' ').filter(c=>c!==name).join(' ');},add:name=>{this.className=((this.className||'')+' '+name).trim();},toggle:(name,on)=>{const classes=new Set((this.className||'').split(' ').filter(Boolean));if(on??!classes.has(name))classes.add(name);else classes.delete(name);this.className=[...classes].join(' ');return classes.has(name);}}; }
+  insertBefore(child,before) { if(child.parent)child.remove();child.parent=this;const i=this.children.indexOf(before);this.children.splice(i<0?this.children.length:i,0,child);return child; }
   prepend(...children) { for(const c of children){if(c.parent)c.remove();c.parent=this;} this.children.unshift(...children); }
   remove() { if(this.parent)this.parent.children=this.parent.children.filter(c=>c!==this); }
   get firstElementChild() { return this.children[0]; }
@@ -463,8 +464,12 @@ globalThis.fetch=async (path,options)=>{
   return {ok:true,json:async()=>path==='/api/projects'?{projects:[{root:first.project,name:'Project',runs:[{id:first.run,status:'open'},{id:second.run,status:'open'}]}]}:{plan:{},view:structuredClone(live),state:{decisions:{}}}};
 };
 const settle=async()=>{ for(let i=0;i<12;i++) await new Promise(setImmediate); };
-await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64')+'#dom'); await settle();
+await import('data:text/javascript;base64,'+Buffer.from(source.replace(/}\s*$/, 'globalThis.surfaceTest={applyView,nodeCard,panel,rowSentence,stateWords,selectNode,planCounts,planFacts,runFacts};\n}')).toString('base64')+'#dom'); await settle();
 const get=id=>document.getElementById(id);
+""" + body)
+
+    def test_dom_uses_controller_and_preserves_composing_input_on_refresh(self):
+        self.run_dom(r"""
 assert.equal(document.documentElement.lang,'en','plan language must override Korean browser');
 assert.match(get('map').querySelector('.overview-note').textContent,/Compact\s+Show details/,'semantic controls follow the plan language');
 // The graph opens first, and a waiting decision is answered from its card.
@@ -476,7 +481,7 @@ const phoneCard=get('phone-flow').querySelector('.node-card');
 phoneCard.rect={x:12,y:786,width:350,height:166,bottom:952};docEvents['window:scroll']();assert.equal(phoneCard.style.visibility,'visible');
 phoneCard.rect={x:12,y:420,width:350,height:166,bottom:586};docEvents['window:scroll']();assert.equal(phoneCard.style.visibility,'visible');
 assert.match(get('attention').textContent,/d7/);
-assert.match(get('attention').textContent,/Approve hold for work/);
+assert.match(get('attention').textContent,/Missing case.*Accept anyway/);
 const before=get('map').querySelectorAll('article'); docEvents.visibilitychange(); await settle();
 assert.deepEqual(get('map').querySelectorAll('article'),before,'unchanged polling preserves card elements');
 live.decisions.push({...d,id:'d8',node:null,node_title:null,question:'Which language?'});
@@ -491,7 +496,7 @@ docEvents.visibilitychange();await settle();get('attention').querySelectorAll('b
 assert.equal(!get('decision').querySelectorAll('details').find(e=>e.className==='evidence') || get('decision').querySelectorAll('details').find(e=>e.className==='evidence').hidden,true,'a question without evidence must not advertise an empty disclosure');
 get('decision').querySelector('button').click();live.decisions.pop();
 const saved=structuredClone(live);
-live.decisions[0]={...d,purpose:'human_check',failed:[],files:[],has_evidence:false};live.timeline=[];
+live.decisions[0]={...d,purpose:'human_check',failed:[],files:[],verified:[],worker_note:null,has_evidence:false};live.timeline=[];
 docEvents.visibilitychange();await settle();get('attention').querySelectorAll('button').at(-1).click();
 const emptyActions=get('answer-actions').querySelectorAll('button[data-outcome]');
 assert.equal(emptyActions[0].dataset.outcome,'revision_requested','request evidence first');
@@ -519,12 +524,12 @@ get('home-tab').click(); assert.equal(get('home').hidden,false); assert.equal(ge
 const entries=get('home').querySelectorAll('li').filter(e=>e.id);
 assert.deepEqual(entries.map(e=>e.id),['e9','e3']);
 const words=e=>e.textContent;
-assert.match(words(entries[1]),/attempt 1 came back/); assert.match(words(entries[1]),/Unit passes/); assert.match(words(entries[1]),/run tests/); assert.match(words(entries[1]),/Linked conversation/);
+assert.match(words(entries[1]),/Came back/); assert.match(words(entries[1]),/Unit passes/); assert.match(words(entries[1]),/run tests/); assert.match(words(entries[1]),/Linked conversation/);
 assert.equal(entries[1].querySelector('details').open,true,'a returned attempt shows its checks without a click');
 get('flow-tab').click(); assert.equal(get('flow').hidden,false); assert.equal(get('home').hidden,true);
 // Open through the HTML fallback; map and panel route to the same openDecision.
 get('attention').querySelectorAll('button').at(-1).click();
-assert.match(get('decision').textContent,/attempt 1 came back/);
+assert.match(get('decision').textContent,/Came back/);
 assert.match(get('decision').textContent,/Did not pass · Unit passes/);
 assert.match(get('decision').textContent,/a.py/);
 assert.equal(get('flow-tab')['aria-pressed'],'false','reading must not claim to be the graph');
@@ -605,7 +610,8 @@ live.location_mismatch=true;docEvents.visibilitychange();await settle();get('hom
 assert.equal(get('attention').hidden,false);assert.match(get('attention').textContent,/project/i);
 live.location_mismatch=false;live.plan_approval={...approval,id:'d30'};live.decisions=[live.plan_approval];live.has_work=true;
 docEvents.visibilitychange();await settle();assert.match(get('attention').textContent,/Continue/);
-assert.match(get('attention').querySelector('.plan-actions').textContent,/Continue/);
+assert.equal(get('attention').querySelector('.plan-actions'),null);assert.match(get('attention').textContent,/View plan/);
+get('flow-tab').click();assert.match(get('attention').querySelector('.plan-actions').textContent,/Continue/);
 """)
 
 
@@ -622,6 +628,50 @@ controller.close();controller.open('d7');assert.equal(controller.canSubmit('appr
 show([{...empty,purpose:'hold',failed:['Failed check']}]);controller.open('d7');
 controller.confirmBlind(true);assert.equal(controller.canSubmit('approved',''),false,'confirmation never bypasses the reading gate');
 controller.openDetails();assert.equal(controller.canSubmit('approved',''),true);
+""")
+
+    def test_f4_f6_f7_f9_f12_f14_readable_consent_surfaces(self):
+        self.run_dom(r"""
+const api=globalThis.surfaceTest;
+const node={...live.nodes[0],kind:'work',lane:2,contract:{},planned_checks:[],context:{why:'Routine formatting; reviewers are too strict'},requirement:'R1'};
+live={...live,nodes:[node],summary:'Plan summary',context:{why:'Plan rationale'},requirements:[{id:'R1',text:'Keep audit records'}],plan_counts:{work:1,review:1,decisions:1},integration_checks:[{id:'all',type:'cmd',command:'true',timeout_s:7,cwd:'.',shell:'bash'}],promoted_checks:[],planned_questions:[{node:'work',when:'trajectory',question:'Accept corrections?'}]};
+api.applyView(live);
+const panel=new Element('section');api.planFacts(panel,node);
+assert.match(panel.textContent,/Plan author’s note.*Routine formatting/);
+assert.match(panel.textContent,/R1/);assert.match(panel.textContent,/different model family/);
+assert.match(panel.textContent,/every lane-2\/3 work gate/);assert.match(panel.textContent,/three attempts/);
+const run=new Element('section');api.runFacts(run);
+assert.match(run.textContent,/Plan summary/);assert.match(run.textContent,/Plan rationale/);assert.match(run.textContent,/R1.*Keep audit records/);assert.match(run.textContent,/every lane-2\/3 work gate/);
+live.nodes.push({...node,id:'q',title:'Question',kind:'decision',status:'pending',attempts:0,contract:{decision_kind:'authorization'}});
+live.decisions=[];api.applyView(live);api.selectNode('q');assert.doesNotMatch(get('panel').textContent,/attempts available/);
+live.decisions=[{...d,free:true,record_purpose:'free',purpose:'direction',kind:'direction',question:'Override security?',asked_by:{role:'worker',session:'worker-17'},files:[],verified:[],unverified:[],failed:[],worker_note:null,context:{},author_context:{},has_evidence:false}];
+api.applyView(live);
+assert.match(get('attention').textContent,/Question from Worker/);assert.match(get('attention').textContent,/accepts or releases nothing/);
+assert.match(get('decision-list').textContent,/accepts or releases nothing/);
+get('attention').querySelectorAll('button').at(-1).click();
+assert.match(get('decision').textContent,/Question from Worker/);
+assert.equal(get('decision').querySelector('.evidence'),null,'free questions never receive gate evidence styling');
+assert.doesNotMatch(get('decision').textContent,/What the gate checked/);
+""")
+
+    def test_b8_state_names_match_every_surface(self):
+        self.run_dom(r"""
+const api=globalThis.surfaceTest;
+const cases=[['notStarted','pending',0],['running','running',1],['retrying','running',2],['submitted','submitted',1],['passed','passed',1],['awaiting','awaiting_approval',1],['returned','rejected',1],['exhausted','replan',3],['held','held',1],['preapprovalSubmitted','submitted',1]];
+for(const lang of ['ko','en'])for(const [name,status,attempts] of cases){
+  const node={id:'work',kind:'work',title:'Work',status,attempts,max_attempts:3,preapproval_submission:name==='preapprovalSubmitted',inputs:[],outputs:[],laps:[],returned_reasons:[],contract:{},planned_checks:[]};
+  const row={id:'e1',seq:1,kind:'attempt',node:'work',attempt:attempts,state:status==='rejected'?'returned':name==='awaiting'?'needs_you':status,checks:[],files:[],findings:[]};
+  live={...live,language:lang,nodes:[node],plan_counts:{work:1},plan_approval:null,decisions:name==='awaiting'?[{...d,node:'work'}]:[],timeline:[row]};
+  api.applyView(structuredClone(live));
+  const expected=api.stateWords(name,lang).name;
+  for(const level of ['detail','overview'])assert(api.nodeCard(node,false,level).textContent.includes(expected),name+' '+level);
+  assert(get('map').querySelector('.state-legend').textContent.includes(expected),name+' legend');
+  assert(get('phone-flow').textContent.includes(expected),name+' phone');
+  assert(get('node-list').textContent.includes(expected),name+' list');
+  api.selectNode('work');if(get('panel').hidden)api.selectNode('work');
+  assert(get('panel').querySelector('.panel-status').textContent.includes(expected),name+' panel');
+  assert(api.rowSentence(row).includes(expected),name+' record: '+api.rowSentence(row));
+}
 """)
 
     def test_selection_keeps_geometry_and_disclosures_use_chevrons(self):
@@ -674,7 +724,7 @@ assert.equal(statusGlyph('running'),'▶');
             self.assertEqual(decision['verified'], ['약속한 결과가 빠짐없이 있어요'])
             self.assertEqual(decision['unverified'], ['처음 읽는 분도 따라 할 수 있어요', '설치 순서가 처음 쓰는 분께 자연스러운지는 확인하지 못했어요.'])
             self.assertEqual(decision['worker_note'], '설치 순서 부분은 자신이 없어요.')
-            self.assertTrue(decision['context']['why'])
+            self.assertTrue(decision['author_context']['why'])
             self.assertEqual(decision['files'], [{'name':'guide.txt','path':'guide.txt'}])
             self.assertEqual(view['language'],'ko')
             self.assertEqual(view['nodes'][3]['inputs'], [{'label': '기록 사용법', 'other_title': '기록 저장', 'delivered': True}])

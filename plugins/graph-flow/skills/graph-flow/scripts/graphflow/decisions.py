@@ -52,7 +52,7 @@ def answer(run_dir, decision_id, outcome, answer_text, source, actor, displayed=
         if decision.get("recorded_location") != store.location(run_dir):
             raise core.GFError("project_moved", "Moving or renaming a project directory or run invalidates approvals. Re-post the plan and approve once more.", core.EXIT_STATE)
         if decision.get("binding_changed"):
-            raise core.GFError("approval_changed", "Submission or evidence changed; submit again before approval.", core.EXIT_STATE)
+            raise core.GFError("approval_changed", "Submission or evidence changed; run the gate again to ask about the current evidence.", core.EXIT_STATE)
         if decision["stale"]:
             raise core.GFError("stale_decision", "decision is stale: %s" % decision_id, core.EXIT_STATE)
         if decision["status"] == "answered":

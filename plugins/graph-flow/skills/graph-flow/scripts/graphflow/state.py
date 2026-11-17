@@ -27,8 +27,12 @@ REVIEWED_STATUSES = ("submitted", "unverified", "held", "awaiting_approval", "pa
 PHASES = ("loop", "gate")
 
 
-def fingerprint(node):
+def fingerprint(node, plan=None):
     node = copy.deepcopy(node)
+    if plan and node.get("kind") == "decision":
+        nodes = planning.node_index(plan)
+        node["releases"] = sorted((nid, fingerprint(nodes[nid]))
+                                  for nid, deps in _closure(nodes).items() if node["id"] in deps)
     for key in ("title", "summary", "context"):
         node.pop(key, None)
     for need in node.get("needs") or []:
@@ -301,7 +305,7 @@ def derive(plan, events):
             if run_dir is not None:
                 try:
                     revision_plan = store._load_plan(run_dir, int(d["revision"]), d)
-                    fps = {nid: fingerprint(n) for nid, n in planning.node_index(revision_plan).items()}
+                    fps = {nid: fingerprint(n, revision_plan) for nid, n in planning.node_index(revision_plan).items()}
                 except (core.GFError, KeyError, ValueError, TypeError):
                     fps = {}
                     for nid in nodes:
@@ -512,6 +516,11 @@ def derive(plan, events):
                             or (dec["submission"] is not None
                                 and dec["submission"] != _sub_id(a)))
 
+    for dec in decisions.values():
+        if actual_location and dec.get("recorded_location") and dec["recorded_location"] != actual_location:
+            dec["stale"] = True
+            dec["stale_reason"] = "project_moved"
+
     # Supersession remains derivable if a writer deletes the convenience events.
     plan_decisions = [d for d in decisions.values() if d.get("purpose") == "plan_approval"]
     if plan_decisions:
@@ -522,7 +531,7 @@ def derive(plan, events):
                 dec["status"] = "superseded"
     location_mismatch = bool(actual_location and any(
         d.get("recorded_location") and d["recorded_location"] != actual_location
-        and not d.get("stale") and (d.get("purpose") == "plan_approval" or d.get("status") == "open")
+        and d.get("purpose") == "plan_approval" and d is latest
         for d in decisions.values()))
 
     out_nodes = {}

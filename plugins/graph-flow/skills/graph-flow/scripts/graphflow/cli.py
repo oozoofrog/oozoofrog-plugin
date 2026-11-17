@@ -41,7 +41,7 @@ def _merge_plan_records(supplied, learned, field):
     merged = {item["id"]: item for item in supplied}
     for item in learned:
         if item["id"] in merged and merged[item["id"]] != item:
-            raise core.GFError("invalid_plan", "conflicting %s field id: %s" % (field, item["id"]), core.EXIT_NEGATIVE)
+            raise core.GFError("invalid_plan", "conflicting %s field id: %s. Check .graph-flow/checks.json (promoted checks) or constraints.jsonl; remove the stale field from the input plan and re-post to freeze the current records." % (field, item["id"]), core.EXIT_NEGATIVE)
         merged[item["id"]] = item
     return list(merged.values())
 
@@ -69,10 +69,12 @@ def _set_plan(args, actor):
             old_nodes = plan.node_index(tx.plan)
             new_nodes = plan.node_index(normalized)
             changed = {nid for nid, n in old_nodes.items()
-                       if nid not in new_nodes or state.fingerprint(n) != state.fingerprint(new_nodes[nid])}
+                       if nid not in new_nodes or state.fingerprint(n, tx.plan) != state.fingerprint(new_nodes[nid], normalized)}
             deps = state._closure(old_nodes)
             protected = [nid for nid, st in prior["nodes"].items()
-                         if st["status"] in ("running", "submitted", "passed")
+                         if (st["status"] in ("running", "submitted", "passed") or any(
+                             d.get("issuer") == "gate" and d.get("node") == nid and d.get("status") == "answered"
+                             and not d.get("stale") for d in prior["decisions"].values()))
                          and (nid in changed or deps[nid] & changed)]
             if protected:
                 raise core.GFError("active_plan_change", "Keep completed/running contracts; add new work instead: "
@@ -91,7 +93,7 @@ def _set_plan(args, actor):
         revision, sha = tx.write_plan(normalized)
         tx.append("plan.set", {"revision": revision, "plan_sha256": sha,
                                "plan_identity": identity, "plan_title": normalized.get("title") or normalized.get("goal"), "node_counts": plan.node_counts(normalized["nodes"]),
-                               "fingerprints": {n["id"]: state.fingerprint(n) for n in normalized["nodes"]},
+                               "fingerprints": {n["id"]: state.fingerprint(n, normalized) for n in normalized["nodes"]},
                                "constraints_applied": ids, "replaced_unverifiable": tx.plan_error}, actor)
         tx.append("constraint.apply", {"ids": ids}, actor)
         if not reuse:
