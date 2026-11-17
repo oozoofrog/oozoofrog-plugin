@@ -4,12 +4,12 @@ Run from the repository root (Python standard library, Node with built-in WebSoc
 Chrome/Chromium, and ffmpeg must already be available):
 
 ```bash
-python3 -I -S -B plugins/graph-flow/dev/screens/build_fixtures.py /Volumes/eyedisk/build/graph-flow-screens/r19
-node plugins/graph-flow/dev/screens/capture.mjs /Volumes/eyedisk/build/graph-flow-screens/r19
+python3 -I -S -B plugins/graph-flow/dev/screens/build_fixtures.py /Volumes/eyedisk/build/graph-flow-screens/r20
+node plugins/graph-flow/dev/screens/capture.mjs /Volumes/eyedisk/build/graph-flow-screens/r20
 ```
 
 The builder replaces only its marked `fixtures/` directory. The capture command
-writes the 81 numbered PNGs to `final/`, copies them and makes the requested ffmpeg
+writes the 97 numbered PNGs to `final/`, copies them and makes the requested ffmpeg
 variants in `verify/`, and records DOM observations, hashes, and process cleanup
 outside those directories. An optional third argument, e.g. `5,16`, recaptures only
 those numbers. Rebuild fixtures before a fresh full capture. No installs or real
@@ -36,3 +36,6 @@ Round 17 distinguishes the fitted large plan at 1280px from the default 1440px o
 Round 18 captures enlarged lower rows with vertical scrolling (11), the unverified answer record (27) separately from its graph banner (36), and the new consent after on-page key recovery (56). Scene 66 uses the permission button’s actual rejected outcome. Captures assert panel/graph relations, change titles, content bounds and the named scene states.
 
 Round 19 adds selected work/review/decision/final-check cards at both sizes (70–77) and maximum-length Korean text in detail/overview desktop/phone views (78–81). The first explanation stays pinned below the title. Scene 56 selects the final check after on-page recovery, unlike the unselected terminal recovery in 35. Capture validates visible explanations, actual text bounds, relations and owned-process cleanup. Verification includes all requested images plus the prior 34/38 variants.
+
+
+Round 20 adds the missing phone decisions and trajectory, lane-3 permission, decision review, failed host check, changed-evidence re-ask and plan re-approval at both sizes (82–97). The trajectory uses three real submissions, a failed run check, a failed node check, and failed then passing reviews. Marked `decision_screen` scenes assert Q1–Q5 order, distinct consequences, viewport bounds, unchanged polling and the exhausted-attempt cost; every decision also receives gray/glance copies.

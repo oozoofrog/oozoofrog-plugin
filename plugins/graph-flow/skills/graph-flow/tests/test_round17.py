@@ -137,8 +137,9 @@ assert.equal(uniqueChecks([c,{...c,timeout_s:10}]).length,2);
         source = PAGE.read_text()
         self.assertNotIn("n.title+' ('+n.node+')'", source)
         reading = source.split('function openDecision(')[1].split('function leaveDecision')[0]
-        self.assertEqual(reading.count("t('freeEffect')"), 0)
-        self.assertEqual(reading.count("t('details')"), 2)
+        self.assertEqual(reading.count("t('freeEffect')"), 1)
+        self.assertEqual(reading.count("t('details')"), 1)
+        self.assertIn("t('qInspect')", reading)
 
     def test_d9_answers_scope_body_and_outputs_are_readable(self):
         self.js(r'''

@@ -464,3 +464,6 @@ A human-check `title` without a `prompt`, and human-check/decision-node `context
 ### Readable integrity failures
 
 `status` (including the project run list), `trace`, `decide list`, their MCP equivalents, and dashboard run/project/queue reads show available records plus `integrity` entries with a code and recovery. A missing, invalid or hash/identity-mismatched plan reports `plan_tampered`: re-post the plan with `gf plan set <file>` for approval; dispatch/gates still refuse. `log_sequence` and `log_corrupt` return an unavailable snapshot with recovery to restore an intact event log from backup; conformance observations are explicitly not measurable. Existing project-move/key checks remain unchanged, with their existing recovery advice included in reads.
+
+
+Dashboard question facts (attempt histories, previous review findings, current reviews, release/block lists and plan differences) are display data recomputed from records. The signed binding format is unchanged. Free-question evidence may contain `options` (`label`, `answer`), supplied by repeated `decide ask --option`; answering uses the existing `answered` outcome and never releases work by itself.

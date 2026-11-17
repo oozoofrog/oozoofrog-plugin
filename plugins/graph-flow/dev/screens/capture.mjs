@@ -26,7 +26,7 @@ const runtime = mkdtempSync(path.join(output, 'capture-'));
 const profile = path.join(runtime, 'chrome-profile');
 const delay = ms => new Promise(r => setTimeout(r, ms));
 const baseEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GF_')));
-const envFor = fixture => ({...baseEnv, GF_HOME:fixture.home, GF_NO_OPEN:'1', GF_ROLE:'leader', GF_SESSION:'screens-r19'});
+const envFor = fixture => ({...baseEnv, GF_HOME:fixture.home, GF_NO_OPEN:'1', GF_ROLE:'leader', GF_SESSION:'screens-r20'});
 const evidence = path.join(output, 'screen-status.json');
 let records = only && existsSync(evidence) ? JSON.parse(readFileSync(evidence)) : [];
 const owned = [], lifecycle = [];
@@ -200,12 +200,32 @@ try {
       if(screen.number===67)assert(audit.selectedVisible,'E3 fit keeps selected card visible');
       if(screen.number===63){assert(/허락하기로 답했어요|받아들이기로 답했어요|받아들이지 않기로 답했어요/.test(dom.text));assert(dom.text.includes('이 안내를 시험 환경에 공개할까요?'));}
       if(screen.number===19)assert(await evaluate("getComputedStyle(document.querySelector('#accessible')).visibility==='hidden' && !!document.querySelector('#panel .planned-command')?.textContent"),'E4 opaque overlay and a real command');
+      if(screen.decision_screen) {
+        const questionAudit=await evaluate(`(()=>{
+          const root=document.querySelector('#decision:not([hidden])')||document.querySelector('#attention');
+          const blocks=[...root.querySelectorAll('[data-question-block]')].map(e=>e.dataset.questionBlock);
+          const area=root.querySelector('[data-question-block=choices]');
+          const groups=[...area.children].filter(e=>e.querySelector('button')&&!e.hidden);
+          const inside=e=>{const r=e.getBoundingClientRect();return r.width>0&&r.top>=0&&r.left>=0&&r.bottom<=innerHeight+.5&&r.right<=innerWidth+.5;};
+          const options=groups.map(e=>{const b=e.querySelector('button'),p=e.querySelector('.action-effect');return {label:b.textContent,effect:p?.textContent,inside:!!p&&inside(b)&&inside(p)};});
+          return {blocks,options,question:root.querySelector('[data-question-block=question]').textContent,why:root.querySelector('[data-question-block=why]').textContent};
+        })()`);
+        assert.deepEqual(questionAudit.blocks.slice(0,5),['question','why','choices','history','verified'],'Q1–Q5 reading order');
+        assert(questionAudit.options.length>=2,'multiple choices');
+        assert(questionAudit.options.every(o=>o.effect&&o.inside),JSON.stringify(questionAudit));
+        assert.equal(new Set(questionAudit.options.map(o=>o.effect)).size,questionAudit.options.length,'each consequence differs');
+        if(screen.scenario==='trajectory')assert(questionAudit.options.some(o=>o.effect.includes('시도 3번을 다 써서')&&o.effect.includes('다시 승인')),'exhausted attempt cost');
+        dom.question=questionAudit;
+        const before=await evaluate(`({scrollY,level:document.querySelector('#map').dataset.level,focus:document.activeElement?.id,text:document.querySelector('#decision')?.textContent})`);
+        await delay(2200);
+        assert.deepEqual(await evaluate(`({scrollY,level:document.querySelector('#map').dataset.level,focus:document.activeElement?.id,text:document.querySelector('#decision')?.textContent})`),before,'polling preserves the open question');
+      }
       dom.audit=audit;
       const shot = await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true});
       const bytes = Buffer.from(shot.data,'base64');
       writeFileSync(path.join(final,filename),bytes);
       copyFileSync(path.join(final,filename),path.join(verify,filename));
-      if(derivedNumbers.has(screen.number)) {
+      if(derivedNumbers.has(screen.number)||screen.decision_screen) {
         for(const [suffix,filter] of [['glance','scale=iw/4:ih/4,gblur=sigma=1.2,scale=iw*4:ih*4'],['gray','format=gray']]) {
           const result = spawnSync(ffmpeg,['-hide_banner','-loglevel','error','-y','-i',path.join(final,filename),'-vf',filter,'-frames:v','1',path.join(verify,filename.replace('.png','-'+suffix+'.png'))],{encoding:'utf8'});
           assert.equal(result.status,0,result.stderr);

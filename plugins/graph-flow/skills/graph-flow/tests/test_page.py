@@ -501,7 +501,7 @@ live.decisions[0]={...d,purpose:'human_check',failed:[],files:[],verified:[],wor
 docEvents.visibilitychange();await settle();get('attention').querySelectorAll('button').at(-1).click();
 const emptyActions=get('answer-actions').querySelectorAll('button[data-outcome]');
 assert.equal(emptyActions[0].dataset.outcome,'revision_requested','request evidence first');
-assert.equal(emptyActions[1].className,'','acceptance is secondary');
+assert(!emptyActions[1].classList.contains('primary'),'no option is recommended');
 assert.equal(emptyActions[1].disabled,true,'empty acceptance needs explicit confirmation');
 assert.match(get('decision').textContent,/There is nothing here to judge by/);
 get('blind-confirm').checked=true;get('blind-confirm').dispatchEvent({type:'change'});
@@ -589,7 +589,7 @@ live.plan_approval=approval;live.plan_counts={work:1,review:0,decision:0,checks:
 docEvents.visibilitychange();await settle();
 assert.match(get('attention').textContent,/Start this plan\?/);
 assert.match(get('attention').textContent,/Work: 1 · 2 automated checks/);
-const planInput=get('plan-changes'),planActions=get('attention').querySelector('.plan-actions').querySelectorAll('button');
+const planInput=get('plan-changes'),planActions=['revision_requested','approved'].map(outcome=>get('attention').querySelector('.plan-actions').querySelectorAll('button[data-outcome]').find(b=>b.dataset.outcome===outcome));
 assert.equal(planActions[0].textContent,'Send back');assert.equal(planActions[0].disabled,true);
 assert.equal(planActions[1].textContent,'Start');assert.equal(planActions[1].disabled,true,'unread graph cannot authorize a plan');
 planInput.value='Explain the check';planInput.dispatchEvent({type:'input'});planInput.focus();planInput.selectionStart=4;
@@ -597,7 +597,7 @@ live.title='Plan wording changed';docEvents.visibilitychange();await settle();
 assert.equal(get('plan-changes'),planInput);assert.equal(document.activeElement,planInput);assert.equal(planInput.selectionStart,4);
 assert.equal(planActions[0].disabled,false);
 get('home-tab').click();get('flow-tab').click();
-assert.equal(get('attention').querySelector('.plan-actions').querySelectorAll('button')[1].disabled,true,'returning to the graph still requires reading it');
+assert.equal(get('attention').querySelector('.plan-actions').querySelectorAll('button[data-outcome]').find(b=>b.dataset.outcome==='approved').disabled,true,'returning to the graph still requires reading it');
 live.plan_approval={...approval,status:'answered',outcome:'revision_requested',verified:true,answer:'Explain the check'};live.decisions=[];
 docEvents.visibilitychange();await settle();
 assert.match(get('attention').textContent,/The plan was sent back/);assert.match(get('attention').textContent,/Explain the check/);

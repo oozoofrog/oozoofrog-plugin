@@ -22,7 +22,7 @@ class Browser19Tests(unittest.TestCase):
     set_plan = fixture.PlanApprovalTests.set_plan
 
     def setUp(self):
-        output = Path('/Volumes/eyedisk/build/graph-flow-screens/r19')
+        output = Path('/Volumes/eyedisk/build/graph-flow-screens/r20')
         output.mkdir(parents=True, exist_ok=True)
         temporary = tempfile.TemporaryDirectory
         with mock.patch.object(tempfile, 'TemporaryDirectory', side_effect=lambda: temporary(dir=output, prefix='browser-test-')):

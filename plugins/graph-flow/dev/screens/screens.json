@@ -67,7 +67,8 @@
       "height": 900
     },
     "interactions": [],
-    "group": "EVERYDAY"
+    "group": "EVERYDAY",
+    "decision_screen": true
   },
   {
     "number": 6,
@@ -197,7 +198,8 @@
       "height": 844
     },
     "interactions": [],
-    "group": "EVERYDAY"
+    "group": "EVERYDAY",
+    "decision_screen": true
   },
   {
     "number": 13,
@@ -211,12 +213,8 @@
     },
     "interactions": [
       {
-        "action": "open",
-        "selector": ".phone-history"
-      },
-      {
         "action": "into",
-        "selector": ".phone-history"
+        "selector": ".decision-history"
       }
     ],
     "group": "EVERYDAY"
@@ -256,7 +254,8 @@
       "height": 900
     },
     "interactions": [],
-    "group": "EVERYDAY"
+    "group": "EVERYDAY",
+    "decision_screen": true
   },
   {
     "number": 16,
@@ -336,7 +335,8 @@
       "height": 900
     },
     "interactions": [],
-    "group": "EVERYDAY"
+    "group": "EVERYDAY",
+    "decision_screen": true
   },
   {
     "number": 21,
@@ -393,7 +393,8 @@
       "height": 844
     },
     "interactions": [],
-    "group": "EVERYDAY"
+    "group": "EVERYDAY",
+    "decision_screen": true
   },
   {
     "number": 25,
@@ -1006,7 +1007,8 @@
       "height": 900
     },
     "interactions": [],
-    "group": "OCCASIONAL"
+    "group": "OCCASIONAL",
+    "decision_screen": true
   },
   {
     "number": 59,
@@ -1019,7 +1021,8 @@
       "height": 900
     },
     "interactions": [],
-    "group": "OCCASIONAL"
+    "group": "OCCASIONAL",
+    "decision_screen": true
   },
   {
     "number": 60,
@@ -1121,7 +1124,8 @@
       "height": 900
     },
     "interactions": [],
-    "group": "EVERYDAY"
+    "group": "EVERYDAY",
+    "decision_screen": true
   },
   {
     "number": 65,
@@ -1147,7 +1151,8 @@
       "height": 900
     },
     "interactions": [],
-    "group": "OCCASIONAL"
+    "group": "OCCASIONAL",
+    "decision_screen": true
   },
   {
     "number": 67,
@@ -1381,5 +1386,229 @@
       }
     ],
     "group": "LONG-TEXT"
+  },
+  {
+    "number": 82,
+    "name": "hold-phone",
+    "scenario": "hold",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "DECISIONS",
+    "decision_screen": true
+  },
+  {
+    "number": 83,
+    "name": "outcomes-phone",
+    "scenario": "outcomes",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "DECISIONS",
+    "decision_screen": true
+  },
+  {
+    "number": 84,
+    "name": "free-phone",
+    "scenario": "free",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "DECISIONS",
+    "decision_screen": true
+  },
+  {
+    "number": 85,
+    "name": "revised-phone",
+    "scenario": "revised",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "DECISIONS",
+    "decision_screen": true
+  },
+  {
+    "number": 86,
+    "name": "trajectory-desktop",
+    "scenario": "trajectory",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "DECISIONS",
+    "decision_screen": true
+  },
+  {
+    "number": 87,
+    "name": "trajectory-phone",
+    "scenario": "trajectory",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "DECISIONS",
+    "decision_screen": true
+  },
+  {
+    "number": 88,
+    "name": "lane3-desktop",
+    "scenario": "lane3",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "DECISIONS",
+    "decision_screen": true
+  },
+  {
+    "number": 89,
+    "name": "lane3-phone",
+    "scenario": "lane3",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "DECISIONS",
+    "decision_screen": true
+  },
+  {
+    "number": 90,
+    "name": "decision-review-desktop",
+    "scenario": "decision-review",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "DECISIONS",
+    "decision_screen": true
+  },
+  {
+    "number": 91,
+    "name": "decision-review-phone",
+    "scenario": "decision-review",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "DECISIONS",
+    "decision_screen": true
+  },
+  {
+    "number": 92,
+    "name": "hold-check-desktop",
+    "scenario": "hold-check",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "DECISIONS",
+    "decision_screen": true
+  },
+  {
+    "number": 93,
+    "name": "hold-check-phone",
+    "scenario": "hold-check",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "DECISIONS",
+    "decision_screen": true
+  },
+  {
+    "number": 94,
+    "name": "reasked-desktop",
+    "scenario": "reasked",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "DECISIONS",
+    "decision_screen": true
+  },
+  {
+    "number": 95,
+    "name": "reasked-phone",
+    "scenario": "reasked",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "DECISIONS",
+    "decision_screen": true
+  },
+  {
+    "number": 96,
+    "name": "reapproval-desktop",
+    "scenario": "reapproval",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "DECISIONS",
+    "decision_screen": true
+  },
+  {
+    "number": 97,
+    "name": "reapproval-phone",
+    "scenario": "reapproval",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "DECISIONS",
+    "decision_screen": true
   }
 ]

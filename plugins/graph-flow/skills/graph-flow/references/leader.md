@@ -133,3 +133,6 @@ Use the `security` grade when the purpose is defensive vulnerability discovery, 
 Brief sub-sessions in English and require English reports, preserving original code, paths, and user-facing strings. Sub-sessions never start other sessions and never ask the user directly. Only the leader talks to the user, in the user's language. Human-facing requests are decisions or approvals; implementation checks remain inside the loop.
 
 Follow the [human identity rule](../SKILL.md#human-identity).
+
+
+For free questions, give concrete alternatives in the person's terms with repeated `--option` arguments to `gf decide ask`. The dashboard displays those choices and their consequences; do not mark one as recommended. Existing questions without alternatives keep their answer-text path behind an explicit choice. Binding questions are still created only by plan/gate code.

@@ -24,7 +24,7 @@ try {
   for(let i=0;i<80;i++){ready=await evaluate("document.querySelectorAll('#map .node-card').length===13");if(ready)break;await delay(100);}
   assert(ready,'twelve planned pieces and final card render');await delay(300);
   const bounds=await evaluate(`(()=>{const v=document.querySelector('.map-viewport').getBoundingClientRect();return [...document.querySelectorAll('#map .node-card')].map(e=>{const r=e.getBoundingClientRect();return {id:e.dataset.node,rect:r.toJSON(),viewport:v.toJSON(),scale:document.querySelector('#map').dataset.scale,stage:document.querySelector('.map-stage').style.cssText,position:e.parentElement.style.cssText,inside:r.x>=v.x-.5&&r.right<=v.right+.5&&r.y>=v.y-.5&&r.bottom<=v.bottom+.5}})})()`);
-  assert(bounds.every(b=>b.inside),JSON.stringify(bounds));
+  assert(bounds.every(b=>b.inside)||await evaluate("Number(document.querySelector('#map').dataset.scale)>=6/7 && [...document.querySelectorAll('.map-overflow button')].some(b=>!b.hidden&&/→|↓|←|↑/.test(b.textContent))"),'Q blocks leave a scrollable map at the readable floor: '+JSON.stringify(bounds));
   const position=()=>evaluate(`(()=>{const m=document.querySelector('#map'),v=document.querySelector('.map-viewport'),s=document.querySelector('.map-stage');return {level:m.dataset.level,scale:m.dataset.scale,x:v.scrollLeft,y:v.scrollTop,origin:s.style.left+','+s.style.top}})()`);
   const before=await position();
   await evaluate(`document.querySelector('#map [data-node="n0"] .node-header').click()`);
@@ -43,7 +43,7 @@ try {
     for(const label of ['상세 보기','간략 보기','화면에 맞추기']) {
       await evaluate(`[...document.querySelectorAll('.map-toolbar button')].find(b=>b.textContent===${JSON.stringify(label)}||(${JSON.stringify(label)}==='화면에 맞추기'&&b.dataset.action==='fit')).click()`);await delay(100);
       assert(await evaluate(`(()=>{const e=document.querySelector('.map-visible'),r=e.getBoundingClientRect(),t=document.querySelector('.map-toolbar').getBoundingClientRect();return e.scrollWidth<=e.clientWidth+1&&r.left>=t.left&&r.right<=t.right})()`),'E1 whole count phrases fit the toolbar');
-      assert(await evaluate(`(()=>{const e=document.querySelector('#map [data-node="n0"]'),r=e.getBoundingClientRect(),v=document.querySelector('.map-viewport').getBoundingClientRect();return r.left>=v.left&&r.right<=v.right&&r.top>=v.top&&r.bottom<=v.bottom})()`),'E3 selected card survives fit and level changes');
+      assert(await evaluate(`(()=>{const e=document.querySelector('#map [data-node="n0"]'),r=e.getBoundingClientRect(),v=document.querySelector('.map-viewport').getBoundingClientRect();return r.left>=v.left&&r.right<=v.right&&r.top>=v.top&&r.bottom<=v.bottom})()`),'E3 selected card survives fit and level changes '+JSON.stringify({width,label,rects:await evaluate("[document.querySelector('#map [data-node=n0]'),document.querySelector('.map-viewport')].map(e=>e.getBoundingClientRect().toJSON())")}));
       assert(await evaluate(`(()=>{const v=document.querySelector('.map-viewport');return getComputedStyle(v).scrollbarGutter==='stable both-edges'&&v.offsetWidth>v.clientWidth})()`),'E5 reserve scrollbar gutter');
       assert(await evaluate(`[...document.querySelectorAll('#map .node-card')].every(e=>e.scrollHeight<=e.clientHeight+1 && e.getBoundingClientRect().height<=e.parentElement.getBoundingClientRect().height+1)`),'E6 measured content fits every card');
     }

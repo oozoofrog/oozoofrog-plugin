@@ -621,11 +621,13 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(set(node) >= {"worker", "session", "started"}, True)
         self.assertIn("identity",view["decisions"][0]);view["decisions"][0].pop("identity")
         view["decisions"][0].pop("contract")
+        facts = view["decisions"][0].pop("facts")
+        self.assertIn("history", facts)
         self.assertEqual(view["decisions"], [{"id": "d%d" % ask, "node": "human", "node_title": "Human",
                                             "question": "Does this wording fit?", "kind": "review",
                                         "purpose": "human_check", "commit": None, "artifact_hashes": {},
                                             "context": {}, "has_evidence": False,
-                                            "verified": [], "unverified": [], "worker_note": None,
+                                            "verified": [], "unverified": ["The result meets the requirement", "scope"], "worker_note": None,
                                         "record_purpose": "human_check", "files": [], "failed": [], "failed_reviews": 0, "review_lenses": [], "free": False, "replaces_refused": None, "replaces_outcome": None, "author_context": context, "trajectory_reasons": []}])
         self.assertEqual(view["lessons"], [{"text": active["text"], "node_title": "Done"},
                                          {"text": unknown["text"], "node_title": None}])

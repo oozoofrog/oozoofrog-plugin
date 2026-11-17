@@ -45,6 +45,7 @@ FIELDS = {
     "reason": _field("string", "Reason for reopening a node or retiring a constraint."),
     "kind": _field("string", "Decision kind: direction, information, review, or authorization."),
     "question": _field("string", "Question only a person can answer."),
+    "options": _field("array", "Concrete answer choices for a free question."),
     "purpose": _field("string", "Decision purpose; defaults to free."),
     "command": _field("string", "Command cited as decision evidence."),
     "files": _field("array", "Project-relative files cited as decision evidence."),
@@ -107,7 +108,7 @@ TOOLS = {
     "node_reopen": _tool("reopen", "Return one accepted unit and its dependents for correction (P8).",
                          required=("node", "reason"), positional=("node",), options=("reason",)),
     "decision_ask": _tool("decide ask", "Ask a free direction/information question; only the gate creates binding approvals (P10).",
-                          required=("kind", "question"), options=("kind", "question", "node", "check", "purpose", "command", "files")),
+                          required=("kind", "question"), options=("kind", "question", "node", "check", "purpose", "command", "files", "options")),
     "decision_list": _tool("decide list", "List open decisions within the caller's node context (P5, P10)."),
     "decision_wait": _tool("decide wait", "Wait for a person's decision without answering on their behalf (P10).",
                            required=("id",), positional=("id",), options=("timeout",)),
@@ -184,6 +185,8 @@ def _call(tool, arguments):
             if isinstance(value, bool):
                 if value:
                     argv.append(flag)
+            elif key == "options":
+                argv.extend("--option=" + text for text in value)
             elif isinstance(value, list):
                 argv.extend([flag] + value)
             else:

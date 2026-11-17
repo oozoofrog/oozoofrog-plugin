@@ -407,6 +407,65 @@ def _planned_check(check, node=None):
                 runs_own_files=_check_uses_owned_files(check, node))
 
 
+def _decision_facts(decision, current, derived, events):
+    """Display-only facts; never part of the signed decision identity."""
+    nodes = planning.node_index(current)
+    nid = decision.get("node")
+    st = derived["nodes"].get(nid, {})
+    basis = st.get("basis", 0)
+    history, submissions = [], {}
+    for event in events:
+        data = event["data"]
+        if event["seq"] <= basis:
+            continue
+        if data.get("node") == nid and event["type"] == "node.start":
+            history.append(dict(attempt=data["attempt"], state="running", reasons=[], reviews=[]))
+        elif data.get("node") == nid and history:
+            row = history[-1]
+            if event["type"] == "node.submit":
+                row["state"] = "submitted"
+                submissions[event["seq"]] = row
+            elif event["type"] == "gate.verdict":
+                row["state"] = data.get("verdict")
+                rejection = data.get("rejection") or {}
+                if rejection.get("reason"):
+                    titles = {c["id"]: c.get("title") or c["id"] for c in _node_checks(nodes.get(nid, {})) + current.get("integration_checks", []) + current.get("promoted_checks", [])}
+                    row["reasons"] = [title for cid, title in titles.items() if "check %s " % cid in rejection["reason"]]
+                    if not row["reasons"]:
+                        row["reasons"] = [nodes.get(nid, {}).get("title") or nid]
+        if event["type"] == "review.submit" and data.get("target") == nid:
+            row = submissions.get(data.get("target_submission"))
+            if row is not None:
+                row["reviews"].append(dict(title=nodes.get(data["node"], {}).get("title", data["node"]),
+                    verdict=data.get("verdict"), findings=data.get("findings", [])))
+    current_submission = (st.get("submission") or {}).get("id")
+    reviews = [dict(title=nodes.get(r.get("node"), {}).get("title", r.get("node")),
+                    verdict=r.get("verdict"), accepted=r.get("status") == "passed")
+               for r in st.get("reviews", []) if r.get("target_submission") == current_submission]
+    downstream, blocked = [], []
+    for node in nodes.values():
+        if derived["nodes"][node["id"]]["status"] in ("passed", "running", "submitted"):
+            continue
+        if not any(n.get("from") == nid for n in node.get("needs", [])):
+            continue
+        other = [n["from"] for n in node.get("needs", []) if n["from"] != nid
+                 and derived["nodes"][n["from"]]["status"] != "passed"]
+        (blocked if other else downstream).append(node.get("title") or node["id"])
+    if nid is None:
+        downstream = [n.get("title") or n["id"] for n in nodes.values()
+                      if derived["nodes"][n["id"]]["status"] not in ("passed", "running", "submitted")
+                      and (n.get("kind") != "review" or derived["nodes"][n["target"]].get("submission"))
+                      and all(derived["nodes"][d["from"]]["status"] == "passed" for d in n.get("needs", []))]
+    asks = [e for e in events if e["type"] == "decision.ask" and e["data"].get("purpose") == "plan_approval"]
+    previous = [e for e in events if e["type"] == "decision.ask" and e["seq"] < decision.get("seq", 0)
+                and e["data"].get("node") == nid and e["data"].get("purpose") == decision.get("purpose")]
+    return dict(attempts=st.get("attempts", 0), max_attempts=st.get("max_attempts", 3),
+                history=history, reviews=reviews, releases=downstream, blocked=blocked,
+                reapproval=decision.get("purpose") == "plan_approval" and bool(previous) and previous[-1]["data"].get("plan_identity") != decision.get("plan_identity"),
+                continuing=any(e["type"] == "node.start" for e in events),
+                reasked=bool(previous), options=_objects(_mapping(decision.get("evidence")).get("options")))
+
+
 def _view(current, derived, events, project):
     current = current or {}
     recorded_title = next((e["data"].get("plan_title") for e in reversed(events)
@@ -535,6 +594,9 @@ def _view(current, derived, events, project):
                 failed.append(wording or "A check without a description did not pass.")
             elif result.get("result") == "passed" and wording:
                 verified.append(wording)
+        for check in checks:
+            if check.get("type") != "human" and check.get("id") not in latest:
+                unverified.append(check_titles.get(check.get("id")) or check.get("id"))
         failed_reviews = 0
         review_lenses = []
         for review in _objects(st.get("reviews")):
@@ -559,6 +621,7 @@ def _view(current, derived, events, project):
                                               else _text(decision.get("purpose"))),
                                   "record_purpose": _text(decision.get("purpose")),
                                   "identity": state.decision_identity(decision),
+                                  "facts": _decision_facts(decision, current, derived, events),
                                   "contract": evidence.get("contract"),
                                   "commit": (decision.get("submission_binding") or {}).get("commit"),
                                   "artifact_hashes": decision.get("artifact_hashes") or {},
@@ -620,6 +683,28 @@ def _view(current, derived, events, project):
         key: approval.get(key) for key in ("id", "status", "outcome", "answer", "verified", "question", "plan_identity", "reason", "source")}
     if view["plan_approval"] and approval.get("id"):
         view["plan_approval"]["identity"] = state.decision_identity(approval)
+        view["plan_approval"]["facts"] = _decision_facts(approval, current, derived, events)
+    if approval and view["plan_approval"]["facts"]["reapproval"]:
+        revisions = [e["data"].get("revision") for e in events if e["type"] == "plan.set" and not e["data"].get("wording_only")]
+        if len(revisions) > 1:
+            try:
+                previous = pathlib.Path(project) / ".graph-flow" / "runs" / derived["run"]["id"] / "plans" / ("%04d.json" % revisions[-2])
+                view["previous_plan"] = json.loads(previous.read_text(encoding="utf-8"))
+                view["current_plan"] = current
+                old_nodes = planning.node_index(view["previous_plan"])
+                changes = []
+                for nid in sorted(set(old_nodes) | set(nodes)):
+                    before, after = old_nodes.get(nid), nodes.get(nid)
+                    kind = "added" if before is None else "removed" if after is None else "changed"
+                    fields = [k for k in (after or before) if before and after and before.get(k) != after.get(k)]
+                    if kind != "changed" or fields:
+                        changes.append(dict(title=(after or before).get("title") or nid, kind=kind, fields=fields))
+                for key in ("goal", "requirements", "integration_checks", "promoted_checks", "constraints"):
+                    if view["previous_plan"].get(key) != current.get(key):
+                        changes.append(dict(title=current.get("title", ""), kind="changed", fields=[key]))
+                view["plan_changes"] = changes
+            except (OSError, ValueError, TypeError):
+                pass
     view["stale_decisions"] = [{"id": d["id"], "reason": d.get("stale_reason"), "purpose": d.get("purpose")} for d in derived["decisions"].values() if d.get("stale_reason")]
     for node in view["nodes"]:
         node["submitted_files"] = list((derived["nodes"][node["id"]].get("submission") or {}).get("changed_files") or [])

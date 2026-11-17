@@ -20,6 +20,12 @@ from test_review11 import Review11Tests
 from graphflow import cli
 
 SCENARIOS = {
+    'trajectory': '세 번째 제출: 전체 검사 반려, 자체 검사 반려, 실패 후 통과한 검토',
+    'lane3': '제출 결과 사용 허가',
+    'decision-review': '검토 결정',
+    'hold-check': '자동으로 확정할 수 없는 검사 실패',
+    'reasked': '근거가 바뀌어 다시 물은 사람 검사',
+    'reapproval': '계획 변경 후 재승인',
     'long-text': '최대 길이 한국어 제목 60자·요약 300자·검사 제목 120자',
     'demo': '여섯 작업의 진행, 근거가 있는 확인 요청과 자유 질문',
     'real': '명령 검사, lane 2 검토, lane 3 허가를 포함한 코드 작업',
@@ -89,7 +95,7 @@ class Fixture:
         self.project = self.root / 'project'
         self.project.mkdir()
         self.env = {k: v for k, v in os.environ.items() if not k.startswith('GF_')}
-        self.env.update(GF_HOME=str(self.home), GF_NO_OPEN='1', GF_ROLE='leader', GF_SESSION='screens-r19',
+        self.env.update(GF_HOME=str(self.home), GF_NO_OPEN='1', GF_ROLE='leader', GF_SESSION='screens-r20',
                         GIT_AUTHOR_DATE='2026-11-17T00:00:00+0000', GIT_COMMITTER_DATE='2026-11-17T00:00:00+0000')
         self.commands = []
         self.git('init', '-q')
@@ -138,6 +144,8 @@ class Fixture:
         self.call('start', node)
         entry = next(n for n in self.raw['nodes'] if n['id'] == node)
         for file in entry.get('owns', []):
+            if file in ('own.ok','run.ok'):
+                continue
             path = self.project / file
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text('사용 안내\n\n1. 작업할 내용을 확인해요.\n2. 변경한 결과를 검사해요.\n3. 근거를 읽고 다음 단계를 결정해요.\n', encoding='utf-8')
@@ -163,6 +171,65 @@ def branching(count):
 
 def build(root, scenario):
     f = Fixture(root, scenario)
+    if scenario in ('trajectory', 'lane3'):
+        f.raw['nodes'] += [review(), work('b', '안내 전달', ['a'])]
+        f.raw['nodes'][0]['lane'] = 2 if scenario == 'trajectory' else 3
+        if scenario == 'trajectory':
+            f.raw['nodes'][0]['owns'] += ['own.ok', 'run.ok']
+            f.raw['nodes'][0]['checks'].append(dict(id='own', type='cmd', title='안내에 복구 순서가 있어요', run='test -f own.ok'))
+            f.raw['integration_checks'] = [dict(id='all', type='cmd', title='전체 안내 묶음이 준비됐어요', run='test -f run.ok')]
+        f.post(True)
+        for attempt in range(1, 4 if scenario == 'trajectory' else 2):
+            if attempt == 2:
+                (f.project / 'run.ok').write_text('ready')
+            if attempt in (1, 3):
+                (f.project / 'own.ok').write_text('ready')
+            elif attempt == 2:
+                (f.project / 'own.ok').unlink()
+            f.submit()
+            f.assign('r', True)
+            f.call('start', 'r')
+            findings = f.root / ('findings-%s.json' % attempt)
+            write_json(findings, [dict(severity='high', file='guide.txt', line=2,
+                text='실패했을 때 되돌리는 순서가 빠져 있어요.', evidence='2번째 줄 뒤에 복구 안내가 없어요.')] if attempt == 1 and scenario == 'trajectory' else [])
+            f.call('--role', 'reviewer', '--node', 'r', 'review', 'submit', 'r', '--verdict', 'fail' if attempt == 1 and scenario == 'trajectory' else 'pass', '--findings', str(findings))
+            f.call('gate', 'r')
+            outcome = f.call('gate', 'a', code=1)
+            if outcome.get('asks'):
+                f.decision = outcome['asks'][0]
+        return f.metadata()
+    if scenario == 'reapproval':
+        f.post(True)
+        f.raw['nodes'].append(work('b', '예제 작성', ['a']))
+        f.raw['nodes'][0]['checks'][0]['run'] = 'test -s guide.txt && test -r guide.txt'
+        f.decision = f.post()
+        return f.metadata()
+    if scenario == 'decision-review':
+        f.raw['nodes'] = [question(), work()]
+        f.raw['nodes'][0].update(title='공개 안내 확인', question='이 공개 안내를 받아들일까요?', decision_kind='review')
+        f.raw['nodes'][1]['needs'] = [{'from': 'q', 'artifact': '허가'}]
+        f.post(True)
+        f.decision = f.call('gate', 'q', code=1)['asks'][0]
+        return f.metadata()
+    if scenario == 'hold-check':
+        f.raw['nodes'][0]['checks'].append(dict(id='visual', type='host', tool='browser', expect='문장이 잘리지 않아요', title='작은 화면에서 안내가 읽혀요'))
+        f.post(True)
+        f.assign('a')
+        f.call('start','a')
+        (f.project/'guide.txt').write_text('안내 내용\n')
+        # Host observations are grade 2 and produce the existing hold decision.
+        f.call('check', 'record', 'a', 'visual', '--result', 'failed', '--note', '작은 화면에서 안내 문장이 잘려요.')
+        f.call('submit','a')
+        f.decision = f.call('gate', 'a', code=1)['asks'][0]
+        return f.metadata()
+    if scenario == 'reasked':
+        f.raw['nodes'][0]['checks'].append(dict(id='human',type='human',prompt='이 안내를 사용자가 따라갈 수 있을까요?'))
+        f.post(True)
+        f.submit()
+        f.decision=f.call('gate','a',code=1)['asks'][0]
+        (f.project / 'guide.txt').write_text('사용 안내를 고쳤어요.\n실패하면 이전 설정으로 되돌려요.\n')
+        f.decision=f.call('gate','a',code=1)['asks'][0]
+        return f.metadata()
     if scenario == 'long-text':
         f.raw['nodes'] = [work(), work('b', needs=['a']), review('b'), question()]
         for i, node in enumerate(f.raw['nodes']):
@@ -304,7 +371,7 @@ def build(root, scenario):
     if scenario == 'free':
         f.post(True)
         f.call('start', 'a')
-        f.decision = f.call('decide', 'ask', '--kind', 'information', '--question', '안내의 주 독자는 누구인가요? 처음 사용자에게 맞춰도 될까요?', '--node', 'a')['id']
+        f.decision = f.call('decide', 'ask', '--kind', 'information', '--question', '안내를 누가 읽도록 쓸까요?', '--node', 'a', '--option', '처음 쓰는 사람', '--option', '이미 써 본 사람')['id']
         return f.metadata()
     if scenario in ('files', 'superseded', 'file-changed-live'):
         f.raw['nodes'][0]['checks'].append(dict(id='human', type='human', prompt='이 안내를 사용자가 따라갈 수 있을까요?', context={'why': '설명의 흐름은 사람이 읽고 확인해요.'}))

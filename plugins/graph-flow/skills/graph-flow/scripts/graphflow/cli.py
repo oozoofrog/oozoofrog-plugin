@@ -331,6 +331,8 @@ def _loop(args, actor):
         return gate.reopen(args.run, node, args.reason, actor)
     if path == ("decide", "ask"):
         evidence = {"command": args.evidence_command, "files": args.files, "checks": []}
+        if args.option:
+            evidence["options"] = [{"label": text, "answer": text} for text in args.option]
         asked = decisions.ask(args.run, args.kind, args.question, node, args.check,
                               args.purpose, evidence, actor)
         # How to put this question in front of the person (leader.md).
@@ -446,6 +448,7 @@ def _parser(authorize_only=False):
             sub.add_argument("--check")
             sub.add_argument("--purpose")
             sub.add_argument("--command", dest="evidence_command")
+            sub.add_argument("--option", action="append", default=[], help="answer choice; repeat for each option")
             sub.add_argument("--files", nargs="+", default=[])
         elif path == ("decide", "wait"):
             sub.add_argument("id")

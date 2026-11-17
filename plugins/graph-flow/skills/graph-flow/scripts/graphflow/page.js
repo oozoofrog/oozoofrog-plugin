@@ -618,7 +618,54 @@ const STRINGS = {
     "readEvidenceHint": "자세한 근거를 먼저 열어 주세요.",
     "reviewInput": "검토할 결과",
     "reviewLenses": "검토 관점",
-    "ownCheckCards": "{names}: 작업 담당자가 검사 실행에 쓰이는 파일도 바꿀 수 있어요."
+    "ownCheckCards": "{names}: 작업 담당자가 검사 실행에 쓰이는 파일도 바꿀 수 있어요.",
+    "qWhy": "왜 묻나요",
+    "qChoices": "골라 주세요",
+    "qHistory": "지금까지 있었던 일",
+    "qVerified": "지금 확인된 것",
+    "qTrajectory": "「{title}」 일이 {n}번 만에 제출됐어요. 여러 번 고친 이 결과를 써도 될까요?",
+    "qLane3": "「{title}」 결과를 사용하는 일을 허락할까요?",
+    "qReplan": "계획이 바뀌었어요. 바뀐 계획대로 계속할까요?",
+    "qWhyTrajectory": "세 번 이상 시도했거나, 시간·작업 범위를 넘겼거나 되돌린 일은 사람이 기록을 확인해요.",
+    "qWhyPlan": "무엇을 만들고 언제 확인받을지 사람이 정해요.",
+    "qWhyHold": "검사나 검토가 통과하지 못해서 사람이 다음 방향을 정해요.",
+    "qWhyPermission": "이 일을 허락할지는 사람이 정해야 해요.",
+    "qWhyHuman": "자동 검사로 확인할 수 없는 부분을 사람이 살펴봐요.",
+    "qWhyFree": "진행 담당자가 필요한 답을 아직 몰라서 물어요.",
+    "qWhyReasked": "지난 질문 뒤 내용이나 근거가 바뀌어서 다시 확인해요.",
+    "qNext": "남은 확인이 끝나면 {tasks} 일을 시작할 수 있어요.",
+    "qFinal": "남은 조건을 확인한 뒤 전체 결과 확인으로 이어져요.",
+    "qBlocked": " {tasks} 일은 다른 앞 일이 끝나기를 기다려요.",
+    "qExhausted": "이 일은 시도 {max}번을 다 써서, 진행 담당자가 계획을 고쳐 다시 승인을 받아야 해요.",
+    "qReturn": "진행 담당자가 고칠 곳을 전달하고 {n}번째 시도를 시작할 수 있어요.",
+    "qNoPermission": "진행 담당자가 질문과 계획을 고쳐 다시 올릴 때까지 {tasks} 일이 기다려요.",
+    "qPlanNo": "계획을 고쳐 다시 승인받을 때까지 새 일은 시작하지 않아요.",
+    "qInspect": "먼저 살펴보기",
+    "qInspectEffect": "근거를 열어요. 답은 보내지 않아요.",
+    "qPlanInspect": "계획 카드와 바뀐 내용을 읽어요. 답은 보내지 않아요.",
+    "qWrite": "답 직접 적기",
+    "qLater": "나중에 답하기",
+    "qLaterEffect": "질문을 열어 둬요. 이 답을 기다리는 일은 그대로 기다려요.",
+    "qAnswerEffect": "고른 답을 진행 담당자에게 보내요. 작업 통과 여부는 바뀌지 않아요.",
+    "qNoHistory": "앞선 시도 기록이 없어요.",
+    "qNoChecks": "이번 제출에 통과한 자동 검사 기록이 없어요.",
+    "qHumanLeft": "사람이 확인할 부분: {question}",
+    "qReviewResult": "검토 「{title}」: {result}",
+    "qAttempt": "{n}번째 시도 · {state}",
+    "qPlanHistory": "계획에 일 {n}개가 있어요. 아래 카드에서 하는 일과 검사 내용을 읽을 수 있어요.",
+    "qReaskedHistory": "앞선 질문의 내용이나 근거가 바뀌어 새 질문으로 올라왔어요.",
+    "qPlanChecks": "계획의 형식과 연결 관계를 확인했어요. 작업 결과 검사는 아직 별도로 확인해야 해요.",
+    "qUnknown": "아직 확인 안 된 것: {items}",
+    "qAwaitReview": "검토 기록을 진행 담당자가 아직 확인하지 않았어요.",
+    "qPlanStart": "시작하기",
+    "qPlanChanged": "「{title}」: {fields} 내용을 바꿨어요.",
+    "qPlanAdded": "「{title}」 일을 더했어요.",
+    "qPlanRemoved": "「{title}」 일을 뺐어요.",
+    "qWait": " {tasks} 일은 기다려요.",
+    "qSeveral": "{tasks} 등 {n}개",
+    "qSeverity_high": "큰 문제",
+    "qSeverity_medium": "고칠 문제",
+    "qSeverity_low": "참고할 점"
   },
   "en": {
     "flow": "Whole flow",
@@ -1238,7 +1285,54 @@ const STRINGS = {
     "readEvidenceHint": "Open the detailed evidence first.",
     "reviewInput": "Result to review",
     "reviewLenses": "Review lenses",
-    "ownCheckCards": "{names}: the worker can also change files used to run these checks."
+    "ownCheckCards": "{names}: the worker can also change files used to run these checks.",
+    "qWhy": "Why ask you",
+    "qChoices": "Choose an option",
+    "qHistory": "What happened so far",
+    "qVerified": "What is verified now",
+    "qTrajectory": "“{title}” was submitted after {n} attempts. Use this revised result?",
+    "qLane3": "Allow use of the result of “{title}”?",
+    "qReplan": "The plan changed. Continue with the revised plan?",
+    "qWhyTrajectory": "A person reviews three or more attempts, timeouts, scope violations or rollbacks.",
+    "qWhyPlan": "You decide the scope and when your review is needed.",
+    "qWhyHold": "A check or review failed, so a person decides how to proceed.",
+    "qWhyPermission": "Only a person can permit this work.",
+    "qWhyHuman": "A person reviews what automatic checks cannot establish.",
+    "qWhyFree": "The coordinator needs information they do not yet have.",
+    "qWhyReasked": "The question or evidence changed since the previous request.",
+    "qNext": "After the remaining checks, these steps can start: {tasks}.",
+    "qFinal": "The remaining conditions are checked before checking the whole result.",
+    "qBlocked": " {tasks} still wait for other prerequisites.",
+    "qExhausted": "All {max} attempts are used. The coordinator must revise the plan and obtain approval again.",
+    "qReturn": "The coordinator can pass on the corrections and start attempt {n}.",
+    "qNoPermission": "{tasks} wait until the coordinator revises and reposts the question and plan.",
+    "qPlanNo": "New work waits for a revised plan and approval.",
+    "qInspect": "Inspect first",
+    "qInspectEffect": "Open the evidence without sending an answer.",
+    "qPlanInspect": "Read the plan cards and changes without sending an answer.",
+    "qWrite": "Write an answer",
+    "qLater": "Answer later",
+    "qLaterEffect": "Leave the question open; work waiting for this answer continues to wait.",
+    "qAnswerEffect": "Send the chosen answer to the coordinator; acceptance is unchanged.",
+    "qNoHistory": "There are no earlier attempt records.",
+    "qNoChecks": "No passing automatic checks are recorded for this submission.",
+    "qHumanLeft": "For you to review: {question}",
+    "qReviewResult": "Review “{title}”: {result}",
+    "qAttempt": "Attempt {n} · {state}",
+    "qPlanHistory": "The plan has {n} steps. Read their work and checks in the cards below.",
+    "qReaskedHistory": "A new question replaces the earlier question after its wording or evidence changed.",
+    "qPlanChecks": "Plan structure and dependencies were checked. Work results still need separate checks.",
+    "qUnknown": "Not verified yet: {items}",
+    "qAwaitReview": "The coordinator has not accepted the review record yet.",
+    "qPlanStart": "Start",
+    "qPlanChanged": "“{title}”: changed {fields}.",
+    "qPlanAdded": "Added “{title}”.",
+    "qPlanRemoved": "Removed “{title}”.",
+    "qWait": " {tasks} remain blocked.",
+    "qSeveral": "{tasks} and others ({n} total)",
+    "qSeverity_high": "High severity",
+    "qSeverity_medium": "Medium severity",
+    "qSeverity_low": "Low severity"
   }
 };
 // UI_STRINGS_END
@@ -1313,10 +1407,22 @@ export function canApprove(session) {
     session.kind === 'authorization' || session.purpose === 'hold' || session.failed?.length || session.decision?.files?.length || session.decision?.has_evidence) || session.detailsOpened || (!(session.purpose === 'hold' || session.failed?.length) && session.fileOpened));
 }
 export function decisionQuestion(d, language="en") {
-  if(d.node&&d.purpose==='hold'&&!d.free&&d.failed?.length)return STRINGS[language][d.failed_reviews===d.failed.length?'holdReviewExact':'holdExact'].replace('{n}',d.failed.length).replace('{items}',d.failed.join('; '));
+  const w=STRINGS[language], f=d.facts||{}, format=(key,args)=>w[key].replace(/\{(\w+)\}/g,(_,k)=>args[k]??'');
+  if(d.purpose==='plan_approval')return f.reapproval?w.qReplan:f.continuing?w.planContinueQuestion:d.question||w.planQuestion;
+  if(!d.free&&d.purpose==='trajectory'&&f.attempts)return format('qTrajectory',{title:d.node_title,n:f.attempts});
+  if(!d.free&&d.purpose==='lane3'&&d.node_title)return format('qLane3',{title:d.node_title});
+  if(d.node&&d.purpose==='hold'&&!d.free&&d.failed?.length)return format(d.failed_reviews===d.failed.length?'holdReviewExact':'holdExact',{n:d.failed.length,items:d.failed.join('; ')});
   const generated = `Approve ${d.record_purpose ?? d.purpose} for ${d.node}?`;
   const made = ['human_check', 'trajectory', 'lane3'].includes(d.record_purpose ?? d.purpose);
   return made && d.node && d.question === generated ? '' : d.question;
+}
+export function decisionCopy(d, language='en') {
+  const w=STRINGS[language],f=d.facts||{},format=(key,args={})=>w[key].replace(/\{(\w+)\}/g,(_,k)=>args[k]??'');
+  const names=items=>{const values=items||[],tasks=values.slice(0,2).map(n=>'「'+n+'」').join(', ');return values.length>2?format('qSeveral',{tasks,n:values.length}):tasks;},tasks=names(f.releases);
+  const why=d.free?'qWhyFree':f.reasked&&d.purpose!=='plan_approval'?'qWhyReasked':({plan_approval:'qWhyPlan',trajectory:'qWhyTrajectory',hold:'qWhyHold',lane3:'qWhyPermission',authorization:'qWhyPermission'})[d.purpose]||'qWhyHuman';
+  const yes=(tasks?format('qNext',{tasks}):w.qFinal)+(f.blocked?.length?format('qBlocked',{tasks:names(f.blocked)}):'');
+  const no=d.purpose==='plan_approval'?w.qPlanNo:f.attempts>=f.max_attempts?format('qExhausted',{max:f.max_attempts}):f.attempts?format('qReturn',{n:f.attempts+1}):format('qNoPermission',{tasks:tasks||d.node_title||w.work});
+  return {why:w[why],yes:d.free?w.qAnswerEffect:d.purpose==='hold'?format('holdAccept',{failed:w[d.failed_reviews?(d.failed.length>d.failed_reviews?'failedBoth':'failedReviews'):'failedChecks']})+' '+yes:yes,no:d.free?w.qLaterEffect:no+(tasks&&d.purpose!=='plan_approval'?format('qWait',{tasks}):'')};
 }
 export function renderCheckInputs(parent,check,language,create) {
   let more;
@@ -2023,7 +2129,7 @@ function planAttention(box) {
   }
   clear(box);
   const unverified = approval?.status === 'answered' && !approval.verified;
-  const heading = el('h2', view.location_mismatch ? t('projectMoved') : view.key_mismatch ? t('planKeyHeading') : view.plan_error ? t('planTampered') : !approval?.id ? t('planMissing') : unverified ? t('planUnverified') : approval.status === 'open' ? (view.has_work?t('planContinueQuestion'):approval.question) : t('planSentBack'));
+  const heading = el('h2', view.location_mismatch ? t('projectMoved') : view.key_mismatch ? t('planKeyHeading') : view.plan_error ? t('planTampered') : !approval?.id ? t('planMissing') : unverified ? t('planUnverified') : approval.status === 'open' ? decisionQuestion({...approval,purpose:'plan_approval',facts:{...approval.facts,continuing:view.has_work}},language) : t('planSentBack'));
   heading.id = 'plan-question'; box.setAttribute('aria-labelledby', heading.id);
   box.append(heading, el('p', planCounts(view.plan_counts,language,true), 'plan-summary'));
   planBanner = {key};
@@ -2082,7 +2188,7 @@ function planAttention(box) {
   const remainingList=el('ul'),remainingDetails=el('details',undefined,'remaining-cards'),remainingButton=el('summary',t('seeRemaining'));remainingDetails.append(remainingButton,remainingList);startGroup.append(remainingDetails);
   const backGroup = el('div'), changes = el('details',undefined,'plan-change-form'), label = el('label', t('backReason')), input = el('textarea');
   input.id = 'plan-changes'; label.htmlFor = input.id; input.rows = 2; input.value = session?.draft || '';
-  const back = button(t('sendBack'), () => send('revision_requested'));
+  const back = button(t('sendBack'), () => send('revision_requested'));back.dataset.outcome='revision_requested';start.dataset.outcome='approved';
   const message = el('p', undefined, 'muted'); message.setAttribute('role', 'status');
   const update = () => { const changed=box.querySelector('.change-notice');if(changed)changed.textContent=t(planChangeIds?.old?(unreadPlanChanges()?'planChangeIds':'planChangesRead'):(unreadPlanChanges()?'newPlanDecision':'newPlanRead'),planChangeIds||{}); const reason=graphReadReason() || (unreadPlanChanges()?t('changesReadReason',{names:planChanges.filter(c=>!planRead.has(c.id)).map(c=>c.title).join(', ')}):'') || (!oldResults.every(n=>planRead.has('result:'+n.id))?t('oldReadReason'):'');const remaining=unreadCards(),phone=matchMedia('(max-width:760px)').matches;
     graphReason.textContent=reason?(phone&&remaining.length>2?t('remainingCount',{n:remaining.length})+' '+remaining.slice(0,2).filter(n=>title(n).length<=12).map(title).join(', '):reason):graphReadDone();
@@ -2100,7 +2206,20 @@ function planAttention(box) {
     if (result.refresh) refresh(true);
   }
   changes.append(el('summary',t('sendBack')), label, input, back); backGroup.append(changes, el('p', t('planBackEffect'), 'muted'));
-  actions.append(backGroup, startGroup); box.append(actions, message); heading.append(refChip(approval.id, approval.question, true)); update();
+  const d={...approval,purpose:'plan_approval'},copy=decisionCopy(d,language);
+  heading.dataset.questionBlock='question';
+  const why=card(t('qWhy'),copy.why);why.dataset.questionBlock='why';box.insertBefore(why,box.children[1]);
+  startGroup.querySelector('.muted').textContent=copy.yes;backGroup.querySelector('.muted').textContent=copy.no;
+  startGroup.querySelector('.muted').classList.add('action-effect');startGroup.insertBefore(startGroup.querySelector('.muted'),graphReason);backGroup.querySelector('.muted').classList.add('action-effect');
+  const inspect=el('div');inspect.append(button(t('qInspect'),()=>{const target=$('phone-flow').getBoundingClientRect().width?$('phone-flow'):$('map');target.scrollIntoView({block:'start'});}),el('p',t('qPlanInspect'),'action-effect'));
+  actions.dataset.questionBlock='choices';actions.append(el('h3',t('qChoices')),startGroup,backGroup,inspect);
+  const summary=changes.querySelector('summary');summary.textContent='';summary.append(button(t('sendBack'),()=>{changes.open=!changes.open;}));
+  box.insertBefore(actions,box.children[2]);
+  const history=el('section');history.dataset.questionBlock='history';history.append(el('h3',t('qHistory')),el('p',t('qPlanHistory',{n:view.nodes.length})));
+  const changeEvidence=[...box.children].filter(item=>item.classList.contains('plan-change-list')||item.classList.contains('change-notice'));
+  for(const change of view.plan_changes||[])history.append(el('p',t(change.kind==='added'?'qPlanAdded':change.kind==='removed'?'qPlanRemoved':'qPlanChanged',{title:change.title,fields:change.fields.map(f=>STRINGS[language]['field_'+f]||t('diffOther')).join(', ')})));
+  const verified=el('section');verified.dataset.questionBlock='verified';verified.append(el('h3',t('qVerified')),el('p',t('qPlanChecks')));
+  box.append(history,verified,...changeEvidence,message);heading.append(refChip(approval.id,approval.question,true));update();
   return true;
 }
 function attention() {
@@ -2381,28 +2500,27 @@ function openDecision(id, focus = true) {
   const backButton=button(t('backToTab',{tab:t(cameFrom==='home'?'home':'graph')}),leaveDecision,'link'); reading.append(backButton);
   const introduction = el('div'); reading.append(introduction);
   const report = el('div', undefined, 'worker-report'), note = el('div', undefined, 'speech');
-  report.append(el('p',t('workerNote'),'eyebrow'),note); reading.append(report);
+  report.append(el('p',t('workerNote'),'eyebrow'),note);
   const isQuestion = ['direction','information'].includes(d.kind), permission = d.record_purpose==='node'&&d.kind==='authorization';
   const answerLabel = el('label', t(isQuestion ? 'answerLabel' : permission ? 'optionalNote' : 'backReason')); answerLabel.htmlFor = 'answer-text';
-  const phoneHistory=el('details',undefined,'phone-history');reading.append(phoneHistory);
   const input = el('textarea'); input.id = 'answer-text'; input.required = true; input.value = session.draft;
-  input.addEventListener('input', () => { if (current()) { decisionController.setDraft(input.value); updateActions(); } }); reading.append(answerLabel, input);
+  const answerForm=el('div',undefined,'answer-form');answerForm.hidden=true;answerForm.append(answerLabel,input);
+  input.addEventListener('input', () => { if (current()) { decisionController.setDraft(input.value); updateActions(); } });
   const message = el('p'); message.id = 'answer-message'; message.setAttribute('role','status'); reading.append(message);
   const blindBox=el('label',undefined,'blind-confirm');
   const blindCheck=el('input');blindCheck.type='checkbox';blindCheck.id='blind-confirm';
   blindBox.append(blindCheck,el('span',t(permission?'permissionConfirmBlind':'confirmBlind')));reading.append(blindBox);
   blindCheck.addEventListener('change',()=>{decisionController.confirmBlind(blindCheck.checked);updateActions();});
-  const actions = el('div'); actions.id = 'answer-actions';
+  const actions = el('section'); actions.id = 'answer-actions'; actions.dataset.questionBlock='choices'; actions.append(el('h3',t('qChoices')));
   const updateActions = () => {
-    actions.querySelectorAll('button[data-outcome]').forEach(b => { b.disabled = !current() || !decisionController.canSubmit(b.dataset.outcome, input.value); });
+    actions.querySelectorAll('button[data-outcome]').forEach(b => { b.disabled = !current() || session.busy || (b.dataset.outcome==='approved' && !decisionController.canSubmit(b.dataset.outcome, input.value)); });
     for(const b of actions.querySelectorAll('button[data-outcome]')) {
       const kind=b.dataset.outcome,hint=actions.querySelector(`[data-hint=${kind}]`);
       hint.textContent=!b.disabled?'':session.busy?t('sending'):kind==='approved'?(session.nothingToJudge&&!session.blindConfirmed?t(permission?'permissionBlindHint':'blindHint'):t(session.failed.length||session.purpose==='hold'||!session.decision.files?.length?'readEvidenceHint':'readGateHint')):t(isQuestion?'writeFirst':'revisionHint');
       hint.hidden=!hint.textContent;
     }
     const read=canApprove(session),empty=session.nothingToJudge;
-    if(approveButton)approveButton.classList.toggle('primary',!empty);
-    if(revisionButton)revisionButton.classList.toggle('primary',!permission&&empty);
+
     const fileButtons=[...fileChoices.querySelectorAll('button')];
     const fileCanUnlock=!session.failed.length&&session.purpose!=='hold';
     fileButtons.forEach(b=>{b.classList.remove('primary');b.classList.toggle('file-opened',b.dataset.opened==='true');});
@@ -2429,16 +2547,21 @@ function openDecision(id, focus = true) {
     if (result.refresh) refresh(true);
   };
   let approveButton, revisionButton;
-  const actionButton = (outcome, text, cls) => {
-    const b = button(text, () => send(outcome), cls); b.dataset.outcome = outcome;
+  const actionButton = (outcome, text, cls = '') => {
+    const b = button(text, () => { if(outcome==='approved'||outcome==='rejected'){send(outcome);return;}answerForm.hidden=false;session.chosenOutcome=outcome;input.focus(); }, cls); b.dataset.outcome = outcome;
     const row=el('div',undefined,'answer-action'),copy=el('div'),effect=el('p',undefined,'action-effect'),hint=el('p',undefined,'action-hint');
     effect.dataset.effect=outcome;hint.dataset.hint=outcome;hint.id='hint-'+outcome;b.setAttribute('aria-describedby',hint.id);
-    copy.append(effect,hint);row.append(b,copy);actions.append(row);return b;
+    effect.id='effect-'+outcome;b.setAttribute('aria-describedby',effect.id+' '+hint.id);copy.append(effect,hint);row.append(b,copy);actions.append(row);return b;
   };
-  if (isQuestion) actionButton('answered', t('answer'));
-  else { revisionButton=actionButton(permission?'rejected':'revision_requested', t(permission?'refuse':'sendBack')); approveButton = actionButton('approved', '', 'primary'); }
-  reading.append(actions);
-  const right = el('div'), surrounding = el('div'), history = el('section', undefined, 'decision-history'); right.append(history, surrounding);
+  if (isQuestion) {
+    for(const option of d.facts?.options||[]){if(!option.label||!option.answer)continue;const row=el('div',undefined,'answer-action');row.append(button(option.label,()=>{decisionController.setDraft(option.answer);input.value=option.answer;send('answered');}),el('p','「'+option.answer+'」 · '+t('qAnswerEffect'),'action-effect'));actions.append(row);}
+    if(!d.facts?.options?.length)actionButton('answered',t('qWrite'));
+    const later=el('div',undefined,'answer-action');later.append(button(t('qLater'),leaveDecision),el('p',t('qLaterEffect'),'action-effect'));actions.append(later);
+  } else { revisionButton=actionButton(permission?'rejected':'revision_requested',t(permission?'refuse':'sendBack'));approveButton=actionButton('approved',''); }
+  answerForm.append(button(t('answer'),()=>send(session.chosenOutcome||'answered')));
+  reading.append(actions,answerForm);
+
+  const right = el('div'), surrounding = el('section'), history = el('section', undefined, 'decision-history');history.dataset.questionBlock='history';surrounding.dataset.questionBlock='verified';reading.append(history,surrounding,report);
   const files = card(t('readThis'), null, true), fileChoices = el('div', undefined, 'file-choices'), reader = el('pre', undefined, 'file-reader');
   reader.hidden = true; reader.tabIndex = 0; reader.setAttribute('aria-label',t('readThis'));
   const fileStatus = el('p'); fileStatus.setAttribute('role','status');
@@ -2466,7 +2589,7 @@ function openDecision(id, focus = true) {
   details.open = session.detailsOpened;
   const markDetailsOpened = () => { if (current() && details.open) { decisionController.openDetails(); updateActions(); } };
   details.addEventListener('toggle', markDetailsOpened);
-  const evidenceButton=button(t('details'),()=>{details.open=true;markDetailsOpened();details.scrollIntoView({block:'nearest'});},'secondary evidence-action');reading.insertBefore(evidenceButton,actions);
+  const evidenceButton=button(t('qInspect'),()=>{details.open=true;markDetailsOpened();details.scrollIntoView({block:'nearest'});},'evidence-action');const inspectRow=el('div',undefined,'answer-action inspect-option');inspectRow.append(evidenceButton,el('p',t('qInspectEffect'),'action-effect'));actions.append(inspectRow);
   const reminder = el('p', t('evidenceReminder')); reminder.hidden=true;
   right.prepend(reminder);
   const gateFacts = el('div'); details.append(gateFacts);
@@ -2485,19 +2608,19 @@ function openDecision(id, focus = true) {
       if (!current()) return;
       raw.textContent = (evidence ? JSON.stringify(evidence, null, 2) : t('noEvidence')) + (logs.length ? '\n\n' + logs.join('\n\n') : '\n' + t('noEvidence'));
     } catch { if (current()) raw.textContent = t('evidenceFailed'); }
-  }); details.append(loadEvidence, raw); right.insertBefore(details,files); box.append(reading, right);
+  }); details.append(loadEvidence, raw); right.append(details);right.dataset.questionBlock='evidence';reading.append(right);box.append(reading);
   const update = () => {
     const decision = session.decision;
-    evidenceButton.hidden=session.nothingToJudge||!!decision.free;
+    inspectRow.hidden=!decisionHasEvidence(view,decision);
     clear(introduction);
     if(session.changed){introduction.append(el('p',t(decision.free?'freeChanged':'decisionChanged'),'change-notice'),button(t('acknowledgeChange'),()=>{decisionController.acknowledge();update();}));}
-    introduction.append(el('p',t(decision.free?'freeTab':'decisionTab',{tab:t(cameFrom==='home'?'home':'graph')}),'eyebrow'));
-    decisionHeading(introduction, decision, 'h2'); const heading = introduction.querySelector('h2'); heading.id = 'decision-title';
+    const q=el('section');q.dataset.questionBlock='question';const heading=el('h2',question(decision)||purposeWording(decision.purpose,language),'decision-question');heading.id='decision-title';q.append(heading);introduction.append(q);
+    const why=card(t('qWhy'),decisionCopy(decision,language).why);why.dataset.questionBlock='why';introduction.append(why);
     const node = view.nodes.find(n => n.id === decision.node);
-    if(!decision.free)introduction.append(card(t('why'), decision.context.why || purposeWording(decision.purpose, language)));if(decision.replaces_refused)introduction.append(el('p',t(decision.replaces_outcome==='rejected'?'replacesRefused':'replacesReturned',{id:decision.replaces_refused}),'change-notice'));authorNote(introduction,decision.author_context);
+    if(decision.replaces_refused)introduction.append(el('p',t(decision.replaces_outcome==='rejected'?'replacesRefused':'replacesReturned',{id:decision.replaces_refused}),'change-notice'));
     updateFiles(decision);
-    if(decision.commit){const commit=el('details');commit.append(el('summary',t('commitDetails')),el('p',t('approvedCommit')+' · '+decision.commit,'muted'));introduction.append(commit);}
-    if(decision.files?.length&&Object.keys(decision.artifact_hashes||{}).length){const hashes=el('details');hashes.append(el('summary',t('evidenceHashes')),el('pre',Object.entries(decision.artifact_hashes).map(([path,hash])=>path+' · '+(hash||'—')).join('\n')));introduction.append(hashes);}
+    if(decision.commit){const commit=el('details');commit.append(el('summary',t('commitDetails')),el('p',t('approvedCommit')+' · '+decision.commit,'muted'));right.append(commit);}
+    if(decision.files?.length&&Object.keys(decision.artifact_hashes||{}).length){const hashes=el('details');hashes.append(el('summary',t('evidenceHashes')),el('pre',Object.entries(decision.artifact_hashes).map(([path,hash])=>path+' · '+(hash||'—')).join('\n')));right.append(hashes);}
     clear(history);
     const rows = node && !decision.free ? view.timeline.filter(r => r.node === node.id && r.kind === 'attempt') : [];
     const missing=el('div',undefined,'missing-records');
@@ -2510,53 +2633,39 @@ function openDecision(id, focus = true) {
       if (!decision.files?.length) missing.append(el('p',t(decisionHasEvidence(view,decision)?'evidenceTextOnly':'noFiles')));
       if (!rows.some(r=>r.attempt===node?.attempts && r.checks?.length)) missing.append(el('p',t('noCurrentChecks')));
     }
-    if(approveButton){
-      approveButton.classList.toggle('primary',!nothingToInspect);
-      revisionButton.classList.toggle('primary',!permission&&nothingToInspect);
-      // Action order is stable; emphasis changes, position does not.
+    right.querySelector('.missing-records')?.remove();if(missing.children.length)right.append(missing);
+    history.hidden=false;history.append(el('h3',t('qHistory')));
+    if(decision.facts?.reasked)history.append(el('p',t('qReaskedHistory')));
+    const attempts=decision.free?[]:decision.facts?.history||[];
+    if(!decision.facts&&rows.length){for(const row of rows)history.append(logRow(row,false,true));}
+    else if(!attempts.length)history.append(el('p',t('qNoHistory')));
+    for(const row of attempts){
+      const item=el('div',undefined,'attempt-fact');item.append(el('p',t('qAttempt',{n:row.attempt,state:t(({reject:'attemptReturned',replan:'exhausted',pass:'attemptPassed',needs_approval:'awaiting',hold:'held',submitted:'submitted',running:'running'})[row.state]||'notRecorded')})));
+      for(const reason of row.reasons||[])item.append(el('p',t('checkFailed')+' · '+reason));
+      for(const review of row.reviews||[]){item.append(el('p',t('qReviewResult',{title:review.title,result:t(review.verdict==='pass'?'checkPassed':'checkFailed')})));for(const f of review.findings||[])item.append(el('p',[f.severity?t(({high:'qSeverity_high',medium:'qSeverity_medium',low:'qSeverity_low'})[f.severity]||'notRecorded'):null,f.file&&(f.file+':'+(f.line||'')),f.text,f.evidence].filter(Boolean).join(' · ')));}
+      history.append(item);
     }
-    if(missing.children.length) {introduction.append(missing);if(!evidenceButton.hidden)missing.append(evidenceButton);}
-    history.hidden = !rows.length;phoneHistory.hidden=!rows.length;clear(phoneHistory);
-    const previous=rows.filter(r=>r.attempt<node?.attempts && r.checks?.some(c=>c.result==='failed')).sort((a,b)=>b.seq-a.seq)[0];
-    phoneHistory.append(el('summary',t('history')));
-    const phoneRows=el('ol',undefined,'log');[...rows].sort((a,b)=>b.seq-a.seq).forEach(r=>{const row=logRow({...r,notes:r.attempt===node.attempts?null:r.notes,files:r.attempt===node.attempts?(r.files||[]).filter(f=>!decision.files?.some(file=>file.path===f)):r.files},false,true);row.prepend(el('p',attemptHeading(r,r.attempt!==node.attempts),'eyebrow'));phoneRows.append(row);});phoneHistory.append(phoneRows);
-    phoneHistory.open=!!rowOpen.get('decision:'+decision.id);phoneHistory.ontoggle=()=>rowOpen.set('decision:'+decision.id,phoneHistory.open);
-    if (rows.length) {
-      history.append(el('h3', t('history')));
-      const list = el('ol', undefined, 'log');
-      let earlier=false;
-      [...rows].sort((a,b) => b.seq-a.seq).forEach(r => {
-        const item = logRow({...r,notes:r.attempt===node.attempts?null:r.notes,files:r.attempt===node.attempts?(r.files||[]).filter(f=>!decision.files?.some(file=>file.path===f)):r.files}, false, true);
-        if(r.attempt===node.attempts || !earlier)item.prepend(el('p', t(r.attempt === node.attempts ? 'currentAttempt' : 'earlierAttempt'), 'eyebrow'));if(r.attempt!==node.attempts)earlier=true;
-        if (!r.checks.length) item.append(el('p', t('noAttemptChecks'), 'muted'));
-        list.append(item);
-      }); history.append(list);
-    }
+    if(decision.purpose==='human_check')history.append(el('p',t('qHumanLeft',{question:question(decision)})));
     clear(gateFacts); gateFacts.append(el('p', t(decision.free?'freeAnswerEffect':'gateReview')), el('p', question(decision) || purposeWording(decision.purpose, language)));
-    failedBlock(gateFacts, decision);
+    failedBlock(gateFacts, decision);authorNote(gateFacts,decision.author_context);
     if(node&&!decision.free){plannedChecks(gateFacts,node.planned_checks);contractDetails(gateFacts,node.contract);}
     for(const [key,name] of [['if_approved','ifApproved'],['if_rejected','ifRejected'],['undo','undo']])if((key!=='if_rejected'||!isQuestion)&&decision.context[key])gateFacts.append(el('p',t(name)+': '+decision.context[key]));
     if (decision.context.why) gateFacts.append(el('p', decision.context.why));
     details.hidden = !decisionHasEvidence(view,decision);details.classList.toggle('evidence',!decision.free);
     loadEvidence.hidden = !decision.has_evidence;
     note.textContent = decision.worker_note || ''; report.hidden = !decision.worker_note;
-    const effects = [['if_approved','ifApproved'],['if_rejected','ifRejected'],['undo','undo']].filter(([key]) => (key!=='if_rejected'||!isQuestion)&&decision.context[key]);
-    clear(surrounding);
-    failedBlock(surrounding, decision);
-    for (const key of ['verified','unverified']) { const values=key==='verified'?decision[key]?.filter(value=>!rows.some(r=>r.attempt===node?.attempts&&r.checks.some(c=>c.result==='passed'&&[c.title,c.command,c.run,c.type,c.id].includes(value)))):decision[key];if (!values?.length) continue; const c = card(t(key)); textList(c, values.map(value=>['scope','cites'].includes(value)?checkTitle({type:value,result:'passed'},language):value)); surrounding.append(c); }
-    files.hidden = !decision.files?.length;
-    if(matchMedia('(max-width:760px)').matches)reading.insertBefore(files,phoneHistory);else right.insertBefore(files,history);
-    if (!decisionHasEvidence(view,decision)) surrounding.append(el('p', t(decision.free?'questionOnly':'decisionOnly'), 'muted'));
-    reminder.hidden = !decision.files?.length || isQuestion || !decisionHasEvidence(view,decision) || (decision.files?.length&&!session.failed.length&&session.purpose!=='hold');
-    if (approveButton) approveButton.textContent = nothingToInspect ? t(permission?'permissionAcceptBlind':'acceptBlind') : purposeAction(decision.purpose, language, decision.failed);
-    for(const effect of actions.querySelectorAll('[data-effect]')) {
-      const kind=effect.dataset.effect;
-      effect.textContent=t(kind==='approved'?'approveEffect':kind==='answered'?'answerEffect':'revisionEffect');
-      if(decision.free)effect.textContent=t('freeAnswerEffect');
-      else if(node&&decision.purpose==='hold')effect.textContent=t(kind==='approved'?'holdAccept':'holdReject',{tasks:dependentTitles(node.id),failed:t(decision.failed_reviews?(decision.failed.length>decision.failed_reviews?'failedBoth':'failedReviews'):'failedChecks')});
-      else if(node?.kind==='decision'&&!isQuestion)effect.textContent=t(kind==='approved'?'decisionAccept':'holdReject',{tasks:dependentTitles(node.id)});
-      if(!decision.free&&decision.purpose!=='hold'&&kind==='revision_requested'&&node?.attempts&&node.attempts<node.max_attempts)effect.textContent=t('retryEffect',{n:node.attempts+1,max:node.max_attempts});
-    }
+    clear(surrounding);surrounding.append(el('h3',t('qVerified')));
+    if(decision.free)surrounding.append(el('p',t('freeQuestion')),el('p',t('freeEffect')));
+    if(view.legacy&&!decision.free)history.append(el('p',t('oldReasked')));
+    if(decision.review_lenses?.length)history.append(el('p',t('reviewLenses')+' · '+decision.review_lenses.join(' · '),'review-lenses'));
+    failedBlock(surrounding,decision);
+    textList(surrounding,(decision.verified||[]).map(value=>'✓ '+(['scope','cites'].includes(value)?checkTitle({type:value,result:'passed'},language):value)),'qNoChecks');
+    for(const r of decision.facts?.reviews||[]){surrounding.append(el('p',t('qReviewResult',{title:r.title,result:t(r.verdict==='pass'?'checkPassed':'checkFailed')})));if(!r.accepted)surrounding.append(el('p',t('qAwaitReview')));}
+    if(decision.unverified?.length)surrounding.append(el('p',t('qUnknown',{items:decision.unverified.map(value=>['scope','cites'].includes(value)?checkTitle({type:value},language):value).join('; ')})));
+    files.hidden=!decision.files?.length;
+    if(approveButton)approveButton.textContent=nothingToInspect?t(permission?'permissionAcceptBlind':'acceptBlind'):purposeAction(decision.purpose,language,decision.failed);
+    const copy=decisionCopy(decision,language);
+    for(const effect of actions.querySelectorAll('[data-effect]'))effect.textContent=effect.dataset.effect==='approved'?copy.yes:effect.dataset.effect==='answered'?t('qAnswerEffect'):copy.no;
     updateActions();
   };
   decisionUI = {session, update}; update(); if (focus) focusHeading(introduction.querySelector('h2'));
@@ -2825,6 +2934,8 @@ function createMap() {
     const plan=!!data.plan_approval && !(data.plan_approval.verified && data.plan_approval.outcome==='approved');
     const position=fitStart(layout,viewport.clientWidth,viewport.clientHeight,scale,data.nodes,plan);
     viewport.scrollLeft=position.left;viewport.scrollTop=position.top;rememberScroll();panIntent=true;snapTitles();revealSelection();outside();
+    // An explicit level/fit action can resize the toolbar after layout.
+    setTimeout(()=>{size();revealSelection();},50);
   };
   const fit=()=>{
     const next=fitGraph(layouts,viewport.clientWidth-24,viewport.clientHeight-24);
@@ -2895,7 +3006,8 @@ function createMap() {
   function size() {
     if(!layout)return;
     if(map.getBoundingClientRect){
-      const available=Math.max(300,innerHeight-map.getBoundingClientRect().top-38);
+      const selectedHeight=(layout.positions[chosenNode]?.height||0)*scale;
+      const available=Math.max(300,selectedHeight+(toolbar.offsetHeight||60)+50,innerHeight-map.getBoundingClientRect().top-38);
       map.style.height=available+'px';
       $('panel').style.maxHeight=matchMedia('(max-width:760px)').matches?'none':available+'px';
       $('panel').style.height=$('panel').style.maxHeight;

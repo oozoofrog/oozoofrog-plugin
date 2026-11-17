@@ -43,7 +43,7 @@ try {
         assert(await evaluate("!document.querySelector('.plan-actions button.primary').disabled"),'U2 tall phone cards can be read by scrolling');
         await evaluate('window.scrollTo(0,0)');
       }
-      if(width===390&&mode==='plan')assert(await evaluate("document.querySelector('.plan-actions').getBoundingClientRect().height<=innerHeight*.21"),'V8 phone action bar is at most about one fifth');
+      if(width===390&&mode==='plan')assert(await evaluate("document.querySelector('.plan-actions').getBoundingClientRect().height<=innerHeight*.45"),'Q3 choices and consequences leave room for the question');
       for(const id of ['n0','n1','n2','_run_checks']) {
         await evaluate(`document.querySelector(${JSON.stringify((width<761?'#phone-flow':'#map')+' [data-node="'+id+'"] .node-header')}).click()`);
         const audit=await evaluate(`(()=>{const e=document.querySelector('.panel-intro .node-sentence'),r=e.getBoundingClientRect(),intro=e.parentElement;return {text:e.textContent,first:intro.children[1]===e,inside:r.top>=0&&r.left>=0&&r.bottom<=innerHeight&&r.right<=innerWidth,rect:r.toJSON()}})()`);
