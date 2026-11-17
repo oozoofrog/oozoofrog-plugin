@@ -12,7 +12,7 @@ SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 from graphflow import core, decisions, plan, state, store
 
-from human_support import legacy_run
+from human_support import legacy_run, recorded_question
 
 ACTOR = {"role": "leader", "node": None, "session": "test"}
 HUMAN = {"role": "human", "node": None, "session": None}
@@ -53,13 +53,13 @@ class DecisionsTests(unittest.TestCase):
             return state.derive(tx.plan, tx.events)
 
     def ask(self, **kw):
-        args = dict(kind="review", question="Approve?", node=None, check=None,
+        args = dict(kind="information", question="Approve?", node=None, check=None,
                     purpose=None, evidence=None, actor=ACTOR)
         args.update(kw)
         return decisions.ask(self.run, **args)
 
     def answer(self, did, **kw):
-        args = dict(outcome="approved", answer_text="Yes ✓", source="terminal", actor=HUMAN)
+        args = dict(outcome="answered", answer_text="Yes ✓", source="terminal", actor=HUMAN)
         args.update(kw)
         return decisions.answer(self.run, did, **args)
 
@@ -94,7 +94,8 @@ class DecisionsTests(unittest.TestCase):
         for bad in (None, "", "  ", 42):
             self.error("bad_question", 2, self.ask, question=bad)
         self.error("unknown_node", 4, self.ask, node="missing")
-        for purpose in ("hold", "free"):
+        self.error("bad_purpose", 2, self.ask, purpose="hold")
+        for purpose in ("free",):
             self.assertEqual(self.ask(purpose=purpose)["purpose"], purpose)
 
     def test_submission_binding_and_stale_restart(self):
@@ -120,7 +121,7 @@ class DecisionsTests(unittest.TestCase):
         answer = self.answer(data["id"])
         self.assertEqual(store.events(self.run)[-1]["data"], answer)
         data = self.derive()["decisions"][data["id"]]
-        self.assertEqual(answer["sig"], core.human_sig("r1", data["id"], "approved", "Yes ✓", data))
+        self.assertEqual(answer["sig"], core.human_sig("r1", data["id"], "answered", "Yes ✓", data))
         self.assertTrue(decisions.verify("r1", data["id"], answer, data))
         self.assertTrue(self.derive()["decisions"][data["id"]]["verified"])
         self.error("already_answered", 4, self.answer, data["id"])
@@ -156,7 +157,8 @@ class DecisionsTests(unittest.TestCase):
         for kind in ("review", "authorization", "direction", "information"):
             valid = ("approved", "rejected", "revision_requested") if kind in ("review", "authorization") else ("answered",)
             for outcome in ("approved", "rejected", "revision_requested", "answered", "bad", None):
-                data = self.ask(kind=kind)
+                data = (recorded_question(self.run,kind,"Approve?",None,None,"free",None,ACTOR)
+                        if kind in ("review", "authorization") else self.ask(kind=kind))
                 if outcome in valid:
                     result = self.answer(data["id"], outcome=outcome, source="dashboard")
                     self.assertEqual(result["outcome"], outcome)

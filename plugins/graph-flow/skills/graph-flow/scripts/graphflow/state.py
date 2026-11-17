@@ -60,7 +60,7 @@ def plan_approval(derived):
     if not identity:
         return {}
     matches = [d for d in derived.get("decisions", {}).values()
-               if d.get("purpose") == "plan_approval" and d.get("plan_identity") == identity
+               if d.get("purpose") == "plan_approval" and d.get("issuer") == "plan" and d.get("plan_identity") == identity
                and not d.get("stale")]
     return max(matches, key=lambda d: d["seq"]) if matches else {}
 
@@ -221,7 +221,7 @@ def decision_identity(decision):
 def require_submission_binding(derived, node_id):
     sub = (derived["nodes"].get(node_id) or {}).get("submission") or {}
     for dec in derived["decisions"].values():
-        if (not dec.get("stale") and dec.get("status") == "answered" and dec.get("node") == node_id and dec.get("submission") == sub.get("id")
+        if (dec.get("issuer") == "gate" and not dec.get("stale") and dec.get("status") == "answered" and dec.get("node") == node_id and dec.get("submission") == sub.get("id")
                 and dec.get("purpose") in ("human_check", "lane3", "trajectory", "hold")
                 and (dec.get("binding_changed") or dec.get("status") == "answered" and not dec.get("verified"))):
             raise core.GFError("approval_changed", "The submission commit or evidence differs from the human approval. Submit again for review.", core.EXIT_STATE)
@@ -378,7 +378,7 @@ def derive(plan, events):
                 continue
             slot = a["checks"].setdefault(cid, {"loop": None, "gate": None})
             if d.get("phase") in PHASES:
-                slot[d["phase"]] = copy.deepcopy(d)
+                slot[d["phase"]] = dict(copy.deepcopy(d), id=seq)
             a["results"].append(d)
 
         elif t in ("node.submit", "review.submit"):
@@ -431,6 +431,8 @@ def derive(plan, events):
                 "submission": d.get("submission"),
                 "check": d.get("check"),
                 "purpose": d.get("purpose"),
+                "issuer": d.get("issuer"),
+                "reason": d.get("reason"),
                 "plan_identity": d.get("plan_identity"),
                 "location": actual_location,
                 "recorded_location": copy.deepcopy(d.get("location")),
@@ -520,7 +522,8 @@ def derive(plan, events):
                 dec["status"] = "superseded"
     location_mismatch = bool(actual_location and any(
         d.get("recorded_location") and d["recorded_location"] != actual_location
-        and not d.get("stale") for d in decisions.values()))
+        and not d.get("stale") and (d.get("purpose") == "plan_approval" or d.get("status") == "open")
+        for d in decisions.values()))
 
     out_nodes = {}
     for nid, node in nodes.items():
@@ -533,6 +536,7 @@ def derive(plan, events):
             sub = r["submission"] or {}
             node_reviews.append({
                 "node": rid,
+                "id": sub.get("id"),
                 "status": r["status"],
                 "target_submission": sub.get("target_submission"),
                 "verdict": sub.get("verdict"),

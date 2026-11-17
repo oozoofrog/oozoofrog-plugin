@@ -198,7 +198,8 @@ def run_scope(run_dir, node_id, phase, cwd, actor):
     data = _result(node_id, check_id, "scope", st["attempts"], phase, directory)
     started = _time.monotonic()
     commit = (st.get("submission") or {}).get("commit") if phase == "gate" else None
-    changed = _changed(directory, st["base"], commit)
+    changed = (list((st.get("submission") or {}).get("changed_files") or [])
+               if phase == "gate" else _changed(directory, st["base"], commit))
     data["violations"] = [p for p in changed if not any(
         p == owner.rstrip("/") or (owner.endswith("/") and p.startswith(owner))
         for owner in node["owns"])]

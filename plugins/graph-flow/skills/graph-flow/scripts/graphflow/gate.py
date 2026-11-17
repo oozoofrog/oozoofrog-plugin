@@ -1,6 +1,8 @@
 """Evidence-ordered gates and lane rules (records.md section 6, P7-P10)."""
 import copy
 import importlib
+import hashlib
+import json
 import pathlib
 import subprocess
 
@@ -9,14 +11,14 @@ from . import checks, core, graph, plan as planmod, state as statemod, store
 __all__ = ["evaluate", "build_rejection", "render_rejection", "gate", "gate_final", "reopen"]
 
 
-def _decisions(state, node_id, submission, check, purpose, kind, request=None):
+def _decisions(state, node_id, submission, check, purpose, kind, request):
     return [d for d in state.get("decisions", {}).values()
-            if not d.get("stale") and d.get("node") == node_id
+            if d.get("issuer") == "gate" and not d.get("stale") and d.get("node") == node_id
             and d.get("submission") == submission and d.get("check") == check
             and d.get("purpose") == purpose
             and (kind is None or d.get("kind") == kind)
-            and (request is None or all(d.get(k) == request.get(k)
-                 for k in ("question", "evidence", "kind")))]
+            and all(d.get(k) == request.get(k)
+                    for k in ("question", "evidence", "kind"))]
 
 
 def _answered(decisions, outcomes):
@@ -24,14 +26,31 @@ def _answered(decisions, outcomes):
                and d.get("outcome") in outcomes for d in decisions)
 
 
-def _ask(node, node_state, purpose, check=None, kind="review", question=None):
+def _ask(node, node_state, purpose, check=None, kind="review", question=None, rollbacks=0):
     submission = node_state.get("submission") or {}
     human = next((c for c in node.get("checks", []) if c.get("id") == check), {})
     context = human.get("context", {}) if purpose == "human_check" else node.get("context", {})
     prompt = human.get("prompt") or human.get("title") or node.get("goal", "")
     question = (node.get("question") if purpose == "node" else prompt if purpose == "human_check"
                 else question or "Approve %s: %s?" % (purpose, node.get("goal", node["id"])))
-    return {"node": node["id"], "submission": submission.get("id"),
+    ko = planmod.is_korean(node)
+    if purpose in ("hold", "trajectory", "lane3"):
+        questions = {
+            "hold": ("실패한 검사와 검토 의견을 확인하고도 이 결과를 받아들일까요?", "Accept this result despite the listed failed checks and reviews?"),
+            "trajectory": ("수정과 되돌림 기록을 확인하고 이 결과를 받아들일까요?", "Accept this result after reviewing the corrections and rollbacks?"),
+            "lane3": ("일을 마쳤어요. 이 결과를 받아들일까요?", "The work is submitted. Accept this result?")}
+        question = questions[purpose][0 if ko else 1]
+    records = []
+    for cid, slots in sorted(node_state.get("checks", {}).items()):
+        result = slots.get("loop")
+        if result:
+            records.append({"type": "check", "id": result.get("id", cid), "value": result})
+    for review in node_state.get("reviews", []):
+        if review.get("status") == "passed" and review.get("target_submission") == submission.get("id"):
+            records.append({"type": "review", "id": review.get("id", review.get("node")), "value": review})
+    for record in records:
+        record["sha256"] = hashlib.sha256(json.dumps(record["value"], sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+    return {"issuer": "gate", "node": node["id"], "submission": submission.get("id"),
             "check": check, "purpose": purpose, "kind": kind,
             "question": question,
             "evidence": {
@@ -40,7 +59,9 @@ def _ask(node, node_state, purpose, check=None, kind="review", question=None):
                 "checks": {cid: {"loop": copy.deepcopy(slots["loop"])}
                            for cid, slots in node_state.get("checks", {}).items() if slots.get("loop")},
                 "context": copy.deepcopy(context),
-                "contract": planmod.node_contract(node)}}
+                "contract": planmod.node_contract(node),
+                "records": records, "rollbacks": rollbacks,
+                "trajectory_clean": node_state.get("trajectory_clean", True)}}
 
 
 def _approval_rule(state, node, requests, rule):
@@ -53,7 +74,8 @@ def _approval_rule(state, node, requests, rule):
         if _answered(decisions, ("approved",)):
             continue
         if _answered(decisions, ("rejected", "revision_requested")):
-            return {"verdict": "hold", "rule": "R4", "failed": [], "asks": []}
+            return {"verdict": "hold", "rule": "R4", "failed": [], "asks": [],
+                    "message": "The person sent this decision back. Revise and re-post the plan, or submit corrected work before asking again."}
         missing = True
         bound = _decisions(state, node["id"], request["submission"], request["check"],
                            request["purpose"], None, request)
@@ -76,10 +98,10 @@ def evaluate(plan, state, node_id, gate_results, integration_results, rollbacks)
     if node["kind"] == "decision":
         request = _ask(node, st, "node", kind=node["decision_kind"])
         decisions = _decisions(state, node_id, None, None, "node", node["decision_kind"], request)
-        if _answered(decisions, ("answered", "approved")):
+        if _answered(decisions, ("approved",) if node["decision_kind"] in ("review", "authorization") else ("answered",)):
             return verdict("pass", "R7")
         if _answered(decisions, ("rejected", "revision_requested")):
-            return verdict("hold", "R4")
+            return dict(verdict("hold", "R4"), message="The person sent this decision back. Revise the question and re-post the plan; dependents remain blocked.")
         asks = [] if any(d.get("status") == "open" for d in decisions) else [
             request]
         return verdict("needs_approval", "R6", asks=asks)
@@ -109,12 +131,13 @@ def evaluate(plan, state, node_id, gate_results, integration_results, rollbacks)
     observed_failures = [r for r in host_results
                          if r.get("grade") == 2 and r.get("result") == "failed"]
     if observed_failures or any(r.get("verdict") == "fail" for r in reviews):
-        holds = _decisions(state, node_id, submission, None, "hold", "review")
-        if not _answered(holds, ("approved",)):
-            return verdict("hold", "R4", observed_failures)
+        result = _approval_rule(state, node, [_ask(node, st, "hold")], "R4")
+        if result:
+            result.update(verdict="hold", failed=observed_failures)
+            return result
 
     if node["kind"] == "work" and lane == 2 and (not st["trajectory_clean"] or rollbacks > 0):
-        result = _approval_rule(state, node, [_ask(node, st, "trajectory")], "R5")
+        result = _approval_rule(state, node, [_ask(node, st, "trajectory", rollbacks=rollbacks)], "R5")
         if result:
             return result
 
@@ -251,6 +274,9 @@ def gate(run_dir, node_id, cwd, actor):
             integration_results = [checks.run_cmd(run_dir, "_run", c, "gate", directory, actor)
                                    for c in _integration(plan, root, derived)]
     elif node["kind"] == "review":
+        for check in node["checks"]:
+            if check["type"] == "cmd":
+                results.append(checks.run_cmd(run_dir, node_id, check, "gate", directory, actor))
         results.append(checks.run_cites(run_dir, node_id, "gate", directory, actor))
     rollbacks = (_optional("trace", "rollbacks", 0, root, run_dir, node["owns"])
                  if node["kind"] == "work" else 0)
@@ -268,7 +294,12 @@ def gate(run_dir, node_id, cwd, actor):
         outcome = evaluate(tx.plan, current, node_id, results, integration_results, rollbacks)
         ask_ids = []
         for request in outcome["asks"]:
-            event = tx.append("decision.ask", request, actor)
+            for prior in current["decisions"].values():
+                if (prior.get("issuer") == "gate" and prior.get("status") == "open"
+                        and all(prior.get(k) == request.get(k) for k in ("node", "purpose", "check"))):
+                    tx.append("decision.superseded", {"id": prior["id"], "reason": "evidence_changed"},
+                              {"role": "tool", "node": node_id, "session": None})
+            event = tx.append("decision.ask", request, {"role": "tool", "node": node_id, "session": None})
             request["id"] = "d%d" % event["seq"]
             ask_ids.append(request["id"])
         rejection = None
@@ -285,7 +316,7 @@ def gate(run_dir, node_id, cwd, actor):
             rejection = build_rejection(node, current_st, outcome["failed"], tails)
         data = {"node": node_id, "attempt": current_st["attempts"],
                 "submission": submission.get("id"), "verdict": outcome["verdict"],
-                "rule": outcome["rule"], "rejection": rejection, "tested_head": tested_head,
+                "rule": outcome["rule"], "message": outcome.get("message"), "rejection": rejection, "tested_head": tested_head,
                 "merged_head": _head(root) if submission.get("commit") else None}
         tx.append("gate.verdict", data, actor)
     return dict(data, asks=ask_ids)

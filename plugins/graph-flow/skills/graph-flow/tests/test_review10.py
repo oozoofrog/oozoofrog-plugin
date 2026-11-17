@@ -107,7 +107,7 @@ class Review10Tests(unittest.TestCase):
         (self.project/'evidence.txt').write_text('reviewed evidence')
         # Signed record mutation tests intentionally inject a gate-owned question.
         with store.transaction(self.run) as tx:
-            ask={'kind':'authorization' if purpose=='lane3' else 'review','question':'Approve?', 'node':'a',
+            ask={'issuer':'gate','kind':'authorization' if purpose=='lane3' else 'review','question':'Approve?', 'node':'a',
                  'submission':state.derive(tx.plan,tx.events)['nodes']['a']['submission']['id'],
                  'check':None,'purpose':purpose,'evidence':{'files':['evidence.txt'],'checks':{}}}
             ev=tx.append('decision.ask',ask,{'role':'leader'});ask['id']='d%d'%ev['seq']

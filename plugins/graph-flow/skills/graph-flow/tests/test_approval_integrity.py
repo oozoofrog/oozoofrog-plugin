@@ -54,7 +54,8 @@ class ApprovalIntegrityTests(unittest.TestCase):
 
     def test_a3_unrelated_authorization_cannot_be_relabelled(self):
         self.set_plan()
-        other=decisions.ask(self.run,'authorization','Allow unrelated action?',None,None,'free',None,core.actor_from_env())
+        from human_support import recorded_question
+        other=recorded_question(self.run,'authorization','Allow unrelated action?',None,None,'free',None,core.actor_from_env())
         self.accept(other['id']); identity=self.snapshot()[1]['run']['plan_identity']
         def forge(es):
             next(e['data'] for e in es if e['type']=='decision.ask' and e['data']['id']==other['id']).update(
@@ -172,5 +173,5 @@ class ApprovalIntegrityTests(unittest.TestCase):
         self.assertEqual(node['planned_checks'][-1]['type'],'scope')
         self.assertEqual(v['integration_checks'][0]['command'],'test -s guide.txt')
         self.assertEqual(node['inputs'],[])
-        self.assertEqual(v['planned_questions'],[{'node':'a','kind':'review','question':'순서를 읽어 주세요'}])
+        self.assertEqual(v['planned_questions'],[{'node':'a','kind':'review','question':'순서를 읽어 주세요','when':'after_work'}])
         self.assertEqual(v['plan_counts'],{'work':1,'review':1,'decision':0,'checks':5,'decisions':1})

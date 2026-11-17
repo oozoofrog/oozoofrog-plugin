@@ -73,7 +73,7 @@ class PlanApprovalTests(unittest.TestCase):
     def test_every_new_revision_requires_consent_unchanged_work_is_preserved(self):
         first = self.set_plan()['decision']; self.accept(first)
         revised = copy.deepcopy(self.raw)
-        revised.update(title='새 안내', context={'note': '설명만 바꿨어요'})
+        revised.update(title='새 안내', context={'why': '설명만 바꿨어요'})
         revised['nodes'][0].update(title='안내 정리', summary='읽기 쉽게 정리해요')
         revised['nodes'][0]['checks'][0]['title'] = '내용이 있어요'
         wording = self.set_plan(revised)['decision']

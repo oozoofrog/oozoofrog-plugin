@@ -90,7 +90,7 @@ def ready(plan, state):
     for node in plan.get("nodes") or []:
         nid = node.get("id")
         if node.get("kind") == "decision":
-            if nodes.get(nid, {}).get("status") != "passed" and needs_satisfied(plan, state, nid):
+            if nodes.get(nid, {}).get("status") not in ("passed", "held") and needs_satisfied(plan, state, nid):
                 out.append(nid)
         elif start_problem(plan, state, nid) is None:
             out.append(nid)

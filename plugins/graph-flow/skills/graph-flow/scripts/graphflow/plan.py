@@ -11,6 +11,14 @@ _GRADES = ("bulk", "scoped", "daily", "large", "security")
 _DECISIONS = ("direction", "information", "review", "authorization")
 
 
+def is_korean(plan):
+    return bool(re.search(r"[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]", str(plan)))
+
+
+def approval_question(plan):
+    return "이 계획대로 시작할까요?" if is_korean(plan) else "Start with this plan?"
+
+
 def _list(value):
     return value if isinstance(value, list) else []
 
@@ -90,7 +98,8 @@ def normalize(plan):
     for node in _nodes(result):
         for field in ("needs", "owns", "outputs", "reads", "checks"):
             node.setdefault(field, [])
-        node.setdefault("max_attempts", 3)
+        if node.get("kind") != "decision":
+            node.setdefault("max_attempts", 3)
         lane = node.get("lane")
         node["effective_lane"] = lane
         checks = [c for c in _list(node["checks"]) if isinstance(c, dict)]
@@ -166,7 +175,10 @@ def validate(plan):
             if not isinstance(check, dict):
                 problem("V1", node, "check must be an object")
                 continue
-            known(check, "id type title context run cwd timeout_s tool expect prompt from_constraint added", node)
+            kind = check.get("type")
+            type_fields = {"cmd": "run cwd timeout_s from_constraint added", "scope": "", "cites": "",
+                           "host": "tool expect", "human": "prompt context"}
+            known(check, "id type title " + (type_fields.get(kind, "") if isinstance(kind,str) else ""), node)
             check_id = check.get("id")
             if not isinstance(check_id, str) or not _ID.fullmatch(check_id):
                 problem("V2", node, "malformed check id: %r" % check_id)
@@ -187,8 +199,11 @@ def validate(plan):
                     problem("V5", node, "cmd check requires run")
                 field(check, "run", str, node)
                 field(check, "cwd", str, node, required=False)
+                for label in ("from_constraint", "added"):
+                    text(check, label, 300, node)
                 if isinstance(check.get("cwd"), str):
-                    paths([check["cwd"]], node)
+                    if _bad_path(check["cwd"]):
+                        problem("V8", node, "unsafe cwd field: %s" % check["cwd"])
                 if "timeout_s" in check and (type(check["timeout_s"]) not in (int, float) or not math.isfinite(check["timeout_s"]) or check["timeout_s"] <= 0):
                     problem("V1", node, "timeout_s must be a finite positive number")
             elif kind == "host":
@@ -214,6 +229,8 @@ def validate(plan):
         problem("V1", None, "schema_version must be 1")
     field(plan, "goal", str, None)
     text(plan, "title", 80, None)
+    text(plan, "summary", 300, None)
+    context(plan, None)
     field(plan, "nodes", list, None)
     if isinstance(plan.get("goal"), str) and not plan["goal"]:
         problem("V1", None, "goal must be non-empty")
@@ -270,7 +287,8 @@ def validate(plan):
         elif node_id in seen:
             problem("V2", node_id, "duplicate node id: %s" % node_id)
         seen.add(node_id)
-        known(node, "id kind goal title summary context needs owns outputs reads checks lane effective_lane grade max_attempts target lens question decision_kind requirement", node_id)
+        kind_fields = {"work": "context grade max_attempts", "review": "target lens context grade max_attempts", "decision": "question decision_kind context"}
+        known(node, "id kind goal title summary needs owns outputs reads checks lane effective_lane requirement " + kind_fields.get(str(node.get("kind")), ""), node_id)
         kind = node.get("kind")
         if kind not in ("work", "review", "decision"):
             problem("V1", node_id, "unknown node kind: %r" % kind)
@@ -279,7 +297,7 @@ def validate(plan):
         text(node, "summary", 300, node_id)
         if type(node.get("lane")) is not int or node.get("lane") not in (1, 2, 3):
             problem("V6", node_id, "lane must be 1, 2 or 3")
-        if kind != "decision" or "grade" in node:
+        if kind != "decision":
             if node.get("grade") not in _GRADES:
                 problem("V1", node_id, "grade must be one of %s" % (", ".join(_GRADES)))
         if "max_attempts" in node and (type(node["max_attempts"]) is not int or node["max_attempts"] not in (1, 2, 3)):
@@ -292,6 +310,13 @@ def validate(plan):
         paths(node.get("owns"), node_id)
         paths(node.get("reads"), node_id)
         checks(node.get("checks"), node_id)
+        allowed_checks = {"work": ("cmd", "scope", "host", "human"),
+                          "review": ("cmd", "cites", "host", "human"), "decision": ()}
+        for check in _list(node.get("checks")):
+            if isinstance(check, dict) and check.get("type") not in allowed_checks.get(str(kind), ()):
+                problem("V5", node_id, "checks type %s is not enforced on %s nodes" % (check.get("type"), kind))
+        if "context" in node:
+            context(node, node_id)
         if kind == "work" and not _list(node.get("checks")):
             # Check the supplied list: normalization must not conceal missing checks.
             problem("V5", node_id, "work node requires a check")
@@ -310,6 +335,11 @@ def validate(plan):
             if not node.get("question") or node.get("decision_kind") not in _DECISIONS:
                 problem("V5", node_id, "decision requires question and a valid decision_kind")
             field(node, "question", str, node_id)
+            if node.get("decision_kind") in ("direction", "information"):
+                if any(depends(plan, other, node_id) for other in indexed):
+                    problem("V5", node_id, "decision_kind must be review or authorization when other nodes depend on this decision")
+                if "if_rejected" in (node.get("context") or {}):
+                    problem("V1", node_id, "context.if_rejected is inapplicable to direction/information")
             if _list(node.get("checks")):
                 problem("V5", node_id, "decision node must have no checks")
         if kind in ("review", "decision") and _list(node.get("owns")):
@@ -363,6 +393,10 @@ def validate(plan):
             node_id = node.get("id")
             if not isinstance(node_id, str) or node_id not in reviewed:
                 problem("V9", node_id if isinstance(node_id, str) else None, "work at effective lane 2 or 3 requires a review")
+    normalized, _ = normalize(plan)
+    for raw, computed in zip(_nodes(plan), _nodes(normalized)):
+        if "effective_lane" in raw and raw["effective_lane"] != computed.get("effective_lane"):
+            problem("V1", raw.get("id"), "effective_lane must match the lane derived from checks")
     return problems
 
 
@@ -386,8 +420,10 @@ def check_contract(check):
 def node_contract(node):
     contract = copy.deepcopy(node)
     contract["checks"] = [check_contract(c) for c in node.get("checks", [])]
-    contract["max_attempts"] = node.get("max_attempts", 3)
+    if node.get("kind") != "decision":
+        contract["max_attempts"] = node.get("max_attempts", 3)
     contract["effective_lane"] = node.get("effective_lane", node.get("lane"))
-    contract["isolation"] = "shared or worktree, selected at assignment"
-    contract["merge"] = "committed submissions must be merged into project HEAD; merge --no-ff"
+    if node.get("kind") != "decision":
+        contract["isolation"] = "shared or worktree, selected at assignment"
+        contract["merge"] = "committed submissions must be merged into project HEAD; merge --no-ff"
     return contract

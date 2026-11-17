@@ -80,7 +80,7 @@ class EvaluateTests(unittest.TestCase):
                                "family": "claude", "verdict": "pass"}]
 
     def answer(self, purpose, outcome="approved", check=None, kind="review", **updates):
-        data = {"node": "w", "submission": 10, "check": check, "purpose": purpose,
+        data = {"issuer": "gate", "node": "w", "submission": 10, "check": check, "purpose": purpose,
                 "kind": kind, "status": "answered", "outcome": outcome, "verified": True, "stale": False}
         if purpose=="node":kind=self.node["decision_kind"];data["kind"]=kind
         request=gate._ask(self.node,self.st,purpose,check=check,kind=kind)
@@ -244,9 +244,10 @@ class EvaluateTests(unittest.TestCase):
                          ("Publish?", "authorization"))
         self.answer("node", status="open", verified=False, submission=None)
         self.assertEqual(self.evaluate()["asks"], [])
-        for outcome in ("answered", "approved"):
-            self.answer("node", outcome, submission=None)
-            self.assert_verdict("pass", "R7")
+        self.answer("node", "answered", submission=None)
+        self.assert_verdict("needs_approval", "R6")
+        self.answer("node", "approved", submission=None)
+        self.assert_verdict("pass", "R7")
         for outcome in ("rejected", "revision_requested"):
             self.answer("node", outcome, submission=None)
             self.assert_verdict("hold", "R4")
@@ -455,7 +456,7 @@ class ScenarioTests(GateCase):
         commit = self.side_submission(text="bad\n")
         self.git("merge", "--no-ff", "--no-edit", commit)
         self.redo_review()
-        asked = decisions.ask(self.run, "review", "Approve trajectory?", "w", None,
+        asked = decisions.ask(self.run, "information", "Trajectory question?", "w", None,
                               "free", None, ACTOR)["id"]
         rejected = self.gate()
         self.assertEqual(rejected["verdict"], "reject")

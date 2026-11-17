@@ -105,7 +105,7 @@ TOOLS = {
                        positional=("node",), options=("final", "cwd")),
     "node_reopen": _tool("reopen", "Return one accepted unit and its dependents for correction (P8).",
                          required=("node", "reason"), positional=("node",), options=("reason",)),
-    "decision_ask": _tool("decide ask", "Ask a person for direction, information, review, or authorization (P10).",
+    "decision_ask": _tool("decide ask", "Ask a free direction/information question; only the gate creates binding approvals (P10).",
                           required=("kind", "question"), options=("kind", "question", "node", "check", "purpose", "command", "files")),
     "decision_list": _tool("decide list", "List open decisions within the caller's node context (P5, P10)."),
     "decision_wait": _tool("decide wait", "Wait for a person's decision without answering on their behalf (P10).",

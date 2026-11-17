@@ -40,7 +40,7 @@ def approve_current_plan(run):
         identity = state.plan_identity(tx.plan)
         recorded = next(e['data'] for e in reversed(tx.events) if e['type'] == 'plan.set')
         tx.append('plan.set', dict(recorded, plan_identity=identity), {'role':'leader'})
-        data = {'purpose':'plan_approval', 'kind':'authorization', 'plan_identity':identity,
+        data = {'issuer':'plan', 'purpose':'plan_approval', 'kind':'authorization', 'plan_identity':identity,
                 'question':'Approve test plan?', 'evidence':{'command':None,'files':[],'checks':[]}}
         ev = tx.append('decision.ask', data, {'role':'leader'})
         data['id'] = 'd%d' % ev['seq']
@@ -60,3 +60,15 @@ def refresh_contract(run, **fields):
                   'plan_identity':state.plan_identity(current),
                   'fingerprints':{n['id']:state.fingerprint(n) for n in current['nodes']}}, {'role':'leader'})
     approve_current_plan(run)
+
+
+def recorded_question(run, kind, question, node, check, purpose, evidence, actor):
+    """Historical/raw question fixture for signature and reader tests, never a public ask API."""
+    with store.transaction(run) as tx:
+        derived = state.derive(tx.plan, tx.events)
+        sub = (derived['nodes'].get(node) or {}).get('submission') or {}
+        data = dict(kind=kind, question=question, node=node, check=check,
+                    purpose=purpose, evidence=evidence, submission=sub.get('id'))
+        event = tx.append('decision.ask', data, actor)
+        data['id'] = 'd%d' % event['seq']
+    return data

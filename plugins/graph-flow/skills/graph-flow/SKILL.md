@@ -18,7 +18,7 @@ If a brief sets `GF_ROLE=worker` or `GF_ROLE=reviewer`, read [worker.md](referen
 ## Run the loop
 
 1. Inspect the project and existing runs: with no run selected, `gf status` lists this project's runs with their status and open decisions. To continue one, set `GF_RUN` to its `run` path and run `gf status` again; initialize a new run with `gf init` only when needed, then record observed capabilities with `gf host set`.
-2. Resolve consequential human choices with `gf decide ask --open`; use `gf decide wait` without blocking unrelated nodes.
+2. Ask free direction/information questions with `gf decide ask --open`; use gate-created authorization/review decision nodes for choices that release work; use `gf decide wait` without blocking unrelated nodes.
 3. Read `gf brief --plan`; write checks before work, split by blast radius, and use `gf plan validate` followed by `gf plan set <file> --open`. This always asks the person to approve the plan before any dispatch.
 4. Do not print or restate the plan in chat. Say one sentence in the person’s language: “계획을 대시보드에 올렸어요. 보시고 시작을 눌러 주세요. (<decision id>)” Then `gf decide wait <id> --timeout 30`. On timeout end the turn; the dashboard cannot wake a session. Resume when the person says they answered. After approval, select `gf ready` nodes, inspect `gf route`, record `gf assign`, and deliver each `gf brief` to its executor.
 5. Inside a work node, use `gf start`, optionally `gf red`, then produce, run `gf check run`, correct, and `gf submit`.
@@ -31,6 +31,7 @@ If a brief sets `GF_ROLE=worker` or `GF_ROLE=reviewer`, read [worker.md](referen
 
 - A check is something a program can evaluate and that can fail.
 - Nothing reaches a person except a decision or an approval, and only a person answers.
+- Only the gate/plan code creates binding approvals, from the approved contract and current evidence ids and hashes. Agent questions never change gate verdicts. Unknown or inapplicable plan fields are errors; command checks on review nodes execute at their gate.
 - A rejection returns one node with its scope, never the batch.
 
 ## Read only what the role needs

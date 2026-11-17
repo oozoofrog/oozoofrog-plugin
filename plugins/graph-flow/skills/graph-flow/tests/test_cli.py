@@ -238,8 +238,8 @@ class CLITests(unittest.TestCase):
         self.assertEqual(self.call('gate', '--final')['result'], 'passed')
         self.assertEqual(self.call('reopen', 'a', '--reason', 'retry')['invalidated'], ['a', 'r'])
         self.call('start', 'a')
-        self.call('submit', 'a')
         (self.repo / 'outside.txt').write_text('outside scope')
+        self.call('submit', 'a')
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             self.assertEqual(cli.main(['--run', str(self.run), 'gate', 'a']), 1)
@@ -312,7 +312,7 @@ class CLITests(unittest.TestCase):
                           '--files', 'a.py')
         self.assertEqual(first['node'], 'a')
         self.assertEqual(first['evidence'], {'command': 'echo test', 'files': ['a.py'], 'checks': []})
-        second = self.call(*reviewer, 'decide', 'ask', '--kind', 'review', '--question', 'Review?')
+        second = self.call(*reviewer, 'decide', 'ask', '--kind', 'information', '--question', 'Review?')
         free = self.call('decide', 'ask', '--kind', 'direction', '--question', 'Direction?')
         self.assertIsNone(free['node'])
         for role, other in ((worker, 'r'), (reviewer, 'a')):

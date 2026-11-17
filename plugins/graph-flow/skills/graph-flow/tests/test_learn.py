@@ -266,7 +266,7 @@ class LearnTests(unittest.TestCase):
         self.assertEqual(self.raw_constraints(), [result["constraint"]])
         self.assertEqual(self.events("constraint.promote")[-1]["data"], {"id": "c1"})
         document = self.raw_checks()
-        document["checks"][0].update(timeout_s=12, cwd="src", custom={"keep": True})
+        document["checks"][0].update(timeout_s=12, cwd="src")
         with store.locked(self.meta / ".lock"):
             learn._write_checks(self.meta, document)
         self.assertEqual(learn.fixed_checks(self.repo), document["checks"])

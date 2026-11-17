@@ -85,8 +85,8 @@ class Review11Tests(unittest.TestCase):
         shown=dict(c,command=c['run'],**{k:v for k,v in expected.items() if k not in c})
         script=("const m=await import('data:text/javascript;base64,'+Buffer.from("+json.dumps(js)+
                 ").toString('base64'));const rows=[];m.renderCheckInputs({append:r=>rows.push(r)},"+
-                json.dumps(shown)+",'en',(tag,text)=>({tag,text,dataset:{}}));"+
-                "console.log(JSON.stringify(Object.fromEntries(rows.map(r=>[r.dataset.input,r.text]))));")
+                json.dumps(shown)+",'en',(tag,text)=>({tag,text,dataset:{},append:r=>rows.push(r)}));"+
+                "console.log(JSON.stringify(Object.fromEntries(rows.filter(r=>r.dataset.input).map(r=>[r.dataset.input,r.text]))));")
         self.assertIn('renderCheckInputs(item,c,language,el)',js)
         result=subprocess.check_output([NODE,'--input-type=module'],input=script,text=True)
         rendered=json.loads(result)

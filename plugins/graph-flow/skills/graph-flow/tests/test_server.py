@@ -20,7 +20,7 @@ SCRIPTS = pathlib.Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 from graphflow import assign, checks, core, decisions, gate, learn, plan, server, state, store
 
-from human_support import legacy_run, approve_current_plan
+from human_support import recorded_question, legacy_run, approve_current_plan
 
 ACTOR = {"role": "leader", "node": None, "session": "server-test"}
 REVIEWER = {"role": "reviewer", "node": "review", "session": "review-test"}
@@ -316,7 +316,7 @@ class ServerTests(unittest.TestCase):
                             "notes": {"bad": "shape"}, "low_confidence": uncertainty}, ACTOR)
                         tx.append("review.submit", {"node": "review", "attempt": 1, "target": "build",
                             "target_submission": event["seq"], "verdict": "fail", "findings": findings}, ACTOR)
-                    decisions.ask(run, "review", "Read this", "build", None, "hold", 5, ACTOR)
+                    recorded_question(run, "review", "Read this", "build", None, "hold", 5, ACTOR)
                     status, body = self.json_request("GET", self.api("/api/run"))
                     self.assertEqual(status, 200, body)
                     d = body["view"]["decisions"][0]
@@ -428,7 +428,7 @@ class ServerTests(unittest.TestCase):
         # A restart gives the old submission's decision a stale binding.
         checks.start(self.runs[1], "build", None, ACTOR)
         self.assertEqual(self.json_request("GET", "/api/queue"), (200, {"queue": []}))
-        fresh = decisions.ask(self.runs[1], "information", "Which direction?", None, None, "free", None, ACTOR)
+        fresh = recorded_question(self.runs[1], "information", "Which direction?", None, None, "free", None, ACTOR)
         item = self.json_request("GET", "/api/queue")[1]["queue"][0]
         self.assertEqual(item["id"], fresh["id"])
         self.assertEqual(item["node_state"], dict.fromkeys(("status", "attempts", "lane", "effective_lane")))
@@ -438,7 +438,7 @@ class ServerTests(unittest.TestCase):
         run = self.runs[0]
         checks.start(run, "build", None, ACTOR)
         checks.submit(run, "build", None, None, "again", [], None, ACTOR)
-        fresh = decisions.ask(run, "review", "Second attempt?", "build", None, "free", None, ACTOR)
+        fresh = recorded_question(run, "review", "Second attempt?", "build", None, "free", None, ACTOR)
         queue = self.json_request("GET", "/api/queue")[1]["queue"]
         item = next(item for item in queue if item["project"] == str(self.projects[0]))
         self.assertEqual(item["id"], fresh["id"])
@@ -684,7 +684,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(view["nodes"][0]["laps"], [])
         self.assertFalse(view["nodes"][0]["answered"])
         answered_events = events + [{"seq": 4, "type": "decision.answer", "data": {"id": "d1"}}]
-        self.assertTrue(server._view(current, state.derive(current, answered_events), answered_events,
+        self.assertFalse(server._view(current, state.derive(current, answered_events), answered_events,
                                     self.projects[0])["nodes"][0]["answered"])
         self.assertEqual(view["counts"]["needs_you"], 1)
         free_events = events[:2]
@@ -706,7 +706,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(view["counts"], {"done": 1, "doing": 0, "waiting": 0, "needs_you": 0, "returned": 0, "returns_total": 0})
 
     def file_decision(self, paths):
-        return decisions.ask(self.runs[0], "review", "Read the files", "build", None,
+        return recorded_question(self.runs[0], "review", "Read the files", "build", None,
                              "free", {"files": paths}, ACTOR)["id"]
 
     def test_file_reader_happy_path_and_view_list(self):

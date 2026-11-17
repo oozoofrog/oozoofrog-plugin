@@ -325,7 +325,7 @@ def _timeline(nodes, events, lessons, verified_decisions=None, repin_seq=0):
         elif kind == "human.repin":
             add(event, "repinned", verified=event["seq"] == repin_seq)
         elif kind == "decision.superseded":
-            add(event, "superseded", decision=data.get("id"), revision=data.get("revision"))
+            add(event, "superseded", decision=data.get("id"), revision=data.get("revision"), reason=data.get("reason"))
         elif kind == "gate.final":
             add(event, "final", result=_text(data.get("result")),
                 failed=_strings(data.get("failed_checks")))
@@ -348,12 +348,12 @@ def _plan_summary(plan):
     from .gate import _ask
     for node in nodes:
         if node.get("kind") == "decision":
-            questions.append({"node": node["id"], "kind": node.get("decision_kind"), "question": node.get("question")})
+            questions.append({"node": node["id"], "when": "node", "kind": node.get("decision_kind"), "question": node.get("question")})
         for check in node.get("checks", []):
             if check.get("type") == "human":
-                questions.append({"node": node["id"], "kind": "review", "question": _ask(node, {}, "human_check", check=check["id"])["question"]})
+                questions.append({"node": node["id"], "when": "after_work", "kind": "review", "question": _ask(node, {}, "human_check", check=check["id"])["question"]})
         if node.get("effective_lane", node.get("lane")) == 3 and node.get("kind") != "decision":
-            questions.append({"node": node["id"], "kind": "authorization", "question": _ask(node, {}, "lane3", kind="authorization")["question"]})
+            questions.append({"node": node["id"], "when": "after_work", "kind": "authorization", "question": _ask(node, {}, "lane3", kind="authorization")["question"]})
     from .plan import node_counts
     counts = node_counts(nodes)
     counts.update(checks=sum(len(_node_checks(n)) for n in nodes) +
@@ -362,8 +362,43 @@ def _plan_summary(plan):
     return counts, questions
 
 
-def _planned_check(check):
-    return dict(planning.check_contract(check), command=check.get("run"))
+def _check_uses_owned_files(check, node):
+    """Static explanation of executable paths, never a security boundary."""
+    if check.get("type") != "cmd":
+        return False
+    own = (node or {}).get("owns", [])
+    cwd = check.get("cwd", ".").rstrip("/")
+    if cwd != "." and any(p == cwd or p.startswith(cwd + "/") or planning._under(cwd, p) for p in own):
+        return True
+    try:
+        tokens = shlex.split(check.get("run", ""), posix=True)
+    except ValueError:
+        return False
+    paths, command = [], []
+    for token in tokens + [";"]:
+        if token in ("&&", "||", "|", ";"):
+            while command and "=" in command[0]:
+                command.pop(0)
+            if command:
+                executable = command[0]
+                paths.append(executable)
+                name = pathlib.PurePosixPath(executable).name
+                if name in ("python", "python3", "node", "sh", "bash", "ruby", "perl") and len(command) > 1 and not command[1].startswith("-"):
+                    paths.append(command[1])
+                if name == "make":
+                    paths.extend(["Makefile", "makefile", "GNUmakefile"])
+                if name in ("npm", "pnpm", "yarn"):
+                    paths.append("package.json")
+            command = []
+        else:
+            command.append(token)
+    return any(planning._under(str(pathlib.PurePosixPath(cwd) / path), owner)
+               for path in paths for owner in own)
+
+
+def _planned_check(check, node=None):
+    return dict(planning.check_contract(check), command=check.get("run") if check.get("type") == "cmd" else None,
+                runs_own_files=_check_uses_owned_files(check, node))
 
 
 def _view(current, derived, events, project):
@@ -418,7 +453,7 @@ def _view(current, derived, events, project):
                               "reads": list(node.get("reads", [])), "declared_outputs": list(node.get("outputs", [])),
                               "kind": node["kind"], "lens": node.get("lens"), "target": node.get("target"), "status": st["status"],
                               "answered": node["kind"] == "decision" and any(
-                                  d.get("node") == nid and d.get("status") == "answered" and not d.get("stale")
+                                  d.get("node") == nid and d.get("status") == "answered" and d.get("verified") and d.get("outcome") in ("approved", "answered") and not d.get("stale")
                                   for d in derived["decisions"].values()),
                               "attempts": st["attempts"], "max_attempts": st["max_attempts"],
                               "lane": st["effective_lane"], "laps": laps,
@@ -432,7 +467,7 @@ def _view(current, derived, events, project):
                               "started": _text(_mapping(starts.get(nid)).get("ts"), None),
                               "inputs": [], "outputs": []})
         view["nodes"][-1]["planned_checks"] = [
-            _planned_check(c) for c in _node_checks(node)]
+            _planned_check(c, node) for c in _node_checks(node)]
         view["nodes"][-1]["deliverables"] = list(node.get("owns", [])) + list(node.get("outputs", []))
         returns = [e for e in events if e.get("type") == "gate.verdict"
                    and e["data"].get("node") == nid and e["data"].get("rejection")]
@@ -555,11 +590,12 @@ def _view(current, derived, events, project):
     view["replaced_unverifiable"] = bool(next((e["data"].get("replaced_unverifiable") for e in reversed(events) if e["type"] == "plan.set"), False))
     approval = state.plan_approval(derived)
     view["plan_approval"] = None if approval is None else {
-        key: approval.get(key) for key in ("id", "status", "outcome", "answer", "verified", "question", "plan_identity")}
+        key: approval.get(key) for key in ("id", "status", "outcome", "answer", "verified", "question", "plan_identity", "reason")}
     if view["plan_approval"] and approval.get("id"):
         view["plan_approval"]["identity"] = state.decision_identity(approval)
     view["stale_decisions"] = [{"id": d["id"], "reason": d.get("stale_reason")} for d in derived["decisions"].values() if d.get("stale_reason")]
     for node in view["nodes"]:
+        node["submitted_files"] = list((derived["nodes"][node["id"]].get("submission") or {}).get("changed_files") or [])
         node["preapproval_submission"] = bool(node["status"] != "passed" and derived["nodes"][node["id"]].get("submission") and
             not (approval and approval.get("verified") and approval.get("outcome") == "approved"))
         node["review_needs_correction"] = bool(node.get("kind") == "review" and node["status"] == "rejected")
@@ -647,7 +683,7 @@ def _file(run_dir, decision_id, relative):
         if decision is None:
             raise _HTTPError(404, "unknown_decision", "this decision is unavailable")
         if decision.get("binding_changed"):
-            raise _HTTPError(409, "evidence_changed", "asked 이후 파일이 바뀌었어요. 다시 확인을 요청해 주세요.")
+            raise _HTTPError(409, "evidence_changed", "질문한 뒤 파일이 바뀌었어요. 다시 확인을 요청해 주세요.")
         if decision["status"] != "open" or decision["stale"]:
             raise _HTTPError(403, "unavailable_decision", "this decision is no longer open")
         _file_path(project, relative, committed=bool((decision.get("submission_binding") or {}).get("commit")))
@@ -660,10 +696,10 @@ def _file(run_dir, decision_id, relative):
         except _HTTPError:
             raise
         except Exception:
-            raise _HTTPError(409, "evidence_changed", "asked 이후 파일이 바뀌었어요. 다시 확인을 요청해 주세요.")
+            raise _HTTPError(409, "evidence_changed", "질문한 뒤 파일이 바뀌었어요. 다시 확인을 요청해 주세요.")
         recorded = (decision.get("artifact_hashes") or {}).get("file:" + relative)
         if not recorded or hashlib.sha256(raw).hexdigest() != recorded:
-            raise _HTTPError(409, "evidence_changed", "asked 이후 파일이 바뀌었어요. 다시 확인을 요청해 주세요.")
+            raise _HTTPError(409, "evidence_changed", "질문한 뒤 파일이 바뀌었어요. 다시 확인을 요청해 주세요.")
         try:
             text = raw.decode("utf-8")
             if "\x00" in text:

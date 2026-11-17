@@ -17,7 +17,7 @@ RUN = "r1"
 ALL_KEYS = {"status", "kind", "lane", "effective_lane", "basis", "attempts", "max_attempts",
             "assignment", "base", "submission", "checks", "red", "reviews", "rejections",
             "verdict", "merged_head", "trajectory_clean", "open_decisions"}
-DECISION_KEYS = {"location", "recorded_location", "submission_binding", "artifact_hashes", "binding_changed", "run_nonce", "human_key_sha256", "plan_identity", "id", "seq", "node", "submission", "check", "purpose", "kind", "question",
+DECISION_KEYS = {"issuer", "reason", "location", "recorded_location", "submission_binding", "artifact_hashes", "binding_changed", "run_nonce", "human_key_sha256", "plan_identity", "id", "seq", "node", "submission", "check", "purpose", "kind", "question",
                  "evidence", "status", "outcome", "answer", "source", "verified", "stale", "legacy_binding"}
 
 
@@ -69,7 +69,7 @@ def decision(nid, needs=()):
         "id": nid, "kind": "decision", "goal": "approve", "decision_kind": "authorization",
         "question": "ok?", "needs": [{"from": f, "artifact": "a"} for f in needs],
         "owns": [], "outputs": ["approval"], "reads": [], "checks": [],
-        "lane": 3, "effective_lane": 3, "max_attempts": 3,
+        "lane": 3, "effective_lane": 3,
     }
 
 
@@ -146,8 +146,8 @@ class Log:
              "attempt": attempt, "phase": phase, "exit_code": 0 if result == "passed" else 1,
              "timed_out": False, "command": "true", "cwd": "/w", "duration_ms": 5, "log": "l"}
         d.update(extra)
-        self.add("check.result", d)
-        return d
+        seq = self.add("check.result", d)
+        return dict(d, id=seq)
 
     def submit(self, node, attempt, commit="c1"):
         return self.add("node.submit", {"node": node, "attempt": attempt, "commit": commit,
@@ -245,8 +245,8 @@ class FingerprintTests(unittest.TestCase):
             for need in node["needs"]:
                 need["label"] = "전달할 결과"
             for check in node["checks"]:
-                check.update(title="결과가 요구를 충족하는지 확인",
-                             context={"undo": "다시 검토할 수 있습니다"})
+                check.update(title="결과가 요구를 충족하는지 확인")
+                if check["type"] == "human": check["context"] = {"undo": "다시 검토할 수 있습니다"}
         for first, second in ((bare, presented), (presented, bare)):
             with self.subTest(add_fields=first is bare):
                 # Use normalized revisions and the exact per-node hash map used by cli.py.
@@ -633,10 +633,10 @@ class ReviewsTests(EnvCase):
         log.start("v3", 1)  # running: not listed
         s = derive(log, p)
         self.assertEqual(s["nodes"]["a"]["reviews"], [
-            {"node": "v1", "status": "submitted", "target_submission": s1, "verdict": "fail",
+            {"node": "v1", "id": r1, "status": "submitted", "target_submission": s1, "verdict": "fail",
              "findings": [{"severity": "high", "file": "a.py", "line": 2, "text": "x"}],
              "family": "openai"},
-            {"node": "v2", "status": "submitted", "target_submission": s1 + 1000,
+            {"node": "v2", "id": s["nodes"]["v2"]["submission"]["id"], "status": "submitted", "target_submission": s1 + 1000,
              "verdict": "pass", "findings": [], "family": None},
         ])
         for nid in ("v1", "v2", "v3", "d"):
@@ -683,7 +683,7 @@ class DecisionTests(EnvCase):
             "id": did, "seq": seq, "node": "a", "submission": None, "check": "unit",
             "location": store.location(log.run_dir), "recorded_location": store.location(log.run_dir),
             "submission_binding": None, "artifact_hashes": {}, "binding_changed": False,
-            "purpose": "node", "plan_identity": None, "run_nonce": None, "human_key_sha256": None, "kind": "direction", "question": "q?",
+            "purpose": "node", "issuer": None, "reason": None, "plan_identity": None, "run_nonce": None, "human_key_sha256": None, "kind": "direction", "question": "q?",
             "evidence": {"command": None, "files": [], "checks": []}, "status": "open",
             "outcome": None, "answer": None, "source": None, "verified": False,
             "stale": False, "legacy_binding":False}})
@@ -1123,7 +1123,7 @@ class ScenarioTests(EnvCase):
         self.assertEqual(s["v"]["status"], "passed")
         self.assertEqual(s["w"]["status"], "submitted")
         self.assertEqual(s["w"]["reviews"], [
-            {"node": "v", "status": "passed", "target_submission": s1, "verdict": "pass",
+            {"node": "v", "id": 8, "status": "passed", "target_submission": s1, "verdict": "pass",
              "findings": [], "family": "openai"}])
 
     def test_s2_reject_and_restart(self):

@@ -93,9 +93,11 @@ class PlanTests(unittest.TestCase):
     def test_v2_single_scope_and_cites_per_node(self):
         for kind in ("scope", "cites"):
             checks = work()["checks"] + [{"id": "first", "type": kind}]
-            self.assertEqual([], plan.validate(document(work(checks=checks))))
-            self.assertProblem(document(work(checks=checks + [{"id": "second", "type": kind}])), "V2", "work")
-        self.assertEqual([], plan.validate(document(work("a", checks=checks), work("b", checks=checks))))
+            node = work(checks=checks) if kind == "scope" else review(checks=checks)
+            nodes = [node] if kind == "scope" else [work(), node]
+            self.assertEqual([], plan.validate(document(*nodes)))
+            node["checks"].append({"id": "second", "type": kind})
+            self.assertProblem(document(*nodes), "V2", node["id"])
 
     def test_v5_review_lane_and_decision_checks(self):
         for lane in (2, 3, None, True, "1", []):
@@ -231,7 +233,7 @@ class PlanTests(unittest.TestCase):
 
     def test_check_types_and_fields(self):
         checks = [{"id": "cmd", "type": "cmd", "run": "true", "timeout_s": 0.5},
-                  {"id": "scope", "type": "scope"}, {"id": "cites", "type": "cites"},
+                  {"id": "scope", "type": "scope"}, {"id": "extra", "type": "cmd", "run": "true"},
                   {"id": "host", "type": "host", "tool": "IDE", "expect": "all tests pass"},
                   {"id": "human", "type": "human", "prompt": "Inspect the rendering"}]
         self.assertEqual([], plan.validate(document(work(checks=checks))))
@@ -286,7 +288,7 @@ class NormalizeTests(unittest.TestCase):
         for node in normalized["nodes"]:
             for key in ("needs", "owns", "outputs", "reads", "checks"):
                 self.assertIsInstance(node[key], list)
-            self.assertEqual(3, node["max_attempts"])
+            self.assertEqual(None if node["kind"] == "decision" else 3, node.get("max_attempts"))
         self.assertEqual(value["extension"], normalized["extension"])
         self.assertEqual(value["nodes"][0]["extension"], normalized["nodes"][0]["extension"])
         normalized["extension"]["future"].append(9)
@@ -330,7 +332,7 @@ class NormalizeTests(unittest.TestCase):
 
     def test_human_id_sequence_skips_taken_ids(self):
         checks = [{"id": "human", "type": "scope"},
-                  {"id": "human_review", "type": "cites"}]
+                  {"id": "human_review", "type": "host", "tool": "IDE", "expect": "pass"}]
         for expected in ("human_review_2", "human_review_3", "human_review_4"):
             normalized, notices = plan.normalize(document(work(checks=checks), review()))
             self.assertEqual({"id": expected, "type": "human"}, normalized["nodes"][0]["checks"][-1])
@@ -344,7 +346,7 @@ class NormalizeTests(unittest.TestCase):
 class PresentationTests(unittest.TestCase):
     def fixture(self):
         checks = [{"id": "cmd", "type": "cmd", "run": "true"},
-                  {"id": "scope", "type": "scope"}, {"id": "cites", "type": "cites"},
+                  {"id": "scope", "type": "scope"}, {"id": "extra", "type": "cmd", "run": "true"},
                   {"id": "host", "type": "host", "tool": "IDE", "expect": "pass"},
                   {"id": "person", "type": "human"}]
         value = document(work(checks=checks), review(), decision(

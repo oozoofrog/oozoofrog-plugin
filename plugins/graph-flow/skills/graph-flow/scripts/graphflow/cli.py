@@ -4,7 +4,6 @@ import importlib
 import json
 import os
 import pathlib
-import re
 import secrets
 import shlex
 import sys
@@ -37,6 +36,16 @@ def _validate(args, actor):
     return {"problems": problems, "notices": notices}, 1 if problems else 0
 
 
+def _merge_plan_records(supplied, learned, field):
+    """Never silently replace a displayed contract with project-local settings."""
+    merged = {item["id"]: item for item in supplied}
+    for item in learned:
+        if item["id"] in merged and merged[item["id"]] != item:
+            raise core.GFError("invalid_plan", "conflicting %s field id: %s" % (field, item["id"]), core.EXIT_NEGATIVE)
+        merged[item["id"]] = item
+    return list(merged.values())
+
+
 def _set_plan(args, actor):
     with store.transaction(args.run, replace_invalid=True) as tx:
         raw = _read_json(args.file)
@@ -45,8 +54,8 @@ def _set_plan(args, actor):
             raise core.GFError("invalid_plan", json.dumps(problems), core.EXIT_NEGATIVE)
         normalized, notices = plan.normalize(raw)
         learn = importlib.import_module("graphflow.learn")
-        normalized["promoted_checks"] = learn.fixed_checks(store.project_of(args.run))
-        normalized["constraints"] = learn.applying(store.project_of(args.run), normalized)
+        normalized["promoted_checks"] = _merge_plan_records(normalized.get("promoted_checks", []), learn.fixed_checks(store.project_of(args.run)), "promoted_checks")
+        normalized["constraints"] = _merge_plan_records(normalized.get("constraints", []), learn.applying(store.project_of(args.run), normalized), "constraints")
         problems = plan.validate(normalized)
         if problems:
             raise core.GFError("invalid_plan", json.dumps(problems), core.EXIT_NEGATIVE)
@@ -89,13 +98,13 @@ def _set_plan(args, actor):
             for previous in prior["decisions"].values():
                 if previous.get("purpose") == "plan_approval" and previous["status"] != "superseded":
                     tx.append("decision.superseded", {"id": previous["id"], "revision": revision}, actor)
-            wording = " ".join([normalized.get("title", ""), normalized.get("goal", "")] +
-                               [n.get("title", "") for n in normalized["nodes"]])
-            question = "이 계획대로 시작할까요?" if re.search(r"[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]", wording) else "Start with this plan?"
+            question = plan.approval_question(normalized)
             data = {"node": None, "submission": None, "check": None, "purpose": "plan_approval",
-                    "kind": "authorization", "question": question, "plan_identity": identity,
-                    "evidence": {"command": None, "files": [], "checks": []}}
-            event = tx.append("decision.ask", data, actor)
+                    "kind": "authorization", "question": question, "issuer": "plan", "plan_identity": identity,
+                    "evidence": {"command": None, "files": sorted({path
+                        for st in prior["nodes"].values() if prior["run"].get("legacy")
+                        for path in (st.get("submission") or {}).get("changed_files", [])}), "checks": []}}
+            event = tx.append("decision.ask", data, {"role": "tool", "node": None, "session": None})
             data["id"] = "d%d" % event["seq"]
             did = data["id"]
         else:

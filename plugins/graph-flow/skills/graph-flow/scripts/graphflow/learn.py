@@ -68,6 +68,15 @@ def _read_checks(meta):
         if (not isinstance(document, dict) or type(document.get("schema_version")) is not int
                 or document["schema_version"] != 1 or not isinstance(document.get("checks"), list)):
             raise ValueError("expected schema_version 1 and a checks list")
+        unknown = set(document) - {"schema_version", "checks"}
+        if unknown:
+            raise ValueError("unknown field: " + ", ".join(sorted(unknown)))
+        probe = {"schema_version": 1, "goal": "Validate saved checks", "integration_checks": document["checks"],
+                 "nodes": [{"id": "validation", "kind": "decision", "goal": "validate", "lane": 1,
+                            "question": "Validate?", "decision_kind": "information"}]}
+        problems = planmod.validate(probe)
+        if problems:
+            raise ValueError("; ".join(p["message"] for p in problems))
         seen = set()
         for check in document["checks"]:
             if (not isinstance(check, dict) or not _nonempty(check.get("id"))
@@ -78,7 +87,7 @@ def _read_checks(meta):
             seen.add(check["id"])
         return document
     except (ValueError, TypeError) as exc:
-        raise core.GFError("checks_corrupt", "invalid checks.json: %s" % exc, core.EXIT_IO)
+        raise core.GFError("checks_corrupt", "invalid .graph-flow/checks.json: %s" % exc, core.EXIT_IO)
 
 
 def _write_checks(meta, document):

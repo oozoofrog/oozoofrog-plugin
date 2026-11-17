@@ -13,8 +13,10 @@ def ask(run_dir, kind, question, node, check, purpose, evidence, actor):
     if kind not in ("direction", "information", "review", "authorization"):
         raise core.GFError("bad_kind", "unknown decision kind: %s" % kind)
     purpose = "free" if purpose is None else purpose
-    if purpose not in ("hold", "free"):
-        raise core.GFError("bad_purpose", "decide ask can create only free questions or holds; gate owns purpose: %s" % purpose)
+    if purpose != "free":
+        raise core.GFError("bad_purpose", "decide ask creates only free questions; gate owns purpose: %s" % purpose)
+    if kind not in ("direction", "information"):
+        raise core.GFError("bad_kind", "free questions must be direction or information; approval questions belong to the gate")
     if not isinstance(question, str) or not question.strip():
         raise core.GFError("bad_question", "question must be non-empty")
     with store.transaction(run_dir) as tx:
@@ -46,7 +48,7 @@ def answer(run_dir, decision_id, outcome, answer_text, source, actor, displayed=
         if displayed is not None and displayed != state.decision_identity(decision):
             raise core.GFError("stale_decision", "The displayed question or evidence changed. Read the current decision again.", core.EXIT_STATE)
         if decision.get("legacy_binding"):
-            raise core.GFError("legacy_decision", "This question predates signed bindings. Run the gate to ask it again.", core.EXIT_STATE)
+            raise core.GFError("legacy_decision", "This question predates signed bindings. Ask the leader to request a fresh question.", core.EXIT_STATE)
         if decision.get("recorded_location") != store.location(run_dir):
             raise core.GFError("project_moved", "Moving or renaming a project directory or run invalidates approvals. Re-post the plan and approve once more.", core.EXIT_STATE)
         if decision.get("binding_changed"):
@@ -139,9 +141,9 @@ def repin(run_dir, actor, displayed=None):
         identity = derived["run"].get("plan_identity")
         if tx.plan and identity:
             ask = {"node": None, "submission": None, "check": None, "purpose": "plan_approval",
-                   "kind": "authorization", "question": "이 계획대로 다시 시작할까요?",
+                   "kind": "authorization", "question": plan.approval_question(tx.plan), "issuer": "plan", "reason": "key_repinned",
                    "plan_identity": identity, "evidence": {"command": None, "files": [], "checks": []}}
-            event = tx.append("decision.ask", ask, actor)
+            event = tx.append("decision.ask", ask, {"role": "tool", "node": None, "session": None})
             ask["id"] = "d%d" % event["seq"]
     return {"repinned": True, "message": "Key re-pinned. Approve the plan again before continuing."}
 

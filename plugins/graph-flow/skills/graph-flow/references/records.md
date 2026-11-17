@@ -148,8 +148,8 @@ A leader may also do a node's work itself (`inline`). That is allowed for lane 1
 | `outputs` | Named non-file outputs (`findings`, `approval`) |
 | `checks` | Section 4. Check ids match the node id pattern and are unique within the node |
 | `lane` | `1`, `2`, or `3` (P9) |
-| `grade` | `bulk`, `scoped`, `daily`, `large`, `security`; used by `gf route`. Optional for `decision` |
-| `max_attempts` | Integer 1 to 3, default 3 (P2) |
+| `grade` | `bulk`, `scoped`, `daily`, `large`, `security`; used by `gf route`. Not applicable to `decision` |
+| `max_attempts` | Integer 1 to 3, default 3, for work/review only (P2) |
 | `review` nodes | Need `target` (a `work` node id) and `lens`; own nothing |
 | `decision` nodes | Need `decision_kind` and `question`; own nothing; have no checks |
 | Check `title` | Optional string on any check type (including integration checks), at most 120 characters, saying what the check confirms in plain words |
@@ -212,6 +212,24 @@ If the current plan revision is missing or cannot be verified, `plan set` may re
 
 `plan set <file> --open`, `decide ask ... --open`, and `gate [<node>|--final] --open` perform the ordinary mutation and then open the right run/decision with one short output line. Only a waiting decision or successful final gate opens; `GF_NO_OPEN=1` suppresses every browser launch, including explicit `gf open` (which reports suppression), never approval. An opening failure adds `open_error` and retains `show`; the mutation is already recorded. MCP never opens the browser and returns a human-terminal `graph-flow open` instruction. An approved unchanged plan does not reopen the browser.
 
+### Enforced fields and presentation labels (0.3)
+
+Unknown or inapplicable fields are rejected by name. All kinds accept identifiers, goals, titles, summaries, needs, reads, outputs, lane, requirement and context. `owns` and `checks` must be empty for decisions; reviews also own nothing. `target`/`lens` belong only to reviews, `question`/`decision_kind` only to decisions, and `grade`/`max_attempts` only to work/review. A supplied `effective_lane` must equal the derived value. Decision lane is a risk label; decision acceptance, not lane, controls release. Direction/information decisions cannot have dependents or send-back context.
+
+| Check type | Accepted type-specific fields | Consumer |
+| --- | --- | --- |
+| `cmd` | `run`, `cwd`, `timeout_s`; provenance labels `from_constraint`, `added` | Command executor, including review gates |
+| `scope` | none | Gate compares the frozen submission file list with `owns` |
+| `cites` | none | Review gate validates file/line citations |
+| `host` | `tool`, `expect` | Recorded host observation; missing evidence blocks, failure holds |
+| `human` | `prompt`, `context` | Gate creates a question after submission and requires acceptance |
+
+Every check also accepts `id`, `type`, and the presentation `title`. Work accepts cmd/scope/host/human; review accepts cmd/cites/host/human; decision accepts no checks. Run integration/promoted checks accept cmd only. The full command runs, with cwd and timeout enforced. No other check shows a planned command. Scope is compared against the submitted file list so gate integration output cannot contaminate the next comparison; commands still run in the tested tree, not a sandbox.
+
+Run fields are schema_version, goal, title, summary, context, requirements, tags, nodes, integration_checks, promoted_checks and constraints. Local promoted checks/constraints are merged by id; a conflicting supplied record is rejected, never silently replaced. The local `.graph-flow/checks.json` is validated by the same command schema, with file and field in errors. Titles, summaries, context, needs labels, reads, outputs, requirement text, constraint text/provenance and check provenance are documented presentation/instruction fields, not machine assertions. `needs`/named outputs enforce graph order; `owns`, checks, lane and attempt limits enforce gate behavior. Constraint scope/tags select inherited instructions; the approved command is the machine enforcement for a promoted constraint.
+
+All binding decisions carry a gate/plan issuer in the signed binding. Agent `decide ask` accepts only free direction/information questions. Gate requests bind the approved node contract, current submission, check/review records with ids and hashes, trajectory and rollback context. The gate recomputes the request and accepts only an identical verified approval. A passed review with a fail verdict therefore creates a new gate-owned hold; an earlier status question cannot override it. Rejected decision nodes stay out of ready and explain how to revise/re-post. Only current plan approval and open decisions participate in project-location mismatch; answered old questions remain history after a move.
+
 ## 4. Checks and evidence grades
 
 | Type | Fields | Judged by | Grade |
@@ -234,7 +252,7 @@ Grade 3 is rollback history (section 9).
 
 ### `scope`
 
-`node.submit.changed_files` compares against the base of the node's FIRST attempt after its current basis, using the same snapshot comparison below. Retries with no new edits retain the node's changed files; reverting to that original snapshot removes a file. Scope comparisons continue to use each attempt's own base, so new out-of-scope edits in any attempt are detected. Committed submissions use the first base revision for changed_files and the current attempt base for commit ancestry and scope.
+`node.submit.changed_files` compares against the base of the node's FIRST attempt after its current basis, using the same snapshot comparison below. Retries with no new edits retain the node's changed files; reverting to that original snapshot removes a file. Loop scope comparisons use each attempt's own base, so new out-of-scope edits in any attempt are detected. Gate scope compares this frozen submission file list with the approved owns paths; later integration-check output does not enter that comparison. Committed submissions use the first base revision for changed_files and the current attempt base for commit ancestry.
 
 `gf brief` and the planning brief state the absolute project directory near the top and instruct running every command there; their tool invocation uses an absolute entry-script path. Check execution writes command output to evidence logs without echoing commands to stdout or stderr, so `gf --json gate` emits exactly one JSON document.
 
@@ -433,10 +451,10 @@ Preconditions (exit 4, no event):
 Execution, in phase `gate`, recording `tested_head`:
 
 - `work`: every `cmd` check of the node, then the scope comparison (always, under check id `scope` or the id of the plan's scope check); if `effective_lane >= 2`, also the integration checks (the plan's `integration_checks` followed by the approved plan's frozen `promoted_checks`).
-- `review`: the `cites` check.
+- `review`: all declared `cmd` checks, then the `cites` check.
 - `host` results are taken from the loop phase of the current attempt.
 
-Evaluation stops at the first rule that fires (P7: all deterministic evidence, then observed evidence, then opinion). Only non-stale, verified decisions count.
+Evaluation stops at the first rule that fires (P7: all deterministic evidence, then observed evidence, then opinion). Only non-stale, verified gate-issued decisions matching the recomputed current question, context and evidence ids/hashes count.
 
 | Rule | Condition | Verdict | Status |
 | --- | --- | --- | --- |
@@ -448,10 +466,10 @@ Evaluation stops at the first rule that fires (P7: all deterministic evidence, t
 | R6 | A `human` check has no approved `review` decision with purpose `human_check` bound to this submission and check; or `effective_lane == 3` and no approved `authorization` decision with purpose `lane3` is bound to this submission | `needs_approval` | `awaiting_approval` |
 | R7 | Otherwise | `pass` | `passed` |
 
-- For R5 and R6 the gate appends the missing `decision.ask` (with evidence: the commands about to be allowed, the changed files, the check table) unless an open, non-stale one with the same node, submission, check, and purpose exists.
+- For R4, R5 and R6 the gate appends the missing `decision.ask` (with evidence: the commands about to be allowed, the changed files, the check table) unless an open, non-stale gate-issued request matches the same node, submission, check, purpose, kind, generated question and current evidence. Obsolete open requests for that purpose are superseded.
 - A decision answered `rejected` or `revision_requested` for R5 or R6 yields `hold` (rule `R4`).
 - A review can hold a node; it can never produce `pass` and never outranks a grade 1 failure.
-- `decision` nodes have no submission. `gf gate <node>` gives `pass` (R7) when a verified, non-stale answer with outcome `answered` or `approved` exists for a decision with purpose `node` bound to this node; `hold` (R4) when that outcome is `rejected` or `revision_requested`; otherwise `needs_approval` (R6), appending the ask (from the node's `question` and `decision_kind`) if none is open.
+- `decision` nodes have no submission. `gf gate <node>` gives `pass` (R7) when a verified, non-stale answer with outcome `approved` (review/authorization) or `answered` (direction/information) exists for the exact gate-issued current request with purpose `node`; `hold` (R4) when that outcome is `rejected` or `revision_requested`; otherwise `needs_approval` (R6), appending the ask (from the node's `question` and `decision_kind`) if none is open.
 - A rejection never changes another node's status (P8).
 - The verdict is appended in one transaction that first re-derives the state and discards the result (exit 4, `stale_result`) unless all of these still hold: the plan revision, the node's `basis`, attempt, and submission id are unchanged; the node still has a current submission (for a decision node: it is not `passed`); and no `gate.verdict` for this node was appended since the gate started. Two gates on the same node therefore cannot both record a verdict, and a late gate can never overwrite a `passed` node.
 
@@ -487,8 +505,8 @@ When a rejection has no log, EVIDENCE names offending paths or citation details,
 
 ## 7. Decisions
 
-- `gf decide ask --kind K --question Q [--node N] [--check C] [--purpose P] [--command C] [--files F ...]` appends `decision.ask` and prints the id (`d<seq>`). The tool fills `submission` with the node's current submission id (or `null`). Kinds: `direction`, `information`, `review`, `authorization`. Default purpose: `free`. Every role may create only `free` or `hold` requests through this command; gate-owned purposes are rejected with `bad_purpose`. The gate generates and rechecks the exact plan question, context and evidence before accepting a gate-owned answer.
-- Record purposes are `node`, `human_check`, `lane3`, `trajectory`, `hold`, and `free`. `node` binds a planned decision; `human_check` requests a human look at a result; `lane3` asks permission for work that is hard to undo; `trajectory` asks whether to accept work with an unclean path (all attempts used, timeout, or scope overrun); `hold` concerns held work; `free` is an independently asked decision. IDs repeat across runs: clients must bind answers and drafts to project, run, and decision id together.
+- `gf decide ask --kind K --question Q [--node N] [--check C] [--purpose P] [--command C] [--files F ...]` appends `decision.ask` and prints the id (`d<seq>`). The tool fills `submission` with the node's current submission id (or `null`). Kinds for this command: `direction`, `information`. Purpose is always `free`. Every other purpose is rejected with `bad_purpose`; review/authorization kinds require a planned gate-created question. The gate generates and rechecks the exact plan question, context and evidence before accepting a gate-owned answer.
+- Record purposes are `node`, `human_check`, `lane3`, `trajectory`, `hold`, and `free`. `node` binds a planned decision; `human_check` requests a human look at a result; `lane3` asks whether to accept submitted lane-3 work after it is done; `trajectory` asks whether to accept work with an unclean path (all attempts used, timeout, or scope overrun); `hold` concerns held work; `free` is an independently asked decision. IDs repeat across runs: clients must bind answers and drafts to project, run, and decision id together.
 - `gf decide wait <id> [--timeout S]` polls the log (1 second interval) until the decision is answered; exit 0 with the answer, exit 1 on timeout.
 - `gf decide list` returns open decisions (for worker and reviewer roles: only those bound to their node).
 - Valid outcomes: `approved`, `rejected`, `revision_requested` for kinds `review` and `authorization`; `answered` for the other two.
@@ -496,7 +514,7 @@ When a rejection has no log, EVIDENCE names offending paths or citation details,
 
 Who can answer (P10):
 
-- The dashboard server, started by a person with `gf serve`, appends `decision.answer` with `source: "dashboard"` and `sig`: HMAC-SHA256, hex, keyed with `human.key`, over canonical JSON `[3, run_id, decision_id, outcome, answer, binding]`, prefixed `v3:`. Binding includes kind, purpose, plan_identity, node, submission, check, question, evidence, the per-run nonce, pinned key fingerprint, filesystem location, full submission binding and attachment/evidence hashes. Old unprefixed/v2 answers never authorize new execution.
+- The dashboard server, started by a person with `gf serve`, appends `decision.answer` with `source: "dashboard"` and `sig`: HMAC-SHA256, hex, keyed with `human.key`, over canonical JSON `[3, run_id, decision_id, outcome, answer, binding]`, prefixed `v3:`. Binding includes issuer, kind, purpose, plan_identity, node, submission, check, question, evidence, the per-run nonce, pinned key fingerprint, filesystem location, full submission binding and attachment/evidence hashes. Old unprefixed/v2 answers never authorize new execution.
 - `gf decide answer` on the command line is refused (exit 3) unless the environment has `GF_HUMAN_TERMINAL=1` and stdin is a TTY. It signs the same way with `source: "terminal"`.
 - `decisions.answer` itself refuses any actor whose role is not `human` (exit 3, `forbidden`), so no other entry point (the MCP server, a script) can produce a signed answer for an agent role. The dashboard server and the terminal path call it with a `human` actor.
 - `state.derive` sets `verified` by recomputing the signature with `core.human_sig` (constant-time comparison); it is `false` when the key is unreadable or the signature differs. Verification recomputes the resolved project root and run directory name from the filesystem context, never from the log; signatures without that context cannot authorize work. Gate rules count only verified answers.
