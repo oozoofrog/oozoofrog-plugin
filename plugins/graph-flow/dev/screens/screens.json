@@ -1197,5 +1197,185 @@
       }
     ],
     "group": "EVERYDAY"
+  },
+  {
+    "number": 70,
+    "name": "selected-work-desktop",
+    "scenario": "long-text",
+    "url": "/?t={token}#project={project}&run={run}&node=a",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "FIRST-SENTENCE"
+  },
+  {
+    "number": 71,
+    "name": "selected-work-phone",
+    "scenario": "long-text",
+    "url": "/?t={token}#project={project}&run={run}&node=a",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "FIRST-SENTENCE"
+  },
+  {
+    "number": 72,
+    "name": "selected-review-desktop",
+    "scenario": "long-text",
+    "url": "/?t={token}#project={project}&run={run}&node=r",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "FIRST-SENTENCE"
+  },
+  {
+    "number": 73,
+    "name": "selected-review-phone",
+    "scenario": "long-text",
+    "url": "/?t={token}#project={project}&run={run}&node=r",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "FIRST-SENTENCE"
+  },
+  {
+    "number": 74,
+    "name": "selected-decision-desktop",
+    "scenario": "long-text",
+    "url": "/?t={token}#project={project}&run={run}&node=q",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "FIRST-SENTENCE"
+  },
+  {
+    "number": 75,
+    "name": "selected-decision-phone",
+    "scenario": "long-text",
+    "url": "/?t={token}#project={project}&run={run}&node=q",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "FIRST-SENTENCE"
+  },
+  {
+    "number": 76,
+    "name": "selected-whole-result-desktop",
+    "scenario": "long-text",
+    "url": "/?t={token}#project={project}&run={run}&node=_run_checks",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "FIRST-SENTENCE"
+  },
+  {
+    "number": 77,
+    "name": "selected-whole-result-phone",
+    "scenario": "long-text",
+    "url": "/?t={token}#project={project}&run={run}&node=_run_checks",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "FIRST-SENTENCE"
+  },
+  {
+    "number": 78,
+    "name": "long-text-detail-desktop",
+    "scenario": "long-text",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "button",
+        "text": "상세 보기"
+      }
+    ],
+    "group": "LONG-TEXT"
+  },
+  {
+    "number": 79,
+    "name": "long-text-detail-phone",
+    "scenario": "long-text",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [
+      {
+        "action": "button",
+        "text": "상세 보기"
+      }
+    ],
+    "group": "LONG-TEXT"
+  },
+  {
+    "number": 80,
+    "name": "long-text-overview-desktop",
+    "scenario": "long-text",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "button",
+        "text": "간략 보기"
+      }
+    ],
+    "group": "LONG-TEXT"
+  },
+  {
+    "number": 81,
+    "name": "long-text-overview-phone",
+    "scenario": "long-text",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [
+      {
+        "action": "click",
+        "selector": "#phone-view-toggle"
+      },
+      {
+        "action": "button",
+        "text": "간략 보기"
+      }
+    ],
+    "group": "LONG-TEXT"
   }
 ]

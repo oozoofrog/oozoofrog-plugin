@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Graph Flow: selected cards start with their full summary (then goal or review/question fallback), pinned beneath the title in every mode. Cards wrap complete titles, summaries and check names at both levels; measured heights keep dependencies and plan order intact.
+
 - Graph Flow panel scrolling: snap text to the body edge so earlier lines cannot peek above the first complete line.
 
 - Graph Flow screen evidence: distinguish lower rows, unverified answer records, graph banners and completed on-page recovery; capture all 69 r18 scenes with relation/content assertions and the requested 29 grayscale/glance pairs.

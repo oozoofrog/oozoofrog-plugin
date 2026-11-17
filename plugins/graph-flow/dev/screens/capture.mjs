@@ -227,11 +227,12 @@ try {
     }
   }
 } finally {
+  if(ws?.readyState===1)await send('Browser.close').catch(()=>{});
   ws?.close();
   for(const child of [...owned].reverse()) await stop(child);
   // Check the dedicated profile too: Chrome may have spawned helper processes.
   let remaining=[];
-  for(let attempt=0;attempt<20;attempt++) {
+  for(let attempt=0;attempt<100;attempt++) {
     remaining=spawnSync('/bin/ps',['-axo','pid=,command='],{encoding:'utf8'}).stdout.split('\n').filter(line=>line.includes(profile));
     if(!remaining.length)break;
     await delay(100); // Helpers can finish just after the owned browser exits.

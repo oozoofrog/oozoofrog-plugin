@@ -455,7 +455,7 @@ def _view(current, derived, events, project):
                        and r.get("target_submission") == submission for r in _objects(st["reviews"]))
         view["nodes"].append({"id": nid, "title": title(nid),
                               "context": node.get("context", {}), "requirement": node.get("requirement"),
-                              "summary": _text(node.get("summary"), _text(node.get("goal"))), "goal": node.get("goal", ""),
+                              "summary": _text(node.get("summary"), _text(node.get("goal"))), "goal": node.get("goal", ""), "question": node.get("question", ""),
                               "owns": list(node.get("owns", [])), "needs": list(node.get("needs", [])),
                               "reads": list(node.get("reads", [])), "declared_outputs": list(node.get("outputs", [])),
                               "kind": node["kind"], "lens": node.get("lens"), "target": node.get("target"), "status": st["status"],

@@ -665,7 +665,8 @@ for(const lang of ['ko','en'])for(const [name,status,attempts] of cases){
   live={...live,language:lang,nodes:[node],plan_counts:{work:1},plan_approval:null,decisions:name==='awaiting'?[{...d,node:'work'}]:[],timeline:[row]};
   api.applyView(structuredClone(live));
   const expected=api.stateWords(name,lang).name;
-  for(const level of ['detail','overview'])assert(api.nodeCard(node,false,level).textContent.includes(expected),name+' '+level);
+  assert(api.nodeCard(node,false,'detail').textContent.includes(expected),name+' detail');
+  assert(api.nodeCard(node,false,'overview').querySelector('.node-header')['aria-label'].includes(expected),name+' overview accessible state');
   assert(get('map').querySelector('.state-legend').textContent.includes(expected),name+' legend');
   assert(get('phone-flow').textContent.includes(expected),name+' phone');
   assert(get('node-list').textContent.includes(expected),name+' list');

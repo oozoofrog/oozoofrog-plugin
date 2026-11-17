@@ -120,6 +120,8 @@ const STRINGS = {
     "reviews": "검토를 맡겼어요",
     "waitsForDecision": "결정을 기다림",
     "towardGoal": "목표로",
+    "reviewSentence": "{target}을(를) {lens}의 눈으로 검토해요",
+    "checksMore": "검사 {n}개 더",
     "fit": "화면에 맞추기",
     "zoomIn": "크게 보기",
     "zoomOut": "작게 보기",
@@ -331,7 +333,7 @@ const STRINGS = {
     "planLens": "검토 관점",
     "planOutputs": "넘기는 것",
     "runChecksTitle": "전체 결과 확인",
-    "runChecksAfter": "모든 일을 마친 뒤 확인해요",
+    "runChecksAfter": "모든 일을 마친 뒤 합친 결과가 계획의 통과 조건을 만족하는지 확인해요",
     "runChecksGoal": "계획의 목표",
     "runConstraints": "지켜야 할 조건",
     "countWork": "일 {n}개",
@@ -720,6 +722,8 @@ const STRINGS = {
     "reviews": "reviewed by",
     "waitsForDecision": "waits for a decision",
     "towardGoal": "toward the goal",
+    "reviewSentence": "Review {target} through the lens of {lens}.",
+    "checksMore": "{n} more checks",
     "fit": "Fit to view",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
@@ -931,7 +935,7 @@ const STRINGS = {
     "planLens": "Review lens",
     "planOutputs": "Outputs",
     "runChecksTitle": "Check the whole result",
-    "runChecksAfter": "After all work is finished",
+    "runChecksAfter": "After all work is finished, check that the combined result meets the plan’s requirements.",
     "runChecksGoal": "Plan goal",
     "runConstraints": "Constraints",
     "countWork": "Work: {n}",
@@ -1491,6 +1495,12 @@ export function planCounts(counts = {}, language = 'en', details = false) {
   if (details) keys.push(['checks','countChecks'],['decisions','countPlannedDecision']);
   return keys.filter(([key]) => counts[key] > 0).map(([key,word]) => STRINGS[language][word].replace('{n}',counts[key])).join(' · ');
 }
+export function nodeSentence(node, nodes = [], language = 'en') {
+  if(node.runLevel)return STRINGS[language].runChecksAfter;
+  if(node.summary || node.goal)return node.summary || node.goal;
+  if(node.kind==='review')return STRINGS[language].reviewSentence.replace('{target}',nodes.find(n=>n.id===node.target)?.title || node.target || '').replace('{lens}',Array.isArray(node.lens)?node.lens.join(' · '):node.lens || STRINGS[language].review);
+  return node.question || node.contract?.question || '';
+}
 export function planFlow(data, language = 'en') {
   if (!data.nodes.length || data.plan_error) return data;
   const id = '_run_checks', strings = STRINGS[language];
@@ -1583,7 +1593,7 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
     const cost=crossings();if(cost<bestCost){bestCost=cost;best=layers.map(ids=>[...ids]);}
   }
   layers.splice(0,layers.length,...best);
-  const widths=layers.map(ids=>overview?156:Math.max(264,...ids.filter(id=>byId.has(id)).map(id=>Math.min(280,Math.ceil(textWidth(byId.get(id).title,18,9))+40))));
+  const widths=layers.map(ids=>overview?156:Math.max(264,...ids.filter(id=>byId.has(id)).map(id=>Math.max((byId.get(id).summary||byId.get(id).goal||'').length>180?480:0,Math.min(280,Math.ceil(textWidth(byId.get(id).title,18,9))+40)))));
   for(const v of vertices.values()) {
     v.width=widths[v.layer];
     const degree=Math.max(links.filter(e=>e.from===v.id).length,links.filter(e=>e.to===v.id).length);
@@ -1667,7 +1677,7 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
     }
   }
   if(overview && options.wrapLongChains && layers.length>8 && layers.every(ids=>ids.length===1 && byId.has(ids[0]))) {
-    const columns=7, rowHeight=120;
+    const columns=7, rowHeight=Math.max(80,...Object.values(positions).map(p=>p.height))+40;
     layers.forEach((ids,i)=>{Object.assign(positions[ids[0]],{x:margin+(i%columns)*212,y:margin+Math.floor(i/columns)*rowHeight});});
     for(const r of routes){const a=positions[r.from],b=positions[r.to],start={x:a.x+a.width,y:a.y+a.height/2},end={x:b.x,y:b.y+b.height/2};
       r.start=start;r.end=end;r.chip=null;
@@ -1900,7 +1910,7 @@ function returnedLine(n) {
 }
 let planBanner = null, planSeen=null, planChanges=null, planChangeIds=null;
 const planRead = new Set();
-const graphRead = new Set();let graphReadIdentity='';
+const graphRead = new Set(),graphReadSpans=new Map();let graphReadIdentity='';
 function graphReadReason() {
   if(mode!=='flow'||$('accessible').open||(matchMedia('(max-width:760px)').matches&&selected))return t('planGraphReason',{action:t(view.has_work?'planContinue':'planStart')});
   const remaining=planFlow(view,language).nodes.filter(n=>!graphRead.has(n.id));
@@ -1909,14 +1919,19 @@ function graphReadReason() {
 function recordGraphRead() {
   if(!view||!planBlocked()||mode!=='flow'||$('accessible').open||(matchMedia('(max-width:760px)').matches&&selected))return;
   const identity=JSON.stringify(view.plan_approval?.identity);
-  if(identity!==graphReadIdentity){graphRead.clear();graphReadIdentity=identity;}
+  if(identity!==graphReadIdentity){graphRead.clear();graphReadSpans.clear();graphReadIdentity=identity;}
   const phone=matchMedia('(max-width:760px)').matches&&!$('flow').classList.contains('phone-diagram');
   const viewport=phone?{left:0,top:0,right:innerWidth,bottom:innerHeight-(document.querySelector('.plan-actions')?.offsetHeight||0)}:document.querySelector('.map-viewport')?.getBoundingClientRect();
   if(!viewport)return;
   const top=Math.max(viewport.top,document.querySelector('#attention.plan-banner')?.getBoundingClientRect().bottom||0);
   for(const card of document.querySelectorAll(phone?'#phone-flow .node-card':'#map .node-card')){
     const r=card.getBoundingClientRect();
-    if(r.width&&r.left>=viewport.left-.5&&r.right<=viewport.right+.5&&r.top>=top-.5&&r.bottom<=viewport.bottom+.5)graphRead.add(card.dataset.node);
+    if(r.width&&r.height&&r.left>=viewport.left-.5&&r.right<=viewport.right+.5&&r.bottom>top&&r.top<viewport.bottom){
+      const spans=[...(graphReadSpans.get(card.dataset.node)||[]),[Math.max(0,(top-r.top)/r.height),Math.min(1,(viewport.bottom-r.top)/r.height)]].sort((a,b)=>a[0]-b[0]),merged=[];
+      for(const span of spans){const last=merged.at(-1);if(last&&span[0]<=last[1]+.002)last[1]=Math.max(last[1],span[1]);else merged.push(span);}
+      graphReadSpans.set(card.dataset.node,merged);
+      if(merged.some(([a,b])=>a<=.002&&b>=.998))graphRead.add(card.dataset.node);
+    }
   }
   updateUnreadMarks();planBanner?.update?.();
 }
@@ -2069,10 +2084,10 @@ function panel() {
   const reference = el('p', undefined, 'ref-line'); reference.append(refChip(node.id, `${node.id} · ${title(node)}`));
   if(workedBy(node))reference.append(el('span',t('workedBy',{who:workedBy(node)})));
   const referenceDetails=el('details');referenceDetails.append(el('summary',t('nodeReference')),reference);
-  const panelBar=el('div',undefined,'panel-bar'); panelBar.append(el('strong',title(node)),close); shell.append(panelBar,p);
+  const panelBar=el('div',undefined,'panel-bar'),intro=el('div',undefined,'panel-intro'); intro.append(el('strong',title(node)),el('p',nodeSentence(node,view.nodes,language),'node-sentence')); panelBar.append(intro,close); shell.append(panelBar,p);
   for (const d of view.decisions.filter(d => d.node === node.id)) {
     const ask = card(t('yourTurn'), question(d) || purposeWording(d.purpose, language), true);
-    ask.append(refChip(d.id, `${d.id} · ${title(node)}`, true, d.free)); p.append(ask);
+    ask.append(refChip(d.id, `${d.id} · ${title(node)}`, true, d.free),button(t('read'),()=>openDecision(d.id),'primary')); p.append(ask);
   }
   p.append(el('p', node.runLevel?t('runChecksAfter'):status(node), 'panel-status '+cardTone(node)));
   p.append(el('p',stateWords(displayState(node,view.decisions),language).whoseMove,'whose-move'));
@@ -2290,7 +2305,7 @@ function closeInvalidDecision(run, decisions, nextView = {decisions}) {
 function showChangedDecision(){const changed=decisionController.session?.decision,free=!!changed?.free;unavailableDecisions.push(decisionController.session?.target.id);updateSubtitle();decisionController.close();decisionUI=null;const box=$('decision');clear(box);box.classList.add('decision-changed');box.append(el('p',t('decisionRef',{id:changed.id})+' · '+decisionTitle(changed)),el('p',question(changed)),el('h2',t(free?'freeEvidenceChanged':'evidenceChanged')),el('p',t('waitForNewQuestion'),'change-notice'),button(t('backToTab',{tab:t('graph')}),showGraph));$('picker').disabled=false;}
 function goHome() { if (showMode('home') && view) home(); }
 function showGraph() { if (!showMode('flow')) return; attention(); panel(); }
-function selectNode(id) { const n=flowNode(id),d=view.decisions.find(d=>d.node===id); if(n?.kind==='decision'&&d){openDecision(d.id);return;} if (!showMode('flow')) return; selected = selected === id ? null : id; panel(); if(selected)readPlanChange(selected); if (renderer) renderer.select(selected);planBanner?.update?.(); }
+function selectNode(id) { const n=flowNode(id),d=view.decisions.find(d=>d.node===id); if (!showMode('flow')) return; selected = selected === id ? null : id; panel(); if(selected)readPlanChange(selected); if (renderer) renderer.select(selected);planBanner?.update?.(); }
 function focusHeading(heading) { heading.tabIndex = -1; heading.focus({preventScroll:true}); }
 function openDecision(id, focus = true) {
   replacementDecision=null; decisionNotice=''; notice('');
@@ -2637,11 +2652,10 @@ function inPhase(element, period) {element.style.animationDelay=-(performance.no
 function nodeDescription(n) {return n.runLevel?`${t('runChecksTitle')}. ${t('runChecksAfter')}`:`${t(n.kind||'work')}. ${title(n)}. ${status(n)}. ${attempts(n)}. ${t('returnTimes',{n:cometCount(n)})}`;}
 function nodeCard(n, expanded = false, level = 'detail') {
   const root=el('article',undefined,'node-card '+cardTone(n)+(['running','retrying'].includes(displayState(n,view.decisions))?' working':'')+(expanded?' expanded':''));root.dataset.node=n.id;if(planBlocked())root.classList.add('read-status');
+  if(planBlocked())root.append(el('p',t('cardUnread'),'unread-mark'));
   const change=planChanges?.find(c=>c.id===n.id);if(change)root.append(el('p',t(change.kind),'change-mark'));
   const header=button('',()=>{
-    const decision=view.decisions.find(d=>d.node===n.id);
-    if(n.kind==='decision'){if(decision)openDecision(decision.id);else selectNode(n.id);}
-    else selectNode(n.id);
+    selectNode(n.id);
   },'node-header');
   header.setAttribute('aria-label',nodeDescription(n));header.setAttribute('aria-expanded',String(expanded));
   if (level === 'overview') {
@@ -2653,8 +2667,8 @@ function nodeCard(n, expanded = false, level = 'detail') {
     if ((view.planned_questions || []).some(q=>q.node===n.id)) marks.push(t('questionsMark'));
     header.title = title(n)+' · '+status(n)+(marks.length?' · '+marks.join(' · '):'')+(cometCount(n)&&n.returned_by?' · '+t('returnedActor',{who:n.returned_by.session||who(n.returned_by)}):'');
     header.append(el('span',statusGlyph(state),'status-glyph'),el('strong',title(n),'node-title'));
-    header.append(el('span',status(n)+(cometCount(n)?' · '+t('returnTrace',{n:cometCount(n)}):''),'overview-marks'));
-    if(n.planned_checks?.some(c=>c.runs_own_files)){const mark=el('span',t('ownCheckMark'),'own-check-mark');mark.title=t('ownCheckEffect');header.append(mark);}
+
+
     root.append(header); return root;
   }
   const state = displayState(n, view.decisions), statusLine = el('span', status(n), 'node-status');
@@ -2676,6 +2690,7 @@ function nodeCard(n, expanded = false, level = 'detail') {
     clear(reference);reference.append(el('span',t('returnedActor',{who:n.returned_by?.session || t(n.returned_by?.role==='reviewer'?'returnReviewer':'returnLeader')})));
   }
   const essentials=el('div',undefined,'node-essentials');
+  essentials.append(el('p',nodeSentence(n,view.nodes,language),'node-sentence'));
   if(change?.fields?.length){const diff=el('p',diffText(change.fields[0]),'change-preview');diff.title=change.fields.map(diffText).join('\n');essentials.append(diff);}
   const files=[...new Set(n.deliverables || [])].filter(value=>![STRINGS.ko.genericOutput,STRINGS.en.genericOutput].includes(value)||!(n.deliverables||[]).some(v=>![STRINGS.ko.genericOutput,STRINGS.en.genericOutput].includes(v)));
   const answered=(view.answered||[]).filter(d=>d.node===n.id&&d.verified&&!d.stale).at(-1);
@@ -2690,6 +2705,7 @@ function nodeCard(n, expanded = false, level = 'detail') {
     if(commandTitle(check))preview.append(el('span',t('planCardChecks',{n:automated.length,first:''})),el('code',checkTitle(check,language)));
     else preview.textContent=t('planCardChecks',{n:automated.length,first:state==='notStarted'?t('plannedCheck',{title:checkTitle(check,language)}):checkTitle(check,language)});
     if(human)preview.append(el('span',' · '+t('humanCheckCount',{n:human})));essentials.append(preview);
+    if(automated.length>1)essentials.append(el('p',t('checksMore',{n:automated.length-1})));
   }
   const questions=(view.planned_questions || []).filter(q=>q.node===n.id);
   if(questions.length)essentials.append(el('p',t('planCardQuestion',{n:questions.length,question:questions.map(q=>answered?q.question:plannedQuestion(q)).join(' · ')}),'planned-question'));
@@ -2826,7 +2842,7 @@ function createMap() {
     if(planKey!==layoutKey){layoutKey=planKey;if(!placed){automatic=true;level='detail';}}
     const reveal=id&&id!==chosenNode;data=next;chosenNode=id;map.classList.toggle('has-expanded',!!id);
     layouts=Object.fromEntries(['detail','overview'].map(level=>[level,layeredLayout(data.nodes,data.edges.map(e=>({...e,label:e.label?label(e.label):''})),data.decisions,true,{level,language,wrapLongChains:true,measure:(n,width)=>{
-      const sample=nodeCard(n,n.id===id,level);sample.classList.add('card-measure');sample.style.width=width+'px';sample.style.setProperty('--map-text',Math.max(14,12/scale)+'px');stage.append(sample);
+      const sample=nodeCard(n,n.id===id,level);sample.classList.add('card-measure');sample.style.width=width+'px';sample.style.setProperty('--map-text','14px');stage.append(sample);
       if(nodes.get(n.id)?.querySelector('.answered-result')?.open && sample.querySelector('.answered-result'))sample.querySelector('.answered-result').open=true;
       const height=sample.offsetHeight;sample.remove();return height;
     }})]));

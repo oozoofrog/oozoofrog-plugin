@@ -20,6 +20,7 @@ from test_review11 import Review11Tests
 from graphflow import cli
 
 SCENARIOS = {
+    'long-text': '최대 길이 한국어 제목 60자·요약 300자·검사 제목 120자',
     'demo': '여섯 작업의 진행, 근거가 있는 확인 요청과 자유 질문',
     'real': '명령 검사, lane 2 검토, lane 3 허가를 포함한 코드 작업',
     'many': '열세 작업이 분기하고 합쳐지는 진행 화면',
@@ -162,6 +163,16 @@ def branching(count):
 
 def build(root, scenario):
     f = Fixture(root, scenario)
+    if scenario == 'long-text':
+        f.raw['nodes'] = [work(), work('b', needs=['a']), review('b'), question()]
+        for i, node in enumerate(f.raw['nodes']):
+            node['title'] = (str(i + 1) + ' 사용자가 읽는 긴 한국어 작업 제목을 줄바꿈하여 모두 보여 주는지 확인해요 ' * 3)[:60]
+            node['summary'] = ('작업의 목적과 만드는 결과를 처음 읽는 사람도 이해할 수 있도록 한국어로 설명하고 빠진 내용을 확인해요. ' * 7)[:300]
+            node['goal'] = 'Keep this English goal below the Korean summary.'
+            for check in node.get('checks', []):
+                check['title'] = ('결과 파일에 내용이 있는지와 사용자가 따라 할 수 있는 설명과 복구 순서가 모두 있는지 검사해요 ' * 4)[:120]
+        f.post()
+        return f.metadata()
     if scenario.startswith('old'):
         legacy = json.loads((SKILL / 'tests/fixtures/legacy021.json').read_text().replace('Read this guide', '안내를 읽고 확인해 주세요'))
         # Localize the unsigned historical fixture consistently with its stored plan bytes.
