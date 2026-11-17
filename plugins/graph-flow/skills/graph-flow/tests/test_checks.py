@@ -275,7 +275,7 @@ class CmdTests(ChecksCase):
         self.assertFalse(data["timed_out"])
         self.assertEqual((self.run / data["log"]).read_text(), "out\nerr\n")
         self.assertEqual(set(data), {"node", "check", "type", "grade", "result", "attempt",
-                         "phase", "exit_code", "timed_out", "command", "cwd", "duration_ms", "log"})
+                         "phase", "exit_code", "timed_out", "command", "cwd", "duration_ms", "log", "failed_before"})
         self.assertEqual((data["grade"], data["attempt"], data["phase"]), (1, 1, "loop"))
         self.assertEqual(self.results()[-1]["data"], data)
         self.assertGreaterEqual(data["duration_ms"], 0)

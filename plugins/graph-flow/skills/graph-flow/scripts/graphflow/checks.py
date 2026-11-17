@@ -187,6 +187,8 @@ def run_cmd(run_dir, node_id, check, phase, cwd, actor):
     data = _execute(run_dir, node_id, check, st["attempts"], phase, _cwd(run_dir, cwd))
     with _store.transaction(run_dir) as tx:
         _recheck(tx, node_id, phase, token)
+        if data["result"] == "passed":
+            data["failed_before"] = failure_observed(tx.events, node_id, check["run"], run_dir)
         tx.append("check.result", data, actor)
     return data
 
@@ -279,7 +281,8 @@ def red(run_dir, node_id, check_id, cwd, actor):
     for check in selected:
         outcome = _execute(run_dir, node_id, check, st["attempts"], "loop", _cwd(run_dir, cwd))
         data = {"node": node_id, "check": check["id"], "exit_code": outcome["exit_code"],
-                "failed_first": outcome["result"] == "failed", "log": outcome["log"]}
+                "failed_first": outcome["result"] == "failed", "log": outcome["log"],
+                "command": check["run"]}
         results.append(data)
         if not data["failed_first"]:
             notices.append({"code": "red_already_green", "node": node_id,
@@ -363,3 +366,25 @@ def review_submit(run_dir, node_id, verdict, findings, actor):
                 "findings": findings}
         event = tx.append("review.submit", data, actor)
     return dict(data, id=event["seq"])
+
+
+def recorded_command(event, run_dir):
+    """Older red records carry a revision/check id instead of the command."""
+    data = event.get("data", {})
+    if data.get("command") is not None:
+        return data["command"]
+    if event.get("type") != "check.red":
+        return None
+    try:
+        current = _store._load_plan(run_dir, event["plan_revision"])
+        node = _plan.node_by_id(current, data["node"])
+        return next(c["run"] for c in node["checks"] if c["id"] == data["check"] and c["type"] == "cmd")
+    except (_core.GFError, KeyError, StopIteration):
+        return None
+
+
+def failure_observed(events, node, command, run_dir):
+    return any(e.get("data", {}).get("node") == node
+        and (e["type"] == "check.red" and e["data"].get("failed_first") is True
+             or e["type"] == "check.result" and e["data"].get("result") == "failed")
+        and recorded_command(e, run_dir) == command for e in events)

@@ -74,7 +74,9 @@ class TraceTests(unittest.TestCase):
         self.append(self.run, "gate.verdict", "w", 7, verdict="pass")
         self.append(self.run, "node.start", "x", 8)
         self.append(self.run, "gate.verdict", "x", 9, verdict="pass")
-        self.assertEqual(trace.trace(self.run), {
+        result = trace.trace(self.run)
+        legacy = {"run": result["run"], "nodes": {nid: {k: v for k, v in values.items() if k not in ("executor", "model", "cmd_checks")} for nid, values in result["nodes"].items()}}
+        self.assertEqual(legacy, {
             "run": {"nodes": 2, "passed": 2, "attempts": 3, "rejections": 1, "duration_ms": 9000},
             "nodes": {"w": {"attempts": 2, "rejections": 1, "first_start": "2026-11-15T00:00:01Z",
                               "passed_at": "2026-11-15T00:00:07Z", "duration_ms": 6000,
@@ -84,14 +86,16 @@ class TraceTests(unittest.TestCase):
                               "checks_run": 0, "rollbacks": 0}}})
 
     def test_no_plan_and_reopened_basis(self):
-        self.assertEqual(trace.trace(self.run), {"run": {"nodes": 0, "passed": 0, "attempts": 0,
+        result = trace.trace(self.run)
+        legacy = {"run": result["run"], "nodes": {nid: {k: v for k, v in values.items() if k not in ("executor", "model", "cmd_checks")} for nid, values in result["nodes"].items()}}
+        self.assertEqual(legacy, {"run": {"nodes": 0, "passed": 0, "attempts": 0,
                          "rejections": 0, "duration_ms": None}, "nodes": {}})
         self.set_plan(self.run, [work("w")])
         self.append(self.run, "node.start", "w", 1)
         self.append(self.run, "gate.verdict", "w", 2, verdict="pass")
         self.append(self.run, "node.reopen", "w", 3)
         metrics = trace.trace(self.run)["nodes"]["w"]
-        self.assertEqual(metrics, {"attempts": 0, "rejections": 0, "first_start": None,
+        self.assertEqual({k: v for k, v in metrics.items() if k not in ("executor", "model", "cmd_checks")}, {"attempts": 0, "rejections": 0, "first_start": None,
                          "passed_at": None, "duration_ms": None, "checks_run": 0, "rollbacks": 0})
 
     def test_rollback_history(self):

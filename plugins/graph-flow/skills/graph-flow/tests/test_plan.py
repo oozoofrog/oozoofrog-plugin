@@ -255,7 +255,7 @@ class PlanTests(unittest.TestCase):
 
 class NormalizeTests(unittest.TestCase):
     def test_no_title_is_only_a_notice_for_every_node_kind(self):
-        value = document(work(), review(), decision())
+        value = document(work(checks=[{"id": "test", "type": "cmd", "run": "test -f guide.txt"}]), review(), decision())
         normalized, notices = plan.normalize(value)
         self.assertEqual([], plan.validate(value))
         self.assertEqual([("no_title", n["id"]) for n in value["nodes"]],
@@ -301,7 +301,7 @@ class NormalizeTests(unittest.TestCase):
         self.assertEqual(1, normalized["nodes"][0]["effective_lane"])
         self.assertEqual(1, normalized["nodes"][0]["max_attempts"])
         self.assertEqual(value["nodes"][0]["checks"], normalized["nodes"][0]["checks"])
-        self.assertEqual(["no_title"], [n["code"] for n in notices])
+        self.assertEqual(["no_title", "unfalsifiable_check"], [n["code"] for n in notices])
 
     def test_escalates_scope_cites_host_or_empty_checks_and_caps_at_three(self):
         for kind in ("scope", "cites", "host", None):

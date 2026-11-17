@@ -94,7 +94,7 @@ def _set_plan(args, actor):
         ids = [c["id"] for c in normalized["constraints"]]
         if reuse:
             result = {"revision": tx.revision, "nodes": len(normalized["nodes"]), "decision": approval["id"],
-                      "notices": len(notices), "constraints_applied": ids}
+                      "notices": len(notices), "normalization_notices": notices, "constraints_applied": ids}
             if approval["status"] == "open":
                 _show(args, result, approval["id"])
             return result
@@ -120,7 +120,7 @@ def _set_plan(args, actor):
         else:
             did = approval["id"]
     result = {"revision": revision, "nodes": len(normalized["nodes"]), "decision": did,
-              "notices": len(notices), "constraints_applied": ids}
+              "notices": len(notices), "normalization_notices": notices, "constraints_applied": ids}
     if not reuse or approval["status"] == "open":
         _show(args, result, did)
     return result
@@ -416,6 +416,8 @@ def _parser(authorize_only=False):
             sub.add_argument("file")
         elif path == ("host", "set"):
             sub.add_argument("capabilities", nargs="+")
+        elif path == ("trace",):
+            sub.add_argument("--conformance", action="store_true")
         elif path == ("status",):
             sub.add_argument("target_node", nargs="?")
         elif path in (("route",), ("assign",), ("start",), ("red",), ("submit",),
@@ -553,6 +555,8 @@ def main(argv=None):
         output = {"ok": False, "code": "internal", "message": str(exc)}
     if json_output:
         print(json.dumps(output, ensure_ascii=False))
+    elif identity.command_path == ("trace",) and getattr(args, "conformance", False) and output.get("ok"):
+        print(_lazy_import("trace").render_conformance(output))
     elif "brief" in output:
         print(output["brief"], end="" if output["brief"].endswith("\n") else "\n")
     elif output.get("rejection"):

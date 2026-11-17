@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `graph-flow`: add read-only human-answer/wait and failing-check measurements to `trace` and MCP, with P1–P12 observations via `trace --conformance`. Trivially successful command checks produce normalization notices; gate verdicts stay unchanged.
+
 - `graph-flow` 0.3.0 release fixes: persist approval supersession after observed moves/evidence changes and every gate re-ask; protect only approvals still in force. Rejected decisions and exhausted holds can be revised, refused starts preserve state, edited submitted files re-ask without spending attempts, stale waits return recovery advice, and key recovery survives moves. Legacy plan consent remains valid after later result edits. The dashboard separates binding decisions from free questions, names all released downstream work, uses consistent state/check counts, gives plain permission refusals, and locks plan approval until graph cards have been seen. Reading fields, fit/clipping hints, answered-card tense and recovery text are corrected in both languages.
 
 - `graph-flow` 0.3.0: every run waits for verified plan approval. Re-post a 0.2.1 run's current plan, read its retained results and approve it to continue without restarting unchanged submissions. Only the tool creates binding approvals, and answered decisions cannot release newly added or changed work. Every planned review must pass its own gate on the current submission, at every lane, before its target is accepted. A project move requires one new plan approval; old-location questions become stale and unconsumed approvals are asked again without consuming an attempt. Completed work remains accepted. Key recovery separately requests plan approval again.

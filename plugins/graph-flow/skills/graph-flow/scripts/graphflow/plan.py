@@ -118,6 +118,16 @@ def normalize(plan):
         if "title" not in node:
             notices.append({"code": "no_title", "node": node.get("id"),
                             "message": "add a title in the user's language for the dashboard"})
+    groups = [(n.get("id"), n.get("checks", [])) for n in _nodes(result)]
+    if isinstance(result, dict):
+        groups += [("_run", result.get(k, [])) for k in ("integration_checks", "promoted_checks")]
+    for nid, checks in groups:
+        for check in _list(checks):
+            if (isinstance(check, dict) and check.get("type") == "cmd"
+                    and isinstance(check.get("run"), str)
+                    and check["run"].strip() in ("true", ":", "exit 0", "")):
+                notices.append({"code": "unfalsifiable_check", "node": nid, "check": check.get("id"),
+                                "message": "command always succeeds; use a check that can fail"})
     return result, notices
 
 
@@ -195,7 +205,7 @@ def validate(plan):
                     problem("V2", node, "more than one %s check" % kind)
                 singleton_types.add(kind)
             if kind == "cmd":
-                if not check.get("run"):
+                if "run" not in check:
                     problem("V5", node, "cmd check requires run")
                 field(check, "run", str, node)
                 field(check, "cwd", str, node, required=False)
