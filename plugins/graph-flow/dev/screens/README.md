@@ -4,12 +4,12 @@ Run from the repository root (Python standard library, Node with built-in WebSoc
 Chrome/Chromium, and ffmpeg must already be available):
 
 ```bash
-python3 -I -S -B plugins/graph-flow/dev/screens/build_fixtures.py /Volumes/eyedisk/build/graph-flow-screens/r18
-node plugins/graph-flow/dev/screens/capture.mjs /Volumes/eyedisk/build/graph-flow-screens/r18
+python3 -I -S -B plugins/graph-flow/dev/screens/build_fixtures.py /Volumes/eyedisk/build/graph-flow-screens/r19
+node plugins/graph-flow/dev/screens/capture.mjs /Volumes/eyedisk/build/graph-flow-screens/r19
 ```
 
 The builder replaces only its marked `fixtures/` directory. The capture command
-writes the 69 numbered PNGs to `final/`, copies them and makes the requested ffmpeg
+writes the 81 numbered PNGs to `final/`, copies them and makes the requested ffmpeg
 variants in `verify/`, and records DOM observations, hashes, and process cleanup
 outside those directories. An optional third argument, e.g. `5,16`, recaptures only
 those numbers. Rebuild fixtures before a fresh full capture. No installs or real
@@ -34,3 +34,5 @@ existing skill/runtime. Captures report defects without editing product assets.
 Round 17 distinguishes the fitted large plan at 1280px from the default 1440px overview; the large run advances three pieces and starts the next branch. The unverified-plan scene stays on the graph, while the problem inbox scene opens My turn. Legacy fixture prose is translated only in the isolated capture copy.
 
 Round 18 captures enlarged lower rows with vertical scrolling (11), the unverified answer record (27) separately from its graph banner (36), and the new consent after on-page key recovery (56). Scene 66 uses the permission button’s actual rejected outcome. Captures assert panel/graph relations, change titles, content bounds and the named scene states.
+
+Round 19 adds selected work/review/decision/final-check cards at both sizes (70–77) and maximum-length Korean text in detail/overview desktop/phone views (78–81). The first explanation stays pinned below the title. Scene 56 selects the final check after on-page recovery, unlike the unselected terminal recovery in 35. Capture validates visible explanations, actual text bounds, relations and owned-process cleanup. Verification includes all requested images plus the prior 34/38 variants.

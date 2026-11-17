@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Graph Flow: capture 81 dashboard scenes, including maximum-length Korean text and selected cards of every kind on desktop and phone. Keep the phone diagram below its view toggle at full width, and verify the requested gray/glance variants with isolated processes.
+
 - Graph Flow: show only whole text lines at graph viewport edges and reveal the first explanation when selecting below a long warning band. Align unverified-answer provenance, label workers/models, use review-specific activity, group panel headings with content, expose the existing evidence action clearly, and clarify legacy questions, handoffs and plan warnings.
 
 - Graph Flow: unify unread card marks and Start reasons, use the same plan/final-card count, show neutral completed-reading notes, reserve scroll gutters, and name scrollable views truthfully when Fit reaches the readable minimum. Phone action bars summarize remaining cards with an expandable list.

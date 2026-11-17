@@ -27,7 +27,7 @@ try {
       if(mode==='done'){v.complete=true;v.nodes.forEach(n=>n.status='passed');}
       if(mode==='running')v.nodes.forEach(n=>n.status='running');
       if(mode==='changed')v.plan_approval={...v.plan_approval,status:'open',verified:false};
-      if(mode==='old')v.plan_approval=null;
+      if(mode==='old'){v.plan_approval=null;v.legacy=true;}
       return new Response(JSON.stringify(data),{status:r.status,headers:r.headers});};`});
   const url=config.url+'#'+new URLSearchParams({project:config.project,run:config.run});
   const ready=async()=>{for(let i=0;i<80;i++){if(await evaluate("document.querySelectorAll('#phone-flow .node-card').length===4"))return;await delay(50);}assert.fail('cards did not load');};
@@ -58,6 +58,7 @@ try {
           const bad=await evaluate(`(()=>{const v=document.querySelector('.map-viewport');v.scrollLeft+=31;v.scrollTop+=31;v.dispatchEvent(new Event('scroll'));const r=v.getBoundingClientRect(),top=r.top+v.clientTop,bottom=top+v.clientHeight;return [...document.querySelectorAll('#map .node-title,#map .node-essentials p')].filter(e=>{if(getComputedStyle(e).visibility==='hidden')return false;const range=document.createRange();range.selectNodeContents(e);return [...range.getClientRects()].some(l=>l.top<top-.5&&l.bottom>top+.5||l.top<bottom-.5&&l.bottom>bottom+.5)&&!e.style.clipPath;}).map(e=>e.textContent)})()`);assert.deepEqual(bad,[],'U2 viewport edges never bisect visible letters');
         }
         await evaluate("document.querySelector('.panel-close').click()");await check();
+        if(width<761)assert(await evaluate("document.querySelector('#map').getBoundingClientRect().width>=innerWidth-48"),'Phone diagram uses the full content width below its toggle');
         if(width<761)await evaluate("document.querySelector('#phone-view-toggle').click()");
       }
     }

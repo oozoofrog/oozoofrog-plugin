@@ -26,7 +26,7 @@ const runtime = mkdtempSync(path.join(output, 'capture-'));
 const profile = path.join(runtime, 'chrome-profile');
 const delay = ms => new Promise(r => setTimeout(r, ms));
 const baseEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GF_')));
-const envFor = fixture => ({...baseEnv, GF_HOME:fixture.home, GF_NO_OPEN:'1', GF_ROLE:'leader', GF_SESSION:'screens-r18'});
+const envFor = fixture => ({...baseEnv, GF_HOME:fixture.home, GF_NO_OPEN:'1', GF_ROLE:'leader', GF_SESSION:'screens-r19'});
 const evidence = path.join(output, 'screen-status.json');
 let records = only && existsSync(evidence) ? JSON.parse(readFileSync(evidence)) : [];
 const owned = [], lifecycle = [];
@@ -115,7 +115,7 @@ async function interaction(action, fixture) {
   if(action.selector === '.key-recovery button')await until("!document.querySelector('.key-recovery') && !!document.querySelector('.plan-actions')");
   if(action.selector === '.file-choices button') await until("!!document.querySelector('.file-choices button[data-opened=true]')");
 }
-const derivedNumbers = new Set([1,3,5,7,15,18,19,20,22,23,24,34,37,38,41,44,52,53,58,59,61,62,63,64,65,66,67,68,69]);
+const derivedNumbers = new Set([1,2,3,5,7,10,15,17,18,19,20,21,22,23,24,29,33,34,37,38,41,44,52,53,58,59,61,62,63,64,65,66,67,68,69,...manifest.filter(s=>s.number>=70).map(s=>s.number)]);
 try {
   chrome = start(chromePath, ['--headless=new','--remote-debugging-port=0','--user-data-dir='+profile,'--no-first-run','--no-default-browser-check','--lang=ko','about:blank']);
   const endpoint = (await lineMatching(chrome, chrome.stderr, /DevTools listening on (ws:\/\/\S+)/))[1];
@@ -169,12 +169,12 @@ try {
         const count=document.querySelector('.map-visible'),toolbar=document.querySelector('.map-toolbar');
         const panel=document.querySelector('#panel'),body=panel.querySelector('.panel-body'),bar=panel.querySelector('.panel-bar');
         const cards=[...document.querySelectorAll('#map .node-card')];
-        const selected=cards.find(c=>c.classList.contains('expanded'));
+        const selected=cards.find(c=>c.classList.contains('expanded'));const sentence=panel.querySelector('.node-sentence'),sr=sentence?.getBoundingClientRect();
         const relation=direction=>[...panel.querySelectorAll('[data-relations="'+direction+'"] [data-other-node]')].map(e=>e.dataset.otherNode).sort();
         const routes=[...map.querySelectorAll('.edge-path')];
         const leafRects=body?[...body.querySelectorAll('p,li,summary,h3,pre')].filter(e=>e.getClientRects().length&&!e.querySelector('p,li,summary,h3,pre')).map(e=>{const range=document.createRange();range.selectNodeContents(e);return {text:e.textContent,rect:range.getBoundingClientRect().toJSON()}}):[];
-        const visibleTitles=cards.filter(c=>{const t=c.querySelector('.node-title'),r=t.getBoundingClientRect();return r.left>=vr.left-.5&&r.right<=vr.left+v.clientWidth+.5&&r.top>=vr.top-.5&&r.bottom<=vr.top+v.clientHeight+.5}).map(c=>c.querySelector('.node-title').textContent);
-        return {shown,scroll:{left:v.scrollLeft,top:v.scrollTop},visibleTitles,
+        const visibleTitles=cards.filter(c=>{if(getComputedStyle(c).visibility==='hidden')return false;const t=c.querySelector('.node-title'),range=document.createRange();range.selectNodeContents(t);const r=range.getBoundingClientRect(),left=vr.left+v.clientLeft,top=vr.top+v.clientTop;return r.left>=left-.5&&r.right<=left+v.clientWidth+.5&&r.top>=top-.5&&r.bottom<=top+v.clientHeight+.5}).map(c=>c.querySelector('.node-title').textContent);
+        return {shown,firstSentence:panel.hidden||!!sentence&&sentence.parentElement.children[1]===sentence&&sr.top>=0&&sr.bottom<=innerHeight,scroll:{left:v.scrollLeft,top:v.scrollTop},visibleTitles,
           toolbar:!shown||count.scrollWidth<=count.clientWidth+1&&count.getBoundingClientRect().left>=toolbar.getBoundingClientRect().left,
           panel:panel.hidden||bar.getBoundingClientRect().bottom<=body.getBoundingClientRect().top+.5,
           panelTitle:bar?.querySelector('strong')?.textContent,
@@ -185,6 +185,7 @@ try {
           changeTitles:[...document.querySelectorAll('.plan-change-list>details>summary')].map(e=>e.textContent.split(' · ').slice(1).join(' · ')).sort(),
           markedTitles:cards.filter(c=>c.querySelector('.change-mark')).map(c=>c.querySelector('.node-title').textContent).sort()};
       })()`);
+      assert(audit.firstSentence,'U1 first explanation is visible below the title');
       assert(audit.toolbar,'E1 count phrases must not be clipped');
       assert(audit.panel,'E2 panel body starts below its pinned title');
       assert.equal(audit.panelFirstLines.length,0,'E2 no text is sliced at the top of the panel scroll area');
@@ -194,7 +195,7 @@ try {
       if(screen.number===11){assert(audit.scroll.top>0);audit.lowerRows=screen.interactions.find(a=>a.action==='lower-rows').observedScroll;assert.equal(audit.scroll.left,audit.lowerRows.before.left);assert(audit.visibleTitles.includes('접근성 확인'),'E13 lower branch is visible');}
       if(screen.number===27)assert(await evaluate("!document.querySelector('#home').hidden && document.querySelector('#flow').hidden"),'E13 answer record view');
       if(screen.number===36)assert(await evaluate("!document.querySelector('#flow').hidden && document.querySelector('#home').hidden"),'E13 graph banner view');
-      if(screen.number===56)assert(dom.text.includes('확인 키를 새로 만들었어요'),'E13 recovery advances to new consent');
+      if(screen.number===56)assert(dom.text.includes('확인 키를 새로 만들었어요')&&audit.panelTitle==='전체 결과 확인','V8 on-page recovery shows the new final check');
       if(screen.number===66){assert(dom.text.includes('허락하지 않은 결정'));assert(!dom.text.includes('내가 돌려보낸 결정'));}
       if(screen.number===67)assert(audit.selectedVisible,'E3 fit keeps selected card visible');
       if(screen.number===63){assert(/허락하기로 답했어요|받아들이기로 답했어요|받아들이지 않기로 답했어요/.test(dom.text));assert(dom.text.includes('이 안내를 시험 환경에 공개할까요?'));}

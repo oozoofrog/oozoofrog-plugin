@@ -89,7 +89,7 @@ class Fixture:
         self.project = self.root / 'project'
         self.project.mkdir()
         self.env = {k: v for k, v in os.environ.items() if not k.startswith('GF_')}
-        self.env.update(GF_HOME=str(self.home), GF_NO_OPEN='1', GF_ROLE='leader', GF_SESSION='screens-r18',
+        self.env.update(GF_HOME=str(self.home), GF_NO_OPEN='1', GF_ROLE='leader', GF_SESSION='screens-r19',
                         GIT_AUTHOR_DATE='2026-11-17T00:00:00+0000', GIT_COMMITTER_DATE='2026-11-17T00:00:00+0000')
         self.commands = []
         self.git('init', '-q')
