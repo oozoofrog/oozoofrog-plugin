@@ -206,7 +206,7 @@ Decisions are bound, not counted: a decision is **stale** when its node's `basis
       "basis": 0,
       "attempts": 1,
       "max_attempts": 3,
-      "assignment": {"executor": "t3", "model": "gpt-6.1-sol", "effort": "high", "provider": "codex", "family": "openai", "isolation": "shared"},
+      "assignment": {"executor": "t3", "model": "gpt-6.2-sol", "effort": "high", "provider": "codex", "family": "openai", "isolation": "shared"},
       "base": {"rev": "0123abc", "dirty": {}},
       "submission": {"id": 11, "attempt": 1, "target": "export", "target_submission": 9, "verdict": "pass", "findings": []},
       "checks": {"cites": {"loop": null, "gate": {"result": "passed", "attempt": 1}}},

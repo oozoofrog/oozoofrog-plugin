@@ -9,10 +9,10 @@ The defaults in [routing.json](../routing.json) are:
 | Grade | Task | Claude model / effort | OpenAI model / effort |
 | --- | --- | --- | --- |
 | bulk | Repeated independent extraction or mechanical changes | claude-haiku-5-5 / medium | gpt-6-luna / medium |
-| scoped | Bounded implementation with an established approach | claude-sonnet-5-5 / medium | gpt-6.1-sol / medium |
-| daily | Debugging or an implementation that needs investigation | claude-opus-5-5 / medium | gpt-6.1-sol / high |
-| large | Broad interface, architecture, or migration work | claude-fable-5-2 / high | gpt-6-astra / high |
-| security | Defensive vulnerability discovery on owned systems | claude-fable-5-2 / high | gpt-6-astra / high |
+| scoped | Bounded implementation with an established approach | claude-sonnet-5-5 / medium | gpt-6.2-sol / medium |
+| daily | Debugging or an implementation that needs investigation | claude-opus-5-5 / medium | gpt-6.2-sol / high |
+| large | Broad interface, architecture, or migration work | claude-fable-5-2 / high | gpt-6.2-astra / high |
+| security | Defensive vulnerability discovery on owned systems | claude-fable-5-2 / high | gpt-6.2-astra / high |
 
 Re-run routing before dispatch or retry. It prefers the eligible provider instance with the lowest measured usage, excludes stale or full accounts, and can recommend another family when default-family usage is high. Missing usage means unknown capacity, not a full quota. A null provider is not a usable account id: discover an available authenticated instance through the host, record what you actually use, and disclose missing usage evidence. Honor an explicit user model/account choice; report unavailability instead of silently substituting.
 

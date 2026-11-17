@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Graph Flow uses `gpt-6.2-sol` for scoped and daily Codex work and `gpt-6.2-astra` for large and security work. The OpenAI escalation ladder uses the same models.
+
 - Graph Flow: show complete check titles on separate detail-card lines with current result symbols and text; capture 101 isolated dashboard scenes.
 
 - Graph Flow: add advisory notices for literal later-owned paths in run checks and checks already passing before observed work. Show the notices on plans/nodes and count pre-work passes in conformance output without changing verdicts.
