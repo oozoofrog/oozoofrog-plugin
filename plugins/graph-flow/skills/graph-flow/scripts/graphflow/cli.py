@@ -512,6 +512,12 @@ def main(argv=None):
         if args.command_path == ("mcp",):
             return result
         payload, code = result if isinstance(result, tuple) else (result, 0)
+        if args.command_path not in (("serve",), ("open",), ("setup",)):
+            try:
+                store.register_project(_project(args))
+            except core.GFError as exc:
+                if exc.code != "not_a_repository":
+                    raise
         output = dict(ok=True, **payload)
         if code and args.command_path == ("plan", "validate"):
             output.update(ok=False, code="invalid_plan", message="plan validation failed")

@@ -39,7 +39,7 @@ def command_examples(markdown):
             lexer.whitespace_split = True
             tokens = list(lexer)
             for index, token in enumerate(tokens):
-                if token != "gf" and not token.endswith("/gf"):
+                if token not in ("gf", "graph-flow") and not token.endswith("/gf"):
                     continue
                 arguments = []
                 for argument in tokens[index + 1:]:

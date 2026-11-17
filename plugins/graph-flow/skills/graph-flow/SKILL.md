@@ -44,3 +44,5 @@ If a brief sets `GF_ROLE=worker` or `GF_ROLE=reviewer`, read [worker.md](referen
 - [Dashboard](references/dashboard.md): show recorded progress and let a person answer decisions. Open without asking at exactly three moments: plan approval (`plan set --open`), a waiting decision (`decide ask --open` or `gate <node> --open`), and completion (`gate --final --open`). Use `GF_NO_OPEN=1` only to suppress the browser in headless use; it never skips approval. On MCP-only hosts, relay the returned `graph-flow open` command.
 
 Never set or change `GF_HOME`, `GF_ROLE=human`, or `GF_HUMAN_TERMINAL`; never run the human answer command (`gf decide answer`). Do not impersonate the person through the dashboard, read or WRITE `human.key`, or edit files under `.graph-flow/runs/**`. These rules prevent accidental impersonation, not a malicious process running as the same OS account.
+
+Execution records are unsigned and can be falsified with file access; direct project editing bypasses the tool. Signed approval binds the question, plan and evidence, not execution.

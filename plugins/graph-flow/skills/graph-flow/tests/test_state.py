@@ -17,7 +17,7 @@ ALL_KEYS = {"status", "kind", "lane", "effective_lane", "basis", "attempts", "ma
             "assignment", "base", "submission", "checks", "red", "reviews", "rejections",
             "verdict", "merged_head", "trajectory_clean", "open_decisions"}
 DECISION_KEYS = {"location", "recorded_location", "submission_binding", "artifact_hashes", "binding_changed", "run_nonce", "human_key_sha256", "plan_identity", "id", "seq", "node", "submission", "check", "purpose", "kind", "question",
-                 "evidence", "status", "outcome", "answer", "source", "verified", "stale"}
+                 "evidence", "status", "outcome", "answer", "source", "verified", "stale", "legacy_binding"}
 
 
 class EnvCase(unittest.TestCase):
@@ -89,6 +89,7 @@ class Log:
         (self.run_dir / 'plans').mkdir(parents=True)
         self.events = store.EventLog([], self.run_dir)
         self.rev = 0
+        self.current_plan=None
         if init:
             self.add("run.init", {"run_id": run, "project_root": "/p", "schema_version": 1})
 
@@ -97,7 +98,8 @@ class Log:
 
     def add(self, type_, data, role="leader", node=None):
         if type_ == "decision.ask":
-            data = dict(data, location=store.location(self.run_dir))
+            sub=(state.derive(self.current_plan,self.events)["nodes"].get(data.get("node")) or {}).get("submission") if data.get("submission") is not None else None
+            data = dict(data, location=store.location(self.run_dir), submission_binding=sub, artifact_hashes=state.artifact_hashes(self.run_dir,data.get("evidence"),sub))
         seq = len(self.events) + 1
         ev = {"seq": seq, "ts": "2026-11-15T09:%02d:%02dZ" % divmod(seq % 3600, 60),
               "run": self.run, "plan_revision": self.rev,
@@ -107,6 +109,7 @@ class Log:
         return seq
 
     def plan_set(self, plan):
+        self.current_plan=plan
         self.rev += 1
         fps = {n["id"]: state.fingerprint(n) for n in plan["nodes"]}
         raw = json.dumps(plan).encode()
@@ -666,11 +669,11 @@ class DecisionTests(EnvCase):
         self.assertEqual(s["decisions"], {did: {
             "id": did, "seq": seq, "node": "a", "submission": None, "check": "unit",
             "location": store.location(log.run_dir), "recorded_location": store.location(log.run_dir),
-            "submission_binding": None, "artifact_hashes": None, "binding_changed": False,
+            "submission_binding": None, "artifact_hashes": {}, "binding_changed": False,
             "purpose": "node", "plan_identity": None, "run_nonce": None, "human_key_sha256": None, "kind": "direction", "question": "q?",
             "evidence": {"command": None, "files": [], "checks": []}, "status": "open",
             "outcome": None, "answer": None, "source": None, "verified": False,
-            "stale": False}})
+            "stale": False, "legacy_binding":False}})
         self.assertEqual(set(s["decisions"][did]), DECISION_KEYS)
         self.assertEqual(s["nodes"]["a"]["open_decisions"], [did])
 
@@ -854,6 +857,7 @@ class RunTests(EnvCase):
 
     def test_complete(self):
         log, p = self.passed_run()
+        log.merge([{"node":"a", "commit":"c1", "head":"h"}])
         log.final("failed")
         fseq = log.final("passed")
         r = derive(log, p)["run"]
@@ -1156,6 +1160,7 @@ class ScenarioTests(EnvCase):
 
     def test_s3_reopen_root(self):
         log, p, did = self.build_pwvd()
+        log.merge([{"node":n,"commit":"c1","head":"h"} for n in ("p","w")])
         log.final("passed")
         self.assertEqual(derive(log, p)["run"]["status"], "complete")
         seq = log.reopen("p")

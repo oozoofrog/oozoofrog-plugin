@@ -1,5 +1,6 @@
 """Assignment and isolated session briefs (records.md sections 5 and 8)."""
 import importlib
+import json
 import pathlib
 import shlex
 
@@ -98,7 +99,11 @@ def brief(run_dir, node_id):
         elif check["type"] == "host":
             lines += ["Tool: %s. Record passed|failed and a note with observed evidence for: %s" %
                       (check["tool"], check["expect"])]
-    lines += ["The scope is always compared at the gate."]
+    lines += ["The scope is always compared at the gate.", "", "## Approved execution contract",
+              "", "```json", json.dumps(plan.node_contract(node), ensure_ascii=False, indent=2), "```",
+              "", "## Run-level checks", "", "```json",
+              json.dumps([plan.check_contract(c) for c in current_plan.get("integration_checks", []) +
+                          current_plan.get("promoted_checks", [])], ensure_ascii=False, indent=2), "```"]
     learn = _optional_module("learn")
     if learn is not None:
         frozen = current_plan.get("constraints") or []

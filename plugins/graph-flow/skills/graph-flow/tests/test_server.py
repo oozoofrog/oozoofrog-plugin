@@ -115,6 +115,8 @@ class ServerTests(unittest.TestCase):
         body = {"project": str(self.projects[index]), "run": self.runs[index].name,
                 "id": self.asks[index], "outcome": "approved", "answer": "Yes ✓"}
         body.update(changes)
+        d=state.derive(store.read_plan(self.runs[index]),store.events(self.runs[index]))["decisions"].get(body["id"]) if isinstance(body["id"],str) else None
+        body["displayed"]=state.decision_identity(d) if d else {}
         return body
 
     def json_request(self, method, path, **kwargs):
@@ -281,7 +283,9 @@ class ServerTests(unittest.TestCase):
                       "target_submission": submission, "verdict": "fail",
                       "findings": [{"text": "A case is missing"}, {"text": {}}, 7]}, ACTOR)
         for purpose in ("hold", "trajectory", "human_check"):
-            decisions.ask(run, "review", "Please read", "build", None, purpose, None, ACTOR)
+            with store.transaction(run) as tx:
+                st=state.derive(tx.plan,tx.events)["nodes"]["build"]
+                tx.append("decision.ask",gate._ask(plan.node_by_id(tx.plan,"build"),st,purpose),ACTOR)
         events = store.events(run)
         derived = state.derive(current, events)
         view = server._view(current, derived, events, project)
@@ -339,7 +343,7 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(view["nodes"][0]["title"], "build")
             self.assertEqual(view["nodes"][0]["summary"], "build")
             self.assertEqual(view["decisions"][0]["unverified"], [])
-            self.assertEqual(view["decisions"][0]["context"], {"if_approved": "Readable effect"} if isinstance(context, dict) else {})
+            self.assertEqual(view["decisions"][0]["context"], {})
         constraint_path = self.projects[0] / ".graph-flow/constraints.jsonl"
         constraint_path.write_text("{}\n")
         self.assertEqual(self.json_request("GET", self.api("/api/run"))[0], 200)
@@ -511,7 +515,7 @@ class ServerTests(unittest.TestCase):
         self.assertFalse(data["view"].pop("replaced_unverifiable"))
         self.assertTrue(all(v is None for v in data["view"].pop("plan_approval").values()))
         self.assertEqual(data["view"], {"title": "", "language": "en", "nodes": [], "edges": [], "decisions": [], "answered": [],
-                                      "lessons": [], "complete": False, "run": "empty",
+                                      "lessons": [], "stale_decisions": [], "complete": False, "run": "empty",
                                       "plan_counts": {"work": 0, "review": 0, "decision": 0, "checks": 0, "decisions": 0},
                                   "plan_error": False, "key_mismatch": False, "location_mismatch":False, "has_work":False, "goal": "", "planned_questions": [],
                                   "integration_checks": [], "promoted_checks": [], "superseded": [], "constraints": [],
@@ -588,7 +592,7 @@ class ServerTests(unittest.TestCase):
         view = data["view"]
         self.assertEqual(set(view), {"title", "language", "nodes", "edges", "decisions", "answered", "lessons", "counts", "complete",
                                      "run", "project", "timeline", "plan_approval", "plan_counts", "plan_error", "key_mismatch", "location_mismatch", "has_work",
-                                 "goal", "planned_questions", "integration_checks", "promoted_checks", "superseded", "constraints", "key_recovery", "legacy", "replaced_unverifiable"})
+                                 "goal", "planned_questions", "integration_checks", "promoted_checks", "superseded", "constraints", "key_recovery", "legacy", "replaced_unverifiable", "stale_decisions"})
         self.assertEqual(view["title"], raw["title"])
         self.assertFalse(view["complete"])
         self.assertEqual([n["id"] for n in view["nodes"]], [n["id"] for n in current["nodes"]])
@@ -612,6 +616,8 @@ class ServerTests(unittest.TestCase):
         self.assertEqual([d["outcome"] for d in view["answered"]], ["approved"])
         for node in view["nodes"]:
             self.assertEqual(set(node) >= {"worker", "session", "started"}, True)
+        self.assertIn("identity",view["decisions"][0]);view["decisions"][0].pop("identity")
+        view["decisions"][0].pop("contract")
         self.assertEqual(view["decisions"], [{"id": "d%d" % ask, "node": "human", "node_title": "Human",
                                             "question": "Does this wording fit?", "kind": "review",
                                         "purpose": "human_check", "commit": None, "artifact_hashes": {},
@@ -741,7 +747,7 @@ class ServerTests(unittest.TestCase):
             (project / "docs").symlink_to(outside, target_is_directory=True)
             return original_open(project_root, target)
         with mock.patch.object(server, "_open_project_file", side_effect=replace_directory):
-            self.assert_error(404, "unknown_file", "GET", route)
+            self.assert_error(409, "evidence_changed", "GET", route)
 
     def test_file_reader_refuses_unsafe_paths_even_when_listed(self):
         project = self.projects[0]
@@ -794,7 +800,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual([f["path"] for f in d["files"]], ["built.txt"])
         self.assert_error(403, "forbidden_path", "GET", self.api("/api/file", decision=did, path="other.txt"))
         with mock.patch.object(server, "MAX_FILE_SCAN", 4):
-            self.assert_error(404, "unknown_file", "GET", self.api("/api/file", decision=did, path="built.txt"))
+            self.assert_error(409, "evidence_changed", "GET", self.api("/api/file", decision=did, path="built.txt"))
 
     def test_file_reader_requires_current_open_decision_in_selected_run(self):
         did = self.file_decision(["built.txt"])
@@ -813,17 +819,19 @@ class ServerTests(unittest.TestCase):
         os.mkfifo(project / "fifo")
         did = self.file_decision(["built.txt", "missing", "directory", "fifo"])
         for path in ("missing", "directory", "fifo"):
-            self.assert_error(404, "unknown_file", "GET", self.api("/api/file", decision=did, path=path))
+            self.assert_error(409, "evidence_changed", "GET", self.api("/api/file", decision=did, path=path))
         for raw in (b"\xffbinary", b"text\x00binary", b"x" * (server.MAX_EVIDENCE + 30) + b"\x00", b"x" * server.MAX_EVIDENCE + b"\xff"):
             (project / "built.txt").write_bytes(raw)
-            self.assert_error(404, "unknown_file", "GET", self.api("/api/file", decision=did, path="built.txt"))
+            self.assert_error(409, "evidence_changed", "GET", self.api("/api/file", decision=did, path="built.txt"))
         (project / "built.txt").write_text("한" * server.MAX_EVIDENCE, encoding="utf-8")
+        did=self.file_decision(["built.txt"])
         status, _, body = self.request("GET", self.api("/api/file", decision=did, path="built.txt"))
         self.assertEqual(status, 200)
         self.assertLessEqual(len(body), server.MAX_EVIDENCE)
         self.assertTrue(body.endswith(b"\n[truncated]\n"))
         body.decode("utf-8")
         (project / "built.txt").write_bytes(b"x" * server.MAX_EVIDENCE)
+        did=self.file_decision(["built.txt"])
         self.assertEqual(self.request("GET", self.api("/api/file", decision=did, path="built.txt"))[2], b"x" * server.MAX_EVIDENCE)
 
     def test_view_language_and_total_returns_survive_later_passes(self):

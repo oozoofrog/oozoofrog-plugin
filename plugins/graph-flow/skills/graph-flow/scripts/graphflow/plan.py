@@ -1,5 +1,6 @@
 """Pure plan validation, normalization and dependency queries."""
 import copy
+import math
 import pathlib
 import re
 
@@ -188,8 +189,8 @@ def validate(plan):
                 field(check, "cwd", str, node, required=False)
                 if isinstance(check.get("cwd"), str):
                     paths([check["cwd"]], node)
-                if "timeout_s" in check and (type(check["timeout_s"]) not in (int, float) or check["timeout_s"] <= 0):
-                    problem("V1", node, "timeout_s must be a positive number")
+                if "timeout_s" in check and (type(check["timeout_s"]) not in (int, float) or not math.isfinite(check["timeout_s"]) or check["timeout_s"] <= 0):
+                    problem("V1", node, "timeout_s must be a finite positive number")
             elif kind == "host":
                 field(check, "tool", str, node)
                 field(check, "expect", str, node)
@@ -200,6 +201,14 @@ def validate(plan):
     if not isinstance(plan, dict):
         problem("V1", None, "plan must be an object")
         return problems
+    def finite(value):
+        if isinstance(value, float) and not math.isfinite(value):
+            problem("V1", None, "numbers must be finite")
+        elif isinstance(value, dict):
+            for item in value.values(): finite(item)
+        elif isinstance(value, list):
+            for item in value: finite(item)
+    finite(plan)
     known(plan, "schema_version goal title summary context requirements tags integration_checks promoted_checks constraints nodes", None)
     if type(plan.get("schema_version")) is not int or plan.get("schema_version") != 1:
         problem("V1", None, "schema_version must be 1")
@@ -361,3 +370,24 @@ def node_counts(nodes):
     """The same work/review/decision totals for plan records and every view."""
     return {kind: sum(n.get("kind") == kind for n in nodes)
             for kind in ("work", "review", "decision")}
+
+
+def check_inputs(check):
+    """The entire command execution contract. Environment is inherited, never plan-overridden."""
+    return {"run": check["run"], "cwd": check.get("cwd", "."),
+            "timeout_s": check.get("timeout_s", 600), "shell": "/bin/sh",
+            "environment": "inherited"}
+
+
+def check_contract(check):
+    return dict(check, **check_inputs(check)) if check.get("type") == "cmd" else dict(check)
+
+
+def node_contract(node):
+    contract = copy.deepcopy(node)
+    contract["checks"] = [check_contract(c) for c in node.get("checks", [])]
+    contract["max_attempts"] = node.get("max_attempts", 3)
+    contract["effective_lane"] = node.get("effective_lane", node.get("lane"))
+    contract["isolation"] = "shared or worktree, selected at assignment"
+    contract["merge"] = "committed submissions must be merged into project HEAD; merge --no-ff"
+    return contract

@@ -369,7 +369,24 @@ const STRINGS = {
     "runResultSummary": "결과 · {files}",
     "approvedCommit": "확인할 커밋",
     "evidenceHashes": "확인할 파일의 SHA-256",
-    "returnedActor": "{who}가 돌려보냈어요"
+    "returnedActor": "{who}가 돌려보냈어요",
+    "planChanged": "계획이 바뀌었어요 — 다시 확인해 주세요",
+    "decisionChanged": "질문이나 근거가 바뀌었어요 — 다시 확인해 주세요",
+    "acknowledgeChange": "바뀐 내용을 확인했어요",
+    "changed": "바뀜",
+    "added": "추가됨",
+    "removed": "빠짐",
+    "checkCwd": "작업 폴더 · {value} (검사할 트리 기준)",
+    "checkTimeout": "시간 제한 · {value}초",
+    "checkEnvironment": "환경 · 실행한 프로세스의 환경을 이어받아요",
+    "checkShell": "셸 · {value}",
+    "executionContract": "실행 조건 전체",
+    "planBehaviour": "검사 단계 {lane} · 최대 {max}번 시도",
+    "planIsolation": "작업 공간 · 배정할 때 공유 폴더 또는 별도 Git 작업 폴더를 골라요",
+    "planMerge": "커밋한 결과는 프로젝트에 병합한 뒤 통과시켜요",
+    "planReviewers": "검토 담당 일 · {value}",
+    "evidenceChanged": "asked 이후 파일이 바뀌었어요. 담당자가 확인을 다시 요청해야 해요.",
+    "legacyDecision": "이전 버전의 질문이에요. 담당자가 검사를 다시 요청하면 새 질문이 나타나요."
   },
   "en": {
     "flow": "Whole flow",
@@ -740,7 +757,24 @@ const STRINGS = {
     "runResultSummary": "Results · {files}",
     "approvedCommit": "Commit to approve",
     "evidenceHashes": "SHA-256 of reviewed files",
-    "returnedActor": "Sent back by {who}"
+    "returnedActor": "Sent back by {who}",
+    "planChanged": "The plan changed — please review it again",
+    "decisionChanged": "The question or evidence changed — please review it again",
+    "acknowledgeChange": "I reviewed the changes",
+    "changed": "Changed",
+    "added": "Added",
+    "removed": "Removed",
+    "checkCwd": "Working directory · {value} (relative to the tested tree)",
+    "checkTimeout": "Time limit · {value} seconds",
+    "checkEnvironment": "Environment · inherited from the invoking process",
+    "checkShell": "Shell · {value}",
+    "executionContract": "Full execution contract",
+    "planBehaviour": "Lane {lane} · at most {max} attempts",
+    "planIsolation": "Workspace · shared tree or Git worktree, selected at assignment",
+    "planMerge": "Committed results must be merged into the project before passing",
+    "planReviewers": "Review tasks · {value}",
+    "evidenceChanged": "The file changed since it was asked. The leader must request review again.",
+    "legacyDecision": "This question is from an older version. Running the gate asks it again."
   }
 };
 // UI_STRINGS_END
@@ -772,6 +806,11 @@ export function decisionQuestion(d) {
   const made = ['human_check', 'trajectory', 'lane3'].includes(d.record_purpose ?? d.purpose);
   return made && d.node && d.question === generated ? '' : d.question;
 }
+export function checkExecutionFields(c,language='en') {
+  const words=STRINGS[language], format=(key,value)=>words[key].replace('{value}',String(value));
+  return {run:c.run ?? c.command,cwd:format('checkCwd',c.cwd),timeout_s:format('checkTimeout',c.timeout_s),
+    environment:words.checkEnvironment,shell:format('checkShell',c.shell)};
+}
 export function createDecisionController() {
   let session = null, view = null, chosen = null;
   const requests = new WeakMap();
@@ -787,7 +826,7 @@ export function createDecisionController() {
       if (!session || !sameRun(session.target, chosen) || session.target.id !== id) {
         session = {target:Object.freeze({project:chosen.project, run:chosen.run, id}), draft:'', detailsOpened:false, fileOpened:false, busy:false};
       }
-      update(decision); return session;
+      if(!session.changed)update(decision); return session;
     },
     close() {
       if (session?.busy) return false;
@@ -800,15 +839,19 @@ export function createDecisionController() {
       if (!session) return '';
       const reason = !sameRun(session.target, chosen) ? 'runChanged' : !current() ? 'decisionClosed' : '';
       if (reason) session = null;
-      else update(view.decisions.find(d => d.id === session.target.id));
+      else { const next=view.decisions.find(d => d.id === session.target.id);
+        if(JSON.stringify(next.identity)!==JSON.stringify(session.decision.identity)){session.changed=true;session.nextDecision=next;}
+        else update(next);
+      }
       return reason;
     },
+    acknowledge() { if(session?.changed){session.changed=false;session.detailsOpened=false;session.fileOpened=false;session.blindConfirmed=false;update(session.nextDecision);} },
     setDraft(text) { if (session && !session.busy) session.draft = text; },
     openDetails() { if (current()) session.detailsOpened = true; },
     openFile() { if (current()) session.fileOpened = true; },
     confirmBlind(value) { if (current()) session.blindConfirmed = !!value; },
     canSubmit(outcome, text = session?.draft || '') {
-      if (!current() || session.busy) return false;
+      if (!current() || session.busy || session.changed) return false;
       const question = ['direction','information'].includes(session.kind);
       if (question ? outcome !== 'answered' : !['approved','revision_requested','rejected'].includes(outcome)) return false;
       return outcome === 'approved' ? canApprove(session) : !!text.trim();
@@ -816,7 +859,7 @@ export function createDecisionController() {
     buildRequest(outcome, text = session?.draft || '') {
       if (!controller.canSubmit(outcome, text)) return null;
       session.draft = text; session.busy = true;
-      const request = {...session.target, outcome, answer:text.trim()};
+      const request = {...session.target, outcome, answer:text.trim(), displayed:session.decision.identity};
       requests.set(request, session); return request;
     },
     onResult(request, error = null) {
@@ -1142,7 +1185,7 @@ let decisionUI = null, decisionNotice = '', cameFrom = 'flow';
 
 async function api(path, body, text = false) {
   const response = await fetch(path, {method: body ? 'POST' : 'GET', headers: {'X-GF-Token': token, ...(body ? {'Content-Type':'application/json'} : {})}, ...(body ? {body:JSON.stringify(body)} : {})});
-  if (!response.ok) { const err = new Error('request'); err.status = response.status; throw err; }
+  if (!response.ok) { const err = new Error('request'); err.status = response.status; try{err.code=(await response.json()).code;}catch{} throw err; }
   return text ? response.text() : response.json();
 }
 function query(route, extra = {}, target = chosen) { return route + '?' + new URLSearchParams({project:target.project, run:target.run, ...extra}); }
@@ -1217,11 +1260,17 @@ function handoffsCard(key, rows, direction) {
   for (const row of rows) list.append(el('li', `${label(row.label)} · ${t(direction)} ${otherTitle(row.other_title)} · ${t(row.delivered ? 'delivered' : 'notDelivered')}`));
   c.append(list); return c;
 }
+function contractDetails(parent,contract) {
+  const details=el('details');details.append(el('summary',t('executionContract')),el('pre',JSON.stringify(contract,null,2)));parent.append(details);
+}
 function plannedChecks(parent, checks) {
   const list = el('ul', undefined, 'checks planned-checks');
   for (const c of checks || []) {
     const item = el('li'); item.append(el(commandTitle(c)?'code':'strong', checkTitle(c, language)));
-    if (c.command && !commandTitle(c)) { item.append(el('p', t('plannedCommand'), 'muted'), el('pre', c.command, 'planned-command'), el('p', t('commandScope', {seconds:c.timeout_s || 600}), 'muted')); }
+    if (c.command) {
+      item.append(el('p',t('plannedCommand'),'muted'),el('pre',c.command,'planned-command'));
+      for(const [key,value] of Object.entries(checkExecutionFields(c,language))) { const row=el('p',value,'check-input');row.dataset.input=key;item.append(row); }
+    }
     if (c.prompt) item.append(el('p', t('checkPrompt') + ' · ' + c.prompt));
     if (c.type === 'host') item.append(el('p', t('checkHost', c)));
     list.append(item);
@@ -1254,6 +1303,9 @@ function planFacts(parent, node) {
   textList(parent,[...new Set([...(node.declared_outputs || []),...(node.outputs || []).map(n=>n.label).filter(Boolean)])].map(outputLabel));
   parent.append(el('h3', t('planChecks'))); plannedChecks(parent, node.planned_checks);
   if (node.lens) parent.append(el('h3',t('planLens')),el('p',node.lens));
+  parent.append(el('p',t('planBehaviour',{lane:node.lane,max:node.max_attempts})),el('p',t('planIsolation')),el('p',t('planMerge')));
+  if(node.reviewers?.length)parent.append(el('p',t('planReviewers',{value:node.reviewers.map(id=>otherTitle(flowNode(id)?.title||id)).join(', ')})));
+  contractDetails(parent,node.contract);
 }
 function planBlocked() { if(!view)return false; const a=view.plan_approval; return !!(view.plan_error || view.key_mismatch || view.location_mismatch || a && !(a.status==='answered' && a.verified && a.outcome==='approved')); }
 function problemTitle() { const a=view.plan_approval; return t(view.location_mismatch?'projectMoved':view.key_mismatch?'planKeyHeading':view.plan_error?'planTampered':!a?.id?'planMissing':a.status==='answered'&&!a.verified?'planUnverified':a.status==='open'?(view.has_work?'planContinueQuestion':'planWaiting'):'planSentBack'); }
@@ -1262,13 +1314,14 @@ function returnedLine(n) {
   const failure=row?.checks?.find(c=>c.result==='failed');
   return checkWording(failure || {title:n.returned_reason || t('noReason'),result:'failed'},language);
 }
-let planBanner = null;
+let planBanner = null, planSeen=null, planChanges=null;
+function acknowledgePlan(){planChanges=null;planBanner=null;attention();accessible();if(renderer)renderer.update(view,selected);}
 function planAttention(box) {
   const approval = view.plan_approval;
   const blocked = planBlocked();
   if (!blocked) { planBanner = null; return false; }
   box.hidden = false; box.classList.add('plan-banner');
-  const key = JSON.stringify([chosen, approval?.id, approval?.status, approval?.verified, approval?.outcome, approval?.answer, view.plan_error, view.key_mismatch, view.location_mismatch, view.has_work]);
+  const key = JSON.stringify([chosen, approval?.id, approval?.status, approval?.verified, approval?.outcome, approval?.answer, view.plan_error, view.key_mismatch, view.location_mismatch, view.has_work, approval?.identity, planChanges]);
   if (planBanner?.key === key && box.firstElementChild) {
     box.querySelector('.plan-summary').textContent = planCounts(view.plan_counts,language,true);
     return true;
@@ -1303,6 +1356,12 @@ function planAttention(box) {
   }
   if (view.legacy) box.append(el('p',t('oldRunApproval'),'plan-notice'));
   if (view.replaced_unverifiable) box.append(el('p',t('planReplaced'),'plan-notice'));
+  if(planChanges){
+    box.append(el('p',t('planChanged'),'change-notice'));
+    const changes=el('details');changes.append(el('summary',t('details')));
+    for(const change of planChanges)changes.append(el('p',t(change.kind)+' · '+change.title));
+    box.append(changes,button(t('acknowledgeChange'),acknowledgePlan));
+  }
   const session = decisionController.open(approval.id);
   const actions = el('div', undefined, 'plan-actions'), start = button(t(view.has_work?'planContinue':'planStart'), () => send('approved'), 'primary');
   const startGroup = el('div'); startGroup.append(start, el('p', t(view.has_work?'planContinueEffect':'planStartEffect'), 'muted'));
@@ -1310,9 +1369,10 @@ function planAttention(box) {
   input.id = 'plan-changes'; label.htmlFor = input.id; input.rows = 2; input.value = session?.draft || '';
   const back = button(t('sendBack'), () => send('revision_requested'));
   const message = el('p', undefined, 'muted'); message.setAttribute('role', 'status');
-  const update = () => { start.disabled = !decisionController.canSubmit('approved'); back.disabled = !decisionController.canSubmit('revision_requested'); input.disabled = !!session?.busy; $('picker').disabled = !!session?.busy; };
+  const update = () => { start.disabled = !!planChanges || !decisionController.canSubmit('approved'); back.disabled = !!planChanges || !decisionController.canSubmit('revision_requested'); input.disabled = !!session?.busy; $('picker').disabled = !!session?.busy; };
   input.addEventListener('input', () => { decisionController.setDraft(input.value); update(); });
   async function send(outcome) {
+    if(planChanges)return;
     const request = decisionController.buildRequest(outcome, input.value); if (!request) return;
     update(); let error = null;
     try { await api('/api/answer', request); } catch (e) { error = e; }
@@ -1557,7 +1617,10 @@ function discardDecision() {
   decisionUI = null; planBanner = null; clear($('decision')); return true;
 }
 function closeInvalidDecision(run, decisions, nextView = {decisions}) {
-  const reason = decisionController.refresh(nextView, run);
+  const old=decisionController.session?.target.id;
+  let reason = decisionController.refresh(nextView, run);
+  const stale=nextView.stale_decisions?.find(d=>d.id===old);
+  if(stale && reason)reason=stale.reason==='legacy_decision'?'legacyDecision':'evidenceChanged';
   if (!reason) return false;
   if (mode === 'decision') leaveDecision(); decisionNotice = reason; notice(decisionNotice); return true;
 }
@@ -1658,7 +1721,7 @@ function openDecision(id, focus = true) {
           reader.classList.toggle('code-file', /\.(?:py|js|ts|jsx|tsx|json|css|html|sh|swift|rs|go|c|h|cpp|yaml|yml|toml|xml)$/i.test(file.path));
           reader.textContent = text; reader.hidden = false; fileStatus.textContent = ''; reader.setAttribute('aria-label',file.name);
           decisionController.openFile(); updateActions();
-        } catch { if (current() && request === fileRequest) fileStatus.textContent = t('fileFailed'); }
+        } catch(error) { if (current() && request === fileRequest) {fileStatus.textContent=t(error.code==='evidence_changed'?'evidenceChanged':'fileFailed');session.fileOpened=false;session.changed=true;updateActions();} }
       })); if(file.path!==file.name)entry.append(el('small',file.path,'file-path')); fileChoices.append(entry);
     }
   };
@@ -1687,7 +1750,9 @@ function openDecision(id, focus = true) {
   }); details.append(loadEvidence, raw); right.append(details); box.append(reading, right);
   const update = () => {
     const decision = session.decision;
-    clear(introduction); decisionHeading(introduction, decision, 'h2'); const heading = introduction.querySelector('h2'); heading.id = 'decision-title';
+    clear(introduction);
+    if(session.changed){introduction.append(el('p',t('decisionChanged'),'change-notice'),button(t('acknowledgeChange'),()=>{decisionController.acknowledge();update();}));}
+    decisionHeading(introduction, decision, 'h2'); const heading = introduction.querySelector('h2'); heading.id = 'decision-title';
     const node = view.nodes.find(n => n.id === decision.node);
     introduction.append(card(t('why'), decision.context.why || purposeWording(decision.purpose, language)));
     updateFiles(decision);
@@ -1729,6 +1794,7 @@ function openDecision(id, focus = true) {
     }
     clear(gateFacts); gateFacts.append(el('p', t('gateReview')), el('p', question(decision) || purposeWording(decision.purpose, language)));
     failedBlock(gateFacts, decision);
+    if(node){plannedChecks(gateFacts,node.planned_checks);contractDetails(gateFacts,node.contract);}
     for(const [key,name] of [['if_approved','ifApproved'],['if_rejected','ifRejected'],['undo','undo']])if(decision.context[key])gateFacts.append(el('p',t(name)+': '+decision.context[key]));
     if (decision.context.why) gateFacts.append(el('p', decision.context.why));
     details.hidden = !decision.has_evidence && !decisionController.requiresDetails;
@@ -1767,6 +1833,8 @@ function jump(target) {
   const miss = text => { decisionNotice = t('findNone', {text}); notice(decisionNotice); return false; };
   if (target.decision) {
     const id = target.decision.toLowerCase();
+    const stale=view.stale_decisions?.find(d=>d.id===id);
+    if(stale){decisionNotice=t(stale.reason==='legacy_decision'?'legacyDecision':'evidenceChanged');showMode('home');home();notice(decisionNotice);return true;}
     const old=view.superseded?.find(d=>d.id===id);
     if(old?.replacement) { replacementDecision=old.replacement; decisionNotice=t('supersededNotice',{old:id}); showMode('home'); home(); notice(decisionNotice); return true; }
     if (view.decisions.some(d => d.id === id)) { openDecision(id); return true; }
@@ -1789,6 +1857,17 @@ function find(text) {
 }
 function applyView(next) {
   if (decisionController.session?.busy) return;
+  if(next.plan_approval?.status==='open'){
+    const identity=JSON.stringify(next.plan_approval.identity);
+    if(planSeen && planSeen.identity!==identity){
+      const before=new Map(planSeen.nodes.map(n=>[n.id,n])),after=new Map(next.nodes.map(n=>[n.id,n]));
+      planChanges=[];
+      for(const n of next.nodes)if(!before.has(n.id)||JSON.stringify(n.contract)!==JSON.stringify(before.get(n.id).contract))planChanges.push({id:n.id,title:n.title,kind:before.has(n.id)?'changed':'added'});
+      for(const n of planSeen.nodes)if(!after.has(n.id))planChanges.push({id:n.id,title:n.title,kind:'removed'});
+      if(!planChanges.length)planChanges.push({title:next.title,kind:'changed'});
+    }
+    planSeen={identity,nodes:next.nodes};
+  }
   closeInvalidDecision(chosen, next.decisions, next);
   const nextFingerprint = JSON.stringify(next); if (nextFingerprint === fingerprint) return;
   const active=document.activeElement,focusId=active?.id,focusLabel=active?.getAttribute?.('aria-label');
@@ -1848,7 +1927,7 @@ async function refresh(force = false) {
   } catch (error) { if (currentGeneration === generation) notice(error.status === 401 ? 'unauthorized' : error.status === 400 || error.status === 404 || error.status === 500 ? 'unreadable' : 'lost', true); }
   finally { loading = false; if (queuedRefresh) { queuedRefresh = false; refresh(true); } else schedule(); }
 }
-function resetView() { $('panel').onscroll=null; $('panel').hidden=true; $('flow').classList.remove('has-selection'); panelFingerprint=''; panelNode=null; language = viewLanguage(null, navigator.language); translate(); closeInvalidDecision(chosen, []); view = null; selected = null; fingerprint = ''; ['node-list','edge-list','decision-list','panel','home','attention'].forEach(id => clear($(id))); if (renderer) renderer.update({nodes:[],edges:[],decisions:[],complete:false}, null); $('flow').hidden = true; $('home').hidden = true; $('accessible').hidden = true; $('decision').hidden = true; $('subtitle').textContent = ''; $('where').textContent = ''; }
+function resetView() { planSeen=null;planChanges=null; $('panel').onscroll=null; $('panel').hidden=true; $('flow').classList.remove('has-selection'); panelFingerprint=''; panelNode=null; language = viewLanguage(null, navigator.language); translate(); closeInvalidDecision(chosen, []); view = null; selected = null; fingerprint = ''; ['node-list','edge-list','decision-list','panel','home','attention'].forEach(id => clear($(id))); if (renderer) renderer.update({nodes:[],edges:[],decisions:[],complete:false}, null); $('flow').hidden = true; $('home').hidden = true; $('accessible').hidden = true; $('decision').hidden = true; $('subtitle').textContent = ''; $('where').textContent = ''; }
 function schedule() { clearTimeout(timer); if (!document.hidden) timer = setTimeout(refresh, 2000); }
 $('phone-view-toggle').addEventListener('click',()=>{const diagram=$('flow').classList.toggle('phone-diagram');$('phone-view-toggle').dataset.i18n=diagram?'showFlowList':'showDiagram';$('phone-view-toggle').textContent=t(diagram?'showFlowList':'showDiagram');$('phone-view-toggle').setAttribute('aria-pressed',String(diagram));if(renderer&&view)renderer.update(view,selected);});
 $('home-tab').addEventListener('click', () => { if (view) goHome(); });
@@ -1880,6 +1959,7 @@ function inPhase(element, period) {element.style.animationDelay=-(performance.no
 function nodeDescription(n) {return n.runLevel?`${t('runChecksTitle')}. ${t('runChecksAfter')}`:`${t(n.kind||'work')}. ${title(n)}. ${status(n)}. ${attempts(n)}. ${t('returnTimes',{n:cometCount(n)})}`;}
 function nodeCard(n, expanded = false, level = 'detail') {
   const root=el('article',undefined,'node-card '+cardTone(n)+(['running','retrying'].includes(displayState(n,view.decisions))?' working':'')+(expanded?' expanded':''));root.dataset.node=n.id;
+  const change=planChanges?.find(c=>c.id===n.id);if(change)root.append(el('p',t(change.kind),'change-mark'));
   const header=button('',()=>{
     const decision=view.decisions.find(d=>d.node===n.id);
     if(n.kind==='decision'){if(decision)openDecision(decision.id);else selectNode(n.id);}

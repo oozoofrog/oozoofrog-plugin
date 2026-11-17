@@ -9,12 +9,14 @@ from . import checks, core, graph, plan as planmod, state as statemod, store
 __all__ = ["evaluate", "build_rejection", "render_rejection", "gate", "gate_final", "reopen"]
 
 
-def _decisions(state, node_id, submission, check, purpose, kind):
+def _decisions(state, node_id, submission, check, purpose, kind, request=None):
     return [d for d in state.get("decisions", {}).values()
             if not d.get("stale") and d.get("node") == node_id
             and d.get("submission") == submission and d.get("check") == check
             and d.get("purpose") == purpose
-            and (kind is None or d.get("kind") == kind)]
+            and (kind is None or d.get("kind") == kind)
+            and (request is None or all(d.get(k) == request.get(k)
+                 for k in ("question", "evidence", "kind")))]
 
 
 def _answered(decisions, outcomes):
@@ -24,13 +26,21 @@ def _answered(decisions, outcomes):
 
 def _ask(node, node_state, purpose, check=None, kind="review", question=None):
     submission = node_state.get("submission") or {}
+    human = next((c for c in node.get("checks", []) if c.get("id") == check), {})
+    context = human.get("context", {}) if purpose == "human_check" else node.get("context", {})
+    prompt = human.get("prompt") or human.get("title") or node.get("goal", "")
+    question = (node.get("question") if purpose == "node" else prompt if purpose == "human_check"
+                else question or "Approve %s: %s?" % (purpose, node.get("goal", node["id"])))
     return {"node": node["id"], "submission": submission.get("id"),
             "check": check, "purpose": purpose, "kind": kind,
-            "question": question or "Approve %s for %s?" % (purpose, node["id"]),
+            "question": question,
             "evidence": {
                 "command": [c["run"] for c in node.get("checks", []) if c.get("type") == "cmd"],
                 "files": list(submission.get("changed_files") or []),
-                "checks": copy.deepcopy(node_state.get("checks", {}))}}
+                "checks": {cid: {"loop": copy.deepcopy(slots["loop"])}
+                           for cid, slots in node_state.get("checks", {}).items() if slots.get("loop")},
+                "context": copy.deepcopy(context),
+                "contract": planmod.node_contract(node)}}
 
 
 def _approval_rule(state, node, requests, rule):
@@ -39,14 +49,14 @@ def _approval_rule(state, node, requests, rule):
     missing = False
     for request in requests:
         decisions = _decisions(state, node["id"], request["submission"], request["check"],
-                               request["purpose"], request["kind"])
+                               request["purpose"], request["kind"], request)
         if _answered(decisions, ("approved",)):
             continue
         if _answered(decisions, ("rejected", "revision_requested")):
             return {"verdict": "hold", "rule": "R4", "failed": [], "asks": []}
         missing = True
         bound = _decisions(state, node["id"], request["submission"], request["check"],
-                           request["purpose"], None)
+                           request["purpose"], None, request)
         if not any(d.get("status") == "open" for d in bound):
             asks.append(request)
     if missing:
@@ -64,13 +74,14 @@ def evaluate(plan, state, node_id, gate_results, integration_results, rollbacks)
         return {"verdict": value, "rule": rule, "failed": failed or [], "asks": asks or []}
 
     if node["kind"] == "decision":
-        decisions = _decisions(state, node_id, None, None, "node", None)
+        request = _ask(node, st, "node", kind=node["decision_kind"])
+        decisions = _decisions(state, node_id, None, None, "node", node["decision_kind"], request)
         if _answered(decisions, ("answered", "approved")):
             return verdict("pass", "R7")
         if _answered(decisions, ("rejected", "revision_requested")):
             return verdict("hold", "R4")
         asks = [] if any(d.get("status") == "open" for d in decisions) else [
-            _ask(node, st, "node", kind=node["decision_kind"], question=node["question"])]
+            request]
         return verdict("needs_approval", "R6", asks=asks)
 
     failed = [r for r in list(gate_results) + list(integration_results)
@@ -222,9 +233,9 @@ def gate(run_dir, node_id, cwd, actor):
         started_seq = tx.events[-1]["seq"] if tx.events else 0
     submission = st.get("submission") or {}
     if submission.get("commit"):
-        merged = _git(directory, "merge-base", "--is-ancestor", submission["commit"], "HEAD")
+        merged = _git(root, "merge-base", "--is-ancestor", submission["commit"], "HEAD")
         if merged.returncode:
-            raise core.GFError("not_merged", "submission is not an ancestor of tested HEAD", core.EXIT_STATE)
+            raise core.GFError("not_merged", "submission is not an ancestor of project HEAD; merge it into the project first", core.EXIT_STATE)
     if node["kind"] == "review":
         target = derived["nodes"][node["target"]].get("submission") or {}
         if submission.get("target_submission") != target.get("id"):
@@ -274,7 +285,8 @@ def gate(run_dir, node_id, cwd, actor):
             rejection = build_rejection(node, current_st, outcome["failed"], tails)
         data = {"node": node_id, "attempt": current_st["attempts"],
                 "submission": submission.get("id"), "verdict": outcome["verdict"],
-                "rule": outcome["rule"], "rejection": rejection, "tested_head": tested_head}
+                "rule": outcome["rule"], "rejection": rejection, "tested_head": tested_head,
+                "merged_head": _head(root) if submission.get("commit") else None}
         tx.append("gate.verdict", data, actor)
     return dict(data, asks=ask_ids)
 
@@ -286,12 +298,17 @@ def gate_final(run_dir, cwd, actor):
         plan, revision = tx.plan, tx.revision
         derived = statemod.derive(plan, tx.events)
         statemod.require_plan_approval(derived)
+    for nid, st in derived["nodes"].items():
+        commit = (st.get("submission") or {}).get("commit")
+        if commit and (not st.get("merged_head") or
+                       _git(root, "merge-base", "--is-ancestor", commit, "HEAD").returncode):
+            raise core.GFError("not_merged", "%s is not merged into project HEAD" % nid, core.EXIT_STATE)
     tested_head = _head(directory)
     results = [checks.run_cmd(run_dir, "_run", c, "gate", directory, actor)
                for c in _integration(plan or {}, root, derived)]
     failed = [r["check"] for r in results if r["result"] == "failed"]
     data = {"result": "failed" if failed else "passed", "failed_checks": failed,
-            "tested_head": tested_head}
+            "tested_head": tested_head, "project_head": _head(root)}
     with store.transaction(run_dir) as tx:
         if tx.revision != revision:
             raise core.GFError("stale_result", "plan changed during final gate", core.EXIT_STATE)

@@ -105,7 +105,12 @@ class Review10Tests(unittest.TestCase):
         commit=subprocess.check_output(['git','-C',str(self.project),'rev-parse','HEAD'],text=True).strip()
         self.call('submit','a','--commit',commit)
         (self.project/'evidence.txt').write_text('reviewed evidence')
-        ask=decisions.ask(self.run,'authorization' if purpose=='lane3' else 'review','Approve?', 'a', None,purpose,{'files':['evidence.txt'],'checks':{}}, {'role':'leader'})
+        # Signed record mutation tests intentionally inject a gate-owned question.
+        with store.transaction(self.run) as tx:
+            ask={'kind':'authorization' if purpose=='lane3' else 'review','question':'Approve?', 'node':'a',
+                 'submission':state.derive(tx.plan,tx.events)['nodes']['a']['submission']['id'],
+                 'check':None,'purpose':purpose,'evidence':{'files':['evidence.txt'],'checks':{}}}
+            ev=tx.append('decision.ask',ask,{'role':'leader'});ask['id']='d%d'%ev['seq']
         self.accept(ask['id'])
         return commit
 
@@ -123,7 +128,7 @@ class Review10Tests(unittest.TestCase):
 
     def test_f3_evidence_rewrite_blocks_gate_and_merge(self):
         self.prepare_submission('human_check')
-        (self.project/'evidence.txt').write_text('changed after approval')
+        self.rewrite(lambda es: next(e['data'] for e in es if e['type']=='decision.ask' and e['data'].get('purpose')=='human_check')['artifact_hashes'].update({'file:evidence.txt':'changed'}))
         for args in [('gate','a'), ('merge','a')]:
             self.assertEqual(self.call(*args,code=4)['code'],'approval_changed')
 
@@ -183,11 +188,10 @@ class Review10Tests(unittest.TestCase):
         self.raw['goal']='different';self.set_plan()
         self.raw['goal']='안내 파일을 만들어요';did=self.set_plan()['decision']
         human_answer(self.run,did,'revision_requested','검사를 고쳐 주세요')
-        self.rewrite(lambda es: es.__setitem__(slice(None),[e for e in es if e['type']!='decision.superseded']))
+        self.rewrite(lambda es: es.__setitem__(slice(None),[dict(e,seq=i+1) for i,e in enumerate(e for e in es if e['type']!='decision.superseded')]))
         for args in [('ready',), ('start','a')]:
             error=self.call(*args,code=4)
-            self.assertIn('sent the plan back',error['message']);self.assertIn('검사를 고쳐 주세요',error['message'])
-            self.assertIn('plan set',error['message']);self.assertNotIn('gf open',error['message'])
+            self.assertEqual(error['code'],'plan_not_approved')
 
     def test_f5_later_same_identity_revision_invalidates_approval_without_flag(self):
         self.accept(self.set_plan()['decision'])

@@ -311,7 +311,7 @@ assert(Object.isFrozen(session.target));
 controller.openDetails();
 chosen.run = second.run;
 const request = controller.buildRequest('approved', '  Read it  ');
-assert.deepEqual(request, {...first, id:'d7', outcome:'approved', answer:'Read it'}, 'POST must use the bound target');
+assert.deepEqual(request, {...first, id:'d7', outcome:'approved', answer:'Read it', displayed:undefined}, 'POST must use the bound target');
 assert.equal(session.busy, true);
 assert.equal(controller.buildRequest('approved', ''), null, 'double sends must be refused');
 assert.equal(controller.close(), false, 'a pending POST must keep the view open');

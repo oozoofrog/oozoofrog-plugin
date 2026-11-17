@@ -1,5 +1,7 @@
 # Dashboard HTTP API
 
+Execution records (check results, submissions and merge results) are unsigned and can be falsified by anything with file access. Editing the project directly bypasses the tool. Signed approval protects the particular question, context, approved plan, submission and evidence hashes within the recorded project/run location; it does not prove execution or prevent direct edits.
+
 This is the contract for `graphflow/server.py`, its `page.html` and `page.js`, and an optional host-side pane. State, readiness, decisions and trace use the formats in [records.md](records.md), sections 5, 7 and 9. The dashboard is the human answer surface described by P10 in [principles.md](principles.md).
 
 ## Process and access

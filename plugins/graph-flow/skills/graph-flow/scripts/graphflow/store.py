@@ -112,7 +112,7 @@ def project_of(run_dir):
 
 def register_project(root):
     """Add root to $GF_HOME/registry.json under $GF_HOME/.lock; idempotent."""
-    root = str(pathlib.Path(root).resolve())
+    root = str(real_path(root))
     home = gf_home()
     reg_path = home / "registry.json"
     with locked(home / ".lock"):
@@ -224,6 +224,10 @@ def _read_log(run_dir):
             if nl + 1 == n:
                 break  # last line does not parse: incomplete tail
             raise GFError("log_corrupt", "unparsable line at byte %d of %s" % (pos, path), EXIT_IO)
+        expected = len(out) + 1
+        if type(ev.get("seq")) is not int or ev["seq"] != expected:
+            raise GFError("log_sequence", "invalid seq at line %d of %s; expected %d" %
+                          (expected, path, expected), EXIT_STATE)
         out.append(ev)
         pos = nl + 1
         good = pos
@@ -237,8 +241,27 @@ class EventLog(list):
         self.run_dir = pathlib.Path(run_dir).resolve()
 
 
+def real_path(path):
+    """Resolve symlinks and the spelling stored by case-insensitive filesystems."""
+    path = pathlib.Path(os.path.realpath(str(path)))
+    result = pathlib.Path(path.anchor)
+    for part in path.parts[1:]:
+        candidate = result / part
+        try:
+            # Prefer exact names on case-sensitive filesystems; samefile also handles APFS aliases.
+            names = os.listdir(result)
+            if part not in names:
+                part = next((name for name in names if name.casefold() == part.casefold()
+                             and os.path.samefile(result / name, candidate)), part)
+        except OSError:
+            pass
+        result /= part
+    return result
+
+
 def location(run_dir):
-    return {"project_root": str(project_of(run_dir)), "run_directory": pathlib.Path(run_dir).resolve().name}
+    path = real_path(run_dir)
+    return {"project_root": str(path.parent.parent.parent), "run_directory": path.name}
 
 
 def events(run_dir):

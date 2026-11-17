@@ -151,47 +151,76 @@ def submission_binding(submission):
     return copy.deepcopy(submission)
 
 
-def artifact_hashes(run_dir, evidence, submission=None):
-    """Hash the files shown by the dashboard and the check evidence in the question."""
-    if run_dir is None:
-        return {}
+def artifact_bytes(run_dir, relative, submission=None, log=False):
+    """One byte source for consent hashes and the dashboard. Never dereference a git symlink."""
     import pathlib
     import os
     import stat
+    import subprocess
+    from . import server
     root = store.project_of(run_dir)
+    base = pathlib.Path(run_dir) if log else root
+    commit = (submission or {}).get("commit") if not log else None
+    target = server._file_path(base, relative, committed=bool(commit))
+    if commit:
+        if not isinstance(commit, str) or not __import__('re').fullmatch(r"[0-9a-fA-F]{40,64}", commit):
+            raise ValueError("invalid commit")
+        entry = subprocess.run(["git", "-C", str(root), "ls-tree", "-z", commit, "--", relative],
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True).stdout
+        if not entry.startswith((b"100644 blob ", b"100755 blob ")):
+            raise ValueError("not a regular committed file")
+        oid = entry.split(b"\t", 1)[0].split()[-1].decode("ascii")
+        size = int(subprocess.check_output(["git", "-C", str(root), "cat-file", "-s", oid]))
+        if size > server.MAX_FILE_SCAN:
+            raise ValueError("attachment too large")
+        return subprocess.check_output(["git", "-C", str(root), "cat-file", "blob", oid])
+    fd = server._open_project_file(base, target)
+    with os.fdopen(fd, "rb") as stream:
+        info = os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_size > server.MAX_FILE_SCAN:
+            raise ValueError("not a readable attachment")
+        for name in ("human.key", "server.json", "registry.json"):
+            secret = core.gf_home() / name
+            if secret.exists() and os.path.samestat(info, secret.stat()):
+                raise server._HTTPError(403, "forbidden_path", "this file cannot be opened")
+        raw = stream.read(server.MAX_FILE_SCAN + 1)
+        if len(raw) > server.MAX_FILE_SCAN:
+            raise ValueError("attachment too large")
+        return raw
+
+
+def artifact_hashes(run_dir, evidence, submission=None):
+    if run_dir is None:
+        return {}
     evidence = evidence if isinstance(evidence, dict) else {}
     files = [p for values in (evidence.get("files"), (submission or {}).get("changed_files"))
              if isinstance(values, list) for p in values if isinstance(p, str)]
-    paths = [("file:" + p, root, p) for p in files if isinstance(p, str)]
+    paths = [("file:" + p, p, False) for p in files]
     for slots in (evidence.get("checks") or {}).values() if isinstance(evidence.get("checks"), dict) else []:
         for result in (slots or {}).values():
             if isinstance(result, dict) and isinstance(result.get("log"), str):
-                paths.append(("log:" + result["log"], pathlib.Path(run_dir), result["log"]))
+                paths.append(("log:" + result["log"], result["log"], True))
     hashes = {}
-    for name, base, relative in paths:
+    for name, relative, log in paths:
         try:
-            path = (base / relative).resolve()
-            path.relative_to(base.resolve())
-            if any(p in (".git", ".graph-flow", "human.key") for p in pathlib.PurePosixPath(relative).parts):
-                raise ValueError("private path")
-            digest = hashlib.sha256()
-            fd = os.open(str(path), os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
-            with os.fdopen(fd, "rb") as stream:
-                info = os.fstat(stream.fileno())
-                if not stat.S_ISREG(info.st_mode) or info.st_size > 16 * 1024 * 1024:
-                    raise ValueError("not a readable attachment")
-                for chunk in iter(lambda: stream.read(65536), b""):
-                    digest.update(chunk)
-            hashes[name] = digest.hexdigest()
-        except (OSError, ValueError):
+            hashes[name] = hashlib.sha256(artifact_bytes(run_dir, relative, submission, log)).hexdigest()
+        except Exception:
             hashes[name] = None
     return hashes
+
+
+def decision_identity(decision):
+    """What the person saw, returned unchanged with an answer (also for plan banners)."""
+    content = {k: decision.get(k) for k in ("question", "evidence", "plan_identity", "submission_binding", "location")}
+    return {"id": decision["id"], "question_hash": hashlib.sha256(json.dumps(content,
+            sort_keys=True, ensure_ascii=False, allow_nan=False).encode("utf-8")).hexdigest(),
+            "artifact_hashes": decision.get("artifact_hashes") or {}}
 
 
 def require_submission_binding(derived, node_id):
     sub = (derived["nodes"].get(node_id) or {}).get("submission") or {}
     for dec in derived["decisions"].values():
-        if (not dec.get("stale") and dec.get("node") == node_id and dec.get("submission") == sub.get("id")
+        if (not dec.get("stale") and dec.get("status") == "answered" and dec.get("node") == node_id and dec.get("submission") == sub.get("id")
                 and dec.get("purpose") in ("human_check", "lane3", "trajectory", "hold")
                 and (dec.get("binding_changed") or dec.get("status") == "answered" and not dec.get("verified"))):
             raise core.GFError("approval_changed", "The submission commit or evidence differs from the human approval. Submit again for review.", core.EXIT_STATE)
@@ -379,6 +408,8 @@ def derive(plan, events):
             if a is None:
                 continue
             v = d.get("verdict")
+            if d.get("merged_head"):
+                a["merged_head"] = d["merged_head"]
             if v in VERDICT_STATUS:
                 a["status"] = VERDICT_STATUS[v]
             if v in ("reject", "replan") and d.get("rejection") is not None:
@@ -405,6 +436,7 @@ def derive(plan, events):
                 "submission_binding": copy.deepcopy(d.get("submission_binding")),
                 "artifact_hashes": copy.deepcopy(d.get("artifact_hashes")),
                 "binding_changed": False,
+                "legacy_binding": run_dir is not None and not all(k in d for k in ("location", "submission_binding", "artifact_hashes")),
                 "run_nonce": run_nonce,
                 "human_key_sha256": pinned_key,
                 "kind": d.get("kind"),
@@ -437,6 +469,9 @@ def derive(plan, events):
         # every other type is ignored
 
     for did, dec in decisions.items():
+        if dec["legacy_binding"]:
+            dec["stale"] = True
+            dec["stale_reason"] = "legacy_decision"
         if dec["seq"] < repin_seq or dec.get("purpose") == "plan_approval" and dec["seq"] < identity_revision_seq or dec.get("purpose") == "plan_approval" and dec.get("plan_identity") != current_identity:
             dec["stale"] = True
         sig = sigs.get(did)
@@ -450,17 +485,26 @@ def derive(plan, events):
                     expected.encode("utf-8"), sig.encode("utf-8"))
         nid = dec["node"]
         if nid is None:
+            if run_dir is not None and not dec["legacy_binding"] and dec.get("artifact_hashes") != artifact_hashes(run_dir, dec.get("evidence")):
+                dec["binding_changed"] = True
+                dec["verified"] = False
+                if dec["status"] == "open":
+                    dec["stale"] = True
+                    dec["stale_reason"] = "evidence_changed"
             continue
         a = node_acc(nid)
         if a is None:
             dec["stale"] = True
         else:
             sub = a.get("submission")
-            if dec.get("submission") is not None and dec.get("submission") == _sub_id(a):
+            if run_dir is not None and not dec["legacy_binding"] and dec.get("submission") == _sub_id(a):
                 dec["binding_changed"] = (dec.get("submission_binding") != submission_binding(sub)
                     or dec.get("artifact_hashes") != artifact_hashes(run_dir, dec.get("evidence"), sub))
                 if dec["binding_changed"]:
                     dec["verified"] = False
+                    if dec["status"] == "open":
+                        dec["stale"] = True
+                        dec["stale_reason"] = "evidence_changed"
             dec["stale"] = dec["stale"] or (a["basis"] >= dec["seq"]
                             or (dec["submission"] is not None
                                 and dec["submission"] != _sub_id(a)))
@@ -526,7 +570,8 @@ def derive(plan, events):
 
     complete = (
         bool(out_nodes)
-        and all(n["status"] == "passed" for n in out_nodes.values())
+        and all(n["status"] == "passed" and (not (n.get("submission") or {}).get("commit")
+                or n.get("merged_head")) for n in out_nodes.values())
         and final is not None
         and final.get("result") == "passed"
         and final["seq"] > last_reset_seq

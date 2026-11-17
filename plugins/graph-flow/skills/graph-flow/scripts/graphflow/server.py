@@ -1,6 +1,7 @@
 """Loopback human decision surface (references/dashboard.md)."""
 import codecs
 import hmac
+import hashlib
 import http.client
 import json
 import os
@@ -342,14 +343,15 @@ def _node_checks(node):
 def _plan_summary(plan):
     nodes = plan.get("nodes", [])
     questions = []
+    from .gate import _ask
     for node in nodes:
         if node.get("kind") == "decision":
             questions.append({"node": node["id"], "kind": node.get("decision_kind"), "question": node.get("question")})
         for check in node.get("checks", []):
             if check.get("type") == "human":
-                questions.append({"node": node["id"], "kind": "review", "question": check.get("prompt") or check.get("title") or node.get("goal", "")})
+                questions.append({"node": node["id"], "kind": "review", "question": _ask(node, {}, "human_check", check=check["id"])["question"]})
         if node.get("effective_lane", node.get("lane")) == 3 and node.get("kind") != "decision":
-            questions.append({"node": node["id"], "kind": "authorization", "question": node.get("goal", "")})
+            questions.append({"node": node["id"], "kind": "authorization", "question": _ask(node, {}, "lane3", kind="authorization")["question"]})
     from .plan import node_counts
     counts = node_counts(nodes)
     counts.update(checks=sum(len(_node_checks(n)) for n in nodes) +
@@ -359,7 +361,7 @@ def _plan_summary(plan):
 
 
 def _planned_check(check):
-    return dict(check, command=check.get("run"))
+    return dict(planning.check_contract(check), command=check.get("run"))
 
 
 def _view(current, derived, events, project):
@@ -416,6 +418,9 @@ def _view(current, derived, events, project):
                                   for d in derived["decisions"].values()),
                               "attempts": st["attempts"], "max_attempts": st["max_attempts"],
                               "lane": st["effective_lane"], "laps": laps,
+                              "contract": planning.node_contract(node),
+                              "reviewers": [n["id"] for n in nodes.values() if n.get("target") == nid],
+                              "isolation": _mapping(st["assignment"]).get("isolation"),
                               "returned_reasons": reasons, "reviewed_by_other_family": bool(reviewed),
                               "worker": {k: v for k, v in _mapping(st["assignment"]).items()
                                          if k in ("executor", "model", "effort", "provider") and _text(v)},
@@ -468,6 +473,7 @@ def _view(current, derived, events, project):
         context = {k: v for k, v in _mapping(context).items()
                    if k in ("why", "if_approved", "if_rejected", "undo") and _text(v)}
         evidence = _mapping(decision.get("evidence"))
+        context = evidence.get("context", context)
         st = derived["nodes"].get(decision["node"]) or {}
         submission = _mapping(st.get("submission"))
         verified, unverified, failed = [], [], []
@@ -498,6 +504,8 @@ def _view(current, derived, events, project):
                                   "purpose": (_text(decision.get("kind")) if decision.get("purpose") in (None, "node", "free")
                                               else _text(decision.get("purpose"))),
                                   "record_purpose": _text(decision.get("purpose")),
+                                  "identity": state.decision_identity(decision),
+                                  "contract": evidence.get("contract"),
                                   "commit": (decision.get("submission_binding") or {}).get("commit"),
                                   "artifact_hashes": decision.get("artifact_hashes") or {},
                                   "files": _decision_files(decision, derived, project, _strings(_mapping(nodes.get(decision["node"])).get("owns"))),
@@ -543,6 +551,9 @@ def _view(current, derived, events, project):
     approval = state.plan_approval(derived)
     view["plan_approval"] = None if approval is None else {
         key: approval.get(key) for key in ("id", "status", "outcome", "answer", "verified", "question", "plan_identity")}
+    if view["plan_approval"] and approval.get("id"):
+        view["plan_approval"]["identity"] = state.decision_identity(approval)
+    view["stale_decisions"] = [{"id": d["id"], "reason": d.get("stale_reason")} for d in derived["decisions"].values() if d.get("stale_reason")]
     view["plan_counts"], view["planned_questions"] = _plan_summary(current)
     view["goal"] = current.get("goal", "")
     view["constraints"] = [c["text"] for c in current.get("constraints", [])]
@@ -553,7 +564,7 @@ def _view(current, derived, events, project):
     return view
 
 
-def _file_path(project, relative):
+def _file_path(project, relative, committed=False):
     # Validate the recorded spelling as well as the resolved destination.
     path = pathlib.PurePosixPath(relative)
     private = {".git", ".graph-flow"}
@@ -564,6 +575,8 @@ def _file_path(project, relative):
             or ".." in path.parts or private.intersection(folded) or path.name.casefold() in secrets):
         raise _HTTPError(403, "forbidden_path", "this file cannot be opened")
     root = pathlib.Path(project).resolve()
+    if committed:
+        return root / relative
     try:
         target = (root / relative).resolve()
         parts = target.relative_to(root).parts
@@ -583,7 +596,7 @@ def _decision_files(decision, derived, project, owns=()):
     files = []
     for path in dict.fromkeys(paths):
         try:
-            _file_path(project, path)
+            _file_path(project, path, committed=bool((decision.get("submission_binding") or {}).get("commit")))
         except _HTTPError:
             continue
         files.append({"name": pathlib.PurePosixPath(path).name, "path": path})
@@ -622,45 +635,34 @@ def _file(run_dir, decision_id, relative):
         decision = derived["decisions"].get(decision_id)
         if decision is None:
             raise _HTTPError(404, "unknown_decision", "this decision is unavailable")
+        if decision.get("binding_changed"):
+            raise _HTTPError(409, "evidence_changed", "asked 이후 파일이 바뀌었어요. 다시 확인을 요청해 주세요.")
         if decision["status"] != "open" or decision["stale"]:
             raise _HTTPError(403, "unavailable_decision", "this decision is no longer open")
-        target = _file_path(project, relative)
+        _file_path(project, relative, committed=bool((decision.get("submission_binding") or {}).get("commit")))
         owner = planning.node_index(store.read_plan(run_dir)).get(decision.get("node"), {})
         if relative not in [f["path"] for f in _decision_files(decision, derived, project,
                                                                 _strings(owner.get("owns")))]:
             raise _HTTPError(403, "forbidden_path", "this file is not part of this decision")
         try:
-            fd = _open_project_file(project, target)
-            with os.fdopen(fd, "rb") as stream:
-                info = os.fstat(stream.fileno())
-                if not stat.S_ISREG(info.st_mode):
-                    raise _HTTPError(404, "unknown_file", "this is not a readable text file")
-                if info.st_size > MAX_FILE_SCAN:
-                    # The run lock is held while reading, so the scan must stay short.
-                    raise _HTTPError(404, "unknown_file", "this file is too large to show here")
-                # Also refuse renamed hard links to the dashboard's private records.
-                for name in ("human.key", "server.json", "registry.json"):
-                    secret = core.gf_home() / name
-                    if secret.exists() and os.path.samestat(info, secret.stat()):
-                        raise _HTTPError(403, "forbidden_path", "this file cannot be opened")
-                decoder = codecs.getincrementaldecoder("utf-8")("strict")
-                raw, size = bytearray(), 0
-                while True:
-                    chunk = stream.read(64 * 1024)
-                    if not chunk:
-                        decoder.decode(b"", final=True)
-                        break
-                    if b"\x00" in chunk:
-                        raise UnicodeError("binary")
-                    decoder.decode(chunk)
-                    size += len(chunk)
-                    raw.extend(chunk[:max(0, MAX_EVIDENCE - len(raw))])
-        except (OSError, UnicodeError):
+            raw = state.artifact_bytes(run_dir, relative, decision.get("submission_binding"))
+        except _HTTPError:
+            raise
+        except Exception:
+            raise _HTTPError(409, "evidence_changed", "asked 이후 파일이 바뀌었어요. 다시 확인을 요청해 주세요.")
+        recorded = (decision.get("artifact_hashes") or {}).get("file:" + relative)
+        if not recorded or hashlib.sha256(raw).hexdigest() != recorded:
+            raise _HTTPError(409, "evidence_changed", "asked 이후 파일이 바뀌었어요. 다시 확인을 요청해 주세요.")
+        try:
+            text = raw.decode("utf-8")
+            if "\x00" in text:
+                raise UnicodeError("binary")
+        except UnicodeError:
             raise _HTTPError(404, "unknown_file", "this is not a readable UTF-8 text file")
-        if size > MAX_EVIDENCE:
+        if len(raw) > MAX_EVIDENCE:
             marker = b"\n[truncated]\n"
-            return bytes(raw[:MAX_EVIDENCE - len(marker)]).decode("utf-8", errors="ignore").encode("utf-8") + marker
-        return bytes(raw)
+            return raw[:MAX_EVIDENCE - len(marker)].decode("utf-8", errors="ignore").encode("utf-8") + marker
+        return raw
 
 
 def _evidence(run_dir, relative):
@@ -721,7 +723,7 @@ def _handler(token):
                 self.wfile.write(data)
 
         def _json(self, status, value):
-            self._send(status, json.dumps(value), "application/json; charset=utf-8")
+            self._send(status, json.dumps(value, allow_nan=False), "application/json; charset=utf-8")
 
         def _error(self, status, code, message):
             self._json(status, {"ok": False, "code": code, "message": message})
@@ -797,7 +799,9 @@ try {
                     except UnicodeError:
                         raise _HTTPError(400, "bad_input", "%s must be valid Unicode" % key)
                 run = _run(body["project"], body["run"])
-                answer = decisions.answer(run, body["id"], body["outcome"], body["answer"], "dashboard", HUMAN)
+                if not isinstance(body.get("displayed"), dict):
+                    raise _HTTPError(409, "stale_decision", "Read the current decision before answering.")
+                answer = decisions.answer(run, body["id"], body["outcome"], body["answer"], "dashboard", HUMAN, body.get("displayed"))
                 return self._json(200, {"ok": True, "decision": answer})
             if path.startswith("/static/"):
                 name = path[len("/static/"):]

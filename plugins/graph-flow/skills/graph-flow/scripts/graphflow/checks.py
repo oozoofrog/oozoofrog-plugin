@@ -149,23 +149,24 @@ def _result(node_id, check_id, kind, attempt, phase, cwd):
 
 
 def _execute(run_dir, node_id, check, attempt, phase, cwd):
+    inputs = _plan.check_inputs(check)
     try:
-        directory = (cwd / check.get("cwd", "")).resolve()
+        directory = (cwd / inputs["cwd"]).resolve()
         directory.relative_to(cwd)
     except (OSError, ValueError, RuntimeError):
         raise _error("bad_cwd", "check working directory must stay inside the tested tree",
                      _core.EXIT_USAGE)
     data = _result(node_id, check["id"], "cmd", attempt, phase, directory)
-    data["command"] = check["run"]
+    data["command"] = inputs["run"]
     started = _time.monotonic()
     try:
         log = _store.evidence_path(run_dir, node_id, check["id"], attempt)
         with log.open("wb") as output:
-            proc = _subprocess.Popen(["/bin/sh", "-c", check["run"]], cwd=str(directory),
+            proc = _subprocess.Popen([inputs["shell"], "-c", inputs["run"]], cwd=str(directory),
                                      stdout=output, stderr=_subprocess.STDOUT,
                                      start_new_session=True)
             try:
-                data["exit_code"] = proc.wait(timeout=check.get("timeout_s", 600))
+                data["exit_code"] = proc.wait(timeout=inputs["timeout_s"])
             except _subprocess.TimeoutExpired:
                 data["timed_out"] = True
                 try:

@@ -157,7 +157,7 @@ class GateScenarioTests(unittest.TestCase):
         self.assertEqual((request['purpose'], request['node']), ('lane3', 'feature'))
         self.assertEqual(request['evidence']['command'], [self.command])
         self.assertEqual(request['evidence']['files'], ['feature.py'])
-        self.assertEqual(request['evidence']['checks']['unit']['gate']['result'], 'passed')
+        self.assertEqual(request['evidence']['checks']['unit']['loop']['result'], 'passed')
         with mock.patch.dict(os.environ, {'GF_HUMAN_TERMINAL': '1'}), \
                 mock.patch.object(sys.stdin, 'isatty', return_value=True):
             self.call('--role', 'human', 'decide', 'answer', request['id'],

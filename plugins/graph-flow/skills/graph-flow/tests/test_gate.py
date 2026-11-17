@@ -82,6 +82,9 @@ class EvaluateTests(unittest.TestCase):
     def answer(self, purpose, outcome="approved", check=None, kind="review", **updates):
         data = {"node": "w", "submission": 10, "check": check, "purpose": purpose,
                 "kind": kind, "status": "answered", "outcome": outcome, "verified": True, "stale": False}
+        if purpose=="node":kind=self.node["decision_kind"];data["kind"]=kind
+        request=gate._ask(self.node,self.st,purpose,check=check,kind=kind)
+        data.update(question=request["question"],evidence=request["evidence"])
         data.update(updates)
         self.state["decisions"]["d1"] = data
         return data
@@ -214,7 +217,7 @@ class EvaluateTests(unittest.TestCase):
                 self.answer(purpose, kind=kind, status="open", verified=False)
                 self.assertEqual(self.assert_verdict("needs_approval", rule)["asks"], [])
                 self.state["decisions"]["d1"]["kind"] = "information"
-                self.assertEqual(self.evaluate()["asks"], [], "open-ask identity excludes kind")
+                self.assertEqual(len(self.evaluate()["asks"]), 1, "a different question kind cannot occupy the gate slot")
                 for changed in ({"stale": True}, {"submission": 9}, {"node": "other"},
                                 {"check": "other"}, {"purpose": "free"}):
                     self.answer(purpose, kind=kind, status="open", verified=False).update(changed)
@@ -453,7 +456,7 @@ class ScenarioTests(GateCase):
         self.git("merge", "--no-ff", "--no-edit", commit)
         self.redo_review()
         asked = decisions.ask(self.run, "review", "Approve trajectory?", "w", None,
-                              "trajectory", None, ACTOR)["id"]
+                              "free", None, ACTOR)["id"]
         rejected = self.gate()
         self.assertEqual(rejected["verdict"], "reject")
         rejection = rejected["rejection"]
@@ -787,7 +790,7 @@ class ExecutionTests(GateCase):
         self.set_plan([work()], [dict(CMD, id="bad", run="false"), dict(CMD, id="good")])
         data = gate.gate_final(self.run, self.repo, ACTOR)
         self.assertEqual(data, {"result": "failed", "failed_checks": ["bad"],
-                               "tested_head": self.git("rev-parse", "HEAD")})
+                               "tested_head": self.git("rev-parse", "HEAD"), "project_head": self.git("rev-parse", "HEAD")})
         self.assertEqual(self.events("gate.final")[-1]["data"], data)
 
     def test_decision_gate_executes_no_checks(self):

@@ -94,7 +94,7 @@ class DecisionsTests(unittest.TestCase):
         for bad in (None, "", "  ", 42):
             self.error("bad_question", 2, self.ask, question=bad)
         self.error("unknown_node", 4, self.ask, node="missing")
-        for purpose in ("node", "human_check", "lane3", "trajectory", "hold", "free"):
+        for purpose in ("hold", "free"):
             self.assertEqual(self.ask(purpose=purpose)["purpose"], purpose)
 
     def test_submission_binding_and_stale_restart(self):

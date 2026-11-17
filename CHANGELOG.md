@@ -1,5 +1,7 @@
 # Changelog
 
+- `graph-flow` 0.3.0 review eleven: bind gate-owned questions to approved plan context, show complete execution inputs, read committed evidence from Git, reject changed attachment bytes and stale displayed decisions, validate finite limits and contiguous log sequences, resolve filesystem case aliases, and register moved projects on successful commands. Old 0.2.x questions without bindings become stale automatically; unchanged submissions resume after one plan approval and a fresh gate question without restarting or consuming an attempt. Execution records remain unsigned; consent does not attest execution.
+
 ## Unreleased
 
 - `graph-flow` 0.3.0 review fixes: validate every loaded plan, reject ambiguous ids, derive fingerprints from validated files, bind human signatures to the actual project/run location and submitted commit/evidence, and generate a new key on human re-pin. Agent setup never creates a signing key. Every new revision requires approval; identical re-posts preserve the current decision. Document first-use key planting and log rollback limits. Show actionable warning states on every dashboard tab, copyable recovery, continuation of older runs, failure-first check labels, complete large-plan lists, wrapped chain overview, stable selection scale, viewport-height panels, and reachable phone approval actions.

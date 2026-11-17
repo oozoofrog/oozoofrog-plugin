@@ -1,5 +1,6 @@
 """Human decisions and signatures (records.md sections 5 and 7)."""
 import hmac
+import math
 import secrets
 import time
 
@@ -12,8 +13,8 @@ def ask(run_dir, kind, question, node, check, purpose, evidence, actor):
     if kind not in ("direction", "information", "review", "authorization"):
         raise core.GFError("bad_kind", "unknown decision kind: %s" % kind)
     purpose = "free" if purpose is None else purpose
-    if purpose not in ("node", "human_check", "lane3", "trajectory", "hold", "free"):
-        raise core.GFError("bad_purpose", "unknown decision purpose: %s" % purpose)
+    if purpose not in ("hold", "free"):
+        raise core.GFError("bad_purpose", "decide ask can create only free questions or holds; gate owns purpose: %s" % purpose)
     if not isinstance(question, str) or not question.strip():
         raise core.GFError("bad_question", "question must be non-empty")
     with store.transaction(run_dir) as tx:
@@ -32,7 +33,7 @@ def ask(run_dir, kind, question, node, check, purpose, evidence, actor):
     return data
 
 
-def answer(run_dir, decision_id, outcome, answer_text, source, actor):
+def answer(run_dir, decision_id, outcome, answer_text, source, actor, displayed=None):
     """Sign a human answer; the CLI also enforces terminal checks."""
     if actor.get("role") != "human":
         raise core.GFError("forbidden", "only a human can answer decisions", core.EXIT_FORBIDDEN)
@@ -42,6 +43,10 @@ def answer(run_dir, decision_id, outcome, answer_text, source, actor):
         decision = derived["decisions"].get(decision_id)
         if decision is None:
             raise core.GFError("unknown_decision", "unknown decision: %s" % decision_id, core.EXIT_STATE)
+        if displayed is not None and displayed != state.decision_identity(decision):
+            raise core.GFError("stale_decision", "The displayed question or evidence changed. Read the current decision again.", core.EXIT_STATE)
+        if decision.get("legacy_binding"):
+            raise core.GFError("legacy_decision", "This question predates signed bindings. Run the gate to ask it again.", core.EXIT_STATE)
         if decision.get("recorded_location") != store.location(run_dir):
             raise core.GFError("project_moved", "Moving or renaming a project directory or run invalidates approvals. Re-post the plan and approve once more.", core.EXIT_STATE)
         if decision.get("binding_changed"):
@@ -73,6 +78,8 @@ def answer(run_dir, decision_id, outcome, answer_text, source, actor):
 
 
 def wait(run_dir, decision_id, timeout_s):
+    if type(timeout_s) not in (int, float) or not math.isfinite(timeout_s) or timeout_s < 0:
+        raise core.GFError("bad_timeout", "timeout must be a finite non-negative number")
     deadline = time.monotonic() + timeout_s
     while True:
         with store.transaction(run_dir) as tx:
