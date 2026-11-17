@@ -201,6 +201,8 @@ def _token(revision, st):
 def _preconditions(plan, state, node_id):
     node = planmod.node_by_id(plan, node_id)
     st = state["nodes"][node_id]
+    if node["kind"] == "decision":
+        statemod.require_plan_approval(state)
     if not graph.needs_satisfied(plan, state, node_id):
         raise core.GFError("needs_unsatisfied", "node needs are not satisfied", core.EXIT_STATE)
     if node["kind"] != "decision" and not graph.has_current_submission(st):

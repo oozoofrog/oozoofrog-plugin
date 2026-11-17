@@ -1,6 +1,7 @@
 """Readiness: which nodes can start now (records.md section 5, P12)."""
 from .core import EXIT_STATE, GFError
 from . import plan as planmod
+from .state import require_plan_approval
 
 STARTABLE = ("pending", "assigned", "rejected", "unverified", "held", "awaiting_approval")
 WITH_SUBMISSION = ("submitted", "unverified", "held", "awaiting_approval")
@@ -54,6 +55,7 @@ def shared_busy(plan, state, node_id):
 
 def start_problem(plan, state, node_id):
     """None when `gf start` would accept the node, else the error code."""
+    require_plan_approval(state)
     node = planmod.node_by_id(plan, node_id)
     st = state.get("nodes", {}).get(node_id) or {}
     if node.get("kind") == "decision":
@@ -75,12 +77,14 @@ def start_problem(plan, state, node_id):
 
 
 def check_start(plan, state, node_id):
+    require_plan_approval(state)
     code = start_problem(plan, state, node_id)
     if code:
         raise GFError(code, "node %s cannot start: %s" % (node_id, code), EXIT_STATE)
 
 
 def ready(plan, state):
+    require_plan_approval(state)
     out = []
     nodes = state.get("nodes", {})
     for node in plan.get("nodes") or []:
@@ -91,3 +95,13 @@ def ready(plan, state):
         elif start_problem(plan, state, nid) is None:
             out.append(nid)
     return out
+
+
+def available(plan, state):
+    """Read-only status surfaces stay available while dispatch is blocked."""
+    try:
+        return ready(plan, state)
+    except GFError as exc:
+        if exc.code != "plan_not_approved":
+            raise
+        return []

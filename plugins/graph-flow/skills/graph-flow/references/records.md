@@ -192,6 +192,20 @@ Required top-level fields: `schema_version` (must be `1`), `goal` (non-empty str
 - A node's fingerprint is the SHA-256 hex of `json.dumps(node, sort_keys=True, separators=(",", ":"), ensure_ascii=False)` encoded as UTF-8, computed on a copy of the normalized node with presentation fields excluded as specified under "Basis". `plan.set` records every node's fingerprint.
 - A changed fingerprint invalidates the node and everything that depends on it (section 5, "Basis"). A node removed from the plan disappears from the state.
 
+### Plan approval (0.3)
+
+`plan set` atomically appends `plan.set` with `plan_identity`, then a `decision.ask` with purpose `plan_approval`, kind `authorization`, no node/submission/check, that identity and a question in the plan language. The identity hashes the normalized plan with nodes represented by id/fingerprint; node order is irrelevant. Plan title/summary/context, node title/summary/context, need labels and check title/context are excluded. Goals, ownership, dependencies, checks, lane and other structural fields are included.
+
+An open or verified-approved decision is reused for the same identity, including wording-only revisions. Otherwise a fresh approval is asked; old plan decisions receive `decision.superseded` (`id`, replacement `revision`), retain their answer/text, and are closed and stale. `decide wait` returns superseded immediately. Sending back requires nonempty text on both dashboard and terminal paths. The normal human-role and signature requirements apply; there is no skip flag, environment bypass or agent-answer tool.
+
+Until current approval is answered, verified and approved, `ready`, `assign`, work/review `brief`, `start` (including worker/reviewer starts), and the gate of a decision node refuse with exit 4, `plan_not_approved`, the decision id and `gf open --decision <id>`. MCP calls the same checks. `status`/dashboard return an empty ready list without failing. Planning briefs, validation, plan set, status, trace, decision list/wait remain usable.
+
+During re-planning, **new starts wait; existing work continues**. Completed nodes retain accepted submissions, running nodes can check/submit, and submitted nodes can be gated. To preserve those contracts safely, `plan set` refuses structural edits/removal of a running, submitted or passed node, or a producer it depends on (`active_plan_change`, exit 4). Add a new node for a changed requirement. Unstarted changed nodes and their dependents still follow the basis invalidation rule. Wording-only edits preserve all accepted work. A check already executing across a revision can still return `stale_result` under the existing race guard; rerun that check, not the worker attempt.
+
+**Compatibility:** records with no `plan_identity`/plan-approval event are grandfathered: read/ready/assign/brief/start continue as before. Reading or upgrading never writes a migration. Explicitly setting another plan opts that run into approval, including when its old structure is unchanged. The first such set also preserves existing running/completed contracts.
+
+`plan set <file> --open`, `decide ask ... --open`, and `gate [<node>|--final] --open` perform the ordinary mutation and then open the right run/decision with one short output line. Only a waiting decision or successful final gate opens; `GF_NO_OPEN=1` suppresses opening, never approval. An opening failure adds `open_error` and retains `show`; the mutation is already recorded. MCP never opens the browser and returns a human-terminal `graph-flow open` instruction. An approved unchanged plan does not reopen the browser.
+
 ## 4. Checks and evidence grades
 
 | Type | Fields | Judged by | Grade |
@@ -251,7 +265,8 @@ Incomplete tail: readers ignore a final line that does not end in a newline or d
 | Type | Data |
 | --- | --- |
 | `run.init` | `run_id`, `project_root`, `schema_version` |
-| `plan.set` | `revision`, `plan_sha256`, `fingerprints` (node id to hash), `constraints_applied` (ids) |
+| `plan.set` | `revision`, `plan_sha256`, `fingerprints` (node id to hash), `constraints_applied` (ids), `plan_identity` (0.3 structural hash) |
+| `decision.superseded` | `id`, replacement `revision`; preserves any old answer and closes the decision |
 | `host.set` | `capabilities` (list of strings, e.g. `workflow`, `t3_delegate`, `xcode_mcp`) |
 | `node.assign` | `node`, `executor` (`inline`, `subagent`, `workflow`, `t3`, `background`), `model`, `effort`, `provider`, `family` (`claude`, `openai`, `other`), `isolation` (`shared`, `worktree`) |
 | `node.start` | `node`, `attempt`, `base` `{rev, dirty}`, `cwd` |
@@ -364,7 +379,7 @@ Decisions are bound, not counted: a decision is **stale** when its node's `basis
 - Every node has every key shown; unset values are `null`, `[]`, or `{}` as in the `publish-ok` example.
 - `checks[<id>]` has `loop` and `gate`, each the latest `check.result` data of the **current attempt** for that phase, or `null`. `verdict` is the latest `gate.verdict` data for the current submission (for a decision node: since its basis), or `null`. `rejections` lists the rejection objects of this node's `reject` and `replan` verdicts since its basis, in order. `merged_head` is the `head` of the latest `merge.result` entry for the current submission's commit, or `null`; `submission`, `verdict`, and `merged_head` are cleared by `node.start`.
 - `reviews` (work nodes only) lists every review node that targets the node and has submitted since its own basis (its status is `submitted`, `unverified`, `held`, `awaiting_approval`, or `passed`), with that review node's `status`, its `target_submission`, verdict, findings, and its assignment `family` (or `null`). The gate, not the list, decides which entries match the current submission.
-- `open_decisions` holds the ids of open, non-stale decisions bound to the node. `decisions` holds every decision; `status` is `open` or `answered`.
+- `open_decisions` holds the ids of open, non-stale decisions bound to the node. `decisions` holds every decision; `status` is `open`, `answered`, or `superseded`.
 - `run.final` is the last `gate.final` data plus its `seq`, or `null`. `run.status` is `complete` only when the plan has at least one node, every node is `passed`, the last `gate.final` has result `passed`, and its `seq` is greater than the `seq` of every `plan.set`, `node.reopen`, and `gate.verdict` event; otherwise `open`.
 
 | Node status | Reached by |
@@ -718,3 +733,5 @@ The MCP tool list and the dashboard's HTTP API are specified by the units that o
 - Without a plan, `nodes` and `edges` are empty and node counters are zero; unbound decisions and project lessons can still be present. Existing fallback ids and artifact names may themselves be technical, so leaders should provide presentation fields for person-facing flows.
 
 The dashboard HTTP contract and fixed public static allowlist are in [dashboard.md](dashboard.md#get-staticname). Only those GET static requests skip token authentication; every request still needs the loopback Host check, and all APIs still require the token.
+
+The dashboard view also exposes `plan_approval` (null for legacy runs; id/status/outcome/answer/verified/question/plan_identity otherwise), `plan_counts` (work nodes, declared checks including integration, scheduled human questions including this approval), and node `planned_checks`/`deliverables`. Planned question counts exclude unforeseen free questions and retry approvals. The timeline includes plan set, approval asked, answer text and superseded events.

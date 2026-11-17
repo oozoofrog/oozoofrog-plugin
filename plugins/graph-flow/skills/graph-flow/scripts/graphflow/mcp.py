@@ -192,6 +192,9 @@ def _call(tool, arguments):
         with contextlib.redirect_stdout(output):
             code = cli.main(argv)
     payload = json.loads(output.getvalue())
+    if payload.get("show"):
+        payload["show"] = payload["show"].replace("gf open", "graph-flow open", 1)
+        payload["message"] = "Ask the person to run `%s` in their terminal; this MCP host cannot open their browser." % payload["show"]
     return {"content": [{"type": "text", "text": json.dumps(payload, ensure_ascii=False)}],
             "isError": code in (2, 3, 4, 5)}
 

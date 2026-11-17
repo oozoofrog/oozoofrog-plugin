@@ -26,7 +26,7 @@ The server uses `http.server.ThreadingHTTPServer`. Files are the source of state
 
 ## Who the token stands for
 
-An answer posted with the token is recorded as the person's decision. The token, `server.json` and `human.key` are readable by every process of the same OS user, so roles are a cooperative rule and not a security boundary between a person and an agent on the same account. The rule: opening the dashboard is separate from answering on it. A person may run `gf serve` and open the printed address, or run `gf open`. An agent session may run `gf open` when the person asks to see the dashboard, and `gf open --stop` when the person asks to close it; neither prints an address or a token. An agent session never runs `gf serve`, never reads `server.json` or `human.key`, never sends a request to the dashboard, and never operates the page. An agent that needs a decision records it with `gf decide ask` and waits.
+An answer posted with the token is recorded as the person's decision. The token, `server.json` and `human.key` are readable by every process of the same OS user, so roles are a cooperative rule and not a security boundary between a person and an agent on the same account. The rule: opening the dashboard is separate from answering on it. A person may run `gf serve` and open the printed address, or run `gf open`. An agent session opens the dashboard automatically at plan approval, a waiting decision, and completion, using the creating command’s `--open`, or runs `gf open` when the person asks to see it, and `gf open --stop` when the person asks to close it; neither prints an address or a token. An agent session never runs `gf serve`, never reads `server.json` or `human.key`, never sends a request to the dashboard, and never operates the page. An agent that needs a decision records it with `gf decide ask` and waits.
 
 ## Opening without the address
 
@@ -78,7 +78,7 @@ Returns every open, non-stale decision from every readable run of every register
 
 ## GET /api/run?project=<root>&run=<id>
 
-Returns `{"plan": <stored normalized plan or null>, "state": <derived state>, "ready": [<node IDs>], "trace": <trace result>, "view": <presentation view>}` for one run. The `view` shape is defined in [records.md section 12](records.md#12-dashboard-presentation-view). It includes readable decision `verified`/`unverified` lists and `worker_note`, and node `inputs`/`outputs` derived from edges. The page draws from `view`. Check logs are fetched from `/api/evidence` only when the person presses a log button or opens a decision's details disclosure. The state, readiness, trace and view are read under that run's lock. Readiness uses `graph.ready`; trace uses `trace.trace`.
+Returns `{"plan": <stored normalized plan or null>, "state": <derived state>, "ready": [<node IDs>], "trace": <trace result>, "view": <presentation view>}` for one run. The `view` shape is defined in [records.md section 12](records.md#12-dashboard-presentation-view). It includes readable decision `verified`/`unverified` lists and `worker_note`, and node `inputs`/`outputs` derived from edges. The page draws from `view`. Check logs are fetched from `/api/evidence` only when the person presses a log button or opens a decision's details disclosure. The state, readiness, trace and view are read under that run's lock. Readiness uses `graph.available` (empty while plan approval waits); trace uses `trace.trace`.
 
 The `project` string must exactly match a registered absolute root (HTTP 404, `unknown_project`, otherwise). The run ID must fully match `[a-z0-9][a-z0-9._-]{0,63}`, resolve inside the project's runs directory and exist with an event log (HTTP 404, `unknown_run`, otherwise). These addressing rules also apply to evidence and answer endpoints. URL-encode query values, especially roots and log paths.
 
@@ -117,7 +117,7 @@ decisions.answer(run_dir, id, outcome, answer, "dashboard",
 
 Success is HTTP 200: `{"ok": true, "decision": <answer data>}`. The answer data contains `id`, `outcome`, `answer`, `source: "dashboard"`, and `sig`. The event is signed with `human.key` and derived state verifies the signature. Answering does not run a gate, start a node, or accept a submission: the leader's next gate consumes the answer and changes readiness according to the normal rules.
 
-Kinds `review` and `authorization` accept `approved`, `rejected`, `revision_requested`; kinds `direction` and `information` accept only `answered`. Empty answer text is allowed. Unknown fields are ignored. The decision layer serializes concurrent answers, validates current bindings and refuses a second answer.
+Kinds `review` and `authorization` accept `approved`, `rejected`, `revision_requested`; kinds `direction` and `information` accept only `answered`. Empty answer text is allowed except for sending back/rejecting a plan approval. Unknown fields are ignored. The decision layer serializes concurrent answers, validates current bindings and refuses a second answer.
 
 ## Errors
 
@@ -195,3 +195,9 @@ Open the printed URL. `build_demo_run(gf_home, project_dir)` is importable from 
 ```sh
 GF_HOME=/tmp/gf-demo-home python3 -B plugins/graph-flow/skills/graph-flow/scripts/gf serve
 ```
+
+## Plan review
+
+Before initial approval the graph cards all say “시작 전이에요”; the banner shows the plan question, computed work/check/scheduled-question counts, primary Start and Send back with required text. Each action explains its consequence. Scheduled counts include approval, decision nodes, human checks and lane-3 gates, not unforeseen questions or retries. Selecting a card shows its deliverables, incoming artifacts and plain check titles with small planned commands. The page reads these from run records, never from chat. After approval this same graph shows execution; after send-back the banner keeps the person's exact text until a replacement plan arrives. Mid-run plans preserve actual completed/running statuses. The phone uses the same banner above a vertical card flow.
+
+Plan consent uses the existing signed `/api/answer` path and is bound to structural identity. It does not use the attachment-reading gate, because the reviewed artifact is the visible plan itself; other decision reading gates are unchanged. Polling preserves the plan-change draft and focus. Deep links to a plan decision open this graph banner. The log includes plan set, asked, answered text and superseded. `--open` only opens the browser and cannot answer; it uses the existing browser mechanism, whose current-window reuse does not guarantee tab reuse.

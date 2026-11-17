@@ -14,6 +14,7 @@ from unittest import mock
 SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / 'scripts'
 sys.path.insert(0, str(SCRIPTS))
 from graphflow import cli, core, store
+from human_support import approve_plan
 
 
 class CLITests(unittest.TestCase):
@@ -57,7 +58,9 @@ class CLITests(unittest.TestCase):
         return data
 
     def set_plan(self):
-        return self.call('plan', 'set', str(self.file))
+        result = self.call('plan', 'set', str(self.file))
+        approve_plan(self.run)
+        return result
 
     def test_init_and_host(self):
         data = self.call('--project', str(self.repo), 'init', 'second')
@@ -87,8 +90,8 @@ class CLITests(unittest.TestCase):
         self.assertEqual(self.call('status', 'a')['node']['attempts'], 1)
         self.raw['nodes'][0]['goal'] = 'changed'
         self.write()
-        self.assertEqual(self.set_plan()['revision'], 2)
-        self.assertEqual(self.call('status', 'a')['node']['attempts'], 0)
+        self.assertEqual(self.call('plan', 'set', str(self.file), code=4)['code'], 'active_plan_change')
+        self.assertEqual(self.call('status', 'a')['node']['attempts'], 1)
         self.call('status', 'missing', code=4)
 
     def test_roles_and_views(self):
@@ -147,7 +150,7 @@ class CLITests(unittest.TestCase):
         learn.applying = mock.Mock(return_value=[{'id': 'c1'}])
         with mock.patch.dict(sys.modules, {'graphflow.learn': learn}):
             self.assertEqual(self.set_plan()['constraints_applied'], ['c1'])
-        self.assertEqual(store.events(self.run)[-1]['data'], {'ids': ['c1']})
+        self.assertEqual(next(e['data'] for e in store.events(self.run) if e['type'] == 'constraint.apply'), {'ids': ['c1']})
 
     def git(self, *args):
         result = subprocess.run(['git', '-C', str(self.repo)] + list(args),

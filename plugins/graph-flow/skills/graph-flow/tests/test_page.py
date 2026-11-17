@@ -101,6 +101,14 @@ def build_demo_run(gf_home, project_dir):
 
 
 class PageTests(unittest.TestCase):
+    def test_plan_review_banner_and_human_actions(self):
+        js = (S / 'scripts/graphflow/page.js').read_text(encoding='utf-8')
+        for text in ('plan_approval', 'planAttention', 'plan-changes', 'plan-summary', 'planStartEffect', 'planBackEffect', 'planned_checks', 'plannedCommand', 'planSentBack', 'evSuperseded'):
+            self.assertIn(text, js)
+        self.assertIn("decisionController.buildRequest(outcome, input.value)", js)
+        self.assertIn("if (session?.purpose === 'plan_approval') return true", js)
+        self.assertIn("outcome === 'approved' ? canApprove(session) : !!text.trim()", js)
+
     def test_local_assets_safe_dom_and_nonce(self):
         html = (S / 'scripts/graphflow/page.html').read_text(encoding='utf-8')
         js = (S / 'scripts/graphflow/page.js').read_text(encoding='utf-8')
@@ -358,6 +366,7 @@ class Element {
   set textContent(text) { this.replaceChildren(); this._text=String(text); }
   get textContent() { return this._text + this.children.map(c=>c.textContent).join(' '); }
   setAttribute(key,value) { this[key]=String(value); }
+  removeAttribute(key) { delete this[key]; }
   addEventListener(type,fn) { (this.listeners[type] ||= []).push(fn); }
   dispatchEvent(event) { for (const fn of this.listeners[event.type] || []) fn(event); }
   click() { if (!this.disabled) this.dispatchEvent({type:'click'}); }

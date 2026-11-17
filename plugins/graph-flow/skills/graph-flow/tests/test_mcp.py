@@ -13,6 +13,7 @@ from unittest import mock
 SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / 'scripts'
 sys.path.insert(0, str(SCRIPTS))
 from graphflow import __version__, cli, mcp
+from human_support import approve_plan
 
 
 class MCPTests(unittest.TestCase):
@@ -81,6 +82,7 @@ class MCPTests(unittest.TestCase):
         run = self.call('run_init', {'run_id': 'test', 'project': str(self.repo)})['run']
         os.environ['GF_RUN'] = run
         self.assertEqual(self.call('plan_set', {'plan': self.plan()})['revision'], 1)
+        approve_plan(run)
         return pathlib.Path(run)
 
     def test_initialize_ping_and_notifications(self):

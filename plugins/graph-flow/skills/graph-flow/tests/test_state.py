@@ -16,7 +16,7 @@ RUN = "r1"
 ALL_KEYS = {"status", "kind", "lane", "effective_lane", "basis", "attempts", "max_attempts",
             "assignment", "base", "submission", "checks", "red", "reviews", "rejections",
             "verdict", "merged_head", "trajectory_clean", "open_decisions"}
-DECISION_KEYS = {"id", "seq", "node", "submission", "check", "purpose", "kind", "question",
+DECISION_KEYS = {"plan_identity", "id", "seq", "node", "submission", "check", "purpose", "kind", "question",
                  "evidence", "status", "outcome", "answer", "source", "verified", "stale"}
 
 
@@ -260,12 +260,12 @@ class ShapeTests(EnvCase):
         s = state.derive(None, log.events)
         self.assertEqual(s["nodes"], {})
         self.assertEqual(s["decisions"], {})
-        self.assertEqual(s["run"], {"id": RUN, "plan_revision": 0, "status": "open",
+        self.assertEqual(s["run"], {"id": RUN, "plan_revision": 0, "plan_identity": None, "status": "open",
                                     "host": ["t3_delegate"], "final": None})
 
     def test_empty_events(self):
         s = state.derive(None, [])
-        self.assertEqual(s, {"run": {"id": None, "plan_revision": 0, "status": "open",
+        self.assertEqual(s, {"run": {"id": None, "plan_revision": 0, "plan_identity": None, "status": "open",
                                      "host": [], "final": None},
                              "nodes": {}, "decisions": {}})
 
@@ -647,7 +647,7 @@ class DecisionTests(EnvCase):
         did = "d%d" % seq
         self.assertEqual(s["decisions"], {did: {
             "id": did, "seq": seq, "node": "a", "submission": None, "check": "unit",
-            "purpose": "node", "kind": "direction", "question": "q?",
+            "purpose": "node", "plan_identity": None, "kind": "direction", "question": "q?",
             "evidence": {"command": None, "files": [], "checks": []}, "status": "open",
             "outcome": None, "answer": None, "source": None, "verified": False,
             "stale": False}})

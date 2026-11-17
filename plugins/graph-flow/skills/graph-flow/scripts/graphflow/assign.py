@@ -18,7 +18,9 @@ def _optional_module(name):
 def assign(run_dir, node_id, executor, model, effort, provider, family, isolation, actor):
     with store.transaction(run_dir) as tx:
         node = plan.node_by_id(tx.plan, node_id)
-        current = state.derive(tx.plan, tx.events)["nodes"][node_id]
+        derived = state.derive(tx.plan, tx.events)
+        state.require_plan_approval(derived)
+        current = derived["nodes"][node_id]
         if node["kind"] == "decision" or current["status"] not in (
                 "pending", "assigned", "rejected", "unverified", "held", "awaiting_approval"):
             raise core.GFError("wrong_status", "node cannot be assigned: " + node_id, core.EXIT_STATE)
@@ -57,6 +59,7 @@ def brief(run_dir, node_id):
             raise core.GFError("wrong_status", "decision nodes have no brief", core.EXIT_STATE)
         current_plan = tx.plan
         derived = state.derive(current_plan, tx.events)
+        state.require_plan_approval(derived)
     current = derived["nodes"][node_id]
     reviewer = node["kind"] == "review"
     gf = pathlib.Path(__file__).resolve().parent.parent / "gf"

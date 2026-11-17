@@ -41,6 +41,38 @@ def fingerprint(node):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def plan_identity(plan):
+    """Bind consent to executable structure, using the same presentation exclusions."""
+    value = copy.deepcopy(plan)
+    for key in ("title", "summary", "context"):
+        value.pop(key, None)
+    value["nodes"] = {n["id"]: fingerprint(n) for n in value.get("nodes", [])}
+    for check in value.get("integration_checks", []):
+        check.pop("title", None)
+        check.pop("context", None)
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"),
+                                    ensure_ascii=False).encode("utf-8")).hexdigest()
+
+
+def plan_approval(derived):
+    identity = derived.get("run", {}).get("plan_identity")
+    if identity is None:
+        return None  # Pre-0.3 records retain their existing dispatch contract.
+    matches = [d for d in derived.get("decisions", {}).values()
+               if d.get("purpose") == "plan_approval" and d.get("plan_identity") == identity
+               and not d.get("stale")]
+    return max(matches, key=lambda d: d["seq"]) if matches else {}
+
+
+def require_plan_approval(derived):
+    approval = plan_approval(derived)
+    if approval is not None and not (approval.get("status") == "answered"
+            and approval.get("verified") and approval.get("outcome") == "approved"):
+        did = approval.get("id", "missing")
+        raise core.GFError("plan_not_approved", "Plan needs human approval (%s); show: gf open --decision %s"
+                           % (did, did), core.EXIT_STATE)
+
+
 def _data(ev):
     d = ev.get("data")
     return d if isinstance(d, dict) else {}
@@ -112,6 +144,7 @@ def derive(plan, events):
 
     run_id = None
     plan_revision = 0
+    current_identity = None
     host = []
     final = None
     decisions = {}
@@ -143,6 +176,8 @@ def derive(plan, events):
                 run_id = d["run_id"]
 
         elif t == "plan.set":
+            if "plan_identity" in d:
+                current_identity = d["plan_identity"]
             last_reset_seq = max(last_reset_seq, seq)
             if d.get("revision") is not None:
                 plan_revision = d["revision"]
@@ -266,6 +301,7 @@ def derive(plan, events):
                 "submission": d.get("submission"),
                 "check": d.get("check"),
                 "purpose": d.get("purpose"),
+                "plan_identity": d.get("plan_identity"),
                 "kind": d.get("kind"),
                 "question": d.get("question"),
                 "evidence": copy.deepcopy(d.get("evidence")),
@@ -277,9 +313,15 @@ def derive(plan, events):
                 "stale": False,
             }
 
+        elif t == "decision.superseded":
+            dec = decisions.get(d.get("id"))
+            if dec is not None:
+                dec["status"] = "superseded"
+                dec["stale"] = True
+
         elif t == "decision.answer":
             dec = decisions.get(d.get("id"))
-            if dec is None or dec["status"] == "answered":
+            if dec is None or dec["status"] != "open":
                 continue  # unknown id, or a later answer: the first one wins
             dec["status"] = "answered"
             dec["outcome"] = d.get("outcome")
@@ -289,6 +331,8 @@ def derive(plan, events):
         # every other type is ignored
 
     for did, dec in decisions.items():
+        if dec.get("purpose") == "plan_approval" and dec.get("plan_identity") != current_identity:
+            dec["stale"] = True
         sig = sigs.get(did)
         if dec["status"] == "answered" and isinstance(sig, str):
             expected = core.human_sig(run_id, did, dec["outcome"], dec["answer"])
@@ -364,6 +408,7 @@ def derive(plan, events):
         "run": {
             "id": run_id,
             "plan_revision": plan_revision,
+            "plan_identity": current_identity,
             "status": "complete" if complete else "open",
             "host": host,
             "final": final,

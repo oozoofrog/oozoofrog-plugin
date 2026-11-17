@@ -505,6 +505,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(data["view"].pop("project"), pathlib.Path(self.projects[0]).name)
         self.assertEqual(data["view"], {"title": "", "language": "en", "nodes": [], "edges": [], "decisions": [], "answered": [],
                                       "lessons": [], "complete": False, "run": "empty",
+                                      "plan_approval": None, "plan_counts": {"work": 0, "checks": 0, "decisions": 0},
                                       "counts": {"done": 0, "doing": 0, "waiting": 0,
                                                  "needs_you": 0, "returned": 0, "returns_total": 0}})
 
@@ -576,7 +577,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         view = data["view"]
         self.assertEqual(set(view), {"title", "language", "nodes", "edges", "decisions", "answered", "lessons", "counts", "complete",
-                                     "run", "project", "timeline"})
+                                     "run", "project", "timeline", "plan_approval", "plan_counts"})
         self.assertEqual(view["title"], raw["title"])
         self.assertFalse(view["complete"])
         self.assertEqual([n["id"] for n in view["nodes"]], [n["id"] for n in current["nodes"]])

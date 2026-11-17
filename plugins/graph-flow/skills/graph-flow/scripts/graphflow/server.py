@@ -306,6 +306,8 @@ def _timeline(nodes, events, lessons):
             add(event, "answered", decision=data["id"], node=ask.get("node"),
                 node_title=title(ask.get("node")), question=_text(ask.get("question")),
                 outcome=_text(data.get("outcome")), answer=_text(data.get("answer")))
+        elif kind == "decision.superseded":
+            add(event, "superseded", decision=data.get("id"), revision=data.get("revision"))
         elif kind == "gate.final":
             add(event, "final", result=_text(data.get("result")),
                 failed=_strings(data.get("failed_checks")))
@@ -371,6 +373,16 @@ def _view(current, derived, events, project):
                               "session": actor_of(starts.get(nid))["session"],
                               "started": _text(_mapping(starts.get(nid)).get("ts"), None),
                               "inputs": [], "outputs": []})
+        view["nodes"][-1]["planned_checks"] = [
+            {"id": c["id"], "title": _text(c.get("title")), "type": c["type"],
+             "command": _text(c.get("run"), None)} for c in _objects(node.get("checks"))]
+        view["nodes"][-1]["deliverables"] = list(node.get("owns", [])) + list(node.get("outputs", []))
+        returns = [e for e in events if e.get("type") == "gate.verdict"
+                   and e["data"].get("node") == nid and e["data"].get("rejection")]
+        if returns:
+            last = returns[-1]
+            view["nodes"][-1]["returned_by"] = actor_of(last)
+            view["nodes"][-1]["returned_reason"] = " · ".join(reasons[-1]) if reasons else ""
         if passed:
             view["counts"]["done"] += 1
         elif not st["open_decisions"]:
@@ -469,6 +481,16 @@ def _view(current, derived, events, project):
                 node_title = title(source["node"])
             view["lessons"].append({"text": constraint["text"], "node_title": node_title})
     view["timeline"] = _timeline(nodes, events, lesson_texts)
+    approval = state.plan_approval(derived)
+    view["plan_approval"] = None if approval is None else {
+        key: approval.get(key) for key in ("id", "status", "outcome", "answer", "verified", "question", "plan_identity")}
+    checks = [c for n in nodes.values() for c in n.get("checks", [])]
+    view["plan_counts"] = {"work": sum(n.get("kind") == "work" for n in nodes.values()),
+                           "checks": len(checks) + len(current.get("integration_checks", [])),
+                           "decisions": int(bool(approval)) + sum(n.get("kind") == "decision" for n in nodes.values())
+                           + sum(c.get("type") == "human" for c in checks)
+                           + sum(n.get("effective_lane", n.get("lane")) == 3 and n.get("kind") != "decision"
+                                 for n in nodes.values())}
     return view
 
 
@@ -751,7 +773,7 @@ try {
                     events = store.events(run)
                     derived = state.derive(current, events)
                     result = {"plan": current, "state": derived,
-                              "ready": graph.ready(current or {}, derived), "trace": trace.trace(run),
+                              "ready": graph.available(current or {}, derived), "trace": trace.trace(run),
                               "view": _view(current, derived, events, store.project_of(run))}
                 return self._json(200, result)
             raise _HTTPError(404, "not_found", "unknown route")

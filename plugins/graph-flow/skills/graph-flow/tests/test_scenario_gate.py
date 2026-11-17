@@ -13,6 +13,7 @@ from unittest import mock
 SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / 'scripts'
 sys.path.insert(0, str(SCRIPTS))
 from graphflow import cli
+from human_support import approve_plan
 
 
 class GateScenarioTests(unittest.TestCase):
@@ -79,6 +80,7 @@ class GateScenarioTests(unittest.TestCase):
         file = self.root / 'plan.json'
         file.write_text(json.dumps({'schema_version': 1, 'goal': 'CLI loop', 'nodes': nodes}))
         self.call('plan', 'set', str(file))
+        approve_plan(self.run)
 
     def assign(self, node='feature', family='openai'):
         return self.call('assign', node, '--executor', 'subagent', '--model', 'fixture',

@@ -69,8 +69,10 @@ With `GF_ROLE=leader` and `/work/notes` an existing git repository, send these c
 The first and last server responses have this shape; the intervening `tools/list` response contains the leader's tools and their schemas:
 
 ```jsonl
-{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","serverInfo":{"name":"graph-flow","version":"0.2.1"},"capabilities":{"tools":{}}}}
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","serverInfo":{"name":"graph-flow","version":"0.3.0"},"capabilities":{"tools":{}}}}
 {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\"ok\": true, \"run\": \"/work/notes/.graph-flow/runs/notes-export\"}"}],"isError":false}}
 ```
 
 `ping` returns an empty result. Unknown methods return `-32601`; malformed JSON returns `-32700`. A bad input line does not end the server loop. Initialization echoes the client's protocol version, or uses `2025-06-18` when it is omitted.
+
+`plan_set` always records required plan approval. `ready_nodes`, `assign_node`, work `node_brief`, and `node_start` return `isError: true`, code `plan_not_approved`, until the human signs approval. `run_status`, planning `node_brief` and decision list/wait remain available. Presentation-only changes reuse approval; structural changes ask again. Pre-0.3 records remain unblocked until a new plan is set. Results with `show` tell the leader to ask the person to run `graph-flow open [--decision <id>]` in the terminal; MCP does not expose `--open` or an answer tool. The leader does not restate the plan, waits with `decision_wait`, and ends its turn on timeout because the dashboard cannot wake it.

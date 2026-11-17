@@ -4,6 +4,7 @@ import importlib
 import json
 import os
 import pathlib
+import re
 import sys
 
 from . import assign, checks, core, decisions, gate, graph, merge, plan, route, state, store
@@ -41,6 +42,26 @@ def _set_plan(args, actor):
         if problems:
             raise core.GFError("invalid_plan", json.dumps(problems), core.EXIT_NEGATIVE)
         normalized, notices = plan.normalize(raw)
+        prior = state.derive(tx.plan, tx.events)
+        identity = state.plan_identity(normalized)
+        approval = state.plan_approval(prior)
+        # Never relabel an accepted result or change a running worker's contract.
+        if tx.plan:
+            old_nodes = {n["id"]: n for n in tx.plan["nodes"]}
+            new_nodes = {n["id"]: n for n in normalized["nodes"]}
+            changed = {nid for nid, n in old_nodes.items()
+                       if nid not in new_nodes or state.fingerprint(n) != state.fingerprint(new_nodes[nid])}
+            deps = state._closure(old_nodes)
+            protected = [nid for nid, st in prior["nodes"].items()
+                         if st["status"] in ("running", "submitted", "passed")
+                         and (nid in changed or deps[nid] & changed)]
+            if protected:
+                raise core.GFError("active_plan_change", "Keep completed/running contracts; add new work instead: "
+                                   + ", ".join(protected), core.EXIT_STATE)
+        reuse = (approval and approval.get("plan_identity") == identity
+                 and (approval["status"] == "open" or
+                      approval["status"] == "answered" and approval.get("verified")
+                      and approval["outcome"] == "approved"))
         try:
             learn = importlib.import_module("graphflow.learn")
         except ModuleNotFoundError as exc:
@@ -51,11 +72,46 @@ def _set_plan(args, actor):
             ids = [c["id"] for c in learn.applying(store.project_of(args.run), normalized)]
         revision, sha = tx.write_plan(normalized)
         tx.append("plan.set", {"revision": revision, "plan_sha256": sha,
+                               "plan_identity": identity,
                                "fingerprints": {n["id"]: state.fingerprint(n) for n in normalized["nodes"]},
                                "constraints_applied": ids}, actor)
         tx.append("constraint.apply", {"ids": ids}, actor)
-    return {"revision": revision, "plan_sha256": sha, "notices": notices,
-            "constraints_applied": ids}
+        if not reuse:
+            for previous in prior["decisions"].values():
+                if previous.get("purpose") == "plan_approval" and previous["status"] != "superseded":
+                    tx.append("decision.superseded", {"id": previous["id"], "revision": revision}, actor)
+            wording = " ".join([normalized.get("title", ""), normalized.get("goal", "")] +
+                               [n.get("title", "") for n in normalized["nodes"]])
+            question = "이 계획대로 시작할까요?" if re.search(r"[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]", wording) else "Start with this plan?"
+            data = {"node": None, "submission": None, "check": None, "purpose": "plan_approval",
+                    "kind": "authorization", "question": question, "plan_identity": identity,
+                    "evidence": {"command": None, "files": [], "checks": []}}
+            event = tx.append("decision.ask", data, actor)
+            data["id"] = "d%d" % event["seq"]
+            did = data["id"]
+        else:
+            did = approval["id"]
+    result = {"revision": revision, "nodes": len(normalized["nodes"]), "decision": did,
+              "notices": len(notices), "constraints_applied": ids,
+              "show": "gf open --decision %s" % did}
+    if not reuse or approval["status"] == "open":
+        _show(args, result, did)
+    return result
+
+
+def _show(args, result, decision=None):
+    """Only open on explicit --open; suppression never changes consent."""
+    result["show"] = "gf open" + (" --decision " + decision if decision else "")
+    if getattr(args, "open", False) and os.environ.get("GF_NO_OPEN") != "1":
+        try:
+            target = {"project": str(_project(args)), "run": pathlib.Path(args.run).name,
+                      "decision": decision}
+            _lazy_import("server").open_dashboard(target=target)
+            result["opened"] = True
+        except core.GFError as exc:
+            # The event is already durable. Do not suggest retrying its mutation.
+            result["open_error"] = exc.code
+    return result
 
 
 def _runs(args):
@@ -100,7 +156,7 @@ def _status(args, actor):
     if args.target_node:
         plan.node_by_id(current_plan, args.target_node)
         return {"id": args.target_node, "node": derived["nodes"][args.target_node]}
-    return {"state": derived, "ready": graph.ready(current_plan or {"nodes": []}, derived)}
+    return {"state": derived, "ready": graph.available(current_plan or {"nodes": []}, derived)}
 
 
 def _host_set(args, actor):
@@ -227,6 +283,12 @@ def _loop(args, actor):
                 raise core.GFError("usage", "gate requires a node or --final")
             result = gate.gate(args.run, node, args.cwd, actor)
             passed = result["verdict"] == "pass"
+        _, derived = _snapshot(args.run)
+        waiting = decisions.open_decisions(derived)
+        if waiting:
+            _show(args, result, waiting[0]["id"])
+        elif args.final and passed:
+            _show(args, result)
         return result, core.EXIT_OK if passed else core.EXIT_NEGATIVE
     if path == ("reopen",):
         return gate.reopen(args.run, node, args.reason, actor)
@@ -235,7 +297,7 @@ def _loop(args, actor):
         asked = decisions.ask(args.run, args.kind, args.question, node, args.check,
                               args.purpose, evidence, actor)
         # How to put this question in front of the person (leader.md).
-        return dict(asked, show="gf open --decision %s" % asked["id"])
+        return _show(args, asked, asked["id"])
     if path == ("decide", "list"):
         _, derived = _snapshot(args.run)
         own = actor["node"] if actor["role"] in ("worker", "reviewer") else None
@@ -373,6 +435,8 @@ def _parser(authorize_only=False):
             sub.add_argument("--remove", action="store_true")
         if authorize_only:
             continue
+        if path in (("plan", "set"), ("decide", "ask"), ("gate",)):
+            sub.add_argument("--open", action="store_true")
         if path in (("start",), ("red",), ("check", "run"), ("submit",), ("gate",)):
             sub.add_argument("--cwd")
         if path == ("assign",):

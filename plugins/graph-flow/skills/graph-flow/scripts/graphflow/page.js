@@ -261,7 +261,20 @@ const STRINGS = {
     "retryEffect": "다음은 최대 {max}번 중 {n}번째 시도예요",
     "decisionWork": "관련 일 · {title}",
     "fitAll": "전체 보기",
-    "readScale": "읽기 크기"
+    "readScale": "읽기 크기",
+    "planSummary": "작업 {work}개 · 검사 {checks}개 · 예정된 질문 {decisions}번",
+    "planStart": "시작",
+    "planStartEffect": "승인하면 리더가 이 계획의 일을 시작할 수 있어요.",
+    "planBackEffect": "고칠 내용을 리더에게 보내요. 새 계획을 기다려 주세요.",
+    "planSentBack": "계획을 돌려보냈어요",
+    "planWaiting": "계획을 확인해 주세요",
+    "planSentNote": "내가 보낸 내용",
+    "planChecks": "확인할 것",
+    "plannedCommand": "실행할 명령",
+    "planDeliverables": "만들 결과",
+    "evSuperseded": "새 계획으로 바뀌었어요",
+    "purposePlan": "시작하기 전에 계획을 확인해 주세요.",
+    "untitledCheck": "설명이 아직 없는 검사예요"
   },
   "en": {
     "flow": "Whole flow",
@@ -524,28 +537,42 @@ const STRINGS = {
     "retryEffect": "The next attempt is {n} of {max}",
     "decisionWork": "About · {title}",
     "fitAll": "Fit all",
-    "readScale": "Readable size"
+    "readScale": "Readable size",
+    "planSummary": "{work} pieces of work · {checks} checks · {decisions} planned questions",
+    "planStart": "Start",
+    "planStartEffect": "Approval lets the leader start this plan’s work.",
+    "planBackEffect": "Send changes to the leader, then wait for a revised plan.",
+    "planSentBack": "The plan was sent back",
+    "planWaiting": "Review the plan",
+    "planSentNote": "Your requested changes",
+    "planChecks": "Planned checks",
+    "plannedCommand": "Planned command",
+    "planDeliverables": "Deliverables",
+    "evSuperseded": "Replaced by a new plan",
+    "purposePlan": "Review the plan before work starts.",
+    "untitledCheck": "A check without a description"
   }
 };
 // UI_STRINGS_END
 
 export function sameRun(a, b) { return a?.project === b?.project && a?.run === b?.run; }
 export function purposeWording(purpose, language = 'en') {
-  const keys = {human_check:'purposeReview', review:'purposeReview', lane3:'purposeAuthorization', authorization:'purposeAuthorization', trajectory:'purposeTrajectory', hold:'purposeHold', direction:'purposeDirection', information:'purposeInformation'};
+  const keys = {plan_approval:'purposePlan', human_check:'purposeReview', review:'purposeReview', lane3:'purposeAuthorization', authorization:'purposeAuthorization', trajectory:'purposeTrajectory', hold:'purposeHold', direction:'purposeDirection', information:'purposeInformation'};
   const key = Object.hasOwn(keys, purpose) ? keys[purpose] : 'purposeNeutral';
   return STRINGS[language][key];
 }
 export function purposeAction(purpose, language = 'en', failed = []) {
   if (purpose === 'hold' || failed.length) return STRINGS[language].acceptAnyway;
-  const keys = {lane3:'allow', authorization:'allow', human_check:'accept', review:'accept', trajectory:'accept', hold:'continue'};
+  const keys = {plan_approval:'planStart', lane3:'allow', authorization:'allow', human_check:'accept', review:'accept', trajectory:'accept', hold:'continue'};
   return STRINGS[language][Object.hasOwn(keys, purpose) ? keys[purpose] : 'confirmChoice'];
 }
 export function nothingToJudge(view, decision) {
   const node = view?.nodes?.find(n => n.id === decision.node);
-  return !['direction','information'].includes(decision.kind) && !decision.files?.length &&
+  return decision.purpose !== 'plan_approval' && !['direction','information'].includes(decision.kind) && !decision.files?.length &&
     !view?.timeline?.some(r => r.kind === 'attempt' && r.node === decision.node && r.attempt === node?.attempts && r.checks?.length);
 }
 export function canApprove(session) {
+  if (session?.purpose === 'plan_approval') return true;
   if (session?.nothingToJudge && !session.blindConfirmed) return false;
   return !!session && (!(session.purpose === 'lane3' || session.purpose === 'authorization' ||
     session.kind === 'authorization' || session.purpose === 'hold' || session.failed?.length || session.decision?.files?.length || session.decision?.has_evidence) || session.detailsOpened || (!(session.purpose === 'hold' || session.failed?.length) && session.fileOpened));
@@ -921,7 +948,51 @@ function handoffsCard(key, rows, direction) {
   for (const row of rows) list.append(el('li', `${label(row.label)} · ${t(direction)} ${otherTitle(row.other_title)} · ${t(row.delivered ? 'delivered' : 'notDelivered')}`));
   c.append(list); return c;
 }
+let planBanner = null;
+function planAttention(box) {
+  const approval = view.plan_approval;
+  const blocked = approval && !(approval.status === 'answered' && approval.verified && approval.outcome === 'approved');
+  if (!blocked) { planBanner = null; return false; }
+  box.hidden = false; box.classList.add('plan-banner');
+  const key = JSON.stringify([chosen, approval.id, approval.status]);
+  if (planBanner?.key === key && box.firstElementChild) {
+    box.querySelector('.plan-summary').textContent = t('planSummary', view.plan_counts);
+    return true;
+  }
+  clear(box);
+  const heading = el('h2', approval.status === 'open' ? approval.question : t('planSentBack'));
+  heading.id = 'plan-question'; box.setAttribute('aria-labelledby', heading.id);
+  box.append(heading, el('p', t('planSummary', view.plan_counts), 'plan-summary'));
+  planBanner = {key};
+  if (approval.status !== 'open') {
+    box.append(el('p', t('planSentNote'), 'eyebrow'), el('p', approval.answer || ''), el('p', t('planBackEffect'), 'muted'));
+    return true;
+  }
+  const session = decisionController.open(approval.id);
+  const actions = el('div', undefined, 'plan-actions'), start = button(t('planStart'), () => send('approved'), 'primary');
+  const startGroup = el('div'); startGroup.append(start, el('p', t('planStartEffect'), 'muted'));
+  const backGroup = el('div'), label = el('label', t('backReason')), input = el('textarea');
+  input.id = 'plan-changes'; label.htmlFor = input.id; input.rows = 2; input.value = session?.draft || '';
+  const back = button(t('sendBack'), () => send('revision_requested'));
+  const message = el('p', undefined, 'muted'); message.setAttribute('role', 'status');
+  const update = () => { start.disabled = !decisionController.canSubmit('approved'); back.disabled = !decisionController.canSubmit('revision_requested'); input.disabled = !!session?.busy; $('picker').disabled = !!session?.busy; };
+  input.addEventListener('input', () => { decisionController.setDraft(input.value); update(); });
+  async function send(outcome) {
+    const request = decisionController.buildRequest(outcome, input.value); if (!request) return;
+    update(); let error = null;
+    try { await api('/api/answer', request); } catch (e) { error = e; }
+    const result = decisionController.onResult(request, error);
+    message.textContent = t(result.notice); update();
+    if (result.refresh) refresh(true);
+  }
+  backGroup.append(label, input, back, el('p', t('planBackEffect'), 'muted'));
+  actions.append(startGroup, backGroup); box.append(actions, message, refChip(approval.id, approval.question, true)); update();
+  return true;
+}
 function attention() {
+  const planBox = $('attention');
+  if (planAttention(planBox)) return;
+  planBox.classList.remove('plan-banner'); planBox.removeAttribute('aria-labelledby');
   const box = $('attention'); clear(box); box.hidden = !view.decisions.length;
   box.setAttribute('aria-label', t('yourTurn'));
   if (box.hidden) return;
@@ -960,7 +1031,20 @@ function panel() {
     const ask = card(t('yourTurn'), question(d) || purposeWording(d.purpose, language), true);
     ask.append(refChip(d.id, `${d.id} · ${title(node)}`, true), button(t('read'), () => openDecision(d.id), 'primary')); p.append(ask);
   }
-  p.append(el('h2', title(node)), reference, el('p', `${status(node)} · ${attempts(node)}`));
+  p.append(el('p', status(node), 'eyebrow'), el('h2', title(node)), el('p', node.summary || ''));
+  if (view.plan_approval && !(view.plan_approval.verified && view.plan_approval.outcome === 'approved')) {
+    const deliverables = node.deliverables || [];
+    if (deliverables.length) { p.append(el('h3', t('planDeliverables'))); textList(p, deliverables); }
+    p.append(handoffsCard('received', node.inputs, 'from'), el('h3', t('planChecks')));
+    const list = el('ul', undefined, 'checks');
+    for (const c of node.planned_checks || []) {
+      const item = el('li'); item.append(el('strong', c.title || (c.type === 'scope' ? t('scopeCheck') : t('untitledCheck'))));
+      if(c.command) { const command=el('p', t('plannedCommand')+': ', 'muted');command.append(el('code', c.command));item.append(command); }
+      list.append(item);
+    }
+    p.append(list, reference); p.scrollTop=scroll; return;
+  }
+  p.append(reference, el('p', attempts(node)));
   const rows = view.timeline.filter(r => r.node === node.id && r.kind === 'attempt').sort((a,b)=>b.seq-a.seq);
   if (rows.length) p.append(el('p', t('attemptsOf'), 'eyebrow'));
   const list = el('ol', undefined, 'panel-history');
@@ -986,6 +1070,7 @@ function panel() {
 const rowOpen = new Map(), logShown = new Map();
 function rowSentence(r) {
   const n = r.attempt || 1;
+  if (r.kind === 'superseded') return t('evSuperseded');
   if (r.kind === 'started') return t('evStarted');
   if (r.kind === 'planned') return r.revision > 1 ? t('evReplanned', {rev:r.revision, n:r.count}) : t('evPlanned', {n:r.count});
   if (r.kind === 'final') return r.result === 'passed' ? t('evFinalPassed') : [t('evFinalFailed'), ...(r.failed || [])].join(' · ');
@@ -1113,7 +1198,7 @@ function accessible() {
   }
 }
 function showMode(next) {
-  if (next !== 'decision' && !discardDecision()) return false;
+  if (next !== 'decision' && (mode === 'decision' || next === 'home') && !discardDecision()) return false;
   mode = next; $('home').hidden = next !== 'home'; $('flow').hidden = next !== 'flow'; $('decision').hidden = next !== 'decision'; $('accessible').hidden = next !== 'flow';
   $('home-tab').setAttribute('aria-pressed', String(next === 'home')); $('flow-tab').setAttribute('aria-pressed', String(next === 'flow'));
   // The map can only measure its cards while it is on screen.
@@ -1133,6 +1218,9 @@ function showGraph() { if (!showMode('flow')) return; panel(); }
 function selectNode(id) { const n=view.nodes.find(n=>n.id===id),d=view.decisions.find(d=>d.node===id); if(n?.kind==='decision'&&d){openDecision(d.id);return;} if (!showMode('flow')) return; selected = selected === id ? null : id; panel(); if (renderer) renderer.select(selected); if (selected && matchMedia('(max-width:760px)').matches) $('panel').scrollIntoView({block:'start',behavior:reduced.matches?'auto':'smooth'}); }
 function focusHeading(heading) { heading.tabIndex = -1; heading.focus(); }
 function openDecision(id, focus = true) {
+  if (view.decisions.find(d => d.id === id)?.purpose === 'plan_approval') {
+    showGraph(); attention(); if (focus) $('plan-question')?.focus({preventScroll:true}); return;
+  }
   const session = decisionController.open(id); if (!session) return;
   const current = () => decisionController.session === session;
   const d = session.decision;

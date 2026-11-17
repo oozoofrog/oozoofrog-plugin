@@ -50,6 +50,9 @@ def answer(run_dir, decision_id, outcome, answer_text, source, actor):
                     if decision["kind"] in ("review", "authorization") else ("answered",))
         if outcome not in outcomes:
             raise core.GFError("bad_outcome", "invalid outcome: %s" % outcome)
+        if (decision.get("purpose") == "plan_approval" and outcome != "approved"
+                and (not isinstance(answer_text, str) or not answer_text.strip())):
+            raise core.GFError("answer_required", "describe what to change before sending the plan back")
         if source not in ("dashboard", "terminal"):
             raise core.GFError("bad_source", "invalid answer source: %s" % source)
         data = {"id": decision_id, "outcome": outcome, "answer": answer_text,
@@ -65,7 +68,7 @@ def wait(run_dir, decision_id, timeout_s):
             decision = state.derive(tx.plan, tx.events)["decisions"].get(decision_id)
         if decision is None:
             raise core.GFError("unknown_decision", "unknown decision: %s" % decision_id, core.EXIT_STATE)
-        if decision["status"] == "answered":
+        if decision["status"] in ("answered", "superseded"):
             return decision
         remaining = deadline - time.monotonic()
         if remaining <= 0:
