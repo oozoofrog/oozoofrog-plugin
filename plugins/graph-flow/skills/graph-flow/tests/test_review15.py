@@ -165,7 +165,7 @@ class Recovery15Tests(unittest.TestCase):
         thread=threading.Thread(target=httpd.serve_forever,kwargs={'poll_interval':.01},daemon=True);thread.start()
         try:
             file.write_text('edited again')
-            url='http://127.0.0.1:%d/api/run?'%httpd.server_address[1]+urllib.parse.urlencode({'project':str(self.project),'run':self.run.name})
+            url='http://127.0.0.1:%d/api/run?'%httpd.server_address[1]+urllib.parse.urlencode({'project':str(self.project.resolve()),'run':self.run.name})
             request=urllib.request.Request(url,headers={'X-GF-Token':token})
             with urllib.request.urlopen(request) as response: data=json.load(response)
             self.assertEqual(data['state']['decisions'][second]['status'],'superseded')
