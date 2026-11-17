@@ -75,7 +75,7 @@ class TraceTests(unittest.TestCase):
         self.append(self.run, "node.start", "x", 8)
         self.append(self.run, "gate.verdict", "x", 9, verdict="pass")
         result = trace.trace(self.run)
-        legacy = {"run": result["run"], "nodes": {nid: {k: v for k, v in values.items() if k not in ("executor", "model", "cmd_checks")} for nid, values in result["nodes"].items()}}
+        legacy = {"run": result["run"], "nodes": {nid: {k: v for k, v in values.items() if k not in ("executor", "model", "cmd_checks", "rejection_history")} for nid, values in result["nodes"].items()}}
         self.assertEqual(legacy, {
             "run": {"nodes": 2, "passed": 2, "attempts": 3, "rejections": 1, "duration_ms": 9000},
             "nodes": {"w": {"attempts": 2, "rejections": 1, "first_start": "2026-11-15T00:00:01Z",
@@ -87,7 +87,7 @@ class TraceTests(unittest.TestCase):
 
     def test_no_plan_and_reopened_basis(self):
         result = trace.trace(self.run)
-        legacy = {"run": result["run"], "nodes": {nid: {k: v for k, v in values.items() if k not in ("executor", "model", "cmd_checks")} for nid, values in result["nodes"].items()}}
+        legacy = {"run": result["run"], "nodes": {nid: {k: v for k, v in values.items() if k not in ("executor", "model", "cmd_checks", "rejection_history")} for nid, values in result["nodes"].items()}}
         self.assertEqual(legacy, {"run": {"nodes": 0, "passed": 0, "attempts": 0,
                          "rejections": 0, "duration_ms": None}, "nodes": {}})
         self.set_plan(self.run, [work("w")])
@@ -95,7 +95,7 @@ class TraceTests(unittest.TestCase):
         self.append(self.run, "gate.verdict", "w", 2, verdict="pass")
         self.append(self.run, "node.reopen", "w", 3)
         metrics = trace.trace(self.run)["nodes"]["w"]
-        self.assertEqual({k: v for k, v in metrics.items() if k not in ("executor", "model", "cmd_checks")}, {"attempts": 0, "rejections": 0, "first_start": None,
+        self.assertEqual({k: v for k, v in metrics.items() if k not in ("executor", "model", "cmd_checks", "rejection_history")}, {"attempts": 0, "rejections": 0, "first_start": None,
                          "passed_at": None, "duration_ms": None, "checks_run": 0, "rollbacks": 0})
 
     def test_rollback_history(self):

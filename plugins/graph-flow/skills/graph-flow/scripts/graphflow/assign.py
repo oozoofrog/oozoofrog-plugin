@@ -59,6 +59,7 @@ def brief(run_dir, node_id):
         if node["kind"] == "decision":
             raise core.GFError("wrong_status", "decision nodes have no brief", core.EXIT_STATE)
         current_plan = tx.plan
+        events = list(tx.events)
         derived = state.derive(current_plan, tx.events)
         state.require_plan_approval(derived)
     current = derived["nodes"][node_id]
@@ -117,7 +118,27 @@ def brief(run_dir, node_id):
     if (current.get("verdict") or {}).get("verdict") == "reject" and current["rejections"]:
         lines += ["", "## Previous rejection", "", "```text",
                   _rejection_text(current["rejections"][-1]), "```",
-                  "Fix only what the rejection names; stay inside SCOPE."]
+                  "Fix the rejection and previous review findings; stay inside SCOPE."]
+    if not reviewer:
+        previous = next((e for e in reversed(events) if e["type"] == "node.submit"
+                         and e["data"].get("node") == node_id and e["seq"] > current["basis"]), None)
+        reviews = {}
+        for event in events:
+            data = event["data"]
+            if (previous and event["type"] == "review.submit" and data.get("target") == node_id
+                    and data.get("target_submission") == previous["seq"]):
+                reviews[data["node"]] = data
+        failed = [r for r in reviews.values() if r.get("verdict") == "fail"]
+        if failed:
+            lines += ["", "## Review findings on your previous submission", ""]
+            for review in failed:
+                lines += ["Reviewer: " + review["node"]]
+                for finding in review.get("findings", []):
+                    lines += ["- %s · %s:%s · %s" % (finding.get("severity", "unspecified"),
+                              finding.get("file", ""), finding.get("line", ""), finding.get("text", ""))]
+                    if finding.get("evidence"):
+                        evidence = finding["evidence"]
+                        lines += ["  Evidence: " + (evidence if isinstance(evidence, str) else json.dumps(evidence, ensure_ascii=False))]
     lines += ["", "## Steps", "", "```sh", invocation + "start " + node_id]
     if reviewer:
         lines += ["```", "Read the target's changes.", "```sh",

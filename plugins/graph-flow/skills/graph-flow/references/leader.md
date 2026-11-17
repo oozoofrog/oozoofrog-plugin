@@ -136,3 +136,8 @@ Follow the [human identity rule](../SKILL.md#human-identity).
 
 
 For free questions, give concrete alternatives in the person's terms with repeated `--option` arguments to `gf decide ask`. The dashboard displays those choices and their consequences; do not mark one as recommended. Existing questions without alternatives keep their answer-text path behind an explicit choice. Binding questions are still created only by plan/gate code.
+
+
+A re-brief includes “Review findings on your previous submission” for the last submission's latest failed reviews, with severity, file:line, text and evidence. Read these alongside the gate rejection; a run-level check failure may have hidden the review failure at the gate.
+
+Current recovery behavior: a submitted work node cannot start another attempt and `reopen` accepts only passed nodes. If command/scope checks pass but an accepted independent review says fail, gating creates the existing R4 hold question. A held node with attempts remaining may then start another attempt without answering that question. This documents current behavior; it adds no required answer or rule.

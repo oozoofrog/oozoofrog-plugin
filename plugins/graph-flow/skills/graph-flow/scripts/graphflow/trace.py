@@ -12,6 +12,41 @@ def _duration(first, last):
                 datetime.strptime(first, "%Y-%m-%dT%H:%M:%SZ")).total_seconds() * 1000)
 
 
+def rejection_checks(current, events, verdict):
+    """Attribute recorded failures without changing a rejection or its rule."""
+    data = verdict["data"]
+    nid, reason = data.get("node"), (data.get("rejection") or {}).get("reason", "")
+    log = ((data.get("rejection") or {}).get("evidence") or {})
+    log = log.get("log") if isinstance(log, dict) else None
+    titles = {(n["id"], c["id"]): c.get("title") or c["id"] for n in (current or {}).get("nodes", []) for c in n.get("checks", [])}
+    titles.update({("_run", c["id"]): c.get("title") or c["id"] for c in (current or {}).get("integration_checks", []) + (current or {}).get("promoted_checks", [])})
+    latest = {}
+    for event in events:
+        if event["seq"] >= verdict["seq"]:
+            break
+        item = event["data"]
+        if item.get("node") == nid and event["type"] in ("node.start", "gate.verdict"):
+            latest = {}
+        elif event["type"] == "check.result" and item.get("node") in (nid, "_run") and item.get("phase") == "gate":
+            latest[(item["node"], item.get("check"))] = item
+    result = []
+    for key, item in latest.items():
+        if item.get("result") != "failed":
+            continue
+        cid = item.get("check")
+        if not ((log and item.get("log") == log) or "check %s " % cid in reason
+                or item.get("type") in ("scope", "cites") and item["type"] + ":" in reason):
+            continue
+        result.append(dict(origin="run" if item["node"] == "_run" else "node", check=cid,
+                           title=titles.get(key, cid), type=item.get("type"), timed_out=item.get("timed_out", False)))
+    if not result and log:
+        parts = pathlib.PurePosixPath(log).parts
+        if len(parts) >= 4 and parts[0] == "evidence":
+            result.append(dict(origin="run" if parts[1] == "_run" else "node", check=parts[2],
+                               title=titles.get((parts[1], parts[2]), parts[2])))
+    return result
+
+
 def trace(run_dir):
     current, events, derived = store.snapshot(run_dir)
     summary = {"nodes": 0, "passed": 0, "attempts": 0, "rejections": 0,
@@ -49,6 +84,9 @@ def trace(run_dir):
         assignment = assignments[-1] if assignments else {}
         metrics.update(executor=assignment.get("executor"), model=assignment.get("model"),
                        cmd_checks=command_metrics(node, events, run_dir))
+        metrics["rejection_history"] = [dict(attempt=e["data"].get("attempt"), verdict=e["data"].get("verdict"),
+            checks=rejection_checks(current, events, e)) for e in recent
+            if e["type"] == "gate.verdict" and e["data"].get("rejection")]
         result["nodes"][nid] = metrics
         summary["nodes"] += 1
         summary["passed"] += int(passed)
@@ -216,7 +254,9 @@ def conformance(current, events, metrics):
         if "observation" not in observation:
             if principle == "P10":
                 answers = observation["answers"]
-                observation["observation"] = "human answers %d (planned %d, unplanned %d); waited %s; longest %s; open %d" % (answers["total"], answers["planned"], answers["unplanned"], _elapsed(observation["wait_total_ms"]), _elapsed(observation["wait_longest_ms"]), observation["open_decisions"])
+                kinds = ", ".join("%s %d" % (kind, count) for kind, count in sorted(answers["by_kind"].items())
+                                  if count and kind not in ("plan_approval", "decision_node", "lane3", "human_check"))
+                observation["observation"] = "human answers %d (planned %d, unplanned %d%s); waited %s; longest %s; open %d" % (answers["total"], answers["planned"], answers["unplanned"], ": " + kinds if kinds else "", _elapsed(observation["wait_total_ms"]), _elapsed(observation["wait_longest_ms"]), observation["open_decisions"])
             else:
                 observation["observation"] = "; ".join("%s %s" % (k.replace("_", " "), v) for k, v in observation.items())
     return observations

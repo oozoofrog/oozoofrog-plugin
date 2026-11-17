@@ -427,6 +427,7 @@ def _decision_facts(decision, current, derived, events):
                 submissions[event["seq"]] = row
             elif event["type"] == "gate.verdict":
                 row["state"] = data.get("verdict")
+                row["rejection_checks"] = trace.rejection_checks(current, events, event)
                 rejection = data.get("rejection") or {}
                 if rejection.get("reason"):
                     titles = {c["id"]: c.get("title") or c["id"] for c in _node_checks(nodes.get(nid, {})) + current.get("integration_checks", []) + current.get("promoted_checks", [])}

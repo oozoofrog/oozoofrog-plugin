@@ -665,7 +665,9 @@ const STRINGS = {
     "qSeveral": "{tasks} 등 {n}개",
     "qSeverity_high": "큰 문제",
     "qSeverity_medium": "고칠 문제",
-    "qSeverity_low": "참고할 점"
+    "qSeverity_low": "참고할 점",
+    "qRunFailed": "전체 검사에서 통과하지 못했어요: {title}",
+    "qNodeFailed": "이 일의 검사에서 통과하지 못했어요: {title}"
   },
   "en": {
     "flow": "Whole flow",
@@ -1332,7 +1334,9 @@ const STRINGS = {
     "qSeveral": "{tasks} and others ({n} total)",
     "qSeverity_high": "High severity",
     "qSeverity_medium": "Medium severity",
-    "qSeverity_low": "Low severity"
+    "qSeverity_low": "Low severity",
+    "qRunFailed": "Run-level check failed: {title}",
+    "qNodeFailed": "This step’s own check failed: {title}"
   }
 };
 // UI_STRINGS_END
@@ -2641,7 +2645,8 @@ function openDecision(id, focus = true) {
     else if(!attempts.length)history.append(el('p',t('qNoHistory')));
     for(const row of attempts){
       const item=el('div',undefined,'attempt-fact');item.append(el('p',t('qAttempt',{n:row.attempt,state:t(({reject:'attemptReturned',replan:'exhausted',pass:'attemptPassed',needs_approval:'awaiting',hold:'held',submitted:'submitted',running:'running'})[row.state]||'notRecorded')})));
-      for(const reason of row.reasons||[])item.append(el('p',t('checkFailed')+' · '+reason));
+      if(row.rejection_checks?.length){for(const check of row.rejection_checks)item.append(el('p',t(check.origin==='run'?'qRunFailed':'qNodeFailed',{title:check.title})));}
+      else for(const reason of row.reasons||[])item.append(el('p',t('checkFailed')+' · '+reason));
       for(const review of row.reviews||[]){item.append(el('p',t('qReviewResult',{title:review.title,result:t(review.verdict==='pass'?'checkPassed':'checkFailed')})));for(const f of review.findings||[])item.append(el('p',[f.severity?t(({high:'qSeverity_high',medium:'qSeverity_medium',low:'qSeverity_low'})[f.severity]||'notRecorded'):null,f.file&&(f.file+':'+(f.line||'')),f.text,f.evidence].filter(Boolean).join(' · ')));}
       history.append(item);
     }

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Graph Flow: carry failed review findings into the next work brief, distinguish run-level and node check rejections in history, and name unplanned answer kinds on the P10 text line. Gate rules are unchanged.
+
 - Graph Flow: every dashboard question uses choices with state-specific consequences, reasons, attempt/review history and current verification. Plan changes survive reloads; free questions can supply repeated `--option` answers. Existing reading and signing rules are unchanged.
 
 - Graph Flow: capture 81 dashboard scenes, including maximum-length Korean text and selected cards of every kind on desktop and phone. Keep the phone diagram below its view toggle at full width, and verify the requested gray/glance variants with isolated processes.

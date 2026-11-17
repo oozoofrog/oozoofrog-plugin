@@ -467,3 +467,8 @@ A human-check `title` without a `prompt`, and human-check/decision-node `context
 
 
 Dashboard question facts (attempt histories, previous review findings, current reviews, release/block lists and plan differences) are display data recomputed from records. The signed binding format is unchanged. Free-question evidence may contain `options` (`label`, `answer`), supplied by repeated `decide ask --option`; answering uses the existing `answered` outcome and never releases work by itself.
+
+
+Trace nodes include `rejection_history[].checks` with `origin: run|node`, check id and title, derived from the failed gate observations and the existing rejection evidence. Dashboard attempt history uses the same attribution. R5 is unchanged: for a work node with effective lane 2, after R1–R4 are satisfied, it asks for trajectory approval when `trajectory_clean` is false or recorded cross-run rollbacks are positive. Clean means at most two attempts, no timeout in the current attempt and no loop-phase scope violation in the current attempt. Two attempts alone do not trigger R5; three do, even with a passing independent review and checks. A valid current trajectory approval satisfies that request.
+
+The P10 text observation includes nonzero unplanned categories (for example, `unplanned 2: plan_reapproval 1, trajectory 1`), matching the existing JSON `by_kind` counts.

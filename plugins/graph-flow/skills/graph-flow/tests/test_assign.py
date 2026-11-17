@@ -167,7 +167,7 @@ class AssignTests(unittest.TestCase):
         self.verdict("reject", submission, rejection)
         text = assign.brief(self.run, "work")
         for label in ("## Previous rejection", "UNIT", "VERDICT", "REASON", "EVIDENCE", "SCOPE",
-                      "Fix only what the rejection names; stay inside SCOPE."):
+                      "Fix the rejection and previous review findings; stay inside SCOPE."):
             self.assertIn(label, text)
         self.verdict("hold", submission)
         self.assertNotIn("## Previous rejection", assign.brief(self.run, "work"))
