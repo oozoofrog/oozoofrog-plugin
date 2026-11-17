@@ -650,6 +650,7 @@ const STRINGS = {
     "qNoHistory": "앞선 시도 기록이 없어요.",
     "qNoChecks": "이번 제출에 통과한 자동 검사 기록이 없어요.",
     "qHumanLeft": "사람이 확인할 부분: {question}",
+    "qHumanAuto": "자동으로 확인한 것: {items}",
     "qReviewResult": "검토 「{title}」: {result}",
     "qAttempt": "{n}번째 시도 · {state}",
     "qPlanHistory": "계획에 일 {n}개가 있어요. 아래 카드에서 하는 일과 검사 내용을 읽을 수 있어요.",
@@ -1323,6 +1324,7 @@ const STRINGS = {
     "qNoHistory": "There are no earlier attempt records.",
     "qNoChecks": "No passing automatic checks are recorded for this submission.",
     "qHumanLeft": "For you to review: {question}",
+    "qHumanAuto": "Automatically checked: {items}",
     "qReviewResult": "Review “{title}”: {result}",
     "qAttempt": "Attempt {n} · {state}",
     "qPlanHistory": "The plan has {n} steps. Read their work and checks in the cards below.",
@@ -2666,7 +2668,7 @@ function openDecision(id, focus = true) {
       for(const review of row.reviews||[]){item.append(el('p',t('qReviewResult',{title:review.title,result:t(review.verdict==='pass'?'checkPassed':'checkFailed')})));for(const f of review.findings||[])item.append(el('p',[f.severity?t(({high:'qSeverity_high',medium:'qSeverity_medium',low:'qSeverity_low'})[f.severity]||'notRecorded'):null,f.file&&(f.file+':'+(f.line||'')),f.text,f.evidence].filter(Boolean).join(' · ')));}
       history.append(item);
     }
-    if(decision.purpose==='human_check')history.append(el('p',t('qHumanLeft',{question:question(decision)})));
+    if(decision.purpose==='human_check'){history.append(el('p',t('qHumanAuto',{items:(decision.verified||[]).map(value=>['scope','cites'].includes(value)?checkTitle({type:value,result:'passed'},language):value).join('; ')||t('qNoChecks')})),el('p',t('qHumanLeft',{question:question(decision)})));}
     clear(gateFacts); gateFacts.append(el('p', t(decision.free?'freeAnswerEffect':'gateReview')), el('p', question(decision) || purposeWording(decision.purpose, language)));
     failedBlock(gateFacts, decision);authorNote(gateFacts,decision.author_context);
     if(node&&!decision.free){plannedChecks(gateFacts,node.planned_checks);contractDetails(gateFacts,node.contract);}
@@ -2891,11 +2893,14 @@ function nodeCard(n, expanded = false, level = 'detail') {
   if(n.runLevel) essentials.append(el('p',view.goal,'run-goal-preview'));
   if(files.length&&!n.preapproval_submission&&!answered)essentials.append(el('p',t('planCardDelivery',{files:files.map(outputLabel).join(', ')})));
   if(n.planned_checks?.length && state!=='returned'&&!n.preapproval_submission) {
-    const automated=n.planned_checks.filter(c=>c.type!=='human'),human=n.planned_checks.length-automated.length,check=automated[0]||n.planned_checks[0],preview=el('p');
-    if(commandTitle(check))preview.append(el('span',t('planCardChecks',{n:automated.length,first:''})),el('code',checkTitle(check,language)));
-    else preview.textContent=t('planCardChecks',{n:automated.length,first:state==='notStarted'?t('plannedCheck',{title:checkTitle(check,language)}):checkTitle(check,language)});
-    if(human)preview.append(el('span',' · '+t('humanCheckCount',{n:human})));essentials.append(preview);
-    if(automated.length>1)essentials.append(el('p',t('checksMore',{n:automated.length-1})));
+    const automated=n.planned_checks.filter(c=>c.type!=='human'),human=n.planned_checks.length-automated.length;
+    for(const check of automated.slice(0,3)) {
+      const result=n.check_results?.[check.id]||check.result;
+      const preview=el('p',undefined,'card-check'),mark=result==='passed'?'✓ '+t('checkPassed'):result==='failed'?'✕ '+t('checkFailed'):'○ '+t('notStarted');
+      preview.append(el('span',mark+' · '),el(commandTitle(check)?'code':'span',checkTitle(check,language)));essentials.append(preview);
+    }
+    if(human)essentials.append(el('p',t('humanCheckCount',{n:human})));
+    if(automated.length>3)essentials.append(el('p',t('checksMore',{n:automated.length-3})));
   }
   const questions=(view.planned_questions || []).filter(q=>q.node===n.id);
   if(questions.length)essentials.append(el('p',t('planCardQuestion',{n:questions.length,question:questions.map(q=>answered?q.question:plannedQuestion(q)).join(' · ')}),'planned-question'));

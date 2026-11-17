@@ -28,6 +28,7 @@ for(const [purpose,kind] of [['human_check','review'],['hold','review'],['trajec
  assert.deepEqual(all.slice(0,5),['question','why','choices','history','verified']);
  const effects=get('answer-actions').querySelectorAll('.action-effect').map(e=>e.textContent);assert(effects.length>=2);assert(effects.every(Boolean));assert.equal(new Set(effects).size,effects.length);
  assert(root.querySelector('.answer-form').hidden,'inputs wait for an option');
+ if(purpose==='human_check'){assert(root.querySelector('.decision-history').textContent.includes('자동으로 확인한 것:'));assert(root.querySelector('.decision-history').textContent.includes('사람이 확인할 부분:'));}
  if(purpose==='trajectory'){assert(root.textContent.includes('3번 만에 제출'));assert(root.textContent.includes('시도 3번을 다 써서'));assert(root.textContent.includes('복구 순서가 없어요.'));}
 }
 """)

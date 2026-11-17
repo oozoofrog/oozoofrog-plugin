@@ -533,6 +533,8 @@ def _view(current, derived, events, project):
                               "session": actor_of(starts.get(nid))["session"],
                               "started": _text(_mapping(starts.get(nid)).get("ts"), None),
                               "inputs": [], "outputs": []})
+        observed = {r["check"]: r.get("result") for r in _attempt_results(nid, st, events)}
+        view["nodes"][-1]["check_results"] = observed
         view["nodes"][-1]["planned_checks"] = [
             _planned_check(c, node) for c in _node_checks(node)]
         view["nodes"][-1]["deliverables"] = list(node.get("owns", [])) + list(node.get("outputs", []))

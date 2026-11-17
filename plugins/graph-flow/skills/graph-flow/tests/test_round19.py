@@ -39,7 +39,7 @@ for(const mode of ['plan','running','done','changed','old'])for(const kind of ['
         self.run_dom(r"""
 const api=globalThis.surfaceTest;
 const n={...live.nodes[0],kind:'work',title:'가'.repeat(60),summary:'나'.repeat(300),planned_checks:[0,1,2,3].map(i=>({type:'cmd',title:'다'.repeat(120),run:'true',id:'c'+i}))};
-const c=api.nodeCard(n);assert(c.textContent.includes(n.title));assert(c.textContent.includes(n.summary));assert(c.textContent.includes(n.planned_checks[0].title));assert(c.textContent.includes('3 more checks'));assert(!c.textContent.includes('…'));
+const c=api.nodeCard(n);assert(c.textContent.includes(n.title));assert(c.textContent.includes(n.summary));assert(c.textContent.includes(n.planned_checks[0].title));assert(c.textContent.includes('1 more checks'));assert(!c.textContent.includes('…'));
 const compact=api.nodeCard(n,false,'overview');assert.equal(compact.querySelector('.node-title').textContent,n.title);assert(!compact.querySelector('.node-essentials'));
 """)
 

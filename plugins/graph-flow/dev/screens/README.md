@@ -9,7 +9,7 @@ node plugins/graph-flow/dev/screens/capture.mjs /Volumes/eyedisk/build/graph-flo
 ```
 
 The builder replaces only its marked `fixtures/` directory. The capture command
-writes the 99 numbered PNGs to `final/`, copies them and makes the requested ffmpeg
+writes the 101 numbered PNGs to `final/`, copies them and makes the requested ffmpeg
 variants in `verify/`, and records DOM observations, hashes, and process cleanup
 outside those directories. An optional third argument, e.g. `5,16`, recaptures only
 those numbers. Rebuild fixtures before a fresh full capture. No installs or real
@@ -41,3 +41,5 @@ Round 19 adds selected work/review/decision/final-check cards at both sizes (70�
 Round 20 adds the missing phone decisions and trajectory, lane-3 permission, decision review, failed host check, changed-evidence re-ask and plan re-approval at both sizes (82–97). The trajectory uses three real submissions, a failed run check, a failed node check, and failed then passing reviews. Marked `decision_screen` scenes assert Q1–Q5 order, distinct consequences, viewport bounds, unchanged polling and the exhausted-attempt cost; every decision also receives gray/glance copies.
 
 Scenes 98–99 show both plan notices, recorded by real plan/red commands.
+
+Scenes 100–101 show separate complete check titles with passed, failed and not-run marks, then the remaining-check count.

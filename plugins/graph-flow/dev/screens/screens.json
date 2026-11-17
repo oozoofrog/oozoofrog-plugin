@@ -1636,5 +1636,41 @@
     },
     "interactions": [],
     "group": "DECISIONS"
+  },
+  {
+    "number": 100,
+    "name": "check-lines-desktop",
+    "scenario": "check-lines",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "button",
+        "text": "상세 보기"
+      }
+    ],
+    "group": "DECISIONS"
+  },
+  {
+    "number": 101,
+    "name": "check-lines-phone",
+    "scenario": "check-lines",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [
+      {
+        "action": "button",
+        "text": "상세 보기"
+      }
+    ],
+    "group": "DECISIONS"
   }
 ]
