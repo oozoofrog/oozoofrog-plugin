@@ -1,0 +1,1192 @@
+[
+  {
+    "number": 1,
+    "name": "graph-demo",
+    "scenario": "demo",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 2,
+    "name": "graph-demo-selected",
+    "scenario": "demo",
+    "url": "/?t={token}#project={project}&run={run}&node=b",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 3,
+    "name": "graph-real",
+    "scenario": "real",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 4,
+    "name": "graph-many",
+    "scenario": "many",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "button",
+        "text": "상세 보기"
+      }
+    ],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 5,
+    "name": "decision-with-files",
+    "scenario": "files",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 6,
+    "name": "log",
+    "scenario": "demo",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "click",
+        "selector": "#home-tab"
+      },
+      {
+        "action": "into",
+        "selector": "#log"
+      }
+    ],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 7,
+    "name": "phone-graph",
+    "scenario": "demo",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 8,
+    "name": "phone-log",
+    "scenario": "demo",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [
+      {
+        "action": "click",
+        "selector": "#home-tab"
+      },
+      {
+        "action": "into",
+        "selector": "#log"
+      }
+    ],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 9,
+    "name": "plan-question-list",
+    "scenario": "plan",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "open",
+        "selector": "#accessible"
+      },
+      {
+        "action": "into",
+        "selector": "#accessible"
+      }
+    ],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 10,
+    "name": "graph-real-selected",
+    "scenario": "real",
+    "url": "/?t={token}#project={project}&run={run}&node=html",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 11,
+    "name": "graph-many-lower",
+    "scenario": "many",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "button",
+        "text": "상세 보기"
+      },
+      {
+        "action": "scroll",
+        "selector": ".map-viewport",
+        "x": 0,
+        "y": 700
+      }
+    ],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 12,
+    "name": "phone-decision",
+    "scenario": "files",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 13,
+    "name": "phone-decision-history",
+    "scenario": "files",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [
+      {
+        "action": "open",
+        "selector": ".phone-history"
+      },
+      {
+        "action": "into",
+        "selector": ".phone-history"
+      }
+    ],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 14,
+    "name": "graph-many-right",
+    "scenario": "many",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "button",
+        "text": "상세 보기"
+      },
+      {
+        "action": "scroll",
+        "selector": ".map-viewport",
+        "x": 1800,
+        "y": 0
+      }
+    ],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 15,
+    "name": "decision-nothing-to-read",
+    "scenario": "nothing",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 16,
+    "name": "decision-with-files-read",
+    "scenario": "files",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "click",
+        "selector": ".file-choices button"
+      }
+    ],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 17,
+    "name": "graph-many-fit",
+    "scenario": "many",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "button",
+        "text": "화면에 맞추기"
+      }
+    ],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 18,
+    "name": "graph-many-selected",
+    "scenario": "many",
+    "url": "/?t={token}#project={project}&run={run}&node=n2",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "button",
+        "text": "상세 보기"
+      }
+    ],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 19,
+    "name": "phone-plan-detail",
+    "scenario": "plan",
+    "url": "/?t={token}#project={project}&run={run}&node=a",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 20,
+    "name": "plan-review",
+    "scenario": "plan",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 21,
+    "name": "plan-review-selected",
+    "scenario": "plan",
+    "url": "/?t={token}#project={project}&run={run}&node=b",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 22,
+    "name": "plan-sent-back",
+    "scenario": "sent-back",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 23,
+    "name": "plan-large",
+    "scenario": "large-plan",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "button",
+        "text": "상세 보기"
+      }
+    ],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 24,
+    "name": "phone-plan",
+    "scenario": "plan",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 25,
+    "name": "log-with-plan",
+    "scenario": "plan",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "click",
+        "selector": "#home-tab"
+      }
+    ],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 26,
+    "name": "plan-tampered",
+    "scenario": "tampered",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "RARE"
+  },
+  {
+    "number": 27,
+    "name": "plan-unverified-answer",
+    "scenario": "unverified",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "click",
+        "selector": "#home-tab"
+      }
+    ],
+    "group": "RARE"
+  },
+  {
+    "number": 28,
+    "name": "superseded-decision",
+    "scenario": "superseded",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "RARE"
+  },
+  {
+    "number": 29,
+    "name": "plan-card-detail",
+    "scenario": "plan",
+    "url": "/?t={token}#project={project}&run={run}&node=a",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "scroll",
+        "selector": "#panel",
+        "x": 0,
+        "y": 180
+      }
+    ],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 30,
+    "name": "old-run-needs-approval",
+    "scenario": "old",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "RARE"
+  },
+  {
+    "number": 31,
+    "name": "key-mismatch",
+    "scenario": "key-mismatch",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "RARE"
+  },
+  {
+    "number": 32,
+    "name": "run-level-checks-card-selected",
+    "scenario": "constraints",
+    "url": "/?t={token}#project={project}&run={run}&node=_run_checks",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 33,
+    "name": "plan-large-fit",
+    "scenario": "large-plan",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "button",
+        "text": "화면에 맞추기"
+      }
+    ],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 34,
+    "name": "replaced-plan",
+    "scenario": "replaced",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "RARE"
+  },
+  {
+    "number": 35,
+    "name": "key-repinned",
+    "scenario": "key-repinned",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "RARE"
+  },
+  {
+    "number": 36,
+    "name": "unverified-answer-banner",
+    "scenario": "unverified",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "RARE"
+  },
+  {
+    "number": 37,
+    "name": "review-lens",
+    "scenario": "real",
+    "url": "/?t={token}#project={project}&run={run}&node=html-review",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "open",
+        "selector": "#panel > details:last-of-type"
+      },
+      {
+        "action": "scroll",
+        "selector": "#panel",
+        "x": 0,
+        "y": 340
+      }
+    ],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 38,
+    "name": "run-level-constraints",
+    "scenario": "constraints",
+    "url": "/?t={token}#project={project}&run={run}&node=_run_checks",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "scroll",
+        "selector": "#panel",
+        "x": 0,
+        "y": 300
+      }
+    ],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 39,
+    "name": "phone-large-flow",
+    "scenario": "large-run",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 40,
+    "name": "phone-large-scrolled",
+    "scenario": "large-run",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [
+      {
+        "action": "scroll",
+        "selector": "window",
+        "x": 0,
+        "y": 1050
+      }
+    ],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 41,
+    "name": "plan-large-overview",
+    "scenario": "large-plan",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "button",
+        "text": "간략 보기"
+      }
+    ],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 42,
+    "name": "plan-large-zoomed-detail",
+    "scenario": "large-plan",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "button",
+        "text": "상세 보기"
+      },
+      {
+        "action": "button",
+        "text": "+"
+      },
+      {
+        "action": "scroll",
+        "selector": ".map-viewport",
+        "x": 600,
+        "y": 200
+      }
+    ],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 43,
+    "name": "plan-large-overview-selected",
+    "scenario": "large-plan",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "button",
+        "text": "간략 보기"
+      },
+      {
+        "action": "click",
+        "selector": "#map [data-node=\"n2\"] .node-header"
+      }
+    ],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 44,
+    "name": "run-large-overview",
+    "scenario": "large-run",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "button",
+        "text": "간략 보기"
+      }
+    ],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 45,
+    "name": "run-30-nodes",
+    "scenario": "thirty-run",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "button",
+        "text": "간략 보기"
+      }
+    ],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 46,
+    "name": "project-moved",
+    "scenario": "moved",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "RARE"
+  },
+  {
+    "number": 47,
+    "name": "plan-card-question-content",
+    "scenario": "plan",
+    "url": "/?t={token}#project={project}&run={run}&node=a",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "scroll",
+        "selector": "#panel",
+        "x": 0,
+        "y": 320
+      }
+    ],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 48,
+    "name": "old-run-continue",
+    "scenario": "old-continue",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "open",
+        "selector": ".old-results details"
+      }
+    ],
+    "group": "RARE"
+  },
+  {
+    "number": 49,
+    "name": "key-mismatch-recovery",
+    "scenario": "key-mismatch",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "open",
+        "selector": ".key-recovery"
+      }
+    ],
+    "group": "RARE"
+  },
+  {
+    "number": 50,
+    "name": "problem-in-my-turn-list",
+    "scenario": "unverified",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "click",
+        "selector": "#home-tab"
+      }
+    ],
+    "group": "RARE"
+  },
+  {
+    "number": 51,
+    "name": "plan-30-list",
+    "scenario": "thirty-plan",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "open",
+        "selector": "#accessible"
+      },
+      {
+        "action": "into",
+        "selector": "#accessible"
+      }
+    ],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 52,
+    "name": "plan-changed-under-banner",
+    "scenario": "changed-live",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "live-plan"
+      }
+    ],
+    "group": "RARE"
+  },
+  {
+    "number": 53,
+    "name": "check-with-cwd-and-timeout",
+    "scenario": "check-options",
+    "url": "/?t={token}#project={project}&run={run}&node=a",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "open",
+        "selector": "#panel .execution-details"
+      },
+      {
+        "action": "scroll",
+        "selector": "#panel",
+        "x": 0,
+        "y": 520
+      }
+    ],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 54,
+    "name": "file-changed-since-asked",
+    "scenario": "file-changed-live",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "change-file"
+      }
+    ],
+    "group": "RARE"
+  },
+  {
+    "number": 55,
+    "name": "old-run-open-decision-reasked",
+    "scenario": "old-reasked",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "RARE"
+  },
+  {
+    "number": 56,
+    "name": "key-recovery-on-page",
+    "scenario": "key-recovery-live",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "open",
+        "selector": ".key-recovery"
+      },
+      {
+        "action": "into",
+        "selector": ".key-recovery"
+      }
+    ],
+    "group": "RARE"
+  },
+  {
+    "number": 57,
+    "name": "zoomed-detail-clipped-cards",
+    "scenario": "large-run",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "button",
+        "text": "상세 보기"
+      },
+      {
+        "action": "button",
+        "text": "+"
+      },
+      {
+        "action": "button",
+        "text": "+"
+      },
+      {
+        "action": "scroll",
+        "selector": ".map-viewport",
+        "x": 350,
+        "y": 150
+      }
+    ],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 58,
+    "name": "hold-asked-by-gate",
+    "scenario": "hold",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 59,
+    "name": "decision-node-outcomes",
+    "scenario": "outcomes",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 60,
+    "name": "plan-question-timing",
+    "scenario": "plan",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "open",
+        "selector": "#accessible"
+      },
+      {
+        "action": "into",
+        "selector": "#accessible"
+      },
+      {
+        "action": "into",
+        "selector": "#node-list"
+      }
+    ],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 61,
+    "name": "check-runs-own-files-mark",
+    "scenario": "own-files",
+    "url": "/?t={token}#project={project}&run={run}&node=a",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "scroll",
+        "selector": "#panel",
+        "x": 0,
+        "y": 180
+      }
+    ],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 62,
+    "name": "plan-changed-diff",
+    "scenario": "changed-live",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "live-plan"
+      },
+      {
+        "action": "open",
+        "selector": ".plan-change-list details"
+      },
+      {
+        "action": "into",
+        "selector": ".plan-change-list"
+      }
+    ],
+    "group": "RARE"
+  },
+  {
+    "number": 63,
+    "name": "answered-decision-in-plan",
+    "scenario": "answered",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 64,
+    "name": "free-question-labelled",
+    "scenario": "free",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 65,
+    "name": "review-awaited",
+    "scenario": "review-awaited",
+    "url": "/?t={token}#project={project}&run={run}&node=a",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 66,
+    "name": "rejected-decision-revised",
+    "scenario": "revised",
+    "url": "/?t={token}#project={project}&run={run}&decision={decision}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [],
+    "group": "OCCASIONAL"
+  },
+  {
+    "number": 67,
+    "name": "fit-with-side-panel",
+    "scenario": "large-run",
+    "url": "/?t={token}#project={project}&run={run}&node=n2",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "button",
+        "text": "화면에 맞추기"
+      }
+    ],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 68,
+    "name": "phone-plan-start-locked",
+    "scenario": "large-plan",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    },
+    "interactions": [],
+    "group": "EVERYDAY"
+  },
+  {
+    "number": 69,
+    "name": "wording-only-repost-log",
+    "scenario": "wording",
+    "url": "/?t={token}#project={project}&run={run}",
+    "viewport": {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    "interactions": [
+      {
+        "action": "click",
+        "selector": "#home-tab"
+      },
+      {
+        "action": "into",
+        "selector": "#log"
+      }
+    ],
+    "group": "EVERYDAY"
+  }
+]
