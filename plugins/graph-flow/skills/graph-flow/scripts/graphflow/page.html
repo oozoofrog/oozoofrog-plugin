@@ -65,6 +65,13 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;font:13px/1.7 
 #panel h3{font-size:14px;margin:22px 0 6px;color:var(--muted)}#panel ul{margin-top:4px}#panel{scroll-padding:24px;padding-bottom:32px}.planned-checks li:last-child{border:0}
 @media(min-width:761px){.plan-change-form[open]{top:0}.plan-banner:not(:has(.plan-notice)):not(:has(pre)){min-height:96px}.plan-return-note{grid-column:2;grid-row:1/4;max-height:80px;overflow:auto;font-size:14px}.plan-return-note p{margin:4px 0}.plan-banner>.plan-waiting{grid-column:1!important;margin:0;font-size:12px}}
 @media(max-width:760px){#attention.plan-banner{display:block;padding:16px}.plan-banner h2{font-size:22px}.plan-banner .plan-summary{margin:6px 0 12px}.plan-actions{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:12px}.plan-actions p{white-space:normal}.plan-change-form[open]{position:relative;width:auto;right:auto}.plan-actions:has(.plan-change-form[open]){grid-template-columns:1fr}.node-essentials p{white-space:normal}.node-essentials p:not(.run-goal-preview){white-space:nowrap}#panel,#flow:has(#attention[hidden]) #panel{max-height:80dvh!important;overflow:auto}.line-key{flex-wrap:nowrap}}
+/* Compact cards keep their own readable typography; the viewport clips their edges. */
+#map[data-level="overview"] .map-toolbar{grid-template-columns:32px 32px max-content 40px max-content minmax(0,1fr)}
+.overview-note{display:inline-flex;gap:8px;align-items:center;margin-left:auto;color:var(--ink);font-size:12px}.overview-note button{min-height:26px;padding:1px 8px;font-size:12px}
+.overview-card{padding:0}.overview-card .node-header{height:100%;padding:10px;grid-template-columns:18px minmax(0,1fr);align-content:center;align-items:center;gap:4px 6px}
+.overview-card .node-title{font-size:14px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.overview-card .status-glyph{font-size:16px}
+.overview-marks{grid-column:1/-1;font-size:14px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
+#panel{min-height:0;overflow-y:auto;padding-bottom:40px}#panel::after{content:"";display:block;height:8px;flex:none}.node-essentials code{font-family:ui-monospace,monospace}.checks code{font:inherit;font-family:ui-monospace,monospace;overflow-wrap:anywhere}
 </style>
 <script type="module" nonce="__NONCE__" src="/static/page.js"></script>
 </head>

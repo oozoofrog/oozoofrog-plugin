@@ -172,7 +172,7 @@ import assert from 'node:assert/strict';
 process.on('uncaughtException', error=>{console.error(error.stack.replace(/data:text[^: ]+/g,'page.js'));process.exit(1);});
 import {readFileSync} from 'node:fs';
 const source = readFileSync(process.argv[2], 'utf8');
-const {createDecisionController, decisionQuestion, purposeWording, purposeAction, viewLanguage, edgeRelationLabel, fitScale, MIN_FIT_SCALE, edgeChipText, cometCount, layeredLayout, crossingCount, displayState, statusGlyph, checkWording, checkTitle, offscreenDirection, planFlow,fitStart, planCounts} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+const {createDecisionController, decisionQuestion, purposeWording, purposeAction, viewLanguage, edgeRelationLabel, fitScale, MIN_FIT_SCALE, edgeChipText, cometCount, layeredLayout, crossingCount, displayState, statusGlyph, checkWording, checkTitle, offscreenDirection, planFlow,fitStart, planCounts, fitGraph, zoomLevel, mapAnchor, intersectsViewport, commandTitle, overviewMarkText} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const first = {project:'/project', run:'first'}, second = {project:'/project', run:'second'};
 const decision = {id:'d7', purpose:'lane3', kind:'authorization', failed:[], files:[{name:'Result',path:'result.txt'}]};
 const controller = createDecisionController();
@@ -240,8 +240,41 @@ assert.equal(planCounts({work:4,checks:9,decisions:0},'ko',true),'일 4개 · �
 assert.deepEqual(fitStart({bounds:{width:4000,height:1600},order:['a'],positions:{a:{x:20,y:800}}},1200,600,1),{left:0,top:772});
 assert.deepEqual(fitStart({bounds:{width:800,height:400},order:['a'],positions:{a:{x:20,y:80}}},1200,600,1),{left:0,top:0});
 assert.equal(fitScale({width:800,height:400},1200,600),1);
-assert.equal(fitScale({width:4000,height:1600},1200,600),1,'too large opens at a readable start');
+assert.equal(fitScale({width:4000,height:1600},1200,600),MIN_FIT_SCALE,'too large opens at a readable start');
 assert.equal(checkTitle({id:'all',type:'cmd',command:'test -s result'},'ko'),'test -s result');
+""")
+
+    def test_semantic_fit_and_clipping(self):
+        self.run_controller(r"""
+const graph=(count,pairs)=>planFlow({nodes:Array.from({length:count},(_,i)=>({id:'n'+i,title:'일 '+i,kind:'work',planned_checks:[],status:'pending'})),edges:pairs.map(([a,b])=>({from:'n'+a,to:'n'+b})),goal:'goal'});
+const layouts=data=>Object.fromEntries(['detail','overview'].map(level=>[level,layeredLayout(data.nodes,data.edges,[],true,{level})]));
+const small=layouts(graph(4,[[0,1],[0,2],[1,3],[2,3]]));
+const large=layouts(graph(12,[[0,1],[0,2],[1,3],[1,4],[1,5],[2,6],[2,7],[5,8],[6,9],[7,9],[3,10],[4,10],[9,11],[10,11],[8,11]]));
+// 1440x900, including header, plan banner, toolbar, gutters and fit padding.
+const w=1350,h=538;
+assert.equal(fitGraph(small,w,h).level,'detail');
+assert(fitGraph(small,w,h).scale<=1);
+const fitted=fitGraph(large,w,h);
+assert.equal(fitted.level,'overview');assert(fitted.fits);assert(fitted.scale*14>=12);
+for(const set of [small,large])for(const width of [900,1100,w]){
+ const fit=fitGraph(set,width,h),layout=set[fit.level];
+ if(fit.fits)for(const r of layout.cardRects){assert(r.x*fit.scale>=0);assert((r.x+r.width)*fit.scale<=width);assert((r.y+r.height)*fit.scale<=h);}
+}
+const huge=layouts(graph(30,Array.from({length:29},(_,i)=>[i,i+1])));
+const fallback=fitGraph(huge,w,h);assert.equal(fallback.level,'overview');assert.equal(fallback.fits,false);assert.equal(fallback.scale,MIN_FIT_SCALE);
+assert.equal(fitStart(huge.overview,w,h,fallback.scale).left,0);
+const running=Array.from({length:30},(_,i)=>({id:'n'+i,status:i<15?'passed':'running'}));
+assert(fitStart(huge.overview,w,h,fallback.scale,running,false).left>0);
+for(const r of [{x:-20,y:10,width:100,height:80},{x:290,y:10,width:100,height:80},{x:10,y:-20,width:100,height:80},{x:10,y:290,width:100,height:80}])assert(intersectsViewport(r,300,300),'partly clipped cards stay visible');
+assert(!intersectsViewport({x:-100,y:0,width:100,height:80},300,300));
+const detail=zoomLevel('overview',1,.1);assert.deepEqual(detail,{level:'detail',scale:1});
+assert.deepEqual(zoomLevel('detail',MIN_FIT_SCALE,-.1),{level:'overview',scale:1});
+const p=large.overview.positions.n5,point={x:p.x+p.width*.3,y:p.y+p.height*.6},mapped=mapAnchor(large.overview,large.detail,point),d=large.detail.positions.n5;
+assert.equal(mapped.x,d.x+d.width*.3);assert.equal(mapped.y,d.y+d.height*.6);
+assert.equal(fitGraph(large,900,h,'overview').level,'overview','selection cannot switch level');
+assert.equal(overviewMarkText(['⌕ 검토','↩','◆ 내가 할 일','? 여기서 물어요']),'⌕ · ↩ · ◆ · ?','every mark remains visible when labels would overflow');
+assert(commandTitle({type:'cmd',command:'test -s a.txt'}));
+assert.equal(checkTitle({type:'cmd',command:'test -s a.txt',title:'검사 명령이 성공해요'},'ko'),'test -s a.txt');
 """)
 
     def test_relation_labels_and_loop_states(self):
@@ -398,7 +431,7 @@ class Element {
   scrollIntoView() {}
   getBoundingClientRect() { return this.rect || {x:12,y:20,top:20,right:212,bottom:220,width:200,height:200}; }
   querySelectorAll(selector) {
-    const matches = c => selector.startsWith('.') ? (c.className||'').split(' ').includes(selector.slice(1)) : selector.startsWith('[data-hint=') ? c.dataset.hint===selector.slice(11,-1) : selector==='[data-effect]' ? !!c.dataset.effect : selector==='button[data-outcome]' ? c.tagName==='button' && !!c.dataset.outcome : selector==='[data-i18n]' ? false : c.tagName===selector || selector===`#${c.id}`;
+    const matches = c => selector.startsWith('.') ? (c.className||'').split(' ').includes(selector.slice(1)) : selector.startsWith('[data-hint=') ? c.dataset.hint===selector.slice(11,-1) : selector==='[data-effect]' ? !!c.dataset.effect : selector==='button[data-outcome]' ? c.tagName==='button' && !!c.dataset.outcome : selector==='[data-i18n]' ? !!c.dataset.i18n : c.tagName===selector || selector===`#${c.id}`;
     return this.children.flatMap(c=>[...(matches(c)?[c]:[]),...c.querySelectorAll(selector)]);
   }
   querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
@@ -433,6 +466,7 @@ const settle=async()=>{ for(let i=0;i<12;i++) await new Promise(setImmediate); }
 await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64')+'#dom'); await settle();
 const get=id=>document.getElementById(id);
 assert.equal(document.documentElement.lang,'en','plan language must override Korean browser');
+assert.match(get('map').querySelector('.overview-note').textContent,/Overview\s+Show details/,'semantic controls follow the plan language');
 // The graph opens first, and a waiting decision is answered from its card.
 assert.equal(get('flow').hidden,false); assert.equal(get('home').hidden,true);
 assert.match(get('map').textContent,/d7 · Read and decide/);
@@ -534,6 +568,15 @@ location.hash='#project=%2Fproject&run=second';docEvents['window:hashchange']();
 assert.equal(get('title').textContent,'Another run','cross-run navigation updates the header');
 assert.equal(get('where').textContent,'');
 assert.equal(get('panel').hidden,true);assert.equal(get('panel').onscroll,null);
+// User zoom and selection must survive both unchanged and changed polling.
+const mapState=()=>({level:get('map').dataset.level,scale:get('map').dataset.scale});
+get('map').querySelectorAll('button').find(b=>b.textContent==='+').click();
+const zoomedState=mapState();
+docEvents.visibilitychange();await settle();assert.deepEqual(mapState(),zoomedState);
+live.nodes[0].status='running';live.nodes[0].attempts=2;
+docEvents.visibilitychange();await settle();assert.deepEqual(mapState(),zoomedState);
+get('map').querySelector('article').querySelector('button').click();assert.deepEqual(mapState(),zoomedState);
+get('panel').querySelector('.panel-close').click();assert.deepEqual(mapState(),zoomedState);
 // Consent stays on the graph and keeps the person's draft through polling.
 const approval={id:'d20',purpose:'plan_approval',kind:'authorization',status:'open',question:'Start this plan?',files:[],failed:[],context:{}};
 live.plan_approval=approval;live.plan_counts={work:1,review:0,decision:0,checks:2,decisions:0};live.decisions=[approval];

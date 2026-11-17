@@ -341,7 +341,11 @@ const STRINGS = {
     "citesCheck": "인용한 파일과 줄을 확인해요",
     "humanCheck": "사람이 결과를 확인해요",
     "hostCheck": "실행 환경에서 확인해요",
-    "evRepinned": "확인 키를 다시 연결했어요. 계획을 다시 승인받아요."
+    "evRepinned": "확인 키를 다시 연결했어요. 계획을 다시 승인받아요.",
+    "overviewLevel": "전체 보기",
+    "detailLevel": "상세 보기",
+    "readableFit": "읽을 수 있는 크기",
+    "overviewHelp": "제목만 보여요. 자세한 내용은 카드를 눌러 주세요."
   },
   "en": {
     "flow": "Whole flow",
@@ -684,7 +688,11 @@ const STRINGS = {
     "citesCheck": "Verify cited files and lines",
     "humanCheck": "A person checks the result",
     "hostCheck": "Check in the execution environment",
-    "evRepinned": "Verification key re-pinned; the plan needs approval again."
+    "evRepinned": "Verification key re-pinned; the plan needs approval again.",
+    "overviewLevel": "Overview",
+    "detailLevel": "Show details",
+    "readableFit": "Readable size",
+    "overviewHelp": "Titles only. Select a card for details."
   }
 };
 // UI_STRINGS_END
@@ -781,7 +789,7 @@ export function viewLanguage(view, browser = 'en') {
   return view ? view.language === 'ko' ? 'ko' : 'en' : browser.toLowerCase().startsWith('ko') ? 'ko' : 'en';
 }
 export function cometCount(node) { return (node.laps || []).filter(lap => lap === 'returned').length; }
-// Below this the words on a card stop being readable, so a larger graph scrolls instead of shrinking further.
+// Both levels use at least 14px text; 6/7 keeps it at least 12px on screen.
 export const MIN_FIT_SCALE = 6 / 7;
 export function edgeRelationLabel(edge, language = 'en') {
   const words = STRINGS[language];
@@ -807,8 +815,12 @@ export function displayState(node, decisions = []) {
 export function statusGlyph(state) {
   return {passed:'✓', running:'▶', retrying:'↪', submitted:'◷', awaiting:'◆', returned:'↩', notStarted:'○', exhausted:'!', held:'Ⅱ'}[state];
 }
+export function commandTitle(check) {
+  const command = check.command || check.run;
+  return !!command && (!check.title || check.title === check.id || check.title === command || ['검사 명령이 성공해요', 'The check command succeeds'].includes(check.title));
+}
 export function checkTitle(check, language = 'en') {
-  return check.title && check.title !== check.id ? check.title : check.command || check.run || check.prompt || STRINGS[language][{scope:'scopeCheck',cites:'citesCheck',human:'humanCheck',host:'hostCheck'}[check.type || check.id]] || check.id;
+  return commandTitle(check) ? check.command || check.run : check.title && check.title !== check.id ? check.title : check.command || check.run || check.prompt || STRINGS[language][{scope:'scopeCheck',cites:'citesCheck',human:'humanCheck',host:'hostCheck'}[check.type || check.id]] || check.id;
 }
 export function checkWording(check, language = 'en', attempt = check.attempt) {
   const key = check.result === 'passed' ? 'checkMet' : 'checkNotMet';
@@ -821,10 +833,40 @@ export function offscreenDirection(rect, width, height) {
   const gaps = [['offLeft', -rect.x], ['offRight', rect.x + rect.width - width], ['offTop', -rect.y], ['offBottom', rect.y + rect.height - height]].filter(([,gap]) => gap > .5);
   return gaps.sort((a,b) => a[1]-b[1])[0]?.[0] || null;
 }
+export function intersectsViewport(rect, width, height) {
+  return rect.x < width && rect.y < height && rect.x + rect.width > 0 && rect.y + rect.height > 0;
+}
 const textWidth = (text, wide, narrow) => Array.from(text || '').reduce((sum, c) => sum + (c.charCodeAt(0) > 0x2e80 ? wide : narrow), 0);
+export function overviewMarkText(marks) {
+  const text=marks.join(' · ');
+  return textWidth(text,14,8)>134 ? marks.map(mark=>Array.from(mark)[0]).join(' · ') : text;
+}
 export function fitScale(bounds, width, height, mobile = false) {
   const available = Math.min(width / bounds.width, height / bounds.height);
-  return available >= MIN_FIT_SCALE ? Math.min(1, available) : 1;
+  return Math.max(MIN_FIT_SCALE, Math.min(1, available));
+}
+// A fixed level is used for selection resizing; only opening and Fit choose a richer level.
+export function fitGraph(layouts, width, height, fixedLevel = null) {
+  for (const level of fixedLevel ? [fixedLevel] : ['detail', 'overview']) {
+    const layout = layouts[level], scale = fitScale(layout.bounds, width, height);
+    const fits = layout.bounds.width * scale <= width && layout.bounds.height * scale <= height;
+    if (fits || level === (fixedLevel || 'overview')) return {level, scale, fits};
+  }
+}
+export function zoomLevel(level, scale, amount) {
+  const next = scale + amount;
+  if (level === 'overview' && next > 1) return {level:'detail', scale:1};
+  if (level === 'detail' && next < MIN_FIT_SCALE) return {level:'overview', scale:1};
+  return {level, scale:Math.max(MIN_FIT_SCALE, Math.min(level === 'overview' ? 1 : 1.6, next))};
+}
+// Preserve the nearest card's local point when its layout changes size.
+export function mapAnchor(before, after, point) {
+  const rects = before.cardRects;
+  const distance = r => Math.hypot(Math.max(r.x-point.x,0,point.x-r.x-r.width), Math.max(r.y-point.y,0,point.y-r.y-r.height));
+  const rect = [...rects].sort((a,b)=>distance(a)-distance(b))[0];
+  if (!rect || !after.positions[rect.id]) return point;
+  const next = after.positions[rect.id];
+  return {x:next.x+(point.x-rect.x)*next.width/rect.width, y:next.y+(point.y-rect.y)*next.height/rect.height};
 }
 export function planCounts(counts = {}, language = 'en', details = false) {
   const keys = [['work','countWork'],['review','countReview'],['decision','countDecision']];
@@ -844,9 +886,10 @@ export function planFlow(data, language = 'en') {
     from:n.id,to:id,relation:'hands_over',label:'',gate:n.status==='passed'?'open':'closed',delivered:n.status==='passed'}))]};
 }
 
-export function fitStart(layout, width, height, scale) {
+export function fitStart(layout, width, height, scale, nodes = [], plan = true) {
   if (layout.bounds.width*scale<=width && layout.bounds.height*scale<=height) return {left:0,top:0};
-  const first=layout.positions[layout.order[0]];
+  const id = !plan && layout.order.find(id => nodes.some(n => n.id === id && !n.runLevel && n.status !== 'passed' && !n.answered));
+  const first=layout.positions[id || layout.order[0]];
   return first?{left:Math.max(0,first.x*scale-28),top:Math.max(0,first.y*scale-28)}:{left:0,top:0};
 }
 
@@ -863,10 +906,11 @@ export function forwardEdges(edges) {
   return edges.map(e => e.relation === 'reviews' ? {...e, from:e.to, to:e.from} : e);
 }
 export function layeredLayout(nodes, edges, decisions = [], sort = true, options = {}) {
+  const overview = options.level === 'overview', portGap = overview ? 8 : 14, inset = overview ? 12 : 26;
   const byId = new Map(nodes.map(n => [n.id, n])), vertices = new Map(), links = [];
   const routes = forwardEdges(edges).filter(e => byId.has(e.from) && byId.has(e.to)).map((e,index) => {
     const waiting = decisions.find(d => d.node === e.from);
-    return {...e,index,bundle:index,text:edgeChipText(e),chip:null,gateState:waiting?'waiting_for_you':e.gate==='returned'?'closed':e.gate||'closed',decision:waiting?.id};
+    return {...e,index,bundle:index,text:overview?'':edgeChipText(e),chip:null,gateState:waiting?'waiting_for_you':e.gate==='returned'?'closed':e.gate||'closed',decision:waiting?.id};
   });
   const parents = id => routes.filter(e => e.to === id).map(e => e.from);
   const depths = new Map();
@@ -910,12 +954,14 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
     const cost=crossings();if(cost<bestCost){bestCost=cost;best=layers.map(ids=>[...ids]);}
   }
   layers.splice(0,layers.length,...best);
-  const widths=layers.map(ids=>Math.max(264,...ids.filter(id=>byId.has(id)).map(id=>Math.min(280,Math.ceil(textWidth(byId.get(id).title,18,9))+40))));
+  const widths=layers.map(ids=>overview?156:Math.max(264,...ids.filter(id=>byId.has(id)).map(id=>Math.min(280,Math.ceil(textWidth(byId.get(id).title,18,9))+40))));
   for(const v of vertices.values()) {
     v.width=widths[v.layer];
-    v.height=v.dummy?44:Math.max(v.node.planned_checks || v.node.deliverables ? 194 : 120,40+14*Math.max(links.filter(e=>e.from===v.id).length,links.filter(e=>e.to===v.id).length))+Math.max(0,Math.ceil(textWidth(v.node.title,18,9)/(v.width-40))-1)*26;
+    const degree=Math.max(links.filter(e=>e.from===v.id).length,links.filter(e=>e.to===v.id).length);
+    const portHeight=40+portGap*(degree+2*Math.max(0,degree-3));
+    v.height=overview ? (v.dummy ? 28 : Math.max(64,portHeight)) : v.dummy?44:Math.max(v.node.planned_checks || v.node.deliverables ? 194 : 120,portHeight)+Math.max(0,Math.ceil(textWidth(v.node.title,18,9)/(v.width-40))-1)*26;
   }
-  const gap=18,margin=20;
+  const gap=overview?16:18,margin=20;
   const total=ids=>ids.reduce((s,id)=>s+vertices.get(id).height,0)+Math.max(0,ids.length-1)*gap;
   const tallest=Math.max(0,...layers.map(total));
   for(const ids of layers){let y=margin+(tallest-total(ids))/2;for(const id of ids){vertices.get(id).y=y;y+=vertices.get(id).height+gap;}}
@@ -934,14 +980,17 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
   }
   const channels=layers.slice(1).map((_,d)=>links.filter(e=>vertices.get(e.from).layer===d));
   let x=margin;
-  layers.forEach((ids,d)=>{for(const id of ids)vertices.get(id).x=x;x+=widths[d]+Math.max(108,52+(channels[d]?.length||0)*18);});
+  layers.forEach((ids,d)=>{for(const id of ids)vertices.get(id).x=x;x+=widths[d]+Math.max(overview?56:108,inset*2+(channels[d]?.length||0)*(overview?8:18));});
   // Distinct horizontal ordinates prevent a target lead from joining an unrelated source lead.
   const usedY=[];
   const ordinate=(ideal,low,high,edge,channels)=>{
     for(let step=0;step<10000;step++){
-      const y=ideal+(step%2?1:-1)*Math.ceil(step/2)*14;
-      if(y>=low && y<=high && usedY.every(n=>n.edge===edge||!n.channels.some(c=>channels.includes(c))||Math.abs(n.y-y)>=14)){usedY.push({y,edge,channels});return y;}
+      const y=ideal+(step%2?1:-1)*Math.ceil(step/2)*portGap;
+      if(y>=low && y<=high && usedY.every(n=>n.edge===edge||!n.channels.some(c=>channels.includes(c))||Math.abs(n.y-y)>=portGap)){usedY.push({y,edge,channels});return y;}
     }
+    // Dense fans can leave free ports between the regular spacing grid.
+    const free=Array.from({length:Math.max(0,Math.floor(high)-Math.ceil(low)+1)},(_,i)=>Math.ceil(low)+i).sort((a,b)=>Math.abs(a-ideal)-Math.abs(b-ideal));
+    for(const y of free)if(usedY.every(n=>n.edge===edge||!n.channels.some(c=>channels.includes(c))||Math.abs(n.y-y)>=portGap)){usedY.push({y,edge,channels});return y;}
     throw new Error('Graph ports exceed card capacity');
   };
   for(const ids of layers)for(const id of ids){
@@ -959,7 +1008,7 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
   channels.forEach((channel,d)=>{
     const right=vertices.get(layers[d][0]).x+widths[d],next=vertices.get(layers[d+1][0]).x;
     const pieces=channel.map(e=>{const r=routes[e.route],a=vertices.get(e.from),b=vertices.get(e.to);return {route:r.index,a:a.dummy?{x:a.x+a.width,y:a.port}:r.start,b:b.dummy?{x:b.x,y:b.port}:r.end};});
-    const points=(p,i)=>{const track=right+26+(next-right-52)*(i+1)/(pieces.length+1);return [p.a,{x:track,y:p.a.y},{x:track,y:p.b.y},p.b];};
+    const points=(p,i)=>{const track=right+inset+(next-right-inset*2)*(i+1)/(pieces.length+1);return [p.a,{x:track,y:p.a.y},{x:track,y:p.b.y},p.b];};
     const cost=()=>{let n=0;pieces.forEach((p,i)=>pieces.slice(i+1).forEach((q,j)=>{const a=points(p,i),b=points(q,i+1+j);for(let k=1;k<4;k++)for(let l=1;l<4;l++)if(segmentCross(a[k-1],a[k],b[l-1],b[l])||segmentCross(b[l-1],b[l],a[k-1],a[k]))n++;}));return n;};
     pieces.sort((a,b)=>(a.b.y-a.a.y)-(b.b.y-b.a.y)||a.route-b.route);
     for(let sweep=0;sweep<6;sweep++)for(let i=0;i<pieces.length-1;i++){const before=cost();[pieces[i],pieces[i+1]]=[pieces[i+1],pieces[i]];if(cost()>=before)[pieces[i],pieces[i+1]]=[pieces[i+1],pieces[i]];}
@@ -1111,7 +1160,7 @@ function handoffsCard(key, rows, direction) {
 function plannedChecks(parent, checks) {
   const list = el('ul', undefined, 'checks planned-checks');
   for (const c of checks || []) {
-    const item = el('li'); item.append(el('strong', checkTitle(c, language)));
+    const item = el('li'); item.append(el(commandTitle(c)?'code':'strong', checkTitle(c, language)));
     if (c.command) { item.append(el('p', t('plannedCommand'), 'muted'), el('pre', c.command, 'planned-command'), el('p', t('commandScope', {cwd:c.cwd || '.', seconds:c.timeout_s || 600}), 'muted')); }
     if (c.prompt) item.append(el('p', t('checkPrompt') + ' · ' + c.prompt));
     if (c.type === 'host') item.append(el('p', t('checkHost', c)));
@@ -1300,7 +1349,7 @@ function rowTone(r) {
 function checkLine(c, attempt) {
   const item = el('li', undefined, c.result === 'failed' ? 'check-failed' : '');
   const result = c.timed_out ? t('checkTimedOut') : t(c.result === 'failed' ? 'checkFailed' : 'checkPassed');
-  item.append(wording(checkWording(c, language, attempt),'strong'));
+  item.append(wording(checkWording(c, language, attempt),commandTitle(c)?'code':'strong'));
   if(c.timed_out)item.append(el('span', ' · '+result));
   if (c.command) { const run = el('p', undefined, 'muted'); run.append(el('span', t('ranCommand')+': '), el('code', c.command), el('span', [c.exit_code === null || c.exit_code === undefined ? '' : ' → ' + t(c.exit_code === 0 ? 'exitSuccess' : 'exitFailure', {n:c.exit_code}), typeof c.duration_ms === 'number' ? t('seconds', {n:(c.duration_ms / 1000).toFixed(2)}) : ''].filter(Boolean).join(' · '))); item.append(run); }
   if (c.violations?.length) item.append(el('p', t('outside', {files:c.violations.join(', ')})));
@@ -1748,7 +1797,7 @@ function walker() {
 // A rebuilt element joins a looping animation at the phase it would have reached.
 function inPhase(element, period) {element.style.animationDelay=-(performance.now()%period)+'ms';return element;}
 function nodeDescription(n) {return n.runLevel?`${t('runChecksTitle')}. ${t('runChecksAfter')}`:`${t(n.kind||'work')}. ${title(n)}. ${status(n)}. ${attempts(n)}. ${t('returnTimes',{n:cometCount(n)})}`;}
-function nodeCard(n, expanded = false) {
+function nodeCard(n, expanded = false, level = 'detail') {
   const root=el('article',undefined,'node-card '+cardTone(n)+(['running','retrying'].includes(displayState(n,view.decisions))?' working':'')+(expanded?' expanded':''));root.dataset.node=n.id;
   const header=button('',()=>{
     const decision=view.decisions.find(d=>d.node===n.id);
@@ -1756,6 +1805,18 @@ function nodeCard(n, expanded = false) {
     else selectNode(n.id);
   },'node-header');
   header.setAttribute('aria-label',nodeDescription(n));header.setAttribute('aria-expanded',String(expanded));
+  if (level === 'overview') {
+    root.classList.add('overview-card');
+    const state = displayState(n, view.decisions), marks = [];
+    if (n.kind === 'review') marks.push('⌕ '+t('review'));
+    if (cometCount(n) || state === 'returned') marks.push('↩');
+    if (view.decisions.some(d=>d.node===n.id)) marks.push('◆ '+t('yourTurn'));
+    if ((view.planned_questions || []).some(q=>q.node===n.id)) marks.push(t('questionsMark'));
+    header.title = title(n)+' · '+status(n)+(marks.length?' · '+marks.join(' · '):'');
+    header.append(el('span',statusGlyph(state),'status-glyph'),el('strong',title(n),'node-title'));
+    if(marks.length) header.append(el('span',overviewMarkText(marks),'overview-marks'));
+    root.append(header); return root;
+  }
   const state = displayState(n, view.decisions), statusLine = el('span', n.runLevel?t('runChecksAfter'):status(n), 'node-status');
   statusLine.prepend(el('span', statusGlyph(state), 'status-glyph'));
   header.append(statusLine);
@@ -1776,7 +1837,12 @@ function nodeCard(n, expanded = false) {
   const files=[...new Set(n.deliverables || [])];
   if(n.runLevel) essentials.append(el('p',view.goal,'run-goal-preview'));
   if(files.length)essentials.append(el('p',t('planCardDelivery',{files:files.join(', ')})));
-  if(n.planned_checks?.length)essentials.append(el('p',t('planCardChecks',{n:n.planned_checks.length,first:checkTitle(n.planned_checks[0],language)})));
+  if(n.planned_checks?.length) {
+    const check=n.planned_checks[0],preview=el('p');
+    if(commandTitle(check))preview.append(el('span',t('planCardChecks',{n:n.planned_checks.length,first:''})),el('code',checkTitle(check,language)));
+    else preview.textContent=t('planCardChecks',{n:n.planned_checks.length,first:checkTitle(check,language)});
+    essentials.append(preview);
+  }
   const questions=(view.planned_questions || []).filter(q=>q.node===n.id);
   if(questions.length)essentials.append(el('p',t('planCardQuestion',{n:questions.length}),'planned-question'));
   root.append(header,essentials,footer,reference);
@@ -1789,15 +1855,42 @@ function createMap() {
   const key=el('div',undefined,'line-key'), overflow=el('div',undefined,'map-overflow'); overflow.setAttribute('aria-label',t('graphEdges'));overflow.dataset.i18nLabel='graphEdges';
   toolbar.append(key);map.append(viewport);
   const visibleCount=el('span',undefined,'map-visible'),overflowButtons=new Map();overflow.append(visibleCount);
-  let data={nodes:[],edges:[],decisions:[]},chosenNode=null,layout=null,scale=1,automatic=true;
+  let data={nodes:[],edges:[],decisions:[]},chosenNode=null,layout=null,scale=1,automatic=true,level='detail',layouts=null,rawData=null;
   const nodes=new Map(),chips=new Map(),seen=new Map();let drawing=null,placed=false,layoutKey='',origin={x:0,y:0};
   const zoomText=el('output');zoomText.setAttribute('aria-live','polite');
-  const zoom=amount=>{automatic=false;scale=Math.max(MIN_FIT_SCALE,Math.min(1.6,scale+amount));size();};
-  const start=()=>{const position=fitStart(layout,viewport.clientWidth,viewport.clientHeight,scale);viewport.scrollLeft=position.left;viewport.scrollTop=position.top;outside();};
-  const fit=()=>{scale=fitScale(layout.bounds,viewport.clientWidth-24,viewport.clientHeight-24);automatic=false;size();start();};
-  const zoomOut=button('−',()=>zoom(-.1)),zoomIn=button('+',()=>zoom(.1));
-  toolbar.append(zoomOut,zoomIn,button(t('fit'),fit),zoomText,overflow);
-  zoomOut.dataset.i18nLabel='zoomOut';zoomIn.dataset.i18nLabel='zoomIn';toolbar.children[3].dataset.i18n='fit';viewport.dataset.i18nLabel='mapHelp';
+  const rememberScroll=()=>{scrollPosition={left:viewport.scrollLeft,top:viewport.scrollTop};};
+  let scrollPosition={left:0,top:0};
+  const zoom=(amount,point=null)=>{
+    if(!layout)return;
+    automatic=false;
+    const rect=viewport.getBoundingClientRect(),screenPoint=point?{x:rect.x+point.x,y:rect.y+point.y}:null;
+    point ||= {x:viewport.clientWidth/2,y:viewport.clientHeight/2};
+    const before=layout, anchor={x:(viewport.scrollLeft+point.x-origin.x)/scale,y:(viewport.scrollTop+point.y-origin.y)/scale};
+    const next=zoomLevel(level,scale,amount), changed=level!==next.level;
+    level=next.level;scale=next.scale;
+    if(changed)update(rawData,chosenNode);else size();
+    const mapped=changed?mapAnchor(before,layout,anchor):anchor;
+    const after=viewport.getBoundingClientRect();
+    point=screenPoint?{x:screenPoint.x-after.x,y:screenPoint.y-after.y}:{x:viewport.clientWidth/2,y:viewport.clientHeight/2};
+    viewport.scrollLeft=mapped.x*scale+origin.x-point.x;viewport.scrollTop=mapped.y*scale+origin.y-point.y;
+    rememberScroll();outside();
+  };
+  const start=()=>{
+    const plan=!!data.plan_approval && !(data.plan_approval.verified && data.plan_approval.outcome==='approved');
+    const position=fitStart(layout,viewport.clientWidth,viewport.clientHeight,scale,data.nodes,plan);
+    viewport.scrollLeft=position.left;viewport.scrollTop=position.top;rememberScroll();outside();
+  };
+  const fit=()=>{
+    const next=fitGraph(layouts,viewport.clientWidth-24,viewport.clientHeight-24);
+    level=next.level;scale=next.scale;automatic=true;
+    update(rawData,chosenNode);size();start();
+  };
+  const zoomOut=button('−',()=>zoom(-.1)),zoomIn=button('+',()=>zoom(.1)),fitButton=button(t('fit'),fit);
+  const overviewNote=el('span',undefined,'overview-note'),overviewLabel=el('span',t('overviewLevel')),detailButton=button(t('detailLevel'),()=>zoom(1));
+  overviewLabel.dataset.i18n='overviewLevel';detailButton.dataset.i18n='detailLevel';
+  overviewNote.append(overviewLabel,detailButton);
+  toolbar.append(zoomOut,zoomIn,fitButton,zoomText,overviewNote,overflow);
+  zoomOut.dataset.i18nLabel='zoomOut';zoomIn.dataset.i18nLabel='zoomIn';viewport.dataset.i18nLabel='mapHelp';
   const mapTitle=el('div',undefined,'map-title'), name=el('strong',t('graph')), direction=el('span',t('mapDirection'));
   name.dataset.i18n='graph';direction.dataset.i18n='mapDirection';mapTitle.append(name,direction);toolbar.prepend(mapTitle);translate();
   function outside() {
@@ -1808,8 +1901,8 @@ function createMap() {
       const p=layout.positions[n.id],x=p.x*scale+ox-viewport.scrollLeft,y=p.y*scale+oy-viewport.scrollTop;
       const direction=offscreenDirection({x,y,width:p.width*scale,height:p.height*scale},w,h);
       if(direction)groups[direction].push(n);
-      if(!direction)visible++;
-      const element=nodes.get(n.id); if(element)element.style.visibility=direction?'hidden':'visible';
+      if(intersectsViewport({x,y,width:p.width*scale,height:p.height*scale},w,h))visible++;
+      const element=nodes.get(n.id); if(element)element.style.visibility=intersectsViewport({x,y,width:p.width*scale,height:p.height*scale},w,h)?'visible':'hidden';
     }
     for(const c of layout.chips){const chip=chips.get(c.first);if(chip)chip.hidden=scale<1 || !!chip.dataset.tooWide || !!offscreenDirection({x:c.x*scale+ox-viewport.scrollLeft,y:c.y*scale+oy-viewport.scrollTop,width:c.width*scale,height:c.height*scale},w,h);}
     // The viewport clips routes naturally: an off-screen neighbour leaves a visible continuing stub.
@@ -1829,7 +1922,16 @@ function createMap() {
       };
     }
   }
-  viewport.addEventListener('scroll',outside);
+  viewport.addEventListener('scroll',()=>{
+    if(scrollPosition.left!==viewport.scrollLeft || scrollPosition.top!==viewport.scrollTop)automatic=false;
+    rememberScroll();outside();updateReadout();
+  });
+  function updateReadout() {
+    const fits=layout && layout.bounds.width*scale<=viewport.clientWidth && layout.bounds.height*scale<=viewport.clientHeight;
+    fitButton.textContent=t(automatic&&!fits?'readableFit':'fit');
+    fitButton.setAttribute('aria-pressed',String(automatic&&fits));
+    overviewNote.title=t('overviewHelp');overviewNote.hidden=level!=='overview';map.dataset.level=level;map.dataset.fitted=String(automatic&&fits);map.dataset.scale=String(scale);
+  }
   function size() {
     if(!layout)return;
     if(map.getBoundingClientRect){
@@ -1839,31 +1941,34 @@ function createMap() {
       $('panel').style.height=$('panel').style.maxHeight;
     }
     const w=viewport.clientWidth||900,h=viewport.clientHeight||600;
-    if(!placed && automatic)scale=fitScale(layout.bounds,w-24,h-24);
     origin={x:Math.max(0,(w-layout.bounds.width*scale)/2),y:Math.max(0,(h-layout.bounds.height*scale)/2)};
     Object.assign(stage.style,{left:origin.x+'px',top:origin.y+'px',width:layout.bounds.width+'px',height:layout.bounds.height+'px',transform:`scale(${scale})`});
     stage.style.setProperty('--map-text',Math.max(14,12/scale)+'px');
     Object.assign(spacer.style,{width:layout.bounds.width*scale>w?layout.bounds.width*scale+'px':'100%',height:layout.bounds.height*scale>h?layout.bounds.height*scale+'px':'100%'});
     if(!$('panel').hidden && $('panel').onscroll)$('panel').onscroll();
-    zoomText.textContent=Math.round(scale*100)+'%';zoomOut.disabled=scale<=MIN_FIT_SCALE;zoomOut.title=zoomOut.disabled?t('minZoom'):t('zoomOut');zoomIn.disabled=scale>=1.6;outside();
+    zoomText.textContent=Math.round(scale*100)+'%';zoomOut.disabled=level==='overview'&&scale<=MIN_FIT_SCALE;zoomOut.title=zoomOut.disabled?t('minZoom'):t('zoomOut');zoomIn.disabled=level==='detail'&&scale>=1.6;updateReadout();rememberScroll();outside();
   }
   const setRect=(element,rect)=>Object.assign(element.style,{left:rect.x+'px',top:rect.y+'px',width:rect.width+'px',height:rect.height+'px'});
   function update(next,id) {
-    next=planFlow(next,language);
+    rawData=next;next=planFlow(next,language);
     if(layout)size();
     const planKey=JSON.stringify([next.nodes.map(n=>[n.id,n.title,n.kind,n.target]),next.edges.map(e=>[e.from,e.to,e.relation,e.label])]);
-    if(planKey!==layoutKey){layoutKey=planKey;placed=false;automatic=true;}
+    if(planKey!==layoutKey){layoutKey=planKey;if(!placed){automatic=true;level='detail';}}
     const reveal=id&&id!==chosenNode;data=next;chosenNode=id;map.classList.toggle('has-expanded',!!id);
+    layouts=Object.fromEntries(['detail','overview'].map(level=>[level,layeredLayout(data.nodes,data.edges.map(e=>({...e,label:e.label?label(e.label):''})),data.decisions,true,{level,language})]));
+    layout=layouts[level];
+    size();
+    if(!placed && viewport.clientWidth){const fitted=fitGraph(layouts,viewport.clientWidth-24,viewport.clientHeight-24);level=fitted.level;scale=fitted.scale;layout=layouts[level];}
     const focused=document.activeElement?.closest?.('[data-node]')?.dataset.node,focusedChip=document.activeElement?.dataset?.chip;
     const activeIds=new Set(data.nodes.map(n=>n.id));
     for(const [key,element] of nodes)if(!activeIds.has(key)){element.remove();nodes.delete(key);}
     for(const n of data.nodes) {
       const expanded=n.id===chosenNode;
-      const signature=JSON.stringify([n,data.decisions.filter(d=>d.node===n.id)]);
+      const signature=JSON.stringify([level,n,data.decisions.filter(d=>d.node===n.id)]);
       let element=nodes.get(n.id);
       if(!element){element=el('div',undefined,'node-position');nodes.set(n.id,element);stage.append(element);}
       if(element.dataset.signature!==signature) {
-        const card=nodeCard(n,expanded),before=seen.get(n.id),tone=cardTone(n);
+        const card=nodeCard(n,expanded,level),before=seen.get(n.id),tone=cardTone(n);
         // One-shot motion only for a change observed while the page was open.
         if(before&&cometCount(n)>before.comets)card.classList.add('changed');
         else if(before&&before.tone!==tone&&['passed','current'].includes(tone))card.classList.add('changed');
@@ -1871,7 +1976,6 @@ function createMap() {
       }
       seen.set(n.id,{tone:cardTone(n),comets:cometCount(n)});
     }
-    layout=layeredLayout(data.nodes,data.edges.map(e=>({...e,label:e.label?label(e.label):''})),data.decisions,true,{language});
     clear(key);
     name.textContent=$('flow').classList.contains('sent-plan')?t('planReturned'):t('graph');mapTitle.classList.toggle('returned-title',$('flow').classList.contains('sent-plan'));
     for(const [state,word] of [['open','lineSampleOpen'],['closed','lineSampleClosed'],['review','lineSampleReview']]){
@@ -1911,11 +2015,11 @@ function createMap() {
     mapTitle.classList.remove('map-complete');
     size();
     // Start at the beginning, with no clipped labels from a preceding column.
-    if(!data.nodes.length)placed=false;
+    if(!data.nodes.length){placed=false;automatic=true;level='detail';}
     else if(!placed&&viewport.clientWidth){
       placed=true;start();
     }
-    if(reveal)revealSelection();
+    if(reveal&&!automatic)revealSelection();
     outside();
     if(focused)nodes.get(focused)?.querySelector('button')?.focus({preventScroll:true});
     if(focusedChip)[...chips.values()].find(e=>e.dataset.chip===focusedChip&&e.tagName==='BUTTON')?.focus({preventScroll:true});
@@ -1924,28 +2028,42 @@ function createMap() {
     if(!['map-viewport','map'].includes(e.target.id||e.target.className))return;
     if(['+','=','-','0','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))e.preventDefault();
     if(e.key==='+'||e.key==='=')zoom(.1);if(e.key==='-')zoom(-.1);if(e.key==='0')fit();
+    if(e.key.startsWith('Arrow'))automatic=false;
     if(e.key==='ArrowLeft')viewport.scrollLeft-=80;if(e.key==='ArrowRight')viewport.scrollLeft+=80;
     if(e.key==='ArrowUp')viewport.scrollTop-=80;if(e.key==='ArrowDown')viewport.scrollTop+=80;
   });
   let drag=null;
-  viewport.addEventListener('pointerdown',e=>{if(e.target.closest('button,summary,a'))return;drag={x:e.clientX,y:e.clientY,left:viewport.scrollLeft,top:viewport.scrollTop};if(e.pointerType==='touch'){drag=null;return;}viewport.setPointerCapture(e.pointerId);viewport.classList.add('panning');});
+  viewport.addEventListener('pointerdown',e=>{if(e.target.closest('button,summary,a'))return;automatic=false;drag={x:e.clientX,y:e.clientY,left:viewport.scrollLeft,top:viewport.scrollTop};if(e.pointerType==='touch'){drag=null;return;}viewport.setPointerCapture(e.pointerId);viewport.classList.add('panning');});
   viewport.addEventListener('pointermove',e=>{if(drag){viewport.scrollLeft=drag.left+drag.x-e.clientX;viewport.scrollTop=drag.top+drag.y-e.clientY;}});
   const release=()=>{drag=null;viewport.classList.remove('panning');};viewport.addEventListener('pointerup',release);viewport.addEventListener('pointercancel',release);
-  new ResizeObserver(size).observe(viewport);
+  viewport.addEventListener('wheel',e=>{
+    if(e.ctrlKey || e.metaKey){e.preventDefault();const r=viewport.getBoundingClientRect();zoom(e.deltaY<0?.1:-.1,{x:e.clientX-r.x,y:e.clientY-r.y});}
+    else automatic=false;
+  },{passive:false});
+  let lastWidth=0,lastHeight=0;
+  function resize(selection = false) {
+    if(!layout)return;
+    const w=viewport.clientWidth,h=viewport.clientHeight;
+    if(w===lastWidth&&h===lastHeight)return;
+    lastWidth=w;lastHeight=h;
+    if(selection&&placed&&automatic){scale=fitGraph(layouts,w-24,h-24,level).scale;size();start();}
+    else {size();if(selection&&chosenNode)revealSelection();}
+  }
+  new ResizeObserver(()=>resize()).observe(viewport);
   function revealSelection() {
     const p=layout?.positions[chosenNode];if(!p || !viewport.clientWidth)return;
     const w=viewport.clientWidth,h=viewport.clientHeight,ox=origin.x,oy=origin.y;
-    const neighbours=layout.routes.filter(r=>r.from===chosenNode||r.to===chosenNode).map(r=>layout.positions[r.from===chosenNode?r.to:r.from]);
-    let left=p.x,right=p.x+p.width,top=p.y,bottom=p.y+p.height;
-    for(const q of neighbours.sort((a,b)=>Math.abs(a.x-p.x)-Math.abs(b.x-p.x))){
-      if((Math.max(right,q.x+q.width)-Math.min(left,q.x))*scale<w-32 && (Math.max(bottom,q.y+q.height)-Math.min(top,q.y))*scale<h-32){left=Math.min(left,q.x);right=Math.max(right,q.x+q.width);top=Math.min(top,q.y);bottom=Math.max(bottom,q.y+q.height);}
-    }
-    viewport.scrollTo({left:Math.max(0,(left+right)*scale/2+ox-w/2),top:Math.max(0,(top+bottom)*scale/2+oy-h/2),behavior:'auto'});
+    const left=p.x*scale+ox,top=p.y*scale+oy,right=left+p.width*scale,bottom=top+p.height*scale;
+    if(left<viewport.scrollLeft+12)viewport.scrollLeft=Math.max(0,left-12);
+    else if(right>viewport.scrollLeft+w-12)viewport.scrollLeft=right-w+12;
+    if(top<viewport.scrollTop+12)viewport.scrollTop=Math.max(0,top-12);
+    else if(bottom>viewport.scrollTop+h-12)viewport.scrollTop=bottom-h+12;
+    rememberScroll();outside();
   }
   return {update,select:id=>{
     chosenNode=id;
     for(const [key,element] of nodes){element.firstElementChild.classList.toggle('expanded',key===id);element.querySelector('.node-header').setAttribute('aria-expanded',String(key===id));}
-    size();if(id)revealSelection();
+    resize(true);size();if(id&&(!automatic||!fitGraph(layouts,viewport.clientWidth-24,viewport.clientHeight-24,level).fits))revealSelection();
   },wake:size};
 }
 renderer = createMap(); if(view)renderer.update(view,selected);
