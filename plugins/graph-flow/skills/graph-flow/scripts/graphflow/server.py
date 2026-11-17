@@ -100,7 +100,7 @@ def _project_list():
                 try:
                     current, events, derived = _snapshot(run)
                     nodes = derived["nodes"].values()
-                    item.update(title=(current or {}).get("title") or (current or {}).get("goal"), status=derived["run"]["status"], plan_error=derived["run"].get("plan_error", False), nodes=len(derived["nodes"]),
+                    item.update(title=(current or {}).get("title") or (current or {}).get("goal") or next((e["data"].get("plan_title") for e in reversed(events) if e["type"] == "plan.set"), None), status=derived["run"]["status"], plan_error=derived["run"].get("plan_error", False), nodes=len(derived["nodes"]),
                                 passed=sum(n["status"] == "passed" for n in nodes),
                                 open_decisions=len(decisions.open_decisions(derived)),
                                 last_event=events[-1]["ts"] if events else None)
@@ -305,6 +305,8 @@ def _timeline(nodes, events, lessons, verified_decisions=None, repin_seq=0):
             row["state"] = {"pass": "passed", "reject": "returned", "replan": "replan",
                             "needs_approval": "needs_you", "hold": "held"}.get(verdict, row["state"])
             row["reason"] = _text(_mapping(data.get("rejection")).get("reason"), row["reason"])
+            if verdict in ("reject", "replan"):
+                row["returned_by"] = actor_of(event)
             touch(row, event)
         elif kind == "node.reopen" and nid:
             add(event, "reopened", node=nid, node_title=title(nid),
@@ -317,7 +319,7 @@ def _timeline(nodes, events, lessons, verified_decisions=None, repin_seq=0):
             ask = _mapping(asked.get(data["id"]))
             add(event, "answered", decision=data["id"], node=ask.get("node"),
                 node_title=title(ask.get("node")), question=_text(ask.get("question")),
-                outcome=_text(data.get("outcome")), answer=_text(data.get("answer")), purpose=ask.get("purpose"),
+                outcome=_text(data.get("outcome")), answer=_text(data.get("answer")), source=_text(data.get("source")), purpose=ask.get("purpose"),
                 verified=bool((verified_decisions or {}).get(data["id"], {}).get("verified") and
                               (verified_decisions or {})[data["id"]].get("answer_seq") == event["seq"]))
         elif kind == "human.repin":
@@ -366,9 +368,11 @@ def _planned_check(check):
 
 def _view(current, derived, events, project):
     current = current or {}
+    recorded_title = next((e["data"].get("plan_title") for e in reversed(events)
+                           if e["type"] == "plan.set"), "")
     nodes = planning.node_index(current)
     opened = [] if derived["run"].get("plan_error") or derived["run"].get("key_mismatch") or derived["run"].get("location_mismatch") else decisions.open_decisions(derived)
-    view = {"title": _text(current.get("title"), _text(current.get("goal"))), "nodes": [],
+    view = {"title": _text(current.get("title"), _text(current.get("goal"), recorded_title)), "nodes": [],
             "language": "ko" if re.search(r"[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]",
                 " ".join([_text(current.get("title"))] +
                          [_text(n.get(k)) for n in nodes.values() for k in ("title", "summary")] +
@@ -545,6 +549,7 @@ def _view(current, derived, events, project):
     view["key_mismatch"] = derived["run"].get("key_mismatch", False)
     view["location_mismatch"] = derived["run"].get("location_mismatch", False)
     view["has_work"] = any(e.get("type") in ("node.start", "node.submit", "review.submit", "check.result") for e in events)
+    view["recovery_identity"] = decisions.recovery_identity(derived)
     view["key_recovery"] = "GF_ROLE=human GF_HUMAN_TERMINAL=1 graph-flow --run .graph-flow/runs/%s key repin" % shlex.quote(pathlib.Path((derived["run"].get("location") or {}).get("run_directory") or derived["run"]["id"] or "run").name)
     view["legacy"] = derived["run"].get("legacy", False)
     view["replaced_unverifiable"] = bool(next((e["data"].get("replaced_unverifiable") for e in reversed(events) if e["type"] == "plan.set"), False))
@@ -554,9 +559,15 @@ def _view(current, derived, events, project):
     if view["plan_approval"] and approval.get("id"):
         view["plan_approval"]["identity"] = state.decision_identity(approval)
     view["stale_decisions"] = [{"id": d["id"], "reason": d.get("stale_reason")} for d in derived["decisions"].values() if d.get("stale_reason")]
+    for node in view["nodes"]:
+        node["preapproval_submission"] = bool(node["status"] != "passed" and derived["nodes"][node["id"]].get("submission") and
+            not (approval and approval.get("verified") and approval.get("outcome") == "approved"))
+        node["review_needs_correction"] = bool(node.get("kind") == "review" and node["status"] == "rejected")
+        node["waiting_for_review_correction"] = any(n.get("target") == node["id"] and n.get("status") == "rejected" for n in view["nodes"])
     view["plan_counts"], view["planned_questions"] = _plan_summary(current)
     view["goal"] = current.get("goal", "")
     view["constraints"] = [c["text"] for c in current.get("constraints", [])]
+    view["run_contract"] = {k:v for k,v in current.items() if k != "nodes"}
     view["integration_checks"] = [_planned_check(c) for c in current.get("integration_checks", [])]
     view["promoted_checks"] = [_planned_check(c) for c in current.get("promoted_checks", [])]
     view["superseded"] = [{"id": d["id"], "replacement": (approval or {}).get("id")}
@@ -789,6 +800,17 @@ try {
                 raise _HTTPError(405, "method_not_allowed", "only GET and POST are supported")
             if self.command == "POST":
                 body = self._body()
+                if path == "/api/key/repin":
+                    origin = "http://" + self.headers["Host"]
+                    if (self.headers.get("Origin") != origin or
+                            self.headers.get("Sec-Fetch-Site") != "same-origin"):
+                        raise _HTTPError(403, "page_only", "Confirm key recovery on this page.")
+                    if (set(body) != {"project", "run", "displayed", "confirm"} or
+                            body.get("confirm") is not True or not isinstance(body.get("displayed"), dict)):
+                        raise _HTTPError(400, "bad_input", "Confirm the displayed key recovery request.")
+                    run = _run(body["project"], body["run"])
+                    result = decisions.repin(run, HUMAN, body["displayed"])
+                    return self._json(200, {"ok": True, **result})
                 if path != "/api/answer":
                     raise _HTTPError(404, "not_found", "unknown route")
                 for key in ("project", "run", "id", "outcome", "answer"):

@@ -6,7 +6,7 @@ This is the contract for `graphflow/server.py`, its `page.html` and `page.js`, a
 
 ## Process and access
 
-A person starts the independent process with `gf serve`. `serve(host="127.0.0.1", port=0)` accepts only `127.0.0.1` and `localhost`; any other host raises `GFError("bad_host", ..., 2)` before binding or creating a key. Both accepted names bind IPv4 `127.0.0.1`; port 0 selects an available port. Startup does not create `human.key`; the first human answer does. Startup creates a fresh `secrets.token_urlsafe(32)` token, and publishes `$GF_HOME/server.json` under `$GF_HOME/.lock`, with atomic replacement and mode 0600:
+A person starts the independent process with `graph-flow serve`. `serve(host="127.0.0.1", port=0)` accepts only `127.0.0.1` and `localhost`; any other host raises `GFError("bad_host", ..., 2)` before binding or creating a key. Both accepted names bind IPv4 `127.0.0.1`; port 0 selects an available port. Startup does not create `human.key`; the first human answer does. Startup creates a fresh `secrets.token_urlsafe(32)` token, and publishes `$GF_HOME/server.json` under `$GF_HOME/.lock`, with atomic replacement and mode 0600:
 
 ```json
 {"url": "http://127.0.0.1:12345/?t=TOKEN", "port": 12345, "token": "TOKEN", "pid": 1234, "started": "2026-11-15T09:30:00Z"}
@@ -24,7 +24,7 @@ Authenticate before dispatching (except the public static GET route described be
 
 POST bodies must be UTF-8 JSON objects with one nonnegative `Content-Length`, no `Transfer-Encoding`, and a size of at most 65,536 bytes (64 KB). Over-limit bodies return HTTP 413, code `body_too_large`. Invalid framing, empty bodies, malformed UTF-8/JSON, and JSON values other than objects return HTTP 400, code `bad_body`.
 
-The server uses `http.server.ThreadingHTTPServer`. Files are the source of state: each request reads current records; no decision or state cache is kept. GET never appends events, repairs an incomplete log tail, runs checks or executes recorded commands. POST writes only through `decisions.answer`; the other process writes are startup key creation and the dashboard's own `server.json` and lock handling.
+The server uses `http.server.ThreadingHTTPServer`. Files are the source of state: each request reads current records; no decision or state cache is kept. GET never appends events, repairs an incomplete log tail, runs checks or executes recorded commands. POST writes only through `decisions.answer` or the confirmed human-only key recovery path `decisions.repin`; other process writes are the dashboard’s own `server.json` and lock handling.
 
 ## Who the token stands for
 
@@ -94,7 +94,7 @@ At most 204,800 response bytes (200 KB) are returned. Content is decoded as UTF-
 
 ## GET /api/file?project=<root>&run=<id>&decision=<decision id>&path=<project-relative path>
 
-Authenticated, Host-checked, read-only text reader for the files a person must review. The decision must exist in the selected run, be open and not stale. Its allowlist is exactly the node's **current** submission `changed_files` plus the decision evidence `files`; neither ownership nor arbitrary project files authorize access. `view.decisions[].files` provides deduplicated `{name, path}` choices. The basename and a small secondary path are visible only in this requested reader.
+Authenticated, Host-checked, read-only text reader for the files a person must review. The decision must exist in the selected run, be open and not stale. Its allowlist is exactly the node's **current** submission `changed_files` plus the decision evidence `files`; neither ownership nor arbitrary project files authorize access. `view.decisions[].files` provides deduplicated `{name, path}` choices. The basename is the file button; secondary paths and hashes stay inside a details disclosure.
 
 The path must be relative, contain no `..` component, NUL or backslash, and enter neither `.git` nor `.graph-flow`. After resolving symlinks it must remain inside the project and outside those directories. The resolved path is opened through directory descriptors with no-follow checks on each component, refusing a symlink substituted between validation and opening. `human.key`, `server.json`, `registry.json`, their symlink aliases, and hard links to the current dashboard's private records are refused. Absolute paths and unlisted spellings (even equivalent spellings) return 403 `forbidden_path`. An unknown decision in this run returns 404 `unknown_decision`; answered or stale decisions return 403 `unavailable_decision`.
 
@@ -104,22 +104,26 @@ The decision view loads each file on demand into a scrollable, paper-coloured pl
 
 ## POST /api/answer
 
-All five fields are required strings containing valid Unicode (HTTP 400, `bad_input`, otherwise):
+The five text fields are required strings containing valid Unicode (HTTP 400, `bad_input`, otherwise). `displayed` is also required: it is the exact `{id, question_hash, artifact_hashes}` identity returned with the decision the page displayed. Missing or mismatched identities return HTTP 409 `stale_decision`; a changed banner disables its actions until the person acknowledges the changed plan.
 
 ```json
-{"project": "/absolute/project", "run": "export", "id": "d14", "outcome": "approved", "answer": "Publish this version."}
+{"project": "/absolute/project", "run": "export", "id": "d14", "outcome": "approved", "answer": "Publish this version.", "displayed": {"id":"d14", "question_hash":"<displayed hash>", "artifact_hashes":{}}}
 ```
 
 After resolving the registered run, the server calls:
 
 ```python
 decisions.answer(run_dir, id, outcome, answer, "dashboard",
-                 {"role": "human", "node": None, "session": "dashboard"})
+                 {"role": "human", "node": None, "session": "dashboard"}, displayed)
 ```
 
 Success is HTTP 200: `{"ok": true, "decision": <answer data>}`. The answer data contains `id`, `outcome`, `answer`, `source: "dashboard"`, and `sig`. The event is signed with `human.key` and derived state verifies the signature. Answering does not run a gate, start a node, or accept a submission: the leader's next gate consumes the answer and changes readiness according to the normal rules.
 
 Kinds `review` and `authorization` accept `approved`, `rejected`, `revision_requested`; kinds `direction` and `information` accept only `answered`. Empty answer text is allowed except for sending back/rejecting a plan approval. Unknown fields are ignored. The decision layer serializes concurrent answers, validates current bindings and refuses a second answer.
+
+## POST /api/key/repin
+
+The key-mismatch banner offers a disclosure explaining that this computer will create a fresh signing key and require approval again. Its confirmation button sends exactly `{project, run, displayed, confirm: true}`; `displayed` is the `view.recovery_identity` it showed. This route requires the same token and Host protections as answers, plus this server's exact `Origin` and `Sec-Fetch-Site: same-origin`. It accepts no role field, has no agent/MCP entry point, and calls the human recovery path only after verifying the displayed identity under the run lock. Stale confirmations cannot rotate the key. A new key also makes other runs pinned to the previous key require recovery. The person's existing terminal recovery command remains available. A damaged plan cannot be repaired safely by the page: the leader must post its intended plan again, then the person approves it.
 
 ## Errors
 

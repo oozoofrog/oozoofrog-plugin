@@ -104,6 +104,8 @@ def brief(run_dir, node_id):
               "", "## Run-level checks", "", "```json",
               json.dumps([plan.check_contract(c) for c in current_plan.get("integration_checks", []) +
                           current_plan.get("promoted_checks", [])], ensure_ascii=False, indent=2), "```"]
+    lines += ["", "## Run contract", "", "```json",
+              json.dumps({k:v for k,v in current_plan.items() if k != "nodes"}, ensure_ascii=False, indent=2), "```"]
     learn = _optional_module("learn")
     if learn is not None:
         frozen = current_plan.get("constraints") or []

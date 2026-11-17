@@ -487,7 +487,7 @@ When a rejection has no log, EVIDENCE names offending paths or citation details,
 
 ## 7. Decisions
 
-- `gf decide ask --kind K --question Q [--node N] [--check C] [--purpose P] [--command C] [--files F ...]` appends `decision.ask` and prints the id (`d<seq>`). The tool fills `submission` with the node's current submission id (or `null`). Kinds: `direction`, `information`, `review`, `authorization`. Default purpose: `free`.
+- `gf decide ask --kind K --question Q [--node N] [--check C] [--purpose P] [--command C] [--files F ...]` appends `decision.ask` and prints the id (`d<seq>`). The tool fills `submission` with the node's current submission id (or `null`). Kinds: `direction`, `information`, `review`, `authorization`. Default purpose: `free`. Every role may create only `free` or `hold` requests through this command; gate-owned purposes are rejected with `bad_purpose`. The gate generates and rechecks the exact plan question, context and evidence before accepting a gate-owned answer.
 - Record purposes are `node`, `human_check`, `lane3`, `trajectory`, `hold`, and `free`. `node` binds a planned decision; `human_check` requests a human look at a result; `lane3` asks permission for work that is hard to undo; `trajectory` asks whether to accept work with an unclean path (all attempts used, timeout, or scope overrun); `hold` concerns held work; `free` is an independently asked decision. IDs repeat across runs: clients must bind answers and drafts to project, run, and decision id together.
 - `gf decide wait <id> [--timeout S]` polls the log (1 second interval) until the decision is answered; exit 0 with the answer, exit 1 on timeout.
 - `gf decide list` returns open decisions (for worker and reviewer roles: only those bound to their node).

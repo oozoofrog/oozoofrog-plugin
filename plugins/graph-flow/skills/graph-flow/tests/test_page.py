@@ -270,7 +270,7 @@ assert(!intersectsViewport({x:-100,y:0,width:100,height:80},300,300));
 const detail=zoomLevel('overview',1,.1);assert.deepEqual(detail,{level:'detail',scale:1});
 assert.deepEqual(zoomLevel('detail',MIN_FIT_SCALE,-.1),{level:'overview',scale:1});
 const p=large.overview.positions.n5,point={x:p.x+p.width*.3,y:p.y+p.height*.6},mapped=mapAnchor(large.overview,large.detail,point),d=large.detail.positions.n5;
-assert.equal(mapped.x,d.x+d.width*.3);assert.equal(mapped.y,d.y+d.height*.6);
+assert(Math.abs(mapped.x-(d.x+d.width*.3))<1e-8);assert(Math.abs(mapped.y-(d.y+d.height*.6))<1e-8);
 assert.equal(fitGraph(large,900,h,'overview').level,'overview','selection cannot switch level');
 assert.equal(overviewMarkText(['⌕ 검토','↩','◆ 내가 할 일','? 여기서 물어요']),'⌕ · ↩ · ◆ · ?','every mark remains visible when labels would overflow');
 assert(commandTitle({type:'cmd',command:'test -s a.txt'}));
@@ -602,7 +602,7 @@ live.plan_approval={...live.plan_approval,status:'answered',verified:true,outcom
 docEvents.visibilitychange();await settle();assert.equal(get('attention').hidden,true);
 // A problem is actionable on the record tab too, and existing work asks to continue.
 live.location_mismatch=true;docEvents.visibilitychange();await settle();get('home-tab').click();
-assert.equal(get('attention').hidden,false);assert.match(get('home').textContent,/project/i);
+assert.equal(get('attention').hidden,false);assert.match(get('attention').textContent,/project/i);
 live.location_mismatch=false;live.plan_approval={...approval,id:'d30'};live.decisions=[live.plan_approval];live.has_work=true;
 docEvents.visibilitychange();await settle();assert.match(get('attention').textContent,/Continue/);
 assert.match(get('attention').querySelector('.plan-actions').textContent,/Continue/);

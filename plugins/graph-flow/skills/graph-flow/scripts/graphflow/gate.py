@@ -312,6 +312,13 @@ def gate_final(run_dir, cwd, actor):
     with store.transaction(run_dir) as tx:
         if tx.revision != revision:
             raise core.GFError("stale_result", "plan changed during final gate", core.EXIT_STATE)
+        current = statemod.derive(tx.plan, tx.events)
+        statemod.require_plan_approval(current)
+        for nid, st in current["nodes"].items():
+            commit = (st.get("submission") or {}).get("commit")
+            if commit and (not st.get("merged_head") or
+                           _git(root, "merge-base", "--is-ancestor", commit, "HEAD").returncode):
+                raise core.GFError("not_merged", "%s is not merged into project HEAD" % nid, core.EXIT_STATE)
         tx.append("gate.final", data, actor)
     return data
 

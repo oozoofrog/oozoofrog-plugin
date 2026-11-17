@@ -82,8 +82,12 @@ class Review11Tests(unittest.TestCase):
         self.assertEqual(view['nodes'][0]['contract'],plan.node_contract(p['nodes'][0]))
         # Execute the actual UI projection, enumerating every input the executor consumes.
         js=(Path(__file__).resolve().parents[1]/'scripts/graphflow/page.js').read_text()
-        prefix=js[:js.index('const hasDOM') ] if 'const hasDOM' in js else js
-        script="const m=await import('data:text/javascript;base64,'+Buffer.from("+json.dumps(js)+").toString('base64'));console.log(JSON.stringify(m.checkExecutionFields("+json.dumps(dict(c,command=c['run'],**{k:v for k,v in expected.items() if k not in c}))+",'en')));"
+        shown=dict(c,command=c['run'],**{k:v for k,v in expected.items() if k not in c})
+        script=("const m=await import('data:text/javascript;base64,'+Buffer.from("+json.dumps(js)+
+                ").toString('base64'));const rows=[];m.renderCheckInputs({append:r=>rows.push(r)},"+
+                json.dumps(shown)+",'en',(tag,text)=>({tag,text,dataset:{}}));"+
+                "console.log(JSON.stringify(Object.fromEntries(rows.map(r=>[r.dataset.input,r.text]))));")
+        self.assertIn('renderCheckInputs(item,c,language,el)',js)
         result=subprocess.check_output([NODE,'--input-type=module'],input=script,text=True)
         rendered=json.loads(result)
         self.assertEqual(set(rendered),set(expected))
@@ -154,7 +158,10 @@ class Review11Tests(unittest.TestCase):
         self.assertTrue(self.snapshot()[1]['decisions'][did]['stale'])
         with self.assertRaises(core.GFError) as caught: decisions.answer(self.run,did,'approved','','terminal',HUMAN)
         self.assertEqual(caught.exception.code,'legacy_decision')
-        self.accept(self.set_plan()['decision']);fresh=self.call('gate','a',code=1)['asks'][0]
+        plan_decision=self.set_plan()['decision']
+        current,events,derived=server._snapshot(self.run)
+        self.assertTrue(server._view(current,derived,events,self.project)['nodes'][0]['preapproval_submission'])
+        self.accept(plan_decision);fresh=self.call('gate','a',code=1)['asks'][0]
         self.accept(fresh);self.call('gate','a');self.call('gate','--final')
         self.assertEqual(self.snapshot()[1]['run']['status'],'complete')
         self.assertEqual(self.snapshot()[1]['nodes']['a']['attempts'],1)

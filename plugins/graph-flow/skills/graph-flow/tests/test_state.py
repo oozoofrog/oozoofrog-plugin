@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 import pathlib
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -92,6 +93,18 @@ class Log:
         self.current_plan=None
         if init:
             self.add("run.init", {"run_id": run, "project_root": "/p", "schema_version": 1})
+
+    def materialize_commit(self):
+        root = self.run_dir.parents[2]
+        subprocess.run(["git", "-C", str(root), "init", "-q"], check=True)
+        subprocess.run(["git", "-C", str(root), "-c", "user.name=Test", "-c",
+                        "user.email=test@example.invalid", "-c", "commit.gpgsign=false",
+                        "commit", "--allow-empty", "-qm", "state fixture"], check=True)
+        commit = subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
+        for event in self.events:
+            if event["type"] == "node.submit":
+                event["data"]["commit"] = commit
+        return commit
 
     def __del__(self):
         self.temp.cleanup()
@@ -857,7 +870,8 @@ class RunTests(EnvCase):
 
     def test_complete(self):
         log, p = self.passed_run()
-        log.merge([{"node":"a", "commit":"c1", "head":"h"}])
+        commit = log.materialize_commit()
+        log.merge([{"node":"a", "commit":commit, "head":commit}])
         log.final("failed")
         fseq = log.final("passed")
         r = derive(log, p)["run"]
@@ -1160,7 +1174,8 @@ class ScenarioTests(EnvCase):
 
     def test_s3_reopen_root(self):
         log, p, did = self.build_pwvd()
-        log.merge([{"node":n,"commit":"c1","head":"h"} for n in ("p","w")])
+        commit = log.materialize_commit()
+        log.merge([{"node":n,"commit":commit,"head":commit} for n in ("p","w")])
         log.final("passed")
         self.assertEqual(derive(log, p)["run"]["status"], "complete")
         seq = log.reopen("p")

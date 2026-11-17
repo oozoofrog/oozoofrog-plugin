@@ -113,10 +113,10 @@ Use the `security` grade when the purpose is defensive vulnerability discovery, 
 
 Brief sub-sessions in English and require English reports, preserving original code, paths, and user-facing strings. Sub-sessions never start other sessions and never ask the user directly. Only the leader talks to the user, in the user's language. Human-facing requests are decisions or approvals; implementation checks remain inside the loop.
 
-Never set or change `GF_HOME`, `GF_ROLE=human`, or `GF_HUMAN_TERMINAL`; never run the human answer command (`gf decide answer`). Do not impersonate the person through the dashboard or read signing keys.
+Never set or change `GF_HOME`, `GF_ROLE=human`, or `GF_HUMAN_TERMINAL`; never run the human answer command (`graph-flow decide answer`). Do not impersonate the person through the dashboard or read signing keys.
 
 A check title states exactly what its command verifies. For `grep -q 안내 guide.txt`, write “'안내'라는 낱말이 들어 있어요”, not “안내 내용이 들어 있어요”. Titles, summaries and context shown as labels are not consent: the person must read the goal, owned files, inputs, outputs and commands. A newly promoted check takes effect only after the next plan is set and approved.
 
-If the human key is lost or rotated, ask the person to use their own terminal for `GF_ROLE=human GF_HUMAN_TERMINAL=1 graph-flow --run <run-path> key repin`, then approve the plan again. Never run this recovery command as the agent. For a 0.2.x run, post its current plan with `gf plan set <file>` and wait for one approval before any new execution, including gates.
+If the human key is lost or rotated, ask the person to confirm key recovery on the dashboard, or use their own terminal for `GF_ROLE=human GF_HUMAN_TERMINAL=1 graph-flow --run <run-path> key repin`, then approve the plan again. Never run this recovery command as the agent. For a 0.2.x run, post its current plan with `gf plan set <file>` and wait for one approval before any new execution, including gates.
 
 Agents must never read or WRITE `$GF_HOME/human.key`. First-use pinning cannot be made safe against a writer on the same OS account: planting a known key before the first human answer is part of the accepted same-account limit. Human `key repin` always generates a fresh key; agent setup and server startup do not create one.

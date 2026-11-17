@@ -7,6 +7,7 @@ import copy
 import hashlib
 import hmac
 import json
+import subprocess
 
 from . import core, plan as planning, store
 
@@ -576,6 +577,14 @@ def derive(plan, events):
         and final.get("result") == "passed"
         and final["seq"] > last_reset_seq
     )
+    if complete and run_dir is not None:
+        for node in out_nodes.values():
+            commit = (node.get("submission") or {}).get("commit")
+            if commit and subprocess.run(["git", "-C", str(store.project_of(run_dir)),
+                    "merge-base", "--is-ancestor", commit, "HEAD"],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode:
+                complete = False
+                break
     return {
         "run": {
             "id": run_id,

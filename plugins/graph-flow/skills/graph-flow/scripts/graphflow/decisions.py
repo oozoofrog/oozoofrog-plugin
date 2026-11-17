@@ -112,13 +112,23 @@ def verify(run_id, decision_id, answer_data, decision=None):
         return False
 
 
-def repin(run_dir, actor):
-    """Called only after the CLI's human-terminal guard."""
+def recovery_identity(derived):
+    run = derived["run"]
+    return {"nonce": run.get("run_nonce"),
+            "pinned_key": run.get("human_key_sha256"), "current_key": core.key_fingerprint(),
+            "location": run.get("location"), "plan": run.get("plan_identity"),
+            "repin_seq": run.get("repin_seq", 0)}
+
+
+def repin(run_dir, actor, displayed=None):
+    """Called by the guarded human terminal or confirmed dashboard recovery."""
     if actor.get("role") != "human":
         raise core.GFError("forbidden", "only a human can re-pin a key", core.EXIT_FORBIDDEN)
-    ensure_key(actor, fresh=True)
     with store.transaction(run_dir) as tx:
         derived = state.derive(tx.plan, tx.events)
+        if displayed is not None and displayed != recovery_identity(derived):
+            raise core.GFError("stale_decision", "Read the current recovery request again.", core.EXIT_STATE)
+        ensure_key(actor, fresh=True)
         data = {"run_nonce": secrets.token_hex(32), "human_key_sha256": core.key_fingerprint(),
                 "location": store.location(run_dir)}
         data["sig"] = core.human_sig(tx.run_id, "human.repin", "repinned", "", data)

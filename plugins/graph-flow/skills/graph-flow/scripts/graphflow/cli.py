@@ -81,7 +81,7 @@ def _set_plan(args, actor):
             return result
         revision, sha = tx.write_plan(normalized)
         tx.append("plan.set", {"revision": revision, "plan_sha256": sha,
-                               "plan_identity": identity, "node_counts": plan.node_counts(normalized["nodes"]),
+                               "plan_identity": identity, "plan_title": normalized.get("title") or normalized.get("goal"), "node_counts": plan.node_counts(normalized["nodes"]),
                                "fingerprints": {n["id"]: state.fingerprint(n) for n in normalized["nodes"]},
                                "constraints_applied": ids, "replaced_unverifiable": tx.plan_error}, actor)
         tx.append("constraint.apply", {"ids": ids}, actor)
