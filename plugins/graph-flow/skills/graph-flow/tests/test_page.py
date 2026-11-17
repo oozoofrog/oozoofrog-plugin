@@ -416,6 +416,7 @@ class Element {
   insertBefore(child,before) { if(child.parent)child.remove();child.parent=this;const i=this.children.indexOf(before);this.children.splice(i<0?this.children.length:i,0,child);return child; }
   prepend(...children) { for(const c of children){if(c.parent)c.remove();c.parent=this;} this.children.unshift(...children); }
   remove() { if(this.parent)this.parent.children=this.parent.children.filter(c=>c!==this); }
+  get offsetHeight() { return 0; }
   get firstElementChild() { return this.children[0]; }
   get parentElement() { return this.parent; }
   append(...children) { for (const c of children) { if(c.parent)c.remove(); c.parent=this; this.children.push(c); } }

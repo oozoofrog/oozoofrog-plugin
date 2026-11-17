@@ -1405,6 +1405,7 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
     const portHeight=(options.clearance||0)+40+portGap*(degree+2*Math.max(0,degree-3));
     v.height=overview ? (v.dummy ? 28 : Math.max(v.node?.planned_checks?.some(c=>c.runs_own_files)?104:80,portHeight)) : v.dummy?44:Math.max(detailCardHeight(v.node),portHeight)+Math.max(0,Math.ceil(textWidth(v.node.title,18,9)/(v.width-40))-1)*26;
   }
+  for(const v of vertices.values())if(!v.dummy && options.measure)v.height=Math.max(v.height,options.measure(v.node,v.width));
   const gap=overview?16:18,margin=20;
   const total=ids=>ids.reduce((s,id)=>s+vertices.get(id).height,0)+Math.max(0,ids.length-1)*gap;
   const tallest=Math.max(0,...layers.map(total));
@@ -1501,7 +1502,7 @@ export function compactOverview(layout,width) {
   if(layout.routes.length!==layout.order.length-1 || layout.order.some(id=>layout.routes.filter(r=>r.from===id).length>1 || layout.routes.filter(r=>r.to===id).length>1))return layout;
   if(layout.bounds.width*MIN_FIT_SCALE<=width)return layout;
   const margin=20,gap=36,cardWidth=156,columns=Math.max(1,Math.floor((width/MIN_FIT_SCALE-margin*2+gap)/(cardWidth+gap)));
-  const height=80,rowHeight=height+36;
+  const height=Math.max(80,...layout.cardRects.map(r=>r.height)),rowHeight=height+36;
   const positions={};layout.order.forEach((id,i)=>{positions[id]={...layout.positions[id],x:margin+(i%columns)*(cardWidth+gap),y:margin+Math.floor(i/columns)*rowHeight,width:cardWidth,height};});
   const routes=layout.routes.map((r,i)=>{
     const a=positions[r.from],b=positions[r.to],start={x:a.x+a.width,y:a.y+a.height/2},end={x:b.x,y:b.y+b.height/2};
@@ -1849,15 +1850,16 @@ function attention() {
 }
 let panelFingerprint='',panelNode=null;
 function panel() {
-  const p = $('panel');
+  const shell = $('panel');
   const signature=JSON.stringify([selected,flowNode(selected),view.decisions.filter(d=>d.node===selected),view.timeline.filter(r=>r.node===selected)]);
   if(signature===panelFingerprint)return;
   panelFingerprint=signature;
-  const scroll=selected===panelNode?p.scrollTop:0;panelNode=selected;p.onscroll=null;clear(p);
+  const scroll=selected===panelNode?(shell.querySelector('.panel-body')?.scrollTop||0):0;panelNode=selected;clear(shell);
+  const p=el('div',undefined,'panel-body');
   const node = flowNode(selected);
-  p.hidden = !node; $('flow').classList.toggle('has-selection', !!node);
+  shell.hidden = !node; $('flow').classList.toggle('has-selection', !!node);
   if (!node) return;
-  p.setAttribute('aria-label', title(node));
+  shell.setAttribute('aria-label', title(node));
   const close = button('×', () => {
     const id = selected; selectNode(id);
     [...document.querySelectorAll('.node-card')].find(e => e.dataset.node === id)?.querySelector('.node-header')?.focus({preventScroll:!matchMedia('(max-width:760px)').matches});
@@ -1865,12 +1867,12 @@ function panel() {
   const reference = el('p', undefined, 'ref-line'); reference.append(refChip(node.id, `${node.id} · ${title(node)}`));
   if(workedBy(node))reference.append(el('span',t('workedBy',{who:workedBy(node)})));
   const referenceDetails=el('details');referenceDetails.append(el('summary',t('nodeReference')),reference);
-  const panelBar=el('div',undefined,'panel-bar'); panelBar.append(el('strong',t(node.runLevel?'runChecksTitle':'aboutWork')),close); p.append(panelBar);
+  const panelBar=el('div',undefined,'panel-bar'); panelBar.append(el('strong',title(node)),close); shell.append(panelBar,p);
   for (const d of view.decisions.filter(d => d.node === node.id)) {
     const ask = card(t('yourTurn'), question(d) || purposeWording(d.purpose, language), true);
     ask.append(refChip(d.id, `${d.id} · ${title(node)}`, true, d.free)); p.append(ask);
   }
-  p.append(el('p', node.runLevel?t('runChecksAfter'):status(node), 'panel-status '+cardTone(node)), el('h2', title(node)));
+  p.append(el('p', node.runLevel?t('runChecksAfter'):status(node), 'panel-status '+cardTone(node)));
   p.append(el('p',stateWords(displayState(node,view.decisions),language).whoseMove,'whose-move'));
   if(node.waiting_for_review_correction)p.append(el('p',t('reviewWaiting')));
   if(node.review_needs_correction)p.append(el('p',t('reviewCorrection')));
@@ -2086,7 +2088,7 @@ function closeInvalidDecision(run, decisions, nextView = {decisions}) {
 function showChangedDecision(){const free=!!decisionController.session?.decision.free;unavailableDecisions.push(decisionController.session?.target.id);updateSubtitle();decisionController.close();decisionUI=null;const box=$('decision');clear(box);box.classList.add('decision-changed');box.append(el('h2',t(free?'freeEvidenceChanged':'evidenceChanged')),el('p',t('waitForNewQuestion'),'change-notice'),button(t('backToTab',{tab:t('graph')}),showGraph));$('picker').disabled=false;}
 function goHome() { if (showMode('home') && view) home(); }
 function showGraph() { if (!showMode('flow')) return; attention(); panel(); }
-function selectNode(id) { const n=flowNode(id),d=view.decisions.find(d=>d.node===id); if(n?.kind==='decision'&&d){openDecision(d.id);return;} if (!showMode('flow')) return; selected = selected === id ? null : id; panel(); if(selected)readPlanChange(selected); if (renderer) renderer.select(selected);planBanner?.update?.(); if (selected && matchMedia('(max-width:760px)').matches) $('panel').scrollIntoView({block:'start',behavior:reduced.matches?'auto':'smooth'}); }
+function selectNode(id) { const n=flowNode(id),d=view.decisions.find(d=>d.node===id); if(n?.kind==='decision'&&d){openDecision(d.id);return;} if (!showMode('flow')) return; selected = selected === id ? null : id; panel(); if(selected)readPlanChange(selected); if (renderer) renderer.select(selected);planBanner?.update?.(); }
 function focusHeading(heading) { heading.tabIndex = -1; heading.focus({preventScroll:true}); }
 function openDecision(id, focus = true) {
   replacementDecision=null; decisionNotice=''; notice('');
@@ -2491,6 +2493,7 @@ function nodeCard(n, expanded = false, level = 'detail') {
   if(questions.length)essentials.append(el('p',t('planCardQuestion',{n:questions.length,question:questions.map(q=>plannedQuestion(q)).join(' · ')}),'planned-question'));
   if(answered){const answer=el('details',undefined,'answered-result');answer.append(el('summary',t('answerExpand')),el('p',t('answerGiven',{answer:answered.answer||t(answered.outcome==='approved'?'answeredPermission':'evAnswered')})));essentials.append(answer);}
   root.append(header,essentials,footer,reference);
+  const answer=essentials.querySelector('.answered-result');if(answer)answer.addEventListener('toggle',()=>{if(root.isConnected&&!root.classList.contains('card-measure'))renderer?.remeasure();});
   return root;
 }
 function titleTextRect(title){
@@ -2524,12 +2527,12 @@ function createMap() {
     const after=viewport.getBoundingClientRect();
     point=screenPoint?{x:screenPoint.x-after.x,y:screenPoint.y-after.y}:{x:viewport.clientWidth/2,y:viewport.clientHeight/2};
     viewport.scrollLeft=mapped.x*scale+origin.x-point.x;viewport.scrollTop=mapped.y*scale+origin.y-point.y;
-    rememberScroll();outside();panIntent=true;clearTimeout(snapTimer);snapTimer=setTimeout(snapTitles,160);
+    rememberScroll();outside();panIntent=true;clearTimeout(snapTimer);snapTimer=setTimeout(()=>{snapTitles();revealSelection();},160);
   };
   const start=()=>{
     const plan=!!data.plan_approval && !(data.plan_approval.verified && data.plan_approval.outcome==='approved');
     const position=fitStart(layout,viewport.clientWidth,viewport.clientHeight,scale,data.nodes,plan);
-    viewport.scrollLeft=position.left;viewport.scrollTop=position.top;rememberScroll();panIntent=true;snapTitles();outside();
+    viewport.scrollLeft=position.left;viewport.scrollTop=position.top;rememberScroll();panIntent=true;snapTitles();revealSelection();outside();
   };
   const fit=()=>{
     const next=fitGraph(layouts,viewport.clientWidth-24,viewport.clientHeight-24);
@@ -2618,7 +2621,11 @@ function createMap() {
     const planKey=JSON.stringify([next.nodes.map(n=>[n.id,n.title,n.kind,n.target]),next.edges.map(e=>[e.from,e.to,e.relation,e.label])]);
     if(planKey!==layoutKey){layoutKey=planKey;if(!placed){automatic=true;level='detail';}}
     const reveal=id&&id!==chosenNode;data=next;chosenNode=id;map.classList.toggle('has-expanded',!!id);
-    layouts=Object.fromEntries(['detail','overview'].map(level=>[level,layeredLayout(data.nodes,data.edges.map(e=>({...e,label:e.label?label(e.label):''})),data.decisions,true,{level,language,wrapLongChains:true})]));
+    layouts=Object.fromEntries(['detail','overview'].map(level=>[level,layeredLayout(data.nodes,data.edges.map(e=>({...e,label:e.label?label(e.label):''})),data.decisions,true,{level,language,wrapLongChains:true,measure:(n,width)=>{
+      const sample=nodeCard(n,n.id===id,level);sample.classList.add('card-measure');sample.style.width=width+'px';sample.style.setProperty('--map-text',Math.max(14,12/scale)+'px');stage.append(sample);
+      if(nodes.get(n.id)?.querySelector('.answered-result')?.open && sample.querySelector('.answered-result'))sample.querySelector('.answered-result').open=true;
+      const height=sample.offsetHeight;sample.remove();return height;
+    }})]));
     layouts.overview=compactOverview(layouts.overview,viewport.clientWidth-24);
     layout=layouts[level];
     size();
@@ -2738,7 +2745,7 @@ function createMap() {
     chosenNode=id;
     for(const [key,element] of nodes){element.firstElementChild.classList.toggle('expanded',key===id);element.querySelector('.node-header').setAttribute('aria-expanded',String(key===id));}
     resize(true);size();revealSelection();
-  },wake:size};
+  },wake:size,remeasure:()=>update(rawData,chosenNode)};
 }
 renderer = createMap(); if(view)renderer.update(view,selected);
 }

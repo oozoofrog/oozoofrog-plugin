@@ -464,7 +464,7 @@
     "interactions": [
       {
         "action": "scroll",
-        "selector": "#panel",
+        "selector": "#panel .panel-body",
         "x": 0,
         "y": 180
       }
@@ -580,11 +580,11 @@
     "interactions": [
       {
         "action": "open",
-        "selector": "#panel > details:last-of-type"
+        "selector": "#panel .panel-body > details:last-of-type"
       },
       {
         "action": "scroll",
-        "selector": "#panel",
+        "selector": "#panel .panel-body",
         "x": 0,
         "y": 340
       }
@@ -604,7 +604,7 @@
     "interactions": [
       {
         "action": "scroll",
-        "selector": "#panel",
+        "selector": "#panel .panel-body",
         "x": 0,
         "y": 300
       }
@@ -769,7 +769,7 @@
     "interactions": [
       {
         "action": "scroll",
-        "selector": "#panel",
+        "selector": "#panel .panel-body",
         "x": 0,
         "y": 320
       }
@@ -886,7 +886,7 @@
       },
       {
         "action": "scroll",
-        "selector": "#panel",
+        "selector": "#panel .panel-body",
         "x": 0,
         "y": 520
       }
@@ -1042,7 +1042,7 @@
     "interactions": [
       {
         "action": "scroll",
-        "selector": "#panel",
+        "selector": "#panel .panel-body",
         "x": 0,
         "y": 180
       }

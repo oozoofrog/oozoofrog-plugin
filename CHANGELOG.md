@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Graph Flow dashboard: wrap toolbar counts, pin the selected title above the panel scroll area, keep phone layers opaque, reserve scroll gutters, measure card content, and retain the selected card after fit or level changes.
+
 - Graph Flow screen fixtures: distinguish fit/default overviews, mid-flight runs and the problem inbox; use distinct Korean titles, capture expanded answers, and generate all requested grayscale/glance verification images.
 
 - Graph Flow dashboard: align request/check/title counts, describe plan diffs and held reviews accurately, preserve readable warning/answer slots, explain existing Start/Continue locks, and remove overlapping panel/list headers. Correct superseded-decision targets without changing approval or gate rules.

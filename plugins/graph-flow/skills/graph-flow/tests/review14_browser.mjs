@@ -37,6 +37,19 @@ try {
   assert.equal(await evaluate("document.querySelector('#panel').scrollTop"),scroll);
   await evaluate(`[...document.querySelectorAll('.map-toolbar button')].find(b=>b.textContent==='화면에 맞추기').click()`);await delay(150);
   assert(await evaluate(`(()=>{const v=document.querySelector('.map-viewport').getBoundingClientRect();return (Number(document.querySelector('#map').dataset.scale)>=6/7 && [...document.querySelectorAll('.map-overflow button')].some(b=>!b.hidden&&/→|↓|←|↑/.test(b.textContent))) || [...document.querySelectorAll('#map .node-card')].every(e=>{const r=e.getBoundingClientRect();return r.left>=v.left-.5&&r.right<=v.right+.5&&r.top>=v.top-.5&&r.bottom<=v.bottom+.5;});})()`),'fit with side panel contains every complete card or provides directions at the readable floor');
+  // E1–E6: actual rectangles, not just stylesheet declarations.
+  for(const width of [1440,1000,800]) {
+    await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:false});await delay(100);
+    for(const label of ['상세 보기','간략 보기','화면에 맞추기']) {
+      await evaluate(`[...document.querySelectorAll('.map-toolbar button')].find(b=>b.textContent===${JSON.stringify(label)}).click()`);await delay(100);
+      assert(await evaluate(`(()=>{const e=document.querySelector('.map-visible'),r=e.getBoundingClientRect(),t=document.querySelector('.map-toolbar').getBoundingClientRect();return e.scrollWidth<=e.clientWidth+1&&r.left>=t.left&&r.right<=t.right})()`),'E1 whole count phrases fit the toolbar');
+      assert(await evaluate(`(()=>{const e=document.querySelector('#map [data-node="n0"]'),r=e.getBoundingClientRect(),v=document.querySelector('.map-viewport').getBoundingClientRect();return r.left>=v.left&&r.right<=v.right&&r.top>=v.top&&r.bottom<=v.bottom})()`),'E3 selected card survives fit and level changes');
+      assert(await evaluate(`(()=>{const v=document.querySelector('.map-viewport');return getComputedStyle(v).scrollbarGutter==='stable both-edges'&&v.offsetWidth>v.clientWidth})()`),'E5 reserve scrollbar gutter');
+      assert(await evaluate(`[...document.querySelectorAll('#map .node-card')].every(e=>e.scrollHeight<=e.clientHeight+1 && e.getBoundingClientRect().height<=e.parentElement.getBoundingClientRect().height+1)`),'E6 measured content fits every card');
+    }
+    await evaluate(`document.querySelector('.panel-body').scrollTo(0,180)`);await delay(150);
+    assert(await evaluate(`(()=>{const b=document.querySelector('.panel-bar').getBoundingClientRect(),p=document.querySelector('.panel-body').getBoundingClientRect();return b.bottom<=p.top+.5&&document.querySelector('.panel-bar').textContent.includes('안내 단계 0')})()`),'E2 header and selected title stay outside the scroll surface');
+  }
   await evaluate(`document.querySelector('#accessible').open=true`);await delay(100);
   assert(await evaluate(`document.querySelector('.plan-actions button.primary').disabled`),'list view cannot approve');
   await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
@@ -49,6 +62,7 @@ try {
   assert(await evaluate(`!document.querySelector('.plan-actions button.primary').disabled`),'reading all phone cards unlocks approval');
   await evaluate(`document.querySelector('#phone-flow [data-node="n0"] .node-header').click()`);await delay(100);
   assert(await evaluate(`document.querySelector('.plan-actions button.primary').disabled`),'detail overlay cannot approve');
+  assert(await evaluate(`(()=>{const p=document.querySelector('#panel').getBoundingClientRect(),a=document.querySelector('.plan-actions').getBoundingClientRect();return p.bottom<=a.top&&getComputedStyle(document.querySelector('#accessible')).visibility==='hidden'&&getComputedStyle(document.querySelector('#flow'),'::before').position==='fixed'})()`),'E4 phone overlay closes the gap above the action bar '+JSON.stringify(await evaluate(`({panel:document.querySelector('#panel').getBoundingClientRect().toJSON(),actions:document.querySelector('.plan-actions').getBoundingClientRect().toJSON(),accessible:getComputedStyle(document.querySelector('#accessible')).visibility,backdrop:getComputedStyle(document.querySelector('#flow'),'::before').position,height:document.body.style.getPropertyValue('--plan-actions-height'),css:['position','top','bottom','height','minHeight','maxHeight'].map(k=>[k,getComputedStyle(document.querySelector('#panel'))[k]])})`)));
   assert.deepEqual(errors,[]);
 } finally {
   ws?.close();

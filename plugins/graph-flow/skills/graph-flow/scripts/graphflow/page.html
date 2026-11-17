@@ -131,6 +131,24 @@ button:disabled,button.primary:disabled,.plan-actions button:disabled{background
 .node-card:has(.answered-result[open]){overflow:auto}.node-essentials:has(.answered-result){overflow:auto;min-height:0}
 .map-overflow{padding-bottom:4px}.map-visible,.map-overflow button{font-size:13px}
 @media(max-width:760px){body:has(.plan-actions){padding-bottom:var(--plan-actions-height,220px)}#accessible{scroll-margin-bottom:var(--plan-actions-height,220px)}}
+/* Reading surfaces keep whole phrases and their own scroll gutters. */
+.map-toolbar,#map[data-level="overview"] .map-toolbar{flex-wrap:wrap}
+.map-toolbar .map-overflow{flex:1 1 460px;flex-wrap:wrap;justify-content:flex-start;overflow:visible;white-space:normal}
+.map-visible{flex:1 1 290px;white-space:normal;text-wrap:pretty}
+.map-viewport{overflow:scroll;scrollbar-gutter:stable both-edges}
+#panel,#flow:has(#attention[hidden]) #panel{display:flex;flex-direction:column;padding:0;overflow:hidden;scroll-padding:0}
+#panel::after{display:none}.panel-bar{flex:none;margin:0;padding:14px 18px;font-size:16px;color:var(--ink)}
+.panel-body{min-height:0;overflow:auto;scrollbar-gutter:stable;padding:16px 18px 32px;scroll-snap-type:y mandatory;scroll-padding-top:16px}
+.panel-body>*,.panel-body details>*,.panel-body li{scroll-snap-align:start}
+.node-card{height:auto;min-height:100%;overflow:hidden}.node-card>*{flex-shrink:0}
+.node-card.card-measure{position:absolute;visibility:hidden;min-height:0;height:auto;pointer-events:none}
+.node-card:has(.answered-result[open]),.node-essentials:has(.answered-result){overflow:visible}
+.overview-card .node-header{height:auto;min-height:78px}
+@media(max-width:760px){
+ #flow.has-selection::before{content:"";position:fixed;inset:0;background:white;z-index:10}
+ #flow.has-selection #panel{position:fixed;inset:12px 12px var(--plan-actions-height,12px);height:calc(100dvh - 12px - var(--plan-actions-height,12px))!important;max-height:none!important;z-index:11;padding:0;overflow:hidden}
+ body:has(#flow.has-selection:not([hidden])) #accessible{visibility:hidden}
+}
 </style>
 <script type="module" nonce="__NONCE__" src="/static/page.js"></script>
 </head>
