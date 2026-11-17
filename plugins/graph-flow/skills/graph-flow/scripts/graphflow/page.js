@@ -31,7 +31,7 @@ const STRINGS = {
     "running": "만들고 있어요",
     "retrying": "고치고 있어요",
     "submitted": "검토를 기다려요",
-    "awaiting": "내가 할 일",
+    "awaiting": "내 답을 기다리는 일",
     "held": "다음 방향을 기다려요",
     "exhausted": "다음 계획이 필요해요",
     "noAction": "지금은 하실 일이 없어요. 세 번 안에 통과하지 못하면 알려 드릴게요.",
@@ -143,7 +143,7 @@ const STRINGS = {
     "showAll": "전체 보기",
     "evStarted": "실행 기록을 만들었어요",
     "evPlanned": "계획을 올렸어요",
-    "evWording": "문구를 바꿨어요 · {rev}번째 계획",
+    "evWording": "문구를 바꿨어요 · {rev}번째 계획 · 이전 계획 승인은 유지돼요",
     "evQuestionWording": "질문에 쓰일 문구가 바뀌었어요 · {nodes}",
     "evReplanned": "계획을 바꿨어요 · {rev}번째 계획",
     "evRunning": "{n}번째 시도 중",
@@ -261,7 +261,7 @@ const STRINGS = {
     "decisionWork": "관련 일 · {title}",
     "fitAll": "전체 보기",
     "readScale": "읽기 크기",
-    "planSummary": "일 {work}개 · 검토 {review}개 · 결정 {decision}개",
+    "planSummary": "일 {work}개 · 검토 {review}개 · 결정 단계 {decision}개",
     "planStart": "시작",
     "planStartEffect": "담당자가 계획의 일을 시작해요.",
     "planBackEffect": "고칠 내용을 담당자에게 보내요.",
@@ -287,25 +287,25 @@ const STRINGS = {
     "reviewKey": "⌕ 검토 작업",
     "returnedKey": "↩ 고치러 돌아옴",
     "pendingKey": "○ 시작 전",
-    "planChecklist": "자동 검사 {checks}개 · 예정된 결정 {decisions}번",
+    "planChecklist": "자동 검사 {checks}개 · 예정된 내 응답 {decisions}개",
     "planReturned": "돌려보낸 계획",
     "planUnverified": "답이 확인되지 않았어요",
     "planUnverifiedHelp": "이 답으로는 일을 시작할 수 없어요. 담당자가 계획을 다시 올리면 새 결정에 답해 주세요.",
     "planKeyMismatch": "승인을 확인할 수 없어요. 키 분실·교체, 프로젝트 이동, 기록 변조 중 무엇 때문인지는 알 수 없어요.",
     "planTampered": "계획 파일이 기록과 달라요",
-    "planTamperedHelp": "진행 담당자가 계획을 다시 올려야 해요. 새 계획이 올라오면 여기서 승인해 주세요.",
+    "planTamperedHelp": "진행 담당자가 계획을 다시 올려야 해요. 새 계획이 올라오면 읽고 시작해 주세요.",
     "planGoal": "실제 지시",
     "planOwns": "맡은 파일",
     "planNeeds": "받는 것",
     "planReads": "읽을 자료",
-    "planIntegration": "전체 결과 검사",
+    "planIntegration": "전체 결과 확인",
     "planPromoted": "이 계획에 포함된 고정 검사",
-    "planQuestions": "예정된 결정 {decisions}번 · 어디에서 물을까요?",
+    "planQuestions": "예정된 내 응답 {decisions}개 · 어디에서 물을까요?",
     "planCardChecks": "자동 검사 {n}개 · {first}",
     "planCardDelivery": "결과 · {files}",
-    "planCardQuestion": "결정 {n}개 · {question}",
+    "planCardQuestion": "내 응답 {n}개 · {question}",
     "noPlannedChecks": "별도 검사가 없어요",
-    "supersededNotice": "결정 {old}에서 {newParticle} 바뀌었어요. 현재 계획을 확인해 주세요.",
+    "supersededNotice": "이전 결정 {old} 대신 현재 결정 {new}에 답해 주세요.",
     "supersededLink": "현재 결정 {id} 보기",
     "checkNotMet": "통과 못 함 · {title}",
     "lineKinds": "선의 뜻",
@@ -323,8 +323,8 @@ const STRINGS = {
     "exitFailure": "실패 · 종료 코드 {n}",
     "planKeyHeading": "확인 키가 바뀌었어요",
     "oldRunApproval": "이전 버전(0.2.1)에서 시작한 실행이에요. 담당자가 계획을 다시 올리면 읽고 계속할 수 있어요.",
-    "planMissing": "계획을 올려 주세요",
-    "planMissingHelp": "진행 담당자가 현재 계획을 올리면 여기서 승인할 수 있어요.",
+    "planMissing": "담당자가 계획을 올리기를 기다려요",
+    "planMissingHelp": "진행 담당자가 현재 계획을 올리면 읽고 계속할 수 있어요.",
     "planReplaced": "확인할 수 없던 계획을 교체했어요. 모든 일을 다시 확인해 주세요.",
     "unverifiedAnswer": "확인되지 않은 답 · 승인으로 인정되지 않아요",
     "unverifiedAuthor": "내가 보낸 답인지 확인할 수 없어요",
@@ -336,9 +336,9 @@ const STRINGS = {
     "runConstraints": "지켜야 할 조건",
     "countWork": "일 {n}개",
     "countReview": "검토 {n}개",
-    "countDecision": "결정 {n}개",
+    "countDecision": "결정 단계 {n}개",
     "countChecks": "자동 검사 {n}개",
-    "countQuestions": "질문 {n}개",
+    "countQuestions": "자유 질문 {n}개",
     "questionsMark": "? 여기서 물어요",
     "citesCheck": "인용한 파일과 줄이 실제로 있는지",
     "humanCheck": "사람이 결과를 확인해요",
@@ -361,7 +361,7 @@ const STRINGS = {
     "noWorkRecorded": "아직 실행한 작업 기록이 없어요. 승인 전에는 시작하지 않아요.",
     "planOpen": "계획 읽기",
     "futureDelivery": "{who}에서 받아요",
-    "visiblePlan": "일 {total}개 + 전체 확인 · {n}개 제목이 보여요",
+    "visiblePlan": "계획 카드 {total}개 + 전체 결과 확인 1개 · {n}개 제목이 보여요",
     "listAll": "목록으로 모두 읽기",
     "questionsForNode": "여기서 결정할 내용",
     "findingsOutput": "검토 의견",
@@ -390,7 +390,7 @@ const STRINGS = {
     "evidenceChanged": "결정을 요청한 뒤 파일이나 근거가 바뀌었어요. 이 결정에는 답할 수 없어요.",
     "legacyDecision": "이전 버전의 결정이에요. 담당자가 검사를 다시 요청하면 새 결정이 나타나요.",
     "preapprovalSubmitted": "승인 전에 제출됨",
-    "preapprovalExplanation": "승인 전에 제출된 결과가 있어요 · 승인하면 이어서 검사해요",
+    "preapprovalExplanation": "계획을 읽기 전에 제출된 결과가 있어요 · 계속하면 이어서 검사해요",
     "keyRecover": "확인 키를 새로 만들어요",
     "keyConfirm": "이 컴퓨터에 새 확인 키를 만들어요. 열려 있는 모든 실행에서 계획 승인을 다시 받아요. 이미 실행한 일은 되돌리지 않아요. 승인 없이 새 일을 시작하는 기능은 아니에요.",
     "keyConfirmAction": "확인 키를 새로 만들어요",
@@ -404,23 +404,23 @@ const STRINGS = {
     "reviewCorrectionShort": "검토자가 의견을 고쳐요",
     "reviewWaitingShort": "검토자 답을 기다려요",
     "waitForNewQuestion": "담당자가 다시 물어볼 때까지 기다려 주세요.",
-    "keyRepinned": "확인 키를 새로 만들었어요. 계획을 한 번 더 승인해 주세요.",
+    "keyRepinned": "확인 키를 새로 만들었어요. 계획을 읽고 {action}을 눌러 주세요.",
     "oldResults": "승인 전에 제출된 결과예요. 모두 읽고 계속하면 다음 단계에서 검사해요.",
     "whenAfterWork": "일을 마친 뒤, 받아들이기 전에 물어요.",
     "whenDecision": "앞선 일이 끝난 뒤, 다음 일을 시작하기 전에 물어요.",
     "decisionAccept": "허락하면 다음 일이 차례로 시작될 수 있어요: {tasks}.",
     "decisionReject": "허락하지 않으면 계획을 고쳐서 다시 받을 때까지 다음 일을 시작하지 않아요.",
     "ownCheck": "이 검사는 이 일이 직접 쓰는 파일을 실행해요.",
-    "plannedCheck": "확인할 것 · {title}",
+    "plannedCheck": "검사 항목 · {title}",
     "planChangeIds": "결정 {old}에서 {newParticle} 바뀌었어요. 바뀐 항목을 모두 열어 주세요.",
     "beforeAfter": "이전 → 이후",
     "changesRead": "바뀐 항목을 모두 읽었어요.",
     "roleTool": "작업 흐름 프로그램",
     "checkDetails": "실행 설정 자세히",
     "repeatedSteps": "{n}단계가 같은 검사 형식이에요. 각 일의 이름과 파일을 확인해 주세요.",
-    "field_run": "명령",
+    "field_run": "실행 명령",
     "field_cwd": "실행 폴더",
-    "field_timeout_s": "시간 제한",
+    "field_timeout_s": "제한 시간",
     "field_goal": "할 일",
     "field_title": "이름",
     "field_owns": "맡은 파일",
@@ -447,10 +447,10 @@ const STRINGS = {
     "requirements": "요청한 내용",
     "viewPlan": "계획 보기",
     "ownCheckMark": "⚠ 검사 파일도 수정 가능",
-    "ownCheckEffect": "이 일을 하는 쪽이 검사 내용도 바꿀 수 있어요.",
+    "ownCheckEffect": "작업자가 검사 실행에 쓰이는 파일도 바꿀 수 있어요.",
     "holdExact": "통과하지 못한 검사·검토 의견 {n}개가 있어요: {items}. 그래도 받아들일까요?",
-    "holdAccept": "이 일을 받아들여요. {tasks} 일을 시작할 수 있어요.",
-    "holdReject": "고쳐서 다시 받을 때까지 다음 일을 시작하지 않아요: {tasks}.",
+    "holdAccept": "실패한 검사·검토 의견을 받아들이고 남은 통과 조건을 확인해요.",
+    "holdReject": "이 결과는 통과하지 않아요. 담당자가 내용을 고쳐야 해요.",
     "returnTrace": "↩ {n}번",
     "inputsReady": "앞선 일은 끝났어요 · 시작을 기다려요",
     "commandDefault": "검사 명령이 성공해요",
@@ -467,7 +467,7 @@ const STRINGS = {
     "durationSeconds": "{value}초",
     "visibleTitles": "{n}개 제목이 보여요",
     "moreDetails": "자세히 보기",
-    "holdReviewExact": "사람 검토 의견 {n}개가 통과하지 못했어요: {items}. 그래도 받아들일까요?",
+    "holdReviewExact": "검토 일의 의견 {n}개가 통과하지 못했어요: {items}. 그래도 받아들일까요?",
     "questionRef": "질문 {id}",
     "freeRead": "읽고 답하기",
     "evDecisionAsked": "결정 요청",
@@ -481,8 +481,8 @@ const STRINGS = {
     "optionalNote": "덧붙일 말이 있으면 적어 주세요",
     "fileUnread": "열기 · {file}",
     "fileRead": "✓ 읽었어요 · {file}",
-    "ownCheckCount": "⚠ 검사 {n}개는 자신이 검사하는 파일을 바꿀 수 있어요.",
-    "planGraphReason": "그래프의 모든 카드를 읽은 뒤 시작할 수 있어요. 목록이나 상세 창을 닫고 흐름을 살펴봐 주세요.",
+    "ownCheckCount": "검사 실행 파일을 맡은 일 {n}개",
+    "planGraphReason": "그래프의 모든 카드를 읽은 뒤 {action}할 수 있어요. 목록이나 상세 창을 닫고 흐름을 살펴봐 주세요.",
     "planRemainingReason": "그래프에서 아직 읽지 않은 카드가 {n}개예요. 스크롤해서 모두 살펴봐 주세요.",
     "checkProgress": "자동 검사 {total}개 중 {passed}개 통과",
     "humanCheckCount": "{n}개는 내가 확인",
@@ -493,7 +493,7 @@ const STRINGS = {
     "freeTab": "{tab}에서 연 질문",
     "freeAnswerHere": "질문 {id} · 읽고 답하기",
     "decisionOnly": "이 결정에는 설명, 근거, 읽을 파일이 없어요.",
-    "countPlannedDecision": "내가 결정할 것 {n}개",
+    "countPlannedDecision": "예정된 내 응답 {n}개",
     "freeChanged": "질문 내용이나 근거가 바뀌었어요 — 다시 읽어 주세요",
     "keyDecisionReplaced": "확인 키를 새로 만들어 이 결정을 교체했어요.",
     "evidenceDecisionReplaced": "근거가 바뀌어 이 결정을 교체했어요.",
@@ -503,7 +503,27 @@ const STRINGS = {
     "permissionNoEvidence": "허락할 내용을 확인할 자료가 없어요. 담당자에게 자료를 요청하거나 허락하지 않을 수 있어요.",
     "permissionConfirmBlind": "자료 없이 이 일을 허락할게요",
     "permissionAcceptBlind": "자료 없이 허락하기",
-    "permissionBlindHint": "자료 없이 허락하려면 위 내용을 확인해 주세요."
+    "permissionBlindHint": "자료 없이 허락하려면 위 내용을 확인해 주세요.",
+    "pendingResponses": "지금 답할 요청 {n}개",
+    "yourTurnCount": "내가 할 일 {n}개",
+    "authorWhy": "작성자가 적은 이유",
+    "scopeBody": "변경한 파일이 이 일에 맡긴 범위 안에 있는지 검사해요.",
+    "graphReadDone": "이 계획의 카드 {n}개를 모두 읽었어요. 지금 화면 밖의 카드도 포함해요.",
+    "changesReadReason": "바뀐 항목을 모두 열어 내용을 확인해 주세요.",
+    "oldReadReason": "이전 제출물과 파일을 모두 읽고 계속해 주세요.",
+    "diffAdded": "{value} 추가",
+    "diffRemoved": "{value} 삭제",
+    "diffEmpty": "값 없음",
+    "field_checks": "검사",
+    "replacesRefused": "내가 돌려보낸 결정 {id} 대신 새로 묻는 내용이에요.",
+    "answerGiven": "내가 보낸 답 · {answer}",
+    "answerExpand": "보낸 답 모두 보기",
+    "planItemsTable": "전체 항목 {n}개 표로 보기",
+    "detailsSummary": "판단 근거",
+    "freeAnswerEffect": "답을 담당자에게 전달해요.",
+    "offFinal": "전체 결과 확인 1개",
+    "genericOutput": "결과",
+    "plannedHumanCheck": "내가 확인할 내용 · {title}"
   },
   "en": {
     "flow": "Whole flow",
@@ -536,7 +556,7 @@ const STRINGS = {
     "running": "Making it",
     "retrying": "Redoing work that came back",
     "submitted": "Waiting for review",
-    "awaiting": "Your turn",
+    "awaiting": "Work awaiting my answer",
     "held": "Waiting for the next direction",
     "exhausted": "Needs a new plan",
     "noAction": "Nothing to do here now. You’ll be told if three attempts are not enough.",
@@ -648,7 +668,7 @@ const STRINGS = {
     "showAll": "Show all",
     "evStarted": "The run record was created",
     "evPlanned": "Plan posted",
-    "evWording": "Wording updated · plan {rev}",
+    "evWording": "Wording updated · plan {rev} · earlier plan approval still stands",
     "evQuestionWording": "Wording used in a question changed · {nodes}",
     "evReplanned": "Plan changed · revision {rev}",
     "evRunning": "attempt {n} in progress",
@@ -766,7 +786,7 @@ const STRINGS = {
     "decisionWork": "About · {title}",
     "fitAll": "Fit all",
     "readScale": "Readable size",
-    "planSummary": "Work: {work} · Reviews: {review} · Decisions: {decision}",
+    "planSummary": "Work: {work} · Reviews: {review} · Decision steps: {decision}",
     "planStart": "Start",
     "planStartEffect": "Let the coordinator start this work.",
     "planBackEffect": "Send changes to the coordinator.",
@@ -792,25 +812,25 @@ const STRINGS = {
     "reviewKey": "⌕ Review work",
     "returnedKey": "↩ Returned for changes",
     "pendingKey": "○ Not started",
-    "planChecklist": "{checks} automated checks · {decisions} planned decisions",
+    "planChecklist": "{checks} automated checks · {decisions} planned responses",
     "planReturned": "Returned plan",
     "planUnverified": "Your answer could not be verified",
     "planUnverifiedHelp": "This answer cannot start work. Ask the coordinator to post the plan again, then answer the new decision.",
     "planKeyMismatch": "Approval cannot be verified. This could be a lost/replaced key, a moved project, or altered records; we cannot tell which.",
     "planTampered": "The plan file differs from its record",
-    "planTamperedHelp": "The coordinator must post the plan again. Then approve the replacement here.",
+    "planTamperedHelp": "The coordinator must repost the plan. Read it and press Start when it arrives.",
     "planGoal": "Actual instruction",
     "planOwns": "Owned files",
     "planNeeds": "Inputs",
     "planReads": "Files to read",
-    "planIntegration": "Integration checks",
+    "planIntegration": "Whole-result checks",
     "planPromoted": "Fixed checks in this plan",
-    "planQuestions": "{decisions} planned decisions · Where will you be asked?",
+    "planQuestions": "Planned responses: {decisions} · where?",
     "planCardChecks": "{n} automated checks · {first}",
     "planCardDelivery": "Delivers · {files}",
-    "planCardQuestion": "{n} decisions · {question}",
+    "planCardQuestion": "Responses: {n} · {question}",
     "noPlannedChecks": "No separate checks",
-    "supersededNotice": "Decision {old} was replaced by {new}. Read the current plan.",
+    "supersededNotice": "Answer current decision {new}, which replaces decision {old}.",
     "supersededLink": "Read current decision {id}",
     "checkNotMet": "Did not pass · {title}",
     "lineKinds": "Lines",
@@ -828,8 +848,8 @@ const STRINGS = {
     "exitFailure": "Failed · exit code {n}",
     "planKeyHeading": "The verification key has changed",
     "oldRunApproval": "This run started in an earlier version (0.2.1). Read the reposted plan to continue.",
-    "planMissing": "Post a plan first",
-    "planMissingHelp": "The coordinator must post the current plan before you can approve it here.",
+    "planMissing": "Waiting for the coordinator to post the plan",
+    "planMissingHelp": "Read and continue once the coordinator posts the current plan.",
     "planReplaced": "An unverifiable plan was replaced. Review all work again.",
     "unverifiedAnswer": "Unverified answer · does not count as approval",
     "unverifiedAuthor": "Cannot verify that this answer came from you",
@@ -841,9 +861,9 @@ const STRINGS = {
     "runConstraints": "Constraints",
     "countWork": "Work: {n}",
     "countReview": "Reviews: {n}",
-    "countDecision": "Decisions: {n}",
+    "countDecision": "Decision steps: {n}",
     "countChecks": "{n} automated checks",
-    "countQuestions": "Questions: {n}",
+    "countQuestions": "Free questions: {n}",
     "questionsMark": "? A question here",
     "citesCheck": "whether cited files and lines exist",
     "humanCheck": "A person checks the result",
@@ -866,7 +886,7 @@ const STRINGS = {
     "noWorkRecorded": "No work has been recorded. Execution waits for approval.",
     "planOpen": "Read plan",
     "futureDelivery": "To be received by {who}",
-    "visiblePlan": "{total} tasks + final check · {n} titles visible",
+    "visiblePlan": "{total} plan cards + 1 whole-result card · {n} titles visible",
     "listAll": "Read the complete list",
     "questionsForNode": "Decisions at this step",
     "findingsOutput": "Review notes",
@@ -895,7 +915,7 @@ const STRINGS = {
     "evidenceChanged": "Files or evidence changed after this decision was requested. You cannot answer it.",
     "legacyDecision": "This decision is from an older version. Running the gate requests it again.",
     "preapprovalSubmitted": "Submitted before approval",
-    "preapprovalExplanation": "A result was submitted before approval · checks resume after approval",
+    "preapprovalExplanation": "Results were submitted before plan review · Continue resumes checking",
     "keyRecover": "Make a new verification key",
     "keyConfirm": "Creates a new key on this computer. Every open run needs plan approval again. It does not undo completed actions.",
     "keyConfirmAction": "Make a new verification key",
@@ -909,14 +929,14 @@ const STRINGS = {
     "reviewCorrectionShort": "Reviewer corrects findings",
     "reviewWaitingShort": "Waiting for reviewer corrections",
     "waitForNewQuestion": "Please wait for the leader to ask again.",
-    "keyRepinned": "A new verification key was created. Please approve the plan again.",
+    "keyRepinned": "The approval key was replaced. Read the plan, then press {action}.",
     "oldResults": "These results were submitted before approval. Read each result; continuing allows them to be checked next.",
     "whenAfterWork": "Asked after the work is submitted, before accepting it.",
     "whenDecision": "Asked after prerequisites finish, before dependent work starts.",
     "decisionAccept": "Permitting this releases these steps in order: {tasks}.",
     "decisionReject": "If you decline, downstream work waits until a revised plan is received.",
     "ownCheck": "This check runs files this task may write.",
-    "plannedCheck": "Will check · {title}",
+    "plannedCheck": "Check expectation · {title}",
     "planChangeIds": "Decision {old} was replaced by {new}. Open each change.",
     "beforeAfter": "Before → after",
     "changesRead": "All changed items have been opened.",
@@ -952,10 +972,10 @@ const STRINGS = {
     "requirements": "Requirements",
     "viewPlan": "View plan",
     "ownCheckMark": "⚠ Check file can also change",
-    "ownCheckEffect": "The worker doing this task can also change the check.",
+    "ownCheckEffect": "The worker can also change files used to run the check.",
     "holdExact": "{n} checks or review findings did not pass: {items}. Accept anyway?",
-    "holdAccept": "This piece is accepted and {tasks} can start.",
-    "holdReject": "These steps wait until corrected work is received: {tasks}.",
+    "holdAccept": "Accept the failed checks or review findings and evaluate the remaining gate conditions.",
+    "holdReject": "This result does not pass. The coordinator must arrange corrections.",
     "returnTrace": "↩ {n} returns",
     "inputsReady": "Inputs are delivered · waiting to start",
     "commandDefault": "The check command succeeds",
@@ -972,7 +992,7 @@ const STRINGS = {
     "durationSeconds": "{value} seconds",
     "visibleTitles": "{n} titles visible",
     "moreDetails": "Details",
-    "holdReviewExact": "{n} human review findings did not pass: {items}. Accept anyway?",
+    "holdReviewExact": "Review tasks reported {n} findings that did not pass: {items}. Accept anyway?",
     "questionRef": "Question {id}",
     "freeRead": "Read and answer",
     "evDecisionAsked": "Decision requested",
@@ -986,8 +1006,8 @@ const STRINGS = {
     "optionalNote": "Add a note if you wish",
     "fileUnread": "Open · {file}",
     "fileRead": "✓ Read · {file}",
-    "ownCheckCount": "⚠ {n} checks can change the files they check.",
-    "planGraphReason": "Read every graph card before starting. Close the list or detail overlay and inspect the flow.",
+    "ownCheckCount": "Tasks owning check execution files: {n}",
+    "planGraphReason": "Read every graph card before you {action}. Close the list or detail overlay and inspect the flow.",
     "planRemainingReason": "{n} graph cards remain unread. Scroll through the whole flow.",
     "checkProgress": "{passed} of {total} automated checks passed",
     "humanCheckCount": "{n} for you to review",
@@ -998,7 +1018,7 @@ const STRINGS = {
     "freeTab": "Question opened from {tab}",
     "freeAnswerHere": "Question {id} · Read and answer",
     "decisionOnly": "This decision has no explanation, evidence, or attached files.",
-    "countPlannedDecision": "{n} decisions for you",
+    "countPlannedDecision": "Planned responses: {n}",
     "freeChanged": "The question or evidence changed — read it again",
     "keyDecisionReplaced": "A new verification key replaced this decision.",
     "evidenceDecisionReplaced": "Changed evidence replaced this decision.",
@@ -1008,15 +1028,56 @@ const STRINGS = {
     "permissionNoEvidence": "There is no evidence for this permission. Ask the coordinator for evidence, or decline permission.",
     "permissionConfirmBlind": "I will allow this work without evidence",
     "permissionAcceptBlind": "Allow without evidence",
-    "permissionBlindHint": "To allow without evidence, confirm the statement above."
+    "permissionBlindHint": "To allow without evidence, confirm the statement above.",
+    "pendingResponses": "Requests awaiting your answer: {n}",
+    "yourTurnCount": "Your turn: {n}",
+    "authorWhy": "Author’s reason",
+    "scopeBody": "Checks that changed files stay within this task’s assigned paths.",
+    "graphReadDone": "All {n} cards of this plan have been read, including cards now outside the viewport.",
+    "changesReadReason": "Open each changed item to read it.",
+    "oldReadReason": "Read each earlier submission and its files before continuing.",
+    "diffAdded": "Added {value}",
+    "diffRemoved": "Removed {value}",
+    "diffEmpty": "No value",
+    "field_checks": "Checks",
+    "replacesRefused": "This replaces decision {id}, which you sent back.",
+    "answerGiven": "Your answer · {answer}",
+    "answerExpand": "Read the full answer",
+    "planItemsTable": "All {n} items as a table",
+    "detailsSummary": "Decision evidence",
+    "freeAnswerEffect": "Send your answer to the coordinator.",
+    "offFinal": "1 whole-result card",
+    "genericOutput": "result",
+    "plannedHumanCheck": "Your review question · {title}"
   }
 };
 // UI_STRINGS_END
 
 export function contractDiff(before,after,path='') {
   if(JSON.stringify(before)===JSON.stringify(after))return [];
+  if(Array.isArray(before)||Array.isArray(after)) {
+    const keyed=items=>Object.fromEntries((items||[]).map((v,i)=>[v?.id??i,v]));
+    return contractDiff(keyed(before),keyed(after),path);
+  }
   if(before && after && typeof before==='object' && typeof after==='object')return [...new Set([...Object.keys(before),...Object.keys(after)])].flatMap(k=>contractDiff(before[k],after[k],path?path+'.'+k:k));
-  return [{field:path,before:before??'—',after:after??'—'}];
+  if((before && typeof before==='object')||(after && typeof after==='object')) {
+    const value=before||after;
+    if(value.type && (value.run || value.prompt || value.id))return [{field:path,before:before??null,after:after??null}];
+    return contractDiff(before||{},after||{},path);
+  }
+  return [{field:path,before:before??null,after:after??null}];
+}
+export function actionableDecisions(data, unavailable=[]) {
+  if(data.plan_error||data.key_mismatch||data.location_mismatch)return [];
+  return (data.decisions||[]).filter(d=>!unavailable.includes(d.id)&&!(data.stale_decisions||[]).some(s=>s.id===d.id));
+}
+export function titleVisibility(rect,width,height) {
+  return !offscreenDirection(rect,width,height);
+}
+export function contractDiffText(field,language='en') {
+  const words=STRINGS[language],parts=field.field.split('.');
+  const name=parts.map(k=>words['field_'+k]||k).join(' · ');
+  return name+' · '+durationDiff(field,language);
 }
 export function releasedNodes(nodes,id) {
   const reached=new Set([id]);let changed=true;
@@ -1066,6 +1127,9 @@ export function checkExecutionFields(c,language='en') {
   const words=STRINGS[language], format=(key,value)=>words[key].replace('{value}',String(value));
   return {run:c.run ?? c.command,cwd:format('checkCwd',c.cwd),timeout_s:format('checkTimeout',c.timeout_s),
     environment:words.checkEnvironment,shell:format('checkShell',c.shell)};
+}
+export function uniqueChecks(checks) {
+  const seen=new Set();return checks.filter(c=>{if(c.type!=='cmd')return true;const key=JSON.stringify([c.run||c.command,c.cwd,c.timeout_s,c.shell,c.environment]);if(seen.has(key))return false;seen.add(key);return true;});
 }
 export function createDecisionController() {
   let session = null, view = null, chosen = null;
@@ -1161,7 +1225,10 @@ export function particle(value, pair='이/가') {
   const [closed,open]=pair.split('/'); return text+(final && !(pair==='으로/로'&&final===8)?closed:open);
 }
 export function durationDiff(field, language='en') {
-  const format=value=>field.field.split('.').at(-1)==='timeout_s'&&typeof value==='number'?STRINGS[language].durationSeconds.replace('{value}',value):String(value);
+  const words=STRINGS[language];
+  const format=value=>value==null||value===''?words.diffEmpty:typeof value==='object'?[checkTitle(value,language),value.run||value.command,value.timeout_s!=null?words.durationSeconds.replace('{value}',value.timeout_s):''].filter((v,i,a)=>v&&a.indexOf(v)===i).join(' · '):field.field.split('.').at(-1)==='timeout_s'&&typeof value==='number'?words.durationSeconds.replace('{value}',value):String(value);
+  if(field.before==null)return words.diffAdded.replace('{value}',format(field.after));
+  if(field.after==null)return words.diffRemoved.replace('{value}',format(field.before));
   return format(field.before)+' → '+format(field.after);
 }
 export function displayState(node, decisions = []) {
@@ -1280,7 +1347,7 @@ export function forwardEdges(edges) {
 }
 export function detailCardHeight(node) {
   const facts=(node.deliverables?.length?1:0)+(node.planned_checks?.length?1:0)+(node.runLevel?1:0);
-  return 112+facts*27+(node.kind==='review'||node.reviewers?.length?28:0)+(node.planned_checks?.some(c=>c.type==='human')||node.kind==='decision'?27:0);
+  return 112+facts*27+(node.planned_checks?.some(c=>c.runs_own_files)?32:0)+(node.kind==='decision'?32:0)+(node.kind==='review'||node.reviewers?.length?28:0)+(node.planned_checks?.some(c=>c.type==='human')||node.kind==='decision'?27:0);
 }
 export function layeredLayout(nodes, edges, decisions = [], sort = true, options = {}) {
   const overview = options.level === 'overview', portGap = 20, inset = overview ? 12 : 26;
@@ -1336,7 +1403,7 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
     v.width=widths[v.layer];
     const degree=Math.max(links.filter(e=>e.from===v.id).length,links.filter(e=>e.to===v.id).length);
     const portHeight=(options.clearance||0)+40+portGap*(degree+2*Math.max(0,degree-3));
-    v.height=overview ? (v.dummy ? 28 : Math.max(64,portHeight)) : v.dummy?44:Math.max(detailCardHeight(v.node),portHeight)+Math.max(0,Math.ceil(textWidth(v.node.title,18,9)/(v.width-40))-1)*26;
+    v.height=overview ? (v.dummy ? 28 : Math.max(v.node?.planned_checks?.some(c=>c.runs_own_files)?104:80,portHeight)) : v.dummy?44:Math.max(detailCardHeight(v.node),portHeight)+Math.max(0,Math.ceil(textWidth(v.node.title,18,9)/(v.width-40))-1)*26;
   }
   const gap=overview?16:18,margin=20;
   const total=ids=>ids.reduce((s,id)=>s+vertices.get(id).height,0)+Math.max(0,ids.length-1)*gap;
@@ -1575,7 +1642,7 @@ function contractDetails(parent,contract) {
 function plannedChecks(parent, checks) {
   const list = el('ul', undefined, 'checks planned-checks');
   for (const c of checks || []) {
-    const item = el('li'); if(!commandTitle(c))item.append(el('strong',t('plannedCheck',{title:checkTitle(c,language)}))); if(c.runs_own_files)item.append(el('p',t('ownCheckMark'),'own-check-note'),el('p',t('ownCheckEffect')));
+    const item = el('li'); if(!commandTitle(c))item.append(el('strong',t(c.type==='human'?'plannedHumanCheck':'plannedCheck',{title:checkTitle(c,language)}))); if(c.type==='scope')item.append(el('p',t('scopeBody'))); if(c.runs_own_files)item.append(el('p',t('ownCheckMark'),'own-check-note'),el('p',t('ownCheckEffect')));
     if ((!c.type || c.type === 'cmd') && c.command) {
       item.append(el('p',t('plannedCommand'),'muted'));
       renderCheckInputs(item,c,language,el);
@@ -1589,7 +1656,7 @@ function plannedChecks(parent, checks) {
 }
 function authorNote(parent,context) {
   if(!Object.values(context||{}).some(Boolean))return;
-  const note=card(t('authorNote'));for(const [key,value] of Object.entries(context))if(value)note.append(el('p',t({why:'why',if_approved:'ifApproved',if_rejected:'ifRejected',undo:'undo'}[key])+' · '+value));parent.append(note);
+  const note=card(t('authorNote'));for(const [key,value] of Object.entries(context))if(value)note.append(el('p',t({why:'authorWhy',if_approved:'ifApproved',if_rejected:'ifRejected',undo:'undo'}[key])+' · '+value));parent.append(note);
 }
 function plannedQuestion(q) {
   return q.answered?t('answeredQuestion',{...q,outcome:t(q.outcome==='approved'?(q.kind==='authorization'?'answeredPermission':'answeredApproval'):q.outcome==='answered'?'evAnswered':'answeredRevision'),answer:q.answer||''}):t(q.when==='node'?'whenDecision':q.when==='trajectory'?'whenTrajectory':'whenAfterWork')+' '+q.question;
@@ -1600,7 +1667,7 @@ function runFacts(parent) {
   if(view.requirements?.length){parent.append(el('h3',t('requirements')));textList(parent,view.requirements.map(r=>r.id+' · '+r.text));}
   if(view.integration_checks?.length||view.promoted_checks?.length)parent.append(el('p',t(view.nodes.some(n=>n.kind==='work'&&n.lane>=2)?'alsoNodeChecks':'onlyFinalChecks',{tasks:view.nodes.filter(n=>n.kind==='work'&&n.lane>=2).map(title).join(', ')})));
   parent.append(el('h3',t('runChecksGoal')),el('p',view.goal));
-  for (const [key, checks] of [['planIntegration',view.integration_checks],['planPromoted',view.promoted_checks]]) {
+  for (const [key, checks] of [['planIntegration',uniqueChecks([...(view.integration_checks||[]),...(view.promoted_checks||[])])]]) {
     if (checks?.length) { parent.append(el('h3',t(key))); plannedChecks(parent,checks); }
   }
   if (view.constraints?.length) { parent.append(el('h3',t('runConstraints'))); textList(parent,view.constraints); }
@@ -1626,7 +1693,7 @@ function planFacts(parent, node) {
   textList(parent,[...new Set([...(node.declared_outputs || []),...(node.outputs || []).map(n=>n.label).filter(Boolean)].map(outputLabel))]);
   parent.append(el('h3', t('planChecks'))); plannedChecks(parent, node.planned_checks);
   if(node.kind==='work'&&node.lane>=2){parent.append(el('p',t('crossFamily')));if(view.integration_checks?.length||view.promoted_checks?.length){parent.append(el('p',t(view.nodes.some(n=>n.kind==='work'&&n.lane>=2)?'alsoNodeChecks':'onlyFinalChecks',{tasks:view.nodes.filter(n=>n.kind==='work'&&n.lane>=2).map(title).join(', ')})));plannedChecks(parent,[...(view.integration_checks||[]),...(view.promoted_checks||[])]);}}
-  if (node.lens) parent.append(el('h3',t('planLens')),el('p',node.lens));
+  if (node.lens) parent.append(el('h3',t('planLens')),el('p',Array.isArray(node.lens)?node.lens.join(' · '):node.lens));
   if(node.kind!=='decision'){const settings=el('details');settings.append(el('summary',t('executionSettings')),el('p',t('planBehaviour',{lane:node.lane,max:node.max_attempts})),el('p',t('planIsolation')),el('p',t('planMerge')));parent.append(settings);}
   if(node.reviewers?.length)parent.append(el('p',t('planReviewers',{value:node.reviewers.map(id=>otherTitle(flowNode(id)?.title||id)).join(', ')})));
   contractDetails(parent,node.contract);
@@ -1642,7 +1709,7 @@ let planBanner = null, planSeen=null, planChanges=null, planChangeIds=null;
 const planRead = new Set();
 const graphRead = new Set();let graphReadIdentity='';
 function graphReadReason() {
-  if(mode!=='flow'||$('accessible').open||(matchMedia('(max-width:760px)').matches&&selected))return t('planGraphReason');
+  if(mode!=='flow'||$('accessible').open||(matchMedia('(max-width:760px)').matches&&selected))return t('planGraphReason',{action:t(view.has_work?'planContinue':'planStart')});
   const remaining=planFlow(view,language).nodes.filter(n=>!graphRead.has(n.id)).length;
   return remaining?t('planRemainingReason',{n:remaining}):'';
 }
@@ -1663,7 +1730,7 @@ function recordGraphRead() {
 addEventListener('scroll',recordGraphRead,{passive:true});
 $('accessible').addEventListener('toggle',()=>{planBanner?.update?.();recordGraphRead();});
 function dependentTitles(id){return releasedNodes(view.nodes,id).map(title).join(', ') || t('runChecksTitle');}
-function diffText(field){const key='field_'+field.field.split('.').at(-1);return (STRINGS[language][key]||field.field)+' · '+durationDiff(field,language);}
+function diffText(field){return contractDiffText(field,language);}
 function renderPlanDiff(parent,id){
   const change=planChanges?.find(c=>c.id===id);if(!change)return;
   const box=el('section',undefined,'plan-diff');box.append(el('h3',t('beforeAfter')));
@@ -1716,7 +1783,7 @@ function planAttention(box) {
     return true;
   }
   if(mode!=='flow'){box.append(button(t('viewPlan'),showGraph,'primary'));return true;}
-  const ownChecks=view.nodes.flatMap(n=>n.planned_checks||[]).filter(c=>c.runs_own_files).length;if(ownChecks)box.append(el('p',t('ownCheckCount',{n:ownChecks}),'own-check-note'));
+  const ownChecks=view.nodes.flatMap(n=>n.planned_checks||[]).filter(c=>c.runs_own_files).length;if(ownChecks)box.append(el('p',t('ownCheckEffect'),'own-check-note'));
   if (view.legacy) box.append(el('p',t('oldRunReposted'),'plan-notice'));
   const oldResults=view.legacy?view.nodes.filter(n=>n.preapproval_submission):[];
   if(oldResults.length){
@@ -1729,7 +1796,7 @@ function planAttention(box) {
       details.addEventListener('toggle',()=>{if(details.open)mark();});list.append(details);}
     box.append(list);
   }
-  if(approval.reason==='key_repinned')box.append(el('p',t('keyRepinned'),'plan-notice'));
+  if(approval.reason==='key_repinned')box.append(el('p',t('keyRepinned',{action:t(view.has_work?'planContinue':'planStart')}),'plan-notice'));
   if (view.replaced_unverifiable) box.append(el('p',t('planReplaced'),'plan-notice'));
   if(planChanges){
     box.append(el('p',t(planChangeIds?.old?'planChangeIds':'newPlanDecision',planChangeIds||{}),'change-notice'));
@@ -1744,8 +1811,8 @@ function planAttention(box) {
   input.id = 'plan-changes'; label.htmlFor = input.id; input.rows = 2; input.value = session?.draft || '';
   const back = button(t('sendBack'), () => send('revision_requested'));
   const message = el('p', undefined, 'muted'); message.setAttribute('role', 'status');
-  const update = () => { const changed=box.querySelector('.change-notice');if(changed)changed.textContent=t(planChangeIds?.old?(unreadPlanChanges()?'planChangeIds':'planChangesRead'):(unreadPlanChanges()?'newPlanDecision':'newPlanRead'),planChangeIds||{}); graphReason.textContent=graphReadReason();graphReason.hidden=!graphReason.textContent;start.disabled = !!graphReason.textContent || unreadPlanChanges() || !oldResults.every(n=>planRead.has('result:'+n.id)) || !decisionController.canSubmit('approved'); back.disabled = unreadPlanChanges() || !decisionController.canSubmit('revision_requested'); input.disabled = !!session?.busy; $('picker').disabled = !!session?.busy; };
-  planBanner.update=update;
+  const update = () => { const changed=box.querySelector('.change-notice');if(changed)changed.textContent=t(planChangeIds?.old?(unreadPlanChanges()?'planChangeIds':'planChangesRead'):(unreadPlanChanges()?'newPlanDecision':'newPlanRead'),planChangeIds||{}); const reason=graphReadReason() || (unreadPlanChanges()?t('changesReadReason'):'') || (!oldResults.every(n=>planRead.has('result:'+n.id))?t('oldReadReason'):'');graphReason.textContent=reason||t('graphReadDone',{n:planFlow(view,language).nodes.length});graphReason.hidden=false;start.disabled = !!reason || !decisionController.canSubmit('approved'); back.disabled = unreadPlanChanges() || !decisionController.canSubmit('revision_requested'); input.disabled = !!session?.busy; $('picker').disabled = !!session?.busy; };
+  planBanner.update=()=>{update();document.body.style.setProperty('--plan-actions-height',(actions.offsetHeight+24)+'px');};
   input.addEventListener('input', () => { decisionController.setDraft(input.value); update(); });
   async function send(outcome) {
     if(unreadPlanChanges() || outcome==='approved'&&!!graphReadReason() || outcome==='approved'&&!oldResults.every(n=>planRead.has('result:'+n.id)))return;
@@ -1768,9 +1835,9 @@ function attention() {
   box.setAttribute('aria-label', t('yourTurn'));
   if (box.hidden) return;
   const heading = el('div', undefined, 'attention-heading');
-  heading.append(el('span', t('yourTurn')), el('strong', String(view.decisions.length)));
+  heading.append(el('span', t('yourTurn')), el('strong', String(actionableDecisions(view,unavailableDecisions).length)));
   const items = el('div', undefined, 'attention-items');
-  for (const d of view.decisions) {
+  for (const d of actionableDecisions(view,unavailableDecisions)) {
     const item = el('div', undefined, 'attention-item'), text = el('div'), reference = el('div', undefined, 'ref-line');
     reference.append(refChip(d.id, `${d.id} · ${d.node_title || question(d)}`, true, d.free));
     if (d.node_title) reference.append(el('span', d.node_title));
@@ -1827,7 +1894,7 @@ function panel() {
   p.append(list);
   const more=el('details');more.open=!!rowOpen.get('panel:'+node.id);more.addEventListener('toggle',()=>rowOpen.set('panel:'+node.id,more.open));more.append(el('summary',t('workerDetails')));
   planFacts(more, node);
-    more.append(handoffsCard('received',node.inputs,'from'),handoffsCard('outputs',node.outputs,'to'));
+    if(node.inputs?.length)more.append(handoffsCard('received',node.inputs,'from'));if(node.outputs?.length)more.append(handoffsCard('outputs',node.outputs,'to'));
   if(view.complete){const files=[...new Set(rows.flatMap(r=>r.state==='passed'?r.files||[]:[]))];if(files.length){p.append(el('h3',t('resultLocations')));textList(p,files);}}
   p.append(more,button(t('showInLog'),()=>showNode(node.id),'small'));
   p.scrollTop=scroll;
@@ -1843,7 +1910,7 @@ function rowSentence(r) {
   if (r.kind === 'started') return t('evStarted');
   if (r.kind === 'repinned') return t(r.verified?'evRepinned':'unverifiedAnswer');
   if (r.kind === 'planned' && r.replaced_unverifiable) return t('planReplaced');
-  if (r.kind === 'planned' && r.wording_only) return t('evWording',{rev:r.revision}) + (r.question_wording_changed?.length ? ' · ' + t('evQuestionWording',{nodes:r.question_wording_changed.map(n=>n.title+' ('+n.node+')').join(', ')}) : '');
+  if (r.kind === 'planned' && r.wording_only) return t('evWording',{rev:r.revision}) + (r.question_wording_changed?.length ? ' · ' + t('evQuestionWording',{nodes:r.question_wording_changed.map(n=>n.title).join(', ')}) : '');
   if (r.kind === 'planned') return (r.replaced_unverifiable ? t('planReplaced') : r.revision > 1 ? t('evReplanned', {rev:r.revision}) : t('evPlanned')) + ' · ' + (r.counts ? planCounts(r.counts,language) : t('planItems',{n:r.count}));
   if (r.kind === 'final') return r.result === 'passed' ? t('evFinalPassed') : [t('evFinalFailed'), ...(r.failed || [])].join(' · ');
   if (r.kind === 'learned') return `${t('evLearned')} · ${r.text}`;
@@ -1924,7 +1991,7 @@ function logList(rows, empty, anchor = true) {
 let logFilter = 'all', logNode = null, found = null, mark = null;
 function home() {
   const box = $('home'); clear(box);
-  const pending=view.decisions.filter(d=>d.purpose!=='plan_approval');
+  const pending=actionableDecisions(view,unavailableDecisions).filter(d=>d.purpose!=='plan_approval');
   const blocked=planBlocked(),inbox = el('section'); inbox.append(el('h2', t(pending.length||blocked ? 'needsYou' : 'nothingTitle')));
 
   pending.forEach(d => inbox.append(decisionCard(d)));
@@ -1949,7 +2016,7 @@ function home() {
   const rows = view.timeline.filter(r => (!only || r.node === only.id) && (logFilter === 'all' || rowTone(r) === (logFilter === 'mine' ? 'mine' : 'returned')));
   log.append(filters, logList(rows, view.timeline.length ? 'filterEmpty' : 'logEmpty')); box.append(log);
   const tasks = el('details'); tasks.id = 'tasks'; tasks.open = !!rowOpen.get('tasks'); tasks.addEventListener('toggle', () => rowOpen.set('tasks', tasks.open));
-  tasks.append(el('summary', t('tasks', {n:view.nodes.length})));
+  tasks.append(el('summary', t('planItemsTable', {n:view.nodes.length})));
   const wrap = el('div', undefined, 'table-wrap'), table = el('table', undefined, 'tasks'), heads = el('tr');
   ['colTask','colStatus','colWorker','colTries','colWaits'].forEach(key => { const th = el('th', t(key)); th.scope = 'col'; heads.append(th); }); table.append(heads);
   for (const n of view.nodes) {
@@ -2016,7 +2083,7 @@ function closeInvalidDecision(run, decisions, nextView = {decisions}) {
   if (!reason) return false;
   if (mode === 'decision') leaveDecision(); decisionNotice = reason; notice(decisionNotice); return true;
 }
-function showChangedDecision(){const free=!!decisionController.session?.decision.free;decisionController.close();decisionUI=null;const box=$('decision');clear(box);box.classList.add('decision-changed');box.append(el('h2',t(free?'freeEvidenceChanged':'evidenceChanged')),el('p',t('waitForNewQuestion'),'change-notice'));$('picker').disabled=false;}
+function showChangedDecision(){const free=!!decisionController.session?.decision.free;unavailableDecisions.push(decisionController.session?.target.id);updateSubtitle();decisionController.close();decisionUI=null;const box=$('decision');clear(box);box.classList.add('decision-changed');box.append(el('h2',t(free?'freeEvidenceChanged':'evidenceChanged')),el('p',t('waitForNewQuestion'),'change-notice'),button(t('backToTab',{tab:t('graph')}),showGraph));$('picker').disabled=false;}
 function goHome() { if (showMode('home') && view) home(); }
 function showGraph() { if (!showMode('flow')) return; attention(); panel(); }
 function selectNode(id) { const n=flowNode(id),d=view.decisions.find(d=>d.node===id); if(n?.kind==='decision'&&d){openDecision(d.id);return;} if (!showMode('flow')) return; selected = selected === id ? null : id; panel(); if(selected)readPlanChange(selected); if (renderer) renderer.select(selected);planBanner?.update?.(); if (selected && matchMedia('(max-width:760px)').matches) $('panel').scrollIntoView({block:'start',behavior:reduced.matches?'auto':'smooth'}); }
@@ -2062,7 +2129,7 @@ function openDecision(id, focus = true) {
     const fileButtons=[...fileChoices.querySelectorAll('button')];
     const fileCanUnlock=!session.failed.length&&session.purpose!=='hold';
     fileButtons.forEach(b=>{b.classList.remove('primary');b.classList.toggle('file-opened',b.dataset.opened==='true');});
-    reminder.querySelector('button').classList.toggle('primary',!isQuestion&&!empty&&!read&&(!fileButtons.length||!fileCanUnlock));
+    details.querySelector('summary').classList.toggle('primary',!isQuestion&&!empty&&!read&&(!fileButtons.length||!fileCanUnlock));
     backButton.disabled = !!decisionController.session?.busy;
     blindCheck.disabled = !!session.busy;
     if (current() && !session.busy) message.textContent = '';
@@ -2123,7 +2190,7 @@ function openDecision(id, focus = true) {
   const markDetailsOpened = () => { if (current() && details.open) { decisionController.openDetails(); updateActions(); } };
   details.addEventListener('toggle', markDetailsOpened);
   const reminder = el('p', t('evidenceReminder')); reminder.hidden=true;
-  reminder.append(button(t('details'), () => { if (current()) { details.open = true; markDetailsOpened(); details.querySelector('summary').focus(); } })); right.prepend(reminder);
+  right.prepend(reminder);
   const gateFacts = el('div'); details.append(gateFacts);
   const loadEvidence = button(t('loadEvidence'), async () => {
     if (!current()) return;
@@ -2140,7 +2207,7 @@ function openDecision(id, focus = true) {
       if (!current()) return;
       raw.textContent = (evidence ? JSON.stringify(evidence, null, 2) : t('noEvidence')) + (logs.length ? '\n\n' + logs.join('\n\n') : '\n' + t('noEvidence'));
     } catch { if (current()) raw.textContent = t('evidenceFailed'); }
-  }); details.append(loadEvidence, raw); right.append(details); box.append(reading, right);
+  }); details.append(loadEvidence, raw); right.insertBefore(details,files); box.append(reading, right);
   const update = () => {
     const decision = session.decision;
     clear(introduction);
@@ -2148,7 +2215,7 @@ function openDecision(id, focus = true) {
     introduction.append(el('p',t(decision.free?'freeTab':'decisionTab',{tab:t(cameFrom==='home'?'home':'graph')}),'eyebrow'));
     decisionHeading(introduction, decision, 'h2'); const heading = introduction.querySelector('h2'); heading.id = 'decision-title';
     const node = view.nodes.find(n => n.id === decision.node);
-    introduction.append(card(t('why'), decision.free?t('freeEffect'):decision.context.why || purposeWording(decision.purpose, language)));authorNote(introduction,decision.author_context);
+    if(!decision.free)introduction.append(card(t('why'), decision.context.why || purposeWording(decision.purpose, language)));if(decision.replaces_refused)introduction.append(el('p',t('replacesRefused',{id:decision.replaces_refused}),'change-notice'));authorNote(introduction,decision.author_context);
     updateFiles(decision);
     if(decision.commit){const commit=el('details');commit.append(el('summary',t('commitDetails')),el('p',t('approvedCommit')+' · '+decision.commit,'muted'));introduction.append(commit);}
     if(decision.files?.length&&Object.keys(decision.artifact_hashes||{}).length){const hashes=el('details');hashes.append(el('summary',t('evidenceHashes')),el('pre',Object.entries(decision.artifact_hashes).map(([path,hash])=>path+' · '+(hash||'—')).join('\n')));introduction.append(hashes);}
@@ -2186,7 +2253,7 @@ function openDecision(id, focus = true) {
         list.append(item);
       }); history.append(list);
     }
-    clear(gateFacts); gateFacts.append(el('p', t(decision.free?'freeEffect':'gateReview')), el('p', question(decision) || purposeWording(decision.purpose, language)));
+    clear(gateFacts); gateFacts.append(el('p', t(decision.free?'freeAnswerEffect':'gateReview')), el('p', question(decision) || purposeWording(decision.purpose, language)));
     failedBlock(gateFacts, decision);
     if(node&&!decision.free){plannedChecks(gateFacts,node.planned_checks);contractDetails(gateFacts,node.contract);}
     for(const [key,name] of [['if_approved','ifApproved'],['if_rejected','ifRejected'],['undo','undo']])if((key!=='if_rejected'||!isQuestion)&&decision.context[key])gateFacts.append(el('p',t(name)+': '+decision.context[key]));
@@ -2197,7 +2264,7 @@ function openDecision(id, focus = true) {
     const effects = [['if_approved','ifApproved'],['if_rejected','ifRejected'],['undo','undo']].filter(([key]) => (key!=='if_rejected'||!isQuestion)&&decision.context[key]);
     clear(surrounding);
     failedBlock(surrounding, decision);
-    for (const key of ['verified','unverified']) { if (!decision[key]?.length) continue; const c = card(t(key)); textList(c, decision[key]); surrounding.append(c); }
+    for (const key of ['verified','unverified']) { if (!decision[key]?.length) continue; const c = card(t(key)); textList(c, decision[key].map(value=>['scope','cites'].includes(value)?checkTitle({type:value,result:'passed'},language):value)); surrounding.append(c); }
     files.hidden = !decision.files?.length;
     if(matchMedia('(max-width:760px)').matches)reading.insertBefore(files,phoneHistory);else right.insertBefore(files,history);
     if (!decisionHasEvidence(view,decision)) surrounding.append(el('p', t(decision.free?'questionOnly':'decisionOnly'), 'muted'));
@@ -2206,7 +2273,7 @@ function openDecision(id, focus = true) {
     for(const effect of actions.querySelectorAll('[data-effect]')) {
       const kind=effect.dataset.effect;
       effect.textContent=t(kind==='approved'?'approveEffect':kind==='answered'?'answerEffect':'revisionEffect');
-      if(decision.free)effect.textContent=t('freeEffect');
+      if(decision.free)effect.textContent=t('freeAnswerEffect');
       else if(node&&decision.purpose==='hold')effect.textContent=t(kind==='approved'?'holdAccept':'holdReject',{tasks:dependentTitles(node.id)});
       else if(node?.kind==='decision'&&!isQuestion)effect.textContent=t(kind==='approved'?'decisionAccept':'holdReject',{tasks:dependentTitles(node.id)});
       if(!decision.free&&decision.purpose!=='hold'&&kind==='revision_requested'&&node?.attempts&&node.attempts<node.max_attempts)effect.textContent=t('retryEffect',{n:node.attempts+1,max:node.max_attempts});
@@ -2230,10 +2297,10 @@ function jump(target) {
   const miss = text => { decisionNotice = t('findNone', {text}); notice(decisionNotice); return false; };
   if (target.decision) {
     const id = target.decision.toLowerCase();
-    const stale=view.stale_decisions?.find(d=>d.id===id);
-    if(stale){decisionNotice=t(stale.reason==='legacy_decision'?'legacyDecision':stale.purpose==='free'?'freeEvidenceChanged':'evidenceChanged');showMode('home');home();notice(decisionNotice);return true;}
     const old=view.superseded?.find(d=>d.id===id);
     if(old?.replacement) { replacementDecision=old.replacement; decisionNotice=t('supersededNotice',{old:id,new:old.replacement}); showMode('home'); home(); notice(decisionNotice); return true; }
+    const stale=view.stale_decisions?.find(d=>d.id===id);
+    if(stale){decisionNotice=t(stale.reason==='legacy_decision'?'legacyDecision':stale.purpose==='free'?'freeEvidenceChanged':'evidenceChanged');showMode('home');home();notice(decisionNotice);return true;}
     if (view.decisions.some(d => d.id === id)) { openDecision(id); return true; }
     const row = [...view.timeline].reverse().find(r => r.decision === id); if (!row) return miss(target.decision);
     decisionNotice = ''; notice(''); if (!showMode('home')) return false;
@@ -2251,6 +2318,12 @@ function jump(target) {
 function find(text) {
   text = text.trim(); if (!text || !view) return false;
   return /^d\d+$/i.test(text) ? jump({decision:text}) : jump({node:text});
+}
+const unavailableDecisions=[];
+function updateSubtitle(){
+  const pending=actionableDecisions(view,unavailableDecisions);
+  const states=Object.entries(stateCounts(view.nodes,pending)).filter(([key])=>key!=='awaiting').map(([key,n])=>stateWords(key,language).name+' '+n).join(' · ');
+  $('subtitle').textContent=view.plan_error?'':view.complete?t('complete'):[t('yourTurnCount',{n:pending.length}),states].filter(Boolean).join(' · ');
 }
 function applyView(next) {
   if (decisionController.session?.busy) return;
@@ -2283,9 +2356,7 @@ function applyView(next) {
   $('flow').classList.toggle('sent-plan',!!sent); $('flow').classList.toggle('plan-unavailable',!!view.plan_error);
   const sentBack=view.plan_approval?.status==='answered'&&['rejected','revision_requested'].includes(view.plan_approval.outcome);
   view.nodes.forEach(n=>n.plan_revision_wait=sentBack);
-  const actionCounts=[t('countDecision',{n:view.decisions.filter(d=>!d.free).length}),t('countQuestions',{n:view.decisions.filter(d=>d.free).length})].join(' · ');
-  const states=Object.entries(stateCounts(planFlow(view,language).nodes,view.decisions)).map(([key,n])=>stateWords(key,language).name+' '+n).join(' · ');
-  $('subtitle').textContent=view.plan_error?'':view.complete?t('complete'):actionCounts+' · '+states;
+  updateSubtitle();
   if(view.complete){const resultNode=[...view.nodes].reverse().find(n=>n.kind==='work'&&view.timeline.some(r=>r.node===n.id&&r.files?.length));if(resultNode){const files=[...new Set(view.timeline.filter(r=>r.node===resultNode.id).flatMap(r=>r.files||[]))];$('subtitle').append(button(t('results'),()=>selectNode(resultNode.id),'primary result-action'),el('span',t('runResultSummary',{files:files.join(', ')}),'result-summary'));}}
   accessible(); attention(); panel(); home(); showMode(mode); if (renderer && mode === 'flow') renderer.update(view, selected);
   if (mode === 'decision' && decisionController.session) openDecision(decisionController.session.target.id, false);
@@ -2402,13 +2473,14 @@ function nodeCard(n, expanded = false, level = 'detail') {
   }
   const essentials=el('div',undefined,'node-essentials');
   if(change?.fields?.length){const diff=el('p',diffText(change.fields[0]),'change-preview');diff.title=change.fields.map(diffText).join('\n');essentials.append(diff);}
-  const files=[...new Set(n.deliverables || [])];
+  const files=[...new Set(n.deliverables || [])].filter(value=>![STRINGS.ko.genericOutput,STRINGS.en.genericOutput].includes(value)||!(n.deliverables||[]).some(v=>![STRINGS.ko.genericOutput,STRINGS.en.genericOutput].includes(v)));
+  const answered=(view.answered||[]).filter(d=>d.node===n.id&&d.verified&&!d.stale).at(-1);
   if(n.preapproval_submission)essentials.append(el('p',t('preapprovalExplanation'),'preapproval-note'));
 
 
   if(state==='notStarted'&&n.inputs?.length&&n.inputs.every(i=>i.delivered))essentials.append(el('p',t('inputsReady')));
   if(n.runLevel) essentials.append(el('p',view.goal,'run-goal-preview'));
-  if(files.length&&!n.preapproval_submission)essentials.append(el('p',t('planCardDelivery',{files:files.map(outputLabel).join(', ')})));
+  if(files.length&&!n.preapproval_submission&&!answered)essentials.append(el('p',t('planCardDelivery',{files:files.map(outputLabel).join(', ')})));
   if(n.planned_checks?.length && state!=='returned'&&!n.preapproval_submission) {
     const automated=n.planned_checks.filter(c=>c.type!=='human'),human=n.planned_checks.length-automated.length,check=automated[0]||n.planned_checks[0],preview=el('p');
     if(commandTitle(check))preview.append(el('span',t('planCardChecks',{n:automated.length,first:''})),el('code',checkTitle(check,language)));
@@ -2417,8 +2489,14 @@ function nodeCard(n, expanded = false, level = 'detail') {
   }
   const questions=(view.planned_questions || []).filter(q=>q.node===n.id);
   if(questions.length)essentials.append(el('p',t('planCardQuestion',{n:questions.length,question:questions.map(q=>plannedQuestion(q)).join(' · ')}),'planned-question'));
+  if(answered){const answer=el('details',undefined,'answered-result');answer.append(el('summary',t('answerExpand')),el('p',t('answerGiven',{answer:answered.answer||t(answered.outcome==='approved'?'answeredPermission':'evAnswered')})));essentials.append(answer);}
   root.append(header,essentials,footer,reference);
   return root;
+}
+function titleTextRect(title){
+  if(!title)return null;
+  if(!document.createRange)return title.getBoundingClientRect();
+  const range=document.createRange();range.selectNodeContents(title);return range.getBoundingClientRect();
 }
 function createMap() {
   const map=$('map');map.tabIndex=0;
@@ -2472,23 +2550,23 @@ function createMap() {
     const groups={offLeft:[],offRight:[],offTop:[],offBottom:[]}; let visible=0;
     for(const n of data.nodes) {
       const p=layout.positions[n.id],x=p.x*scale+ox-viewport.scrollLeft,y=p.y*scale+oy-viewport.scrollTop;
-      const element=nodes.get(n.id),title=element?.querySelector('.node-title'),vr=viewport.getBoundingClientRect(),tr=title?.getBoundingClientRect();
-      const rect={x,y,width:p.width*scale,height:p.height*scale};
+      const element=nodes.get(n.id),title=element?.querySelector('.node-title'),vr=viewport.getBoundingClientRect(),tr=titleTextRect(title);
+      const rect=tr?{x:tr.left-vr.left,y:tr.top-vr.top,width:tr.width,height:tr.height}:{x,y,width:p.width*scale,height:p.height*scale};
       const direction=offscreenDirection(rect,w,h);
       if(direction)groups[direction].push(n);
-      if(!direction)visible++;
+      if(titleVisibility(rect,w,h))visible++;
       if(element)element.style.visibility=intersectsViewport({x,y,width:p.width*scale,height:p.height*scale},w,h)?'visible':'hidden';
     }
     for(const c of layout.chips){const chip=chips.get(c.first);if(chip)chip.hidden=scale<1 || !!chip.dataset.tooWide || !!offscreenDirection({x:c.x*scale+ox-viewport.scrollLeft,y:c.y*scale+oy-viewport.scrollTop,width:c.width*scale,height:c.height*scale},w,h);}
     // The viewport clips routes naturally: an off-screen neighbour leaves a visible continuing stub.
     recordGraphRead();
-    visibleCount.textContent=planCounts(data.plan_counts,language)+' · '+t('visibleTitles',{n:visible});
+    visibleCount.textContent=t('visiblePlan',{total:data.nodes.filter(n=>!n.runLevel).length,n:visible});
     for(const [direction,b] of overflowButtons)b.hidden=!groups[direction].length;
     for(const [direction,items] of Object.entries(groups))if(items.length) {
       let b=overflowButtons.get(direction);
       if(!b){b=button('',()=>{},'small');overflowButtons.set(direction,b);overflow.append(b);}
       overflow.append(b);
-      b.textContent=(items.some(n=>!n.runLevel)?t('offCount',{direction:t(direction),n:items.filter(n=>!n.runLevel).length})+(items.some(n=>n.runLevel)?' + '+t('runChecksTitle'):''):t(direction)+' · '+t('runChecksTitle')) + (items.some(n=>['running','retrying','submitted'].includes(displayState(n,data.decisions))) ? t('offWorking',{n:items.filter(n=>['running','retrying','submitted'].includes(displayState(n,data.decisions))).length}) : '') + (items.some(n=>data.decisions.some(d=>d.node===n.id)) ? t('offNeeds',{n:items.filter(n=>data.decisions.some(d=>d.node===n.id)).length}) : '');
+      b.textContent=(items.some(n=>!n.runLevel)?t('offCount',{direction:t(direction),n:items.filter(n=>!n.runLevel).length})+(items.some(n=>n.runLevel)?' + '+t('runChecksTitle'):''):t(direction)+' '+t('offFinal')) + (items.some(n=>['running','retrying','submitted'].includes(displayState(n,data.decisions))) ? t('offWorking',{n:items.filter(n=>['running','retrying','submitted'].includes(displayState(n,data.decisions))).length}) : '') + (items.some(n=>data.decisions.some(d=>d.node===n.id)) ? t('offNeeds',{n:items.filter(n=>data.decisions.some(d=>d.node===n.id)).length}) : '');
       b.onclick=()=>{
         const horizontal=['offLeft','offRight'].includes(direction),back=['offLeft','offTop'].includes(direction);
         const sorted=[...items].sort((a,b)=>(layout.positions[a.id][horizontal?'x':'y']-layout.positions[b.id][horizontal?'x':'y'])*(back?-1:1));

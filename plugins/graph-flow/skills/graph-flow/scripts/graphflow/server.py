@@ -511,7 +511,7 @@ def _view(current, derived, events, project):
 
     for decision in opened:
         node = nodes.get(decision["node"], {})
-        checks = _objects(node.get("checks"))
+        checks = _node_checks(node)
         context = node.get("context", {}) if node.get("kind") == "decision" else {}
         if node.get("kind") != "decision":
             context = next((c.get("context") for c in checks
@@ -528,7 +528,7 @@ def _view(current, derived, events, project):
         verified, unverified, failed = [], [], []
         observations = _attempt_results(decision["node"], st, events)
         latest = {r["check"]: r for r in observations if r.get("phase") in ("loop", "gate")}
-        check_titles = {c["id"]: _text(c.get("title")) for c in checks if isinstance(c.get("id"), str)}
+        check_titles = {c["id"]: _text(c.get("title")) or _text(c.get("run")) or c["id"] for c in checks if isinstance(c.get("id"), str)}
         for result in latest.values():
             wording = check_titles.get(result["check"])
             if result.get("result") == "failed":
@@ -540,8 +540,12 @@ def _view(current, derived, events, project):
             if (submission.get("id") is not None and review.get("target_submission") == submission["id"]
                     and review.get("verdict") == "fail"):
                 failed_reviews += len(_finding_text(review))
-                failed.extend("%s (%s · %s)" % (text, nodes.get(review.get("node"), {}).get("title") or nodes.get(review.get("node"), {}).get("goal") or review.get("node"), nodes.get(review.get("node"), {}).get("lens", "")) for text in _finding_text(review))
+                failed.extend("%s (%s · %s)" % (text, nodes.get(review.get("node"), {}).get("title") or nodes.get(review.get("node"), {}).get("goal") or review.get("node"), " · ".join(_strings(nodes.get(review.get("node"), {}).get("lens"))) if isinstance(nodes.get(review.get("node"), {}).get("lens"), list) else nodes.get(review.get("node"), {}).get("lens", "")) for text in _finding_text(review))
         unverified.extend(_strings(submission.get("low_confidence")))
+        previous = max((d for d in derived["decisions"].values()
+                        if d.get("node") == decision.get("node") and d.get("purpose") == decision.get("purpose")
+                        and d.get("check") == decision.get("check") and d.get("seq", 0) < decision.get("seq", 0)),
+                       key=lambda d: d.get("seq", 0), default={})
         view["decisions"].append({"id": decision["id"], "node": decision["node"],
                                   "asked": _text(_mapping(asks.get(decision.get("seq"))).get("ts"), None),
                                   "asked_by": actor_of(asks.get(decision.get("seq"))),
@@ -556,6 +560,8 @@ def _view(current, derived, events, project):
                                   "artifact_hashes": decision.get("artifact_hashes") or {},
                                   "files": _decision_files(decision, derived, project, _strings(_mapping(nodes.get(decision["node"])).get("owns"))),
                                   "free": decision.get("issuer") != "gate" and decision.get("purpose") != "plan_approval",
+                                  "replaces_refused": previous.get("id") if previous.get("verified") and
+                                      previous.get("outcome") in ("rejected", "revision_requested") else None,
                                   "author_context": author_context,
                                   "context": context, "verified": verified, "unverified": unverified,
                                   "failed": failed, "failed_reviews": failed_reviews, "trajectory_reasons": _trajectory_reasons(st, observations),
@@ -625,7 +631,9 @@ def _view(current, derived, events, project):
     view["run_contract"] = {k:v for k,v in current.items() if k != "nodes"}
     view["integration_checks"] = [_planned_check(c) for c in current.get("integration_checks", [])]
     view["promoted_checks"] = [_planned_check(c) for c in current.get("promoted_checks", [])]
-    view["superseded"] = [{"id": d["id"], "replacement": (approval or {}).get("id")}
+    view["superseded"] = [{"id": d["id"], "replacement": next((new["id"] for new in reversed(list(derived["decisions"].values()))
+                          if new.get("status") == "open" and new.get("node") == d.get("node")
+                          and new.get("purpose") == d.get("purpose") and new.get("check") == d.get("check")), None)}
                           for d in derived["decisions"].values() if d.get("status") == "superseded"]
     return view
 

@@ -191,7 +191,9 @@ class WordingTests(unittest.TestCase):
         script = prelude + '\nlet language="ko";\n' + translate + '\n' + renderer + '\nconsole.log(rowSentence('+json.dumps(row, ensure_ascii=False)+'));'
         rendered = subprocess.run([NODE, '--input-type=module', '-e', script], text=True, capture_output=True, check=True).stdout
         self.assertIn('질문에 쓰일 문구가 바뀌었어요', rendered)
-        self.assertIn('(a)', rendered); self.assertIn('(q)', rendered)
+        self.assertIn('새 안내 쓰기', rendered); self.assertIn('Choose', rendered)
+        self.assertNotIn('(a)', rendered); self.assertNotIn('(q)', rendered)
+        self.assertIn('이전 계획 승인은 유지돼요', rendered)
 
     def test_explicit_prompt_title_is_only_a_label(self):
         self.raw['nodes'][0]['checks'].append({'id': 'human', 'type': 'human', 'title': 'Label', 'prompt': 'Accept?'})

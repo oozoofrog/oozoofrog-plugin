@@ -512,7 +512,7 @@ live.nodes[0].attempts=2;live.nodes[0].laps=['returned','current'];live.nodes[0]
 docEvents.visibilitychange();await settle();
 assert.match(get('map').textContent,/Attempt 2/);
 assert.doesNotMatch(get('map').textContent,/✕|Unit passes/,'earlier failure cannot dominate the current card');
-assert.match(get('map').textContent,/Your turn/);
+assert.match(get('map').textContent,/Work awaiting my answer/);
 live.nodes[0]=originalNode;docEvents.visibilitychange();await settle();
 
 live.nodes.push({id:'choice',kind:'decision',title:'Pick a direction',status:'pending',answered:true,inputs:[],outputs:[],laps:[],returned_reasons:[]});
@@ -721,7 +721,7 @@ assert.equal(statusGlyph('running'),'▶');
             self.assertEqual(view['run'], run.name)
             decision = view['decisions'][0]
             self.assertEqual(decision['purpose'], 'human_check')
-            self.assertEqual(decision['verified'], ['약속한 결과가 빠짐없이 있어요'])
+            self.assertEqual(decision['verified'], ['약속한 결과가 빠짐없이 있어요', 'scope'])
             self.assertEqual(decision['unverified'], ['설치 순서가 처음 쓰는 분께 자연스러운지는 확인하지 못했어요.'])
             self.assertEqual(decision['worker_note'], '설치 순서 부분은 자신이 없어요.')
             self.assertTrue(decision['author_context']['why'])

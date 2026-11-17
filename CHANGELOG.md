@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Graph Flow dashboard: align request/check/title counts, describe plan diffs and held reviews accurately, preserve readable warning/answer slots, explain existing Start/Continue locks, and remove overlapping panel/list headers. Correct superseded-decision targets without changing approval or gate rules.
+
 - Graph Flow dashboard: preserve real dependency routes and stable card order in narrow/selected overview layouts; branching graphs scroll instead of using the compact chain router.
 
 - `graph-flow` agent guidance: slim the entry skill, consolidate the human-identity rule, split the planner contract into `references/plan.md`, and move maintainer signatures/view models to `plugins/graph-flow/docs/implementation.md`. Relocate recovery guidance, document measured conformance and the deliberate plan-approval addition to P10, and keep answer-signing machinery frozen.

@@ -240,20 +240,20 @@ class ServerTests(unittest.TestCase):
         from test_page import build_demo_run
         project = self.root / "demo-project"
         run = build_demo_run(self.home, project)
-        status, data = self.json_request("GET", "/api/run?" + urlencode({"project": str(project), "run": run.name}))
+        status, data = self.json_request("GET", "/api/run?" + urlencode({"project": str(project.resolve()), "run": run.name}))
         self.assertEqual(status, 200)
         decision = data["view"]["decisions"][0]
         self.assertEqual(decision["purpose"], "human_check")
-        self.assertEqual(decision["verified"], ["약속한 결과가 빠짐없이 있어요"])
+        self.assertEqual(decision["verified"], ["약속한 결과가 빠짐없이 있어요", "scope"])
         self.assertEqual(len(decision["unverified"]), 1)
         self.assertTrue(decision["worker_note"])
         current, events, derived = server._snapshot(run)
-        # Untitled checks are omitted; the question is not an unresolved finding.
+        # Untitled commands and implicit scope checks still count; questions are not findings.
         guide = next(n for n in current["nodes"] if n["id"] == "guide")
         guide["checks"][0].pop("title")
         guide["checks"][1].pop("title")
         presentation = server._view(current, derived, events, project)
-        self.assertEqual(presentation["decisions"][0]["verified"], [])
+        self.assertEqual(presentation["decisions"][0]["verified"], ["printf checked", "scope"])
         self.assertNotIn("사용 설명서를 통과시킬까요?", presentation["decisions"][0]["unverified"])
         guide["checks"][0]["title"] = "Readable check"
         derived["nodes"]["guide"]["attempts"] += 1
@@ -292,7 +292,7 @@ class ServerTests(unittest.TestCase):
         for decision in view["decisions"]:
             self.assertEqual(decision["failed"], ["The result is complete",
                 "A check without a description did not pass.", "A case is missing (review · correctness)"])
-            self.assertEqual(decision["verified"], [])
+            self.assertEqual(decision["verified"], ["scope"])
             self.assertEqual(decision["trajectory_reasons"], ["timed_out", "left_its_files"])
         # A later successful result replaces that failure, but not the timeout fact.
         with store.transaction(run) as tx:
@@ -300,7 +300,7 @@ class ServerTests(unittest.TestCase):
                       "phase": "loop", "attempt": 1, "result": "passed"}, ACTOR)
         events = store.events(run); derived = state.derive(current, events)
         view = server._view(current, derived, events, project)
-        self.assertEqual(view["decisions"][0]["verified"], ["The result is complete"])
+        self.assertEqual(view["decisions"][0]["verified"], ["The result is complete", "scope"])
         self.assertEqual(view["decisions"][0]["failed"], [
             "A check without a description did not pass.", "A case is missing (review · correctness)"])
         derived["nodes"]["build"]["reviews"][0]["target_submission"] = -1
@@ -590,7 +590,7 @@ class ServerTests(unittest.TestCase):
         with (project / ".graph-flow" / "constraints.jsonl").open("a", encoding="utf-8") as stream:
             stream.write(json.dumps(unknown) + "\n")
         before = store.events(run)
-        status, data = self.json_request("GET", "/api/run?" + urlencode({"project": str(project), "run": run.name}))
+        status, data = self.json_request("GET", "/api/run?" + urlencode({"project": str(project.resolve()), "run": run.name}))
         self.assertEqual(status, 200)
         view = data["view"]
         self.assertEqual(set(view), {"title", "summary", "context", "requirements", "language", "nodes", "edges", "decisions", "answered", "lessons", "counts", "complete",
@@ -626,7 +626,7 @@ class ServerTests(unittest.TestCase):
                                         "purpose": "human_check", "commit": None, "artifact_hashes": {},
                                             "context": {}, "has_evidence": False,
                                             "verified": [], "unverified": [], "worker_note": None,
-                                        "record_purpose": "human_check", "files": [], "failed": [], "failed_reviews": 0, "free": False, "author_context": context, "trajectory_reasons": []}])
+                                        "record_purpose": "human_check", "files": [], "failed": [], "failed_reviews": 0, "free": False, "replaces_refused": None, "author_context": context, "trajectory_reasons": []}])
         self.assertEqual(view["lessons"], [{"text": active["text"], "node_title": "Done"},
                                          {"text": unknown["text"], "node_title": None}])
         self.assertEqual(view["counts"], {"done": 1, "doing": 1, "waiting": 2, "needs_you": 1, "returned": 1, "returns_total": 1})
@@ -644,7 +644,7 @@ class ServerTests(unittest.TestCase):
                       "fingerprints": {n["id"]: state.fingerprint(n) for n in revised["nodes"]},
                       "constraints_applied": []}, ACTOR)
         approve_current_plan(run)
-        _, data = self.json_request("GET", "/api/run?" + urlencode({"project": str(project), "run": run.name}))
+        _, data = self.json_request("GET", "/api/run?" + urlencode({"project": str(project.resolve()), "run": run.name}))
         self.assertEqual(data["view"]["nodes"][1]["laps"], [])
         self.assertEqual(data["view"]["nodes"][1]["returned_reasons"], [])
         self.assertEqual(data["view"]["edges"][0]["gate"], "closed")
