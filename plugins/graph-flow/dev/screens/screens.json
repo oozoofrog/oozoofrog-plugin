@@ -435,12 +435,7 @@
       "width": 1440,
       "height": 900
     },
-    "interactions": [
-      {
-        "action": "click",
-        "selector": "#home-tab"
-      }
-    ],
+    "interactions": [],
     "group": "RARE"
   },
   {
@@ -521,8 +516,8 @@
     "scenario": "large-plan",
     "url": "/?t={token}#project={project}&run={run}",
     "viewport": {
-      "name": "desktop",
-      "width": 1440,
+      "name": "compact-desktop",
+      "width": 1280,
       "height": 900
     },
     "interactions": [
@@ -659,12 +654,7 @@
       "width": 1440,
       "height": 900
     },
-    "interactions": [
-      {
-        "action": "button",
-        "text": "간략 보기"
-      }
-    ],
+    "interactions": [],
     "group": "OCCASIONAL"
   },
   {
@@ -1094,7 +1084,12 @@
       "width": 1440,
       "height": 900
     },
-    "interactions": [],
+    "interactions": [
+      {
+        "action": "open",
+        "selector": "#map .answered-result"
+      }
+    ],
     "group": "EVERYDAY"
   },
   {

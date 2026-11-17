@@ -4,8 +4,8 @@ Run from the repository root (Python standard library, Node with built-in WebSoc
 Chrome/Chromium, and ffmpeg must already be available):
 
 ```bash
-python3 -I -S -B plugins/graph-flow/dev/screens/build_fixtures.py /Volumes/eyedisk/build/graph-flow-screens/r16
-node plugins/graph-flow/dev/screens/capture.mjs /Volumes/eyedisk/build/graph-flow-screens/r16
+python3 -I -S -B plugins/graph-flow/dev/screens/build_fixtures.py /Volumes/eyedisk/build/graph-flow-screens/r17
+node plugins/graph-flow/dev/screens/capture.mjs /Volumes/eyedisk/build/graph-flow-screens/r17
 ```
 
 The builder replaces only its marked `fixtures/` directory. The capture command
@@ -30,3 +30,5 @@ CLI event timestamps, check duration, nonces and signatures are intentionally re
 The cheap repository test validates the manifest without starting any processes.
 Developer tools remain outside `skills/`; plugin manifests keep loading only the
 existing skill/runtime. Captures report defects without editing product assets.
+
+Round 17 distinguishes the fitted large plan at 1280px from the default 1440px overview; the large run advances three pieces and starts the next branch. The unverified-plan scene stays on the graph, while the problem inbox scene opens My turn. Legacy fixture prose is translated only in the isolated capture copy.

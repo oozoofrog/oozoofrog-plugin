@@ -26,7 +26,7 @@ const runtime = mkdtempSync(path.join(output, 'capture-'));
 const profile = path.join(runtime, 'chrome-profile');
 const delay = ms => new Promise(r => setTimeout(r, ms));
 const baseEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GF_')));
-const envFor = fixture => ({...baseEnv, GF_HOME:fixture.home, GF_NO_OPEN:'1', GF_ROLE:'leader', GF_SESSION:'screens-r16'});
+const envFor = fixture => ({...baseEnv, GF_HOME:fixture.home, GF_NO_OPEN:'1', GF_ROLE:'leader', GF_SESSION:'screens-r17'});
 const evidence = path.join(output, 'screen-status.json');
 let records = only && existsSync(evidence) ? JSON.parse(readFileSync(evidence)) : [];
 const owned = [], lifecycle = [];
@@ -110,7 +110,7 @@ async function interaction(action, fixture) {
   await delay(350);
   if(action.selector === '.file-choices button') await until("!!document.querySelector('.file-choices button[data-opened=true]')");
 }
-const derivedNumbers = new Set([1,3,5,7,15,20,22,23,24,41,44,58,59,61,63,64,65,66,67,68,69]);
+const derivedNumbers = new Set([1,3,5,7,15,20,22,23,24,41,44,52,53,58,59,61,62,63,64,65,66,67,68,69]);
 try {
   chrome = start(chromePath, ['--headless=new','--remote-debugging-port=0','--user-data-dir='+profile,'--no-first-run','--no-default-browser-check','--lang=ko','about:blank']);
   const endpoint = (await lineMatching(chrome, chrome.stderr, /DevTools listening on (ws:\/\/\S+)/))[1];
@@ -136,7 +136,7 @@ try {
     const originalFile = screen.scenario === 'file-changed-live' ? readFileSync(file) : null;
     try {
       if(screen.scenario === 'changed-live') cli(fixture, ['plan','set',fixture.plan]);
-      if(screen.scenario === 'file-changed-live') fixture.decision = cli(fixture, ['gate','a'], 1).asks[0];
+      if(screen.scenario === 'file-changed-live'){const gate=cli(fixture,['gate','a'],1);fixture.decision=gate.asks[0]||gate.show?.match(/--decision (d\d+)/)?.[1];assert(fixture.decision,'current file decision is required');}
       activeServer = start(python, ['-I','-S','-B',path.join(skill,'scripts/gf'),'serve'], {cwd:fixture.project,env:envFor(fixture)});
       const started = JSON.parse((await lineMatching(activeServer, activeServer.stdout, /(\{"ok": true[^\n]+\})/))[1]);
       const base = new URL(started.url);
@@ -154,6 +154,8 @@ try {
       assert.equal(dom.language,'ko');
       assert(dom.text.length > 100 && !/서버에 연결할 수 없|ERR_CONNECTION|사이트에 연결할 수 없/.test(dom.text), 'blank or connection error page');
       assert.equal(errors.length, 0, JSON.stringify(errors));
+      assert(!dom.text.includes('[object Object]'), 'raw object in rendered text');
+      if(screen.number === 64) assert.equal(dom.text.split('이 답만으로는 아무것도 통과되지 않아요').length-1,1,'free-answer limit is stated once');
       if(screen.number === 69) assert(dom.text.includes('질문에 쓰일 문구가 바뀌었어요'), 'wording-only log line missing');
       if(screen.number === 68) assert(await evaluate("document.querySelector('.plan-actions button.primary').disabled"), 'phone plan must remain locked');
       const shot = await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true});

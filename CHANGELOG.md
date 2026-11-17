@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Graph Flow screen fixtures: distinguish fit/default overviews, mid-flight runs and the problem inbox; use distinct Korean titles, capture expanded answers, and generate all requested grayscale/glance verification images.
+
 - Graph Flow dashboard: align request/check/title counts, describe plan diffs and held reviews accurately, preserve readable warning/answer slots, explain existing Start/Continue locks, and remove overlapping panel/list headers. Correct superseded-decision targets without changing approval or gate rules.
 
 - Graph Flow dashboard: preserve real dependency routes and stable card order in narrow/selected overview layouts; branching graphs scroll instead of using the compact chain router.

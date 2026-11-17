@@ -20,7 +20,7 @@ class ScreenManifestTests(unittest.TestCase):
             self.assertIn(row['group'], {'EVERYDAY', 'OCCASIONAL', 'RARE'})
             viewport = row['viewport']
             self.assertEqual((viewport['width'], viewport['height']),
-                             {'desktop': (1440, 900), 'phone': (390, 844)}[viewport['name']])
+                             {'desktop': (1440, 900), 'compact-desktop': (1280, 900), 'phone': (390, 844)}[viewport['name']])
             self.assertRegex(row['name'], r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
             self.assertTrue(row['url'].startswith('/?t={token}#project={project}&run={run}'))
             for action in row['interactions']:
@@ -31,3 +31,18 @@ class ScreenManifestTests(unittest.TestCase):
         self.assertNotIn('skills', SCREENS.relative_to(plugin).parts)
         self.assertEqual({'build_fixtures.py', 'capture.mjs', 'screens.json', 'README.md'},
                          {p.name for p in SCREENS.iterdir() if p.is_file()})
+
+    def test_round17_scenes_distinguish_state_and_fit(self):
+        rows = {r['number']:r for r in json.loads((SCREENS / 'screens.json').read_text())}
+        self.assertFalse(rows[27]['interactions'])
+        self.assertEqual(rows[50]['interactions'][0]['selector'], '#home-tab')
+        self.assertNotEqual(rows[33]['viewport'], rows[41]['viewport'])
+        self.assertFalse(rows[41]['interactions'])
+        self.assertNotEqual(rows[17]['scenario'], rows[44]['scenario'])
+        builder = (SCREENS / 'build_fixtures.py').read_text()
+        self.assertIn("if scenario == 'large-run':", builder)
+        self.assertIn("f.submit('n2', True)", builder)
+        self.assertIn("'html':'검색 화면 검토'", builder)
+        self.assertIn("'guide':'배포 안내 검토'", builder)
+        capture = (SCREENS / 'capture.mjs').read_text()
+        self.assertIn('41,44,52,53,58,59,61,62,63', capture)

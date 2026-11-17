@@ -3,6 +3,7 @@
 import argparse
 import contextlib
 import io
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -75,7 +76,7 @@ def question():
 
 
 def review(target='a', node='r'):
-    return dict(id=node, kind='review', title='안내 검토', goal='안내의 내용과 안전성을 검토해요.',
+    return dict(id=node, kind='review', title={'html':'검색 화면 검토','guide':'배포 안내 검토','b':'예제 검토'}.get(target,'안내 검토'), goal='안내의 내용과 안전성을 검토해요.',
                 target=target, lens='정확성 · 접근성 · 빠진 예외', lane=1, grade='daily')
 
 
@@ -87,7 +88,7 @@ class Fixture:
         self.project = self.root / 'project'
         self.project.mkdir()
         self.env = {k: v for k, v in os.environ.items() if not k.startswith('GF_')}
-        self.env.update(GF_HOME=str(self.home), GF_NO_OPEN='1', GF_ROLE='leader', GF_SESSION='screens-r16',
+        self.env.update(GF_HOME=str(self.home), GF_NO_OPEN='1', GF_ROLE='leader', GF_SESSION='screens-r17',
                         GIT_AUTHOR_DATE='2026-11-17T00:00:00+0000', GIT_COMMITTER_DATE='2026-11-17T00:00:00+0000')
         self.commands = []
         self.git('init', '-q')
@@ -162,7 +163,14 @@ def branching(count):
 def build(root, scenario):
     f = Fixture(root, scenario)
     if scenario.startswith('old'):
-        legacy = json.loads((SKILL / 'tests/fixtures/legacy021.json').read_text())
+        legacy = json.loads((SKILL / 'tests/fixtures/legacy021.json').read_text().replace('Read this guide', '안내를 읽고 확인해 주세요'))
+        # Localize the unsigned historical fixture consistently with its stored plan bytes.
+        history = [json.loads(line) for line in legacy['files']['events.jsonl'].splitlines()]
+        for event in history:
+            if event['type'] == 'plan.set':
+                plan_bytes = legacy['files']['plans/%04d.json' % event['data']['revision']].encode()
+                event['data']['plan_sha256'] = hashlib.sha256(plan_bytes).hexdigest()
+        legacy['files']['events.jsonl'] = ''.join(json.dumps(e, ensure_ascii=False) + '\n' for e in history)
         shutil.rmtree(f.run)  # Only our just-created empty run is replaced by the preserved historical fixture.
         f.run.mkdir()
         for relative, text in legacy['files'].items():
@@ -184,7 +192,11 @@ def build(root, scenario):
         if scenario in ('many', 'large-run', 'thirty-run'):
             f.submit('n0', True)
             f.submit('n1', True)
-            f.call('start', 'n2')
+            if scenario == 'large-run':
+                f.submit('n2', True)
+                f.call('start', 'n3')
+            else:
+                f.call('start', 'n2')
         return f.metadata()
     if scenario == 'real':
         f.raw.update(title='검색 기능 개선', nodes=[work('reader', '기록 읽기'), work('summary', '검색 결과 정리', ['reader']),
