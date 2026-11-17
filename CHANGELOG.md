@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Graph Flow: show only whole text lines at graph viewport edges and reveal the first explanation when selecting below a long warning band. Align unverified-answer provenance, label workers/models, use review-specific activity, group panel headings with content, expose the existing evidence action clearly, and clarify legacy questions, handoffs and plan warnings.
+
 - Graph Flow: unify unread card marks and Start reasons, use the same plan/final-card count, show neutral completed-reading notes, reserve scroll gutters, and name scrollable views truthfully when Fit reaches the readable minimum. Phone action bars summarize remaining cards with an expandable list.
 
 - Graph Flow: selected cards start with their full summary (then goal or review/question fallback), pinned beneath the title in every mode. Cards wrap complete titles, summaries and check names at both levels; measured heights keep dependencies and plan order intact.

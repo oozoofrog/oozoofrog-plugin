@@ -647,10 +647,10 @@ live.nodes.push({...node,id:'q',title:'Question',kind:'decision',status:'pending
 live.decisions=[];api.applyView(live);api.selectNode('q');assert.doesNotMatch(get('panel').textContent,/attempts available/);
 live.decisions=[{...d,free:true,record_purpose:'free',purpose:'direction',kind:'direction',question:'Override security?',asked_by:{role:'worker',session:'worker-17'},files:[],verified:[],unverified:[],failed:[],worker_note:null,context:{},author_context:{},has_evidence:false}];
 api.applyView(live);
-assert.match(get('attention').textContent,/Question · Does not approve work/);assert.match(get('attention').textContent,/accepts or releases nothing/);
+assert.match(get('attention').textContent,/This answer does not change whether the work passes/);assert.match(get('attention').textContent,/accepts or releases nothing/);
 assert.match(get('decision-list').textContent,/accepts or releases nothing/);
 get('attention').querySelectorAll('button').at(-1).click();
-assert.match(get('decision').textContent,/Question · Does not approve work/);
+assert.match(get('decision').textContent,/This answer does not change whether the work passes/);
 assert.equal(get('decision').querySelector('.evidence'),null,'free questions never receive gate evidence styling');
 assert.doesNotMatch(get('decision').textContent,/What the gate checked/);
 """)

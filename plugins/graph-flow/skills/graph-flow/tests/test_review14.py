@@ -187,7 +187,8 @@ class ApprovalScopeTests(unittest.TestCase):
         f=self.root/'finding.json';f.write_text(json.dumps([{'severity':'high','file':'guide.txt','line':1,'text':'Missing audit log'}]))
         self.call('--role','reviewer','--node','r','review','submit','r','--verdict','fail','--findings',str(f));self.call('gate','r');self.call('gate','a',code=1)
         d=next(d for d in self.view()['decisions'] if d['purpose']=='hold')
-        self.assertIn('Missing audit log (Security review · security)',d['failed'])
+        self.assertIn('Missing audit log (Security review)',d['failed'])
+        self.assertIn('security',d['review_lenses'])
 
 
 class Page14Tests(unittest.TestCase):

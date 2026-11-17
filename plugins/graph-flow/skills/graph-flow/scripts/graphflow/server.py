@@ -536,11 +536,15 @@ def _view(current, derived, events, project):
             elif result.get("result") == "passed" and wording:
                 verified.append(wording)
         failed_reviews = 0
+        review_lenses = []
         for review in _objects(st.get("reviews")):
             if (submission.get("id") is not None and review.get("target_submission") == submission["id"]
                     and review.get("verdict") == "fail"):
                 failed_reviews += len(_finding_text(review))
-                failed.extend("%s (%s · %s)" % (text, nodes.get(review.get("node"), {}).get("title") or nodes.get(review.get("node"), {}).get("goal") or review.get("node"), " · ".join(_strings(nodes.get(review.get("node"), {}).get("lens"))) if isinstance(nodes.get(review.get("node"), {}).get("lens"), list) else nodes.get(review.get("node"), {}).get("lens", "")) for text in _finding_text(review))
+                review_node = nodes.get(review.get("node"), {})
+                lens = review_node.get("lens", "")
+                review_lenses.extend(_strings(lens) if isinstance(lens, list) else [lens] if lens else [])
+                failed.extend("%s (%s)" % (text, review_node.get("title") or review_node.get("goal") or review.get("node")) for text in _finding_text(review))
         unverified.extend(_strings(submission.get("low_confidence")))
         previous = max((d for d in derived["decisions"].values()
                         if d.get("node") == decision.get("node") and d.get("purpose") == decision.get("purpose")
@@ -565,7 +569,7 @@ def _view(current, derived, events, project):
                                       previous.get("outcome") in ("rejected", "revision_requested") else None,
                                   "author_context": author_context,
                                   "context": context, "verified": verified, "unverified": unverified,
-                                  "failed": failed, "failed_reviews": failed_reviews, "trajectory_reasons": _trajectory_reasons(st, observations),
+                                  "failed": failed, "failed_reviews": failed_reviews, "review_lenses": list(dict.fromkeys(review_lenses)), "trajectory_reasons": _trajectory_reasons(st, observations),
                                   "worker_note": _text(submission.get("notes"), None),
                                   "has_evidence": any(evidence.get(k) for k in ("command", "files", "checks"))})
     for decision in view["decisions"]:

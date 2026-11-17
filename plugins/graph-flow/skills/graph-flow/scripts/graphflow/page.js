@@ -25,7 +25,7 @@ const STRINGS = {
     "from": "보낸 곳",
     "to": "받는 곳",
     "noReason": "돌아온 까닭이 따로 기록되지 않았어요.",
-    "attempt": "{n}번째 시도예요 · 최대 {max}번",
+    "attempt": "{n}번째 시도 · 최대 {max}번",
     "notStarted": "시작 전이에요",
     "passed": "끝났어요",
     "running": "만들고 있어요",
@@ -47,7 +47,7 @@ const STRINGS = {
     "aboutWork": "일의 상세 내용",
     "decisionRef": "결정 {id}",
     "askedBy": "물어본 곳: {who}",
-    "workedBy": "맡은 곳: {who}",
+    "workedBy": "작업 담당자: {who}",
     "find": "찾기",
     "findHint": "결정·질문 번호 또는 일 이름",
     "findNone": "“{text}”에 맞는 결정, 질문, 일이 없어요. 다른 흐름이면 위에서 바꿔 주세요.",
@@ -226,7 +226,7 @@ const STRINGS = {
     "previousReason": "이전에 돌아온 까닭: {reason}",
     "offWorking": " · 진행 중 {n}개",
     "offNeeds": " · 내가 할 일 {n}",
-    "workerDetails": "담당자 · 받는 것 · 넘기는 것",
+    "workerDetails": "작업 담당자 · 받는 것 · 넘기는 것",
     "attemptRecord": "{n}번째 시도의 검사와 메모",
     "earlierFailure": "✕ {n}번째 시도에서 “{reason}” 확인이 통과하지 못했어요",
     "findDecisionHint": "{id} 또는 일 이름",
@@ -243,7 +243,7 @@ const STRINGS = {
     "attemptShort": "{n}번째 시도",
     "earlierHistory": "이전 시도 기록",
     "failureUnknownAttempt": "✕ 기록된 시도에서 “{names}” 확인이 통과하지 못했어요",
-    "modelName": "모델 {model}",
+    "modelName": "모델: {model}",
     "blindApproval": "채팅에서 에이전트 세션에 결과를 보여 달라고 하거나, 고칠 곳을 적어 돌려보내 주세요.",
     "showDiagram": "선으로 된 그래프 보기",
     "showFlowList": "읽기 쉬운 목록 보기",
@@ -265,12 +265,12 @@ const STRINGS = {
     "readScale": "읽기 크기",
     "planSummary": "일 {work}개 · 검토 {review}개 · 결정 단계 {decision}개",
     "planStart": "시작",
-    "planStartEffect": "담당자가 계획의 일을 시작해요.",
-    "planBackEffect": "고칠 내용을 담당자에게 보내요.",
+    "planStartEffect": "진행 담당자가 계획의 일을 시작해요.",
+    "planBackEffect": "고칠 내용을 진행 담당자에게 보내요.",
     "planSentBack": "계획을 돌려보냈어요",
     "planWaiting": "계획을 확인해 주세요",
     "planSentNote": "내가 보낸 내용",
-    "planWaitingRevision": "담당자가 고친 새 계획을 기다리고 있어요.",
+    "planWaitingRevision": "진행 담당자가 고친 새 계획을 기다리고 있어요.",
     "planChecks": "자동 검사와 내 확인",
     "plannedCommand": "실행할 명령",
     "planDeliverables": "만들 결과",
@@ -282,7 +282,7 @@ const STRINGS = {
     "returnedShort": "{reason} · {whoSubject} 돌려보냈어요",
     "returnLeader": "리더",
     "returnReviewer": "검토자",
-    "recordOrder": "기록 {n}",
+    "recordOrder": "같은 시각의 {n}번째 기록",
     "results": "결과 보기",
     "resultLocations": "결과 파일",
     "checkingKey": "◷ 검사받는 중",
@@ -291,8 +291,8 @@ const STRINGS = {
     "pendingKey": "○ 시작 전",
     "planChecklist": "자동 검사 {checks}개 · 예정된 내 응답 {decisions}개",
     "planReturned": "돌려보낸 계획",
-    "planUnverified": "계획에 대한 내 답이 확인되지 않았어요",
-    "planUnverifiedHelp": "이 답으로는 일을 시작할 수 없어요. 담당자가 계획을 다시 올리면 새 결정에 답해 주세요.",
+    "planUnverified": "계획 답의 서명을 확인할 수 없어요",
+    "planUnverifiedHelp": "이 답으로는 일을 시작할 수 없어요. 진행 담당자가 계획을 다시 올리면 새 결정에 답해 주세요.",
     "planKeyMismatch": "승인을 확인할 수 없어요. 키 분실·교체, 프로젝트 이동, 기록 변조 중 무엇 때문인지는 알 수 없어요.",
     "planTampered": "계획 파일이 기록과 달라요",
     "planTamperedHelp": "진행 담당자가 계획을 다시 올려야 해요. 새 계획이 올라오면 읽고 시작해 주세요.",
@@ -324,12 +324,12 @@ const STRINGS = {
     "exitSuccess": "성공",
     "exitFailure": "실패 · 종료 코드 {n}",
     "planKeyHeading": "확인 키가 바뀌었어요",
-    "oldRunApproval": "이전 버전(0.2.1)에서 시작한 실행이에요. 담당자가 계획을 다시 올리면 읽고 계속할 수 있어요.",
-    "planMissing": "담당자가 계획을 올리기를 기다려요",
+    "oldRunApproval": "이전 실행이에요. 진행 담당자가 계획을 다시 올리면 읽고 계속할 수 있어요.",
+    "planMissing": "진행 담당자가 계획을 올리기를 기다려요",
     "planMissingHelp": "진행 담당자가 현재 계획을 올리면 읽고 계속할 수 있어요.",
     "planReplaced": "확인할 수 없던 계획을 교체했어요. 모든 일을 다시 확인해 주세요.",
     "unverifiedAnswer": "확인되지 않은 답 · 승인으로 인정되지 않아요",
-    "unverifiedAuthor": "내가 보낸 답인지 확인할 수 없어요",
+    "unverifiedAuthor": "답의 서명을 확인할 수 없어요",
     "planLens": "검토 관점",
     "planOutputs": "넘기는 것",
     "runChecksTitle": "전체 결과 확인",
@@ -354,11 +354,11 @@ const STRINGS = {
     "planContinueQuestion": "이 계획대로 계속할까요?",
     "planContinueEffect": "이미 한 일은 유지하고 이어서 진행해요.",
     "warning": "⚠ 진행이 멈춰 있어요",
-    "keyRecoveryAfter": "예상하지 못한 변화라면 담당자와 기록부터 확인해 주세요.",
+    "keyRecoveryAfter": "예상하지 못한 변화라면 진행 담당자와 기록부터 확인해 주세요.",
     "copyCommand": "명령 복사",
     "copiedCommand": "복사했어요",
     "projectMoved": "프로젝트 위치가 달라졌어요",
-    "projectMovedHelp": "프로젝트나 실행 폴더를 옮기거나 이름을 바꾸면 승인이 무효가 돼요. 담당자가 현재 계획을 다시 올리면 한 번 더 승인해 주세요.",
+    "projectMovedHelp": "프로젝트나 실행 폴더를 옮기거나 이름을 바꾸면 승인이 무효가 돼요. 진행 담당자가 현재 계획을 다시 올리면 한 번 더 승인해 주세요.",
     "workRecorded": "진행한 작업 기록이 있어요. 새 실행은 승인을 확인할 때까지 멈춰요.",
     "noWorkRecorded": "아직 실행한 작업 기록이 없어요. 승인 전에는 시작하지 않아요.",
     "planOpen": "계획 읽기",
@@ -390,7 +390,7 @@ const STRINGS = {
     "planMerge": "커밋한 결과는 프로젝트에 병합한 뒤 통과시켜요",
     "planReviewers": "검토 담당 일 · {value}",
     "evidenceChanged": "결정을 요청한 뒤 파일이나 근거가 바뀌었어요. 이 결정에는 답할 수 없어요.",
-    "legacyDecision": "이전 버전의 결정이에요. 담당자가 검사를 다시 요청하면 새 결정이 나타나요.",
+    "legacyDecision": "이전 버전의 결정이에요. 진행 담당자가 검사를 다시 요청하면 새 결정이 나타나요.",
     "preapprovalSubmitted": "승인 전에 제출됨",
     "preapprovalExplanation": "계획을 읽기 전에 제출된 결과가 있어요 · 계속하면 이어서 검사해요",
     "keyRecover": "확인 키를 새로 만들어요",
@@ -405,7 +405,7 @@ const STRINGS = {
     "attemptReturned": "고치러 돌아옴",
     "reviewCorrectionShort": "검토자가 의견을 고쳐요",
     "reviewWaitingShort": "검토자 답을 기다려요",
-    "waitForNewQuestion": "담당자가 다시 물어볼 때까지 기다려 주세요.",
+    "waitForNewQuestion": "진행 담당자가 다시 물어볼 때까지 기다려 주세요.",
     "keyRepinned": "확인 키를 새로 만들었어요. 계획을 읽고 {action}을 눌러 주세요.",
     "oldResults": "승인 전에 제출된 결과예요. 모두 읽고 계속하면 다음 단계에서 검사해요.",
     "whenAfterWork": "일을 마친 뒤, 받아들이기 전에 물어요.",
@@ -435,12 +435,12 @@ const STRINGS = {
     "citesCheckResult": "인용한 파일과 줄이 있어요",
     "sourceTerminal": "터미널",
     "sourceDashboard": "대시보드",
-    "oldRunReposted": "이전 버전(0.2.1)에서 시작한 실행이에요. 이전 결과를 읽고 계속할 수 있어요.",
+    "oldRunReposted": "이전 실행의 결과를 읽고 계속할 수 있어요.",
     "keyQuestionReplaced": "확인 키를 새로 만들어 이 질문을 교체했어요.",
     "evidenceQuestionReplaced": "근거가 바뀌어 이 질문을 교체했어요.",
     "planChangesRead": "결정 {old}에서 {newParticle} 바뀌었어요. 바뀐 항목을 모두 확인했어요.",
     "authorNote": "계획에 적힌 설명",
-    "freeQuestion": "질문 · 통과와 무관",
+    "freeQuestion": "이 질문의 답은 작업의 통과 여부를 바꾸지 않아요.",
     "freeEffect": "답은 질문한 쪽에게 전달돼요. 이 답만으로는 아무것도 통과되지 않아요.",
     "answeredQuestion": "답한 결정 · {question} · {outcome} · {answer}",
     "whenTrajectory": "수정이 세 번 이상이거나 시간 초과, 범위 이탈, 되돌림이 있으면 결과를 받기 전에 물어요.",
@@ -452,7 +452,7 @@ const STRINGS = {
     "ownCheckEffect": "작업 담당자가 검사 실행에 쓰이는 파일도 바꿀 수 있어요.",
     "holdExact": "통과하지 못한 검사·검토 의견 {n}개가 있어요: {items}. 그래도 받아들일까요?",
     "holdAccept": "{failed}을 받아들여요. 진행 담당자가 남은 통과 조건을 확인해요.",
-    "holdReject": "이 결과는 통과하지 않아요. 담당자가 내용을 고쳐야 해요.",
+    "holdReject": "이 결과는 통과하지 않아요. 작업 담당자가 내용을 고쳐야 해요.",
     "returnTrace": "↩ {n}번",
     "inputsReady": "앞선 일은 끝났어요 · 시작을 기다려요",
     "commandDefault": "검사 명령이 성공해요",
@@ -478,7 +478,7 @@ const STRINGS = {
     "newPlanDecision": "새 결정 {new}을 확인해 주세요. 바뀐 항목을 모두 열어 주세요.",
     "newPlanRead": "새 결정 {new}의 바뀐 항목을 모두 확인했어요.",
     "planRevisionState": "계획을 고치기를 기다려요",
-    "whos_planRevisionState": "담당자가 계획을 고쳐요",
+    "whos_planRevisionState": "진행 담당자가 계획을 고쳐요",
     "refuse": "허락하지 않기",
     "optionalNote": "덧붙일 말이 있으면 적어 주세요",
     "fileUnread": "열기 · {file}",
@@ -502,7 +502,7 @@ const STRINGS = {
     "freeEvidenceChanged": "질문한 뒤 파일이나 근거가 바뀌었어요. 이 질문에는 답할 수 없어요.",
     "answeredPermission": "허락하기로 답했어요",
     "onlyFinalChecks": "이 검사는 전체 결과를 확인할 때 실행돼요.",
-    "permissionNoEvidence": "허락할 내용을 확인할 자료가 없어요. 담당자에게 자료를 요청하거나 허락하지 않을 수 있어요.",
+    "permissionNoEvidence": "허락할 내용을 확인할 자료가 없어요. 허락하지 않거나 채팅에서 진행 담당자에게 자료를 요청할 수 있어요.",
     "permissionConfirmBlind": "자료 없이 이 일을 허락할게요",
     "permissionAcceptBlind": "자료 없이 허락하기",
     "permissionBlindHint": "자료 없이 허락하려면 확인 상자를 선택해 주세요.",
@@ -522,13 +522,13 @@ const STRINGS = {
     "answerExpand": "보낸 답 모두 보기",
     "planItemsTable": "일·검토·결정 카드 {n}개 표로 보기",
     "detailsSummary": "판단 근거",
-    "freeAnswerEffect": "답을 담당자에게 전달해요.",
+    "freeAnswerEffect": "답을 진행 담당자에게 전달해요.",
     "offFinal": "전체 결과 확인 1개",
     "genericOutput": "결과",
     "plannedHumanCheck": "내가 확인할 내용 · {title}",
     "cardUnread": "아직 읽지 않음",
     "cardOpenNeeded": "아직 읽지 않음",
-    "planUnverifiedSource": "{source}에서 보낸 내 답이에요. 결정 {id} · {question}",
+    "planUnverifiedSource": "{source}에서 온 답이에요. 서명을 확인할 수 없어요. 결정 {id} · {question}",
     "sourceUnknown": "출처가 기록되지 않은 곳",
     "evidenceTextOnly": "읽을 파일은 없어요. 자세한 근거를 열어 설명과 기록을 확인해 주세요.",
     "failedReviews": "통과하지 못한 검토 의견",
@@ -606,7 +606,19 @@ const STRINGS = {
     "scrollViewHelp": "글자 크기를 유지했어요. 화면 밖의 카드는 스크롤해서 볼 수 있어요.",
     "remainingCount": "읽을 카드 {n}개가 남았어요.",
     "seeRemaining": "남은 카드 보기",
-    "remainingMore": "외 {n}개"
+    "remainingMore": "외 {n}개",
+    "unassigned": "아직 배정되지 않았어요",
+    "sessionLabel": "세션: {id}",
+    "reviewing": "검토하고 있어요",
+    "whos_reviewing": "작업 담당자가 검토하고 있어요",
+    "unverifiedSource": "{source}에서 온 답이에요. 서명을 확인할 수 없어요.",
+    "oldVersionDetails": "이전 실행의 버전: 0.2.1",
+    "oldReasked": "이전 실행에서 제출한 결과를 현재 계획에 맞춰 다시 묻는 질문이에요.",
+    "oldQuestion": "이전 실행에서 제출한 결과를 받아들일까요?",
+    "readEvidenceHint": "자세한 근거를 먼저 열어 주세요.",
+    "reviewInput": "검토할 결과",
+    "reviewLenses": "검토 관점",
+    "ownCheckCards": "{names}: 작업 담당자가 검사 실행에 쓰이는 파일도 바꿀 수 있어요."
   },
   "en": {
     "flow": "Whole flow",
@@ -633,7 +645,7 @@ const STRINGS = {
     "from": "From",
     "to": "To",
     "noReason": "No readable reason was recorded.",
-    "attempt": "Attempt {n} · up to {max} attempts",
+    "attempt": "Attempt {n} · up to {max}",
     "notStarted": "Not started",
     "passed": "Finished",
     "running": "Making it",
@@ -655,7 +667,7 @@ const STRINGS = {
     "aboutWork": "Work details",
     "decisionRef": "Decision {id}",
     "askedBy": "Asked by: {who}",
-    "workedBy": "Worked by: {who}",
+    "workedBy": "Worker: {who}",
     "find": "Find",
     "findHint": "Decision, question, or step name",
     "findNone": "No decision, question, or step matches “{text}”. Select another flow if needed.",
@@ -851,7 +863,7 @@ const STRINGS = {
     "attemptShort": "Attempt {n}",
     "earlierHistory": "Earlier attempt history",
     "failureUnknownAttempt": "✕ In the recorded attempt, “{names}” did not pass",
-    "modelName": "Model {model}",
+    "modelName": "Model: {model}",
     "blindApproval": "Ask the agent session in chat to show the result, or send it back with a note about what to change.",
     "showDiagram": "Show diagram",
     "showFlowList": "Show readable list",
@@ -873,12 +885,12 @@ const STRINGS = {
     "readScale": "Readable size",
     "planSummary": "Work: {work} · Reviews: {review} · Decision steps: {decision}",
     "planStart": "Start",
-    "planStartEffect": "Let the coordinator start this work.",
-    "planBackEffect": "Send changes to the coordinator.",
+    "planStartEffect": "The coordinator starts the planned work.",
+    "planBackEffect": "Send the requested changes to the coordinator.",
     "planSentBack": "The plan was sent back",
     "planWaiting": "Review the plan",
     "planSentNote": "Your requested changes",
-    "planWaitingRevision": "Waiting for the coordinator’s revised plan.",
+    "planWaitingRevision": "Waiting for the coordinator to post a revised plan.",
     "planChecks": "Automated checks and your review",
     "plannedCommand": "Planned command",
     "planDeliverables": "Deliverables",
@@ -890,7 +902,7 @@ const STRINGS = {
     "returnedShort": "{reason} · Sent back by {who}",
     "returnLeader": "Leader",
     "returnReviewer": "Reviewer",
-    "recordOrder": "Record {n}",
+    "recordOrder": "Record {n} at this time",
     "results": "View results",
     "resultLocations": "Result files",
     "checkingKey": "◷ Being checked",
@@ -899,7 +911,7 @@ const STRINGS = {
     "pendingKey": "○ Not started",
     "planChecklist": "{checks} automated checks · {decisions} planned responses",
     "planReturned": "Returned plan",
-    "planUnverified": "Your answer to the plan could not be verified",
+    "planUnverified": "The plan answer signature could not be verified",
     "planUnverifiedHelp": "This answer cannot start work. Ask the coordinator to post the plan again, then answer the new decision.",
     "planKeyMismatch": "Approval cannot be verified. This could be a lost/replaced key, a moved project, or altered records; we cannot tell which.",
     "planTampered": "The plan file differs from its record",
@@ -932,12 +944,12 @@ const STRINGS = {
     "exitSuccess": "Succeeded",
     "exitFailure": "Failed · exit code {n}",
     "planKeyHeading": "The verification key has changed",
-    "oldRunApproval": "This run started in an earlier version (0.2.1). Read the reposted plan to continue.",
+    "oldRunApproval": "This is an earlier run. Read and continue after the coordinator posts its plan again.",
     "planMissing": "Waiting for the coordinator to post the plan",
     "planMissingHelp": "Read and continue once the coordinator posts the current plan.",
     "planReplaced": "An unverifiable plan was replaced. Review all work again.",
     "unverifiedAnswer": "Unverified answer · does not count as approval",
-    "unverifiedAuthor": "Cannot verify that this answer came from you",
+    "unverifiedAuthor": "The answer signature could not be verified",
     "planLens": "Review lens",
     "planOutputs": "Outputs",
     "runChecksTitle": "Check the whole result",
@@ -1043,12 +1055,12 @@ const STRINGS = {
     "citesCheckResult": "Cited files and lines exist",
     "sourceTerminal": "Terminal",
     "sourceDashboard": "Dashboard",
-    "oldRunReposted": "This run started in an earlier version (0.2.1). Read the earlier results to continue.",
+    "oldRunReposted": "Read the results from the earlier run before continuing.",
     "keyQuestionReplaced": "A new verification key replaced this question.",
     "evidenceQuestionReplaced": "Changed evidence replaced this question.",
     "planChangesRead": "Decision {old} was replaced by {new}. All changes read.",
     "authorNote": "Plan author’s note",
-    "freeQuestion": "Question · Does not approve work",
+    "freeQuestion": "This answer does not change whether the work passes.",
     "freeEffect": "The answer goes to the asker. This answer alone accepts or releases nothing.",
     "answeredQuestion": "Answered decision · {question} · {outcome} · {answer}",
     "whenTrajectory": "Asked before acceptance after three attempts, a timeout, a scope violation, or a rollback.",
@@ -1110,7 +1122,7 @@ const STRINGS = {
     "freeEvidenceChanged": "Files or evidence changed after this question. You cannot answer it.",
     "answeredPermission": "Answered: allow this work",
     "onlyFinalChecks": "These checks run when checking the whole result.",
-    "permissionNoEvidence": "There is no evidence for this permission. Ask the coordinator for evidence, or decline permission.",
+    "permissionNoEvidence": "There is no material to inspect. You can refuse permission or ask the coordinator for material in chat.",
     "permissionConfirmBlind": "I will allow this work without evidence",
     "permissionAcceptBlind": "Allow without evidence",
     "permissionBlindHint": "Tick the confirmation box to allow without evidence.",
@@ -1136,7 +1148,7 @@ const STRINGS = {
     "plannedHumanCheck": "Your review question · {title}",
     "cardUnread": "Unread",
     "cardOpenNeeded": "Unread",
-    "planUnverifiedSource": "Your answer came from {source}. Decision {id} · {question}",
+    "planUnverifiedSource": "This answer came from {source}. Its signature could not be verified. Decision {id} · {question}",
     "sourceUnknown": "an unrecorded source",
     "evidenceTextOnly": "There is no file. Open the evidence to read the explanation and records.",
     "failedReviews": "the review findings that did not pass",
@@ -1214,7 +1226,19 @@ const STRINGS = {
     "scrollViewHelp": "Text stays readable. Scroll to see cards outside the viewport.",
     "remainingCount": "{n} cards left to read.",
     "seeRemaining": "Show remaining cards",
-    "remainingMore": "and {n} more"
+    "remainingMore": "and {n} more",
+    "unassigned": "Not assigned yet",
+    "sessionLabel": "Session: {id}",
+    "reviewing": "Reviewing",
+    "whos_reviewing": "The worker is reviewing",
+    "unverifiedSource": "This answer came from {source}. Its signature could not be verified.",
+    "oldVersionDetails": "Earlier run version: 0.2.1",
+    "oldReasked": "This question asks again about a result from the earlier run under the current plan.",
+    "oldQuestion": "Accept the result submitted in the earlier run?",
+    "readEvidenceHint": "Open the detailed evidence first.",
+    "reviewInput": "Result to review",
+    "reviewLenses": "Review lenses",
+    "ownCheckCards": "{names}: the worker can also change files used to run these checks."
   }
 };
 // UI_STRINGS_END
@@ -1391,7 +1415,7 @@ export function edgeRelationLabel(edge, language = 'en') {
 export function edgeChipText(edge) {
   return (edge.relation || 'hands_over') === 'hands_over' && edge.label ? edge.label : '';
 }
-export const STATE_VOCABULARY = Object.fromEntries(['notStarted','running','retrying','submitted','passed','awaiting','returned','exhausted','held','preapprovalSubmitted','planRevisionState'].map(state=>[state,{name:state,whoseMove:'whos_'+state}]));
+export const STATE_VOCABULARY = Object.fromEntries(['notStarted','running','reviewing','retrying','submitted','passed','awaiting','returned','exhausted','held','preapprovalSubmitted','planRevisionState'].map(state=>[state,{name:state,whoseMove:'whos_'+state}]));
 export function stateWords(state, language='en') {
   const entry=STATE_VOCABULARY[state] || STATE_VOCABULARY.notStarted;
   return {name:STRINGS[language][entry.name],whoseMove:STRINGS[language][entry.whoseMove]};
@@ -1430,7 +1454,7 @@ export function displayState(node, decisions = []) {
   if(node.preapproval_submission)return 'preapprovalSubmitted';
   if (decisions.some(d => d.node === node.id)) return 'awaiting';
   if (node.status === 'passed' || node.answered) return 'passed';
-  if (node.status === 'running') return node.attempts > 1 ? 'retrying' : 'running';
+  if (node.status === 'running') return node.kind==='review'?'reviewing':node.attempts > 1 ? 'retrying' : 'running';
   if (['submitted','unverified'].includes(node.status)) return 'submitted';
   if (['replan','exhausted'].includes(node.status)) return 'exhausted';
   if (node.status === 'rejected') return 'returned';
@@ -1438,7 +1462,7 @@ export function displayState(node, decisions = []) {
   return 'notStarted';
 }
 export function statusGlyph(state) {
-  return {planRevisionState:'Ⅱ',preapprovalSubmitted:'⇥', passed:'✓', running:'▶', retrying:'↪', submitted:'◷', awaiting:'◆', returned:'↩', notStarted:'○', exhausted:'!', held:'Ⅱ'}[state];
+  return {planRevisionState:'Ⅱ',preapprovalSubmitted:'⇥', passed:'✓', reviewing:'▶', running:'▶', retrying:'↪', submitted:'◷', awaiting:'◆', returned:'↩', notStarted:'○', exhausted:'!', held:'Ⅱ'}[state];
 }
 export function commandTitle(check) {
   const command = check.command || check.run;
@@ -1780,7 +1804,7 @@ function otherTitle(value) { return view.nodes.some(n => n.id === value && n.tit
 function outputLabel(value) { return ({findings:t('findingsOutput'),approval:t('approvalOutput')})[value] || value; }
 function label(value) { value=outputLabel(value); return !value || /[\/\\]|\.[a-z0-9]{1,8}$/.test(value) || view.nodes.some(n => n.id === value) ? t('handoff') : value; }
 function relationText(edge) { return edgeRelationLabel({...edge,label:edge.label?label(edge.label):''},language); }
-function question(d) { return decisionQuestion(d, language); }
+function question(d) { return view.legacy&&d.purpose==='human_check'&&!/[?？]$/.test(d.question||'')?t('oldQuestion'):decisionQuestion(d, language); }
 function decisionTitle(d) { return title(view.nodes.find(n => n.id === d.node)); }
 // The same words an agent session uses for this decision, so either side can find the other.
 function sessionName(session) {
@@ -1806,7 +1830,7 @@ function refChip(id, say, decision = false, free = false) {
   }, 'ref' + (free ? ' question-ref' : decision ? ' decision-ref' : ''));
   chip.title = t('copyHint'); chip.setAttribute('aria-label', `${id}. ${t('copyHint')}`); return chip;
 }
-function workedBy(n) { return [n.worker?.model&&![STRINGS.ko.roleWorker,STRINGS.ko.roleLeader,STRINGS.en.roleWorker,STRINGS.en.roleLeader].includes(n.worker.model) ? t('modelName',{model:n.worker.model}) : t('roleWorker')].filter(Boolean).join(' · '); }
+function workedBy(n) { return n.worker?.model?t('modelName',{model:n.worker.model}):n.session?t('sessionLabel',{id:n.session}):t('unassigned'); }
 function decisionHeading(parent, d, tag) {
   const reference = el('p', undefined, 'ref-line'); reference.append(refChip(d.id, `${d.id} · ${decisionTitle(d)}`, true, d.free));
 
@@ -1816,11 +1840,13 @@ function decisionHeading(parent, d, tag) {
   if(d.free)parent.append(el('p',t('freeQuestion',{who:who(d.asked_by)}),'free-question'),el('p',t('freeEffect')));
   parent.append(reference, el('p', t('decisionWork',{title:decisionTitle(d)}), 'decision-work'));
   parent.append(el(tag, question(d) || purposeWording(d.purpose,language), 'decision-question'));
+  if(view.legacy&&!d.free)parent.append(el('p',t('oldReasked'),'legacy-question'));
+  if(d.review_lenses?.length)parent.append(el('p',t('reviewLenses')+' · '+d.review_lenses.join(' · '),'review-lenses'));
   if (!d.free && d.purpose === 'trajectory') textList(parent, (d.trajectory_reasons || []).map(key => t(key)));
 }
 function needs(node) { return view.decisions.some(d => d.node === node.id); }
-function status(node) { return stateWords(displayState(node,view.decisions),language).name; }
-function attempts(node) { if(['decision','goal'].includes(node.kind))return ''; return node.status==='passed' && node.attempts ? t(node.attempts===1?'firstPass':'finishedAttempts',{n:node.attempts}) : t(node.attempts?'attempt':'unusedAttempts', {n:node.attempts||0, max:node.max_attempts||3}); }
+function status(node) { return node.kind==='review'&&node.status==='running'?t('reviewing'):stateWords(displayState(node,view.decisions),language).name; }
+function attempts(node) { if(['decision','goal'].includes(node.kind))return ''; return t(node.attempts?'attempt':'unusedAttempts', {n:node.attempts||0,max:node.max_attempts||3}); }
 function card(heading, body, paper = false) { const c = el('div', undefined, 'card' + (paper ? ' paper' : '')); c.append(el('p', heading, 'eyebrow')); if (body) c.append(el('p', body)); return c; }
 function textList(parent, items, empty = 'notRecorded') { const list = el('ul'); if (!items.length) list.append(el('li', t(empty))); else items.forEach(text => list.append(el('li', text))); parent.append(list); }
 function wording(text, tag = 'span') {
@@ -1872,7 +1898,7 @@ function relationFacts(parent,node) {
   for(const [key,rows,direction] of [['planNeeds',node.inputs||[],'from'],['planOutputs',node.outputs||[],'to']]){
     parent.append(el('h3',t(key)));
     const list=el('ul');list.dataset.relations=direction;
-    for(const row of rows){const item=el('li',row.runLevel&&direction==='to'?t('includedIn',{title:row.other_title}):[row.label?outputLabel(row.label):'',t(direction)+' '+otherTitle(row.other_title)].filter(Boolean).join(' · '));item.dataset.otherNode=row.other_id;list.append(item);}
+    for(const row of rows){const item=el('li',row.runLevel&&direction==='to'?t('includedIn',{title:row.other_title}):[row.label?outputLabel(row.label):t(row.relation==='reviews'?'reviewInput':row.relation==='waits_for_decision'?'approvalOutput':'handoff'),t(direction)+' '+otherTitle(row.other_title)].filter(Boolean).join(' · '));item.dataset.otherNode=row.other_id;list.append(item);}
     if(!rows.length)list.append(el('li',t('noHandoffs')));parent.append(list);
   }
 }
@@ -1892,8 +1918,16 @@ function runFacts(parent) {
     for (const q of view.planned_questions) { const row=el('p'); row.append(button(otherTitle(flowNode(q.node)?.title),()=>selectNode(q.node),'link'),el('span',' · '+plannedQuestion(q))); parent.append(row); }
   }
 }
+function groupFacts(parent,start=0) {
+  let group=null;
+  for(const child of [...parent.children].slice(start)){
+    if(child.tagName.toLowerCase()==='h3'){group=el('section',undefined,'fact-section');parent.insertBefore(group,child);}
+    if(group)group.append(child);
+  }
+}
 function planFacts(parent, node) {
-  if (node.runLevel) { runFacts(parent); return; }
+  const start=parent.children.length;
+  if (node.runLevel) { runFacts(parent); groupFacts(parent,start); return; }
   if(node.goal && node.goal!==title(node))parent.append(el('h3', t('planGoal')), el('p', node.goal));
   authorNote(parent,node.context);if(node.requirement)parent.append(el('h3',t('requirements')),el('p',node.requirement));
   const questions=(view.planned_questions||[]).filter(q=>q.node===node.id);
@@ -1904,14 +1938,14 @@ function planFacts(parent, node) {
   relationFacts(parent,node);
   if(node.reads?.length){parent.append(el('h3',t('planReads')));textList(parent,node.reads);}
   const artifacts=(node.declared_outputs||[]).filter(value=>!node.outputs?.some(row=>row.label===value));
-  if(artifacts.length){parent.append(el('h3',t('planArtifacts')));textList(parent,artifacts.map(outputLabel));}
+  if(artifacts.length){parent.append(el('h3',t('planArtifacts')));textList(parent,artifacts.map(value=>value===t('genericOutput')?(node.owns?.join(', ')||t('handoff')):outputLabel(value)));}
   const checks=(node.planned_checks||[]).filter(c=>c.type!=='human'||!questions.length);
   if(checks.length){parent.append(el('h3',t('planChecks')));plannedChecks(parent,checks);}
   if(node.kind==='work'&&node.lane>=2){parent.append(el('p',t('crossFamily')));if(view.integration_checks?.length||view.promoted_checks?.length){parent.append(el('p',t(view.nodes.some(n=>n.kind==='work'&&n.lane>=2)?'alsoNodeChecks':'onlyFinalChecks',{tasks:view.nodes.filter(n=>n.kind==='work'&&n.lane>=2).map(title).join(', ')})));plannedChecks(parent,[...(view.integration_checks||[]),...(view.promoted_checks||[])]);}}
   if (node.lens) parent.append(el('h3',t('planLens')),el('p',Array.isArray(node.lens)?node.lens.join(' · '):node.lens));
   if(node.kind!=='decision'){const settings=el('details');settings.append(el('summary',t('executionSettings')),el('p',t('planBehaviour',{lane:node.lane,max:node.max_attempts})),el('p',t('planIsolation')),el('p',t('planMerge')));parent.append(settings);}
   if(node.reviewers?.length)parent.append(el('p',t('planReviewers',{value:node.reviewers.map(id=>otherTitle(flowNode(id)?.title||id)).join(', ')})));
-  contractDetails(parent,node.contract);
+  contractDetails(parent,node.contract);groupFacts(parent,start);
 }
 function planBlocked() { if(!view)return false; const a=view.plan_approval; return !!(view.plan_error || view.key_mismatch || view.location_mismatch || a && !(a.status==='answered' && a.verified && a.outcome==='approved')); }
 function problemTitle() { const a=view.plan_approval; return t(view.location_mismatch?'projectMoved':view.key_mismatch?'planKeyHeading':view.plan_error?'planTampered':!a?.id?'planMissing':a.status==='answered'&&!a.verified?'planUnverified':a.status==='open'?(view.has_work?'planContinueQuestion':'planWaiting'):'planSentBack'); }
@@ -1927,7 +1961,7 @@ function unreadCards() {
   return planFlow(view,language).nodes.filter(n=>!graphRead.has(n.id)||planChanges?.some(c=>c.id===n.id&&!planRead.has(c.id)));
 }
 function graphReadDone() {
-  const phone=matchMedia('(max-width:760px)').matches,viewport=phone?{left:0,top:0,right:innerWidth,bottom:innerHeight-(document.querySelector('.plan-actions')?.offsetHeight||0)}:document.querySelector('.map-viewport')?.getBoundingClientRect();
+  const phone=matchMedia('(max-width:760px)').matches,viewport=phone?{left:0,top:0,right:innerWidth,bottom:innerHeight-(document.querySelector('.plan-actions')?.offsetHeight||0)}:mapViewportRect();
   const outside=viewport&&[...document.querySelectorAll(phone?'#phone-flow .node-card':'#map .node-card')].some(e=>{const r=e.getBoundingClientRect();return r.left<viewport.left||r.right>viewport.right||r.top<viewport.top||r.bottom>viewport.bottom;});
   return t('graphReadDone',{n:view.nodes.length})+(outside?t('readOffscreen'):'');
 }
@@ -1941,7 +1975,7 @@ function recordGraphRead() {
   const identity=JSON.stringify(view.plan_approval?.identity);
   if(identity!==graphReadIdentity){graphRead.clear();graphReadSpans.clear();graphReadIdentity=identity;}
   const phone=matchMedia('(max-width:760px)').matches&&!$('flow').classList.contains('phone-diagram');
-  const viewport=phone?{left:0,top:0,right:innerWidth,bottom:innerHeight-(document.querySelector('.plan-actions')?.offsetHeight||0)}:document.querySelector('.map-viewport')?.getBoundingClientRect();
+  const viewport=phone?{left:0,top:0,right:innerWidth,bottom:innerHeight-(document.querySelector('.plan-actions')?.offsetHeight||0)}:mapViewportRect();
   if(!viewport)return;
   const top=Math.max(viewport.top,document.querySelector('#attention.plan-banner')?.getBoundingClientRect().bottom||0);
   for(const card of document.querySelectorAll(phone?'#phone-flow .node-card':'#map .node-card')){
@@ -2007,7 +2041,7 @@ function planAttention(box) {
       catch(error){message.textContent=t(error.code==='stale_decision'?'decisionChanged':'connectionFailed');target.disabled=false;}
     },'primary'),message);box.append(recovery);return true;
   }
-  if (!approval?.id && !view.plan_error) { box.append(el('p',t(view.legacy?'oldRunApproval':'planMissingHelp'))); return true; }
+  if (!approval?.id && !view.plan_error) { box.append(el('p',t(view.legacy?'oldRunApproval':'planMissingHelp')));if(view.legacy){const version=el('details');version.append(el('summary',t('moreDetails')),el('p',t('oldVersionDetails')));box.append(version);} return true; }
   if (view.plan_error || unverified) {
     if(unverified)box.append(el('p',t('planUnverifiedSource',{source:t(approval.source==='terminal'?'sourceTerminal':approval.source==='dashboard'?'sourceDashboard':'sourceUnknown'),id:approval.id,question:approval.question})));
     box.append(el('p', t(view.plan_error ? 'planTamperedHelp' : 'planUnverifiedHelp')));
@@ -2021,8 +2055,8 @@ function planAttention(box) {
     return true;
   }
   if(mode!=='flow'){box.append(button(t('viewPlan'),showGraph,'primary'));return true;}
-  const ownChecks=view.nodes.flatMap(n=>n.planned_checks||[]).filter(c=>c.runs_own_files).length;if(ownChecks)box.append(el('p',t('ownCheckEffect'),'own-check-note'));
-  if (view.legacy) box.append(el('p',t('oldRunReposted'),'plan-notice'));
+  const ownChecks=view.nodes.flatMap(n=>n.planned_checks||[]).filter(c=>c.runs_own_files).length;if(ownChecks)box.append(el('p',t('ownCheckCards',{names:view.nodes.filter(n=>n.planned_checks?.some(c=>c.runs_own_files)).map(title).join(', ')}),'own-check-note'));
+  if (view.legacy) {box.append(el('p',t('oldRunReposted'),'plan-notice'));const version=el('details');version.append(el('summary',t('moreDetails')),el('p',t('oldVersionDetails')));box.append(version);}
   const oldResults=view.legacy?view.nodes.filter(n=>n.preapproval_submission):[];
   if(oldResults.length){
     const list=el('div',undefined,'old-results');list.append(el('p',t('oldResults')));
@@ -2051,7 +2085,7 @@ function planAttention(box) {
   const back = button(t('sendBack'), () => send('revision_requested'));
   const message = el('p', undefined, 'muted'); message.setAttribute('role', 'status');
   const update = () => { const changed=box.querySelector('.change-notice');if(changed)changed.textContent=t(planChangeIds?.old?(unreadPlanChanges()?'planChangeIds':'planChangesRead'):(unreadPlanChanges()?'newPlanDecision':'newPlanRead'),planChangeIds||{}); const reason=graphReadReason() || (unreadPlanChanges()?t('changesReadReason',{names:planChanges.filter(c=>!planRead.has(c.id)).map(c=>c.title).join(', ')}):'') || (!oldResults.every(n=>planRead.has('result:'+n.id))?t('oldReadReason'):'');const remaining=unreadCards(),phone=matchMedia('(max-width:760px)').matches;
-    graphReason.textContent=reason?(phone&&remaining.length>2?t('remainingCount',{n:remaining.length}):reason):graphReadDone();
+    graphReason.textContent=reason?(phone&&remaining.length>2?t('remainingCount',{n:remaining.length})+' '+remaining.slice(0,2).filter(n=>title(n).length<=12).map(title).join(', '):reason):graphReadDone();
     graphReason.classList.toggle('read-done',!reason);remainingButton.hidden=!reason||remaining.length<=2||!phone;
     remainingList.replaceChildren(...remaining.map(n=>el('li',title(n))));graphReason.hidden=false;start.disabled = !!reason || !decisionController.canSubmit('approved'); back.disabled = unreadPlanChanges() || !decisionController.canSubmit('revision_requested'); input.disabled = !!session?.busy; $('picker').disabled = !!session?.busy; };
   planBanner.update=()=>{update();document.body.style.setProperty('--plan-actions-height',(actions.offsetHeight+24)+'px');};
@@ -2113,21 +2147,21 @@ function panel() {
     const ask = card(t('yourTurn'), question(d) || purposeWording(d.purpose, language), true);
     ask.append(refChip(d.id, `${d.id} · ${title(node)}`, true, d.free),button(t('read'),()=>openDecision(d.id),'primary')); p.append(ask);
   }
-  p.append(el('p', node.runLevel?t('runChecksAfter'):status(node), 'panel-status '+cardTone(node)));
-  p.append(el('p',stateWords(displayState(node,view.decisions),language).whoseMove,'whose-move'));
+  p.append(el('p', status(node), 'panel-status '+cardTone(node)));
+
   if(node.waiting_for_review_correction)p.append(el('p',t('reviewWaiting')));
   if(node.review_needs_correction)p.append(el('p',t('reviewCorrection')));
   if (node.runLevel || view.plan_approval && !(view.plan_approval.verified && view.plan_approval.outcome === 'approved')) {
     planFacts(p, node); if(!node.runLevel)p.append(referenceDetails); p.scrollTop=scroll; return;
   }
-  if (displayState(node,view.decisions)==='returned') p.append(el('p',t('returnedShort',{who:node.returned_by?.session || t(node.returned_by?.role==='reviewer'?'roleReviewer':'roleLeader'),reason:returnedLine(node)})));
+  if (displayState(node,view.decisions)==='returned') p.append(el('p',t('returnedShort',{who:t(node.returned_by?.role==='reviewer'?'roleReviewer':'roleLeader'),reason:returnedLine(node)})));
   p.append(referenceDetails, el('p', attempts(node)));
   const rows = view.timeline.filter(r => r.node === node.id && r.kind === 'attempt').sort((a,b)=>b.seq-a.seq);
   if (rows.length) p.append(el('p', t('attemptsOf'), 'eyebrow'));
   const list = el('ol', undefined, 'panel-history');
   let earlier=false;
   for (const r of rows) {
-    const item = el('li'); item.className=r.attempt===node.attempts?'current-history':'earlier-history'; if(r.attempt===node.attempts || !earlier)item.append(el('strong',view.complete?t('attemptShort',{n:r.attempt}):attemptHeading(r,r.attempt!==node.attempts)));if(r.attempt!==node.attempts)earlier=true;item.append(wording(rowSentence(r),'p'));
+    const item = el('li'); item.className=r.attempt===node.attempts?'current-history':'earlier-history'; if(r.attempt===node.attempts || !earlier)item.append(el('strong',view.complete?t('attemptShort',{n:r.attempt}):attemptHeading(r,r.attempt!==node.attempts)));if(r.attempt!==node.attempts)earlier=true;if(r.attempt!==node.attempts)item.append(wording(rowSentence(r),'p'));
     const extra=el('details');extra.open=!!rowOpen.get('panel:'+r.id);extra.addEventListener('toggle',()=>rowOpen.set('panel:'+r.id,extra.open)); extra.append(el('summary',t('attemptRecord',{n:r.attempt})));
     const checks=el('ul',undefined,'checks');r.checks.forEach(c=>checks.append(checkLine(c, r.attempt)));extra.append(checks);
     for(const [key,values] of [['workerNote',r.notes?[r.notes]:[]],['changedFiles',r.files||[]],['findings',r.findings||[]],['unsure',r.unsure||[]]])if(values.length){extra.append(el('p',t(key),'eyebrow'));textList(extra,values);}
@@ -2136,7 +2170,7 @@ function panel() {
   }
   p.append(list);
   const more=el('details');more.open=!!rowOpen.get('panel:'+node.id);more.addEventListener('toggle',()=>rowOpen.set('panel:'+node.id,more.open));more.append(el('summary',t('workerDetails')));
-  planFacts(more, node);
+  more.append(el('h3',t('roleWorker')),el('p',workedBy(node)));groupFacts(more,1);planFacts(more, node);
 
   if(view.complete){const files=[...new Set(rows.flatMap(r=>r.state==='passed'?r.files||[]:[]))];if(files.length){p.append(el('h3',t('resultLocations')));textList(p,files);}}
   p.append(more,button(t('showInLog'),()=>showNode(node.id),'small'));
@@ -2159,7 +2193,7 @@ function rowSentence(r) {
   if (r.kind === 'learned') return `${t('evLearned')} · ${r.text}`;
   if (r.kind === 'reopened') return [t('evReopened'), r.reason].filter(Boolean).join(' · ');
   if (r.kind === 'asked') return [t(r.purpose==='free'?'evAsked':'evDecisionAsked'), r.question].filter(Boolean).join(' · ');
-  if (r.kind === 'answered' && !r.verified) return [t('unverifiedAnswer'),r.source?t('answerChannel',{source:t(r.source==='terminal'?'sourceTerminal':'sourceDashboard')}):''].filter(Boolean).join(' · ');
+  if (r.kind === 'answered' && !r.verified) return t('unverifiedSource',{source:t(r.source==='terminal'?'sourceTerminal':r.source==='dashboard'?'sourceDashboard':'sourceUnknown')});
   if (r.kind === 'answered' && r.purpose === 'plan_approval' && r.outcome === 'approved') return [t('answeredPlan'),r.answer].filter(Boolean).join(' · ');
   if (r.kind === 'answered') return [t(({approved:'answeredApproval', revision_requested:'answeredRevision', rejected:'answeredRejection'})[r.outcome] || 'evAnswered'), r.answer].filter(Boolean).join(' · ');
   const failed = (r.checks || []).filter(c => c.result === 'failed').map(c => checkTitle(c, language)), passed = (r.checks || []).filter(c => c.result === 'passed').length;
@@ -2168,7 +2202,7 @@ function rowSentence(r) {
   const checks=current?.planned_checks||[],total=Math.max((r.checks||[]).length,checks.filter(c=>c.type!=='human').length),human=checks.filter(c=>c.type==='human').length;
   const outcome = total && r.state !== 'running' ? t('checkProgress',{total,passed})+(human?' · '+t('humanCheckCount',{n:human}):'') : '';
   const stateKey=displayState({status:({returned:'rejected',needs_you:'awaiting_approval'}[r.state]||r.state),attempts:n},current&&needs(current)&&!['returned','replan','passed'].includes(r.state)?[{node:undefined}]:[]);
-  return [stateWords(stateKey,language).name,outcome,r.returned_by?t('returnedActor',{who:r.returned_by.session||who(r.returned_by)}):''].filter(Boolean).join(' · ');
+  return [current?.kind==='review'&&r.state==='running'?t('reviewing'):stateWords(stateKey,language).name,outcome,r.returned_by?t('returnedActor',{who:who(r.returned_by)}):''].filter(Boolean).join(' · ');
 }
 function rowTone(r) {
   const current=view.nodes.find(n=>n.id===r.node && n.attempts===r.attempt);
@@ -2201,12 +2235,12 @@ function logRow(r, anchor = true, inline = false) {
   const item = el('li', undefined, rowTone(r)+(isEarlier?' earlier-history':' current-history')); if (anchor) item.id = r.id;
   const head = el('div', undefined, 'row-head'), text = el('span', undefined, 'row-text');
   const stamp=el('span', clock(r.ts, true), 'row-time');
-  if(view.timeline.filter(row=>row.ts===r.ts).length>1)stamp.append(el('span', ' · '+t('recordOrder',{n:view.timeline.findIndex(row=>row.id===r.id)+1})));
+  if(view.timeline.filter(row=>row.ts===r.ts).length>1)stamp.title=t('recordOrder',{n:view.timeline.filter(row=>row.ts===r.ts).findIndex(row=>row.id===r.id)+1});
   head.append(stamp);
   if (r.decision) text.append(refChip(r.decision, `${r.decision} · ${r.node_title || r.question}`, true, r.purpose==='free'));
   if (r.node) text.append(el('strong', title({id:r.node, title:r.node_title})));
   text.append(wording(rowSentence(r))); head.append(text);
-  const by = [['answered','repinned'].includes(r.kind) && !r.verified ? t('unverifiedAuthor') : who(r.by), r.kind === 'attempt' && r.worker?.model&&![STRINGS.ko.roleWorker,STRINGS.ko.roleLeader,STRINGS.en.roleWorker,STRINGS.en.roleLeader].includes(r.worker.model) ? t('modelName',{model:r.worker.model}) : ''].filter(Boolean).join(' · ');
+  const by = [['answered','repinned'].includes(r.kind) && !r.verified ? '' : r.kind==='attempt'?t('roleWorker'):who(r.by), r.kind === 'attempt' && r.worker?.model&&![STRINGS.ko.roleWorker,STRINGS.ko.roleLeader,STRINGS.en.roleWorker,STRINGS.en.roleLeader].includes(r.worker.model) ? t('modelName',{model:r.worker.model}) : ''].filter(Boolean).join(' · ');
   if (by) head.append(el('span', by, 'row-who'));
 
   item.append(head);
@@ -2329,7 +2363,7 @@ function closeInvalidDecision(run, decisions, nextView = {decisions}) {
 function showChangedDecision(){const changed=decisionController.session?.decision,free=!!changed?.free;unavailableDecisions.push(decisionController.session?.target.id);updateSubtitle();decisionController.close();decisionUI=null;const box=$('decision');clear(box);box.classList.add('decision-changed');box.append(el('p',t('decisionRef',{id:changed.id})+' · '+decisionTitle(changed)),el('p',question(changed)),el('h2',t(free?'freeEvidenceChanged':'evidenceChanged')),el('p',t('waitForNewQuestion'),'change-notice'),button(t('backToTab',{tab:t('graph')}),showGraph));$('picker').disabled=false;}
 function goHome() { if (showMode('home') && view) home(); }
 function showGraph() { if (!showMode('flow')) return; attention(); panel(); }
-function selectNode(id) { const n=flowNode(id),d=view.decisions.find(d=>d.node===id); if (!showMode('flow')) return; selected = selected === id ? null : id; panel(); if(selected)readPlanChange(selected); if (renderer) renderer.select(selected);planBanner?.update?.(); }
+function selectNode(id) { const n=flowNode(id),d=view.decisions.find(d=>d.node===id); if (!showMode('flow')) return; selected = selected === id ? null : id; panel(); if(selected)readPlanChange(selected); if (renderer) renderer.select(selected);planBanner?.update?.(); if(selected){const intro=$('panel').querySelector('.panel-intro'),r=intro.getBoundingClientRect();if(r.top<0||r.bottom>innerHeight)intro.scrollIntoView({block:'nearest'});} }
 function focusHeading(heading) { heading.tabIndex = -1; heading.focus({preventScroll:true}); }
 function openDecision(id, focus = true) {
   replacementDecision=null; decisionNotice=''; notice('');
@@ -2363,7 +2397,7 @@ function openDecision(id, focus = true) {
     actions.querySelectorAll('button[data-outcome]').forEach(b => { b.disabled = !current() || !decisionController.canSubmit(b.dataset.outcome, input.value); });
     for(const b of actions.querySelectorAll('button[data-outcome]')) {
       const kind=b.dataset.outcome,hint=actions.querySelector(`[data-hint=${kind}]`);
-      hint.textContent=!b.disabled?'':session.busy?t('sending'):kind==='approved'?(session.nothingToJudge&&!session.blindConfirmed?t(permission?'permissionBlindHint':'blindHint'):t('readGateHint')):t(isQuestion?'writeFirst':'revisionHint');
+      hint.textContent=!b.disabled?'':session.busy?t('sending'):kind==='approved'?(session.nothingToJudge&&!session.blindConfirmed?t(permission?'permissionBlindHint':'blindHint'):t(session.failed.length||session.purpose==='hold'||!session.decision.files?.length?'readEvidenceHint':'readGateHint')):t(isQuestion?'writeFirst':'revisionHint');
       hint.hidden=!hint.textContent;
     }
     const read=canApprove(session),empty=session.nothingToJudge;
@@ -2432,6 +2466,7 @@ function openDecision(id, focus = true) {
   details.open = session.detailsOpened;
   const markDetailsOpened = () => { if (current() && details.open) { decisionController.openDetails(); updateActions(); } };
   details.addEventListener('toggle', markDetailsOpened);
+  const evidenceButton=button(t('details'),()=>{details.open=true;markDetailsOpened();details.scrollIntoView({block:'nearest'});},'secondary evidence-action');reading.insertBefore(evidenceButton,actions);
   const reminder = el('p', t('evidenceReminder')); reminder.hidden=true;
   right.prepend(reminder);
   const gateFacts = el('div'); details.append(gateFacts);
@@ -2453,6 +2488,7 @@ function openDecision(id, focus = true) {
   }); details.append(loadEvidence, raw); right.insertBefore(details,files); box.append(reading, right);
   const update = () => {
     const decision = session.decision;
+    evidenceButton.hidden=session.nothingToJudge||!!decision.free;
     clear(introduction);
     if(session.changed){introduction.append(el('p',t(decision.free?'freeChanged':'decisionChanged'),'change-notice'),button(t('acknowledgeChange'),()=>{decisionController.acknowledge();update();}));}
     introduction.append(el('p',t(decision.free?'freeTab':'decisionTab',{tab:t(cameFrom==='home'?'home':'graph')}),'eyebrow'));
@@ -2479,7 +2515,7 @@ function openDecision(id, focus = true) {
       revisionButton.classList.toggle('primary',!permission&&nothingToInspect);
       // Action order is stable; emphasis changes, position does not.
     }
-    if(missing.children.length) introduction.append(missing);
+    if(missing.children.length) {introduction.append(missing);if(!evidenceButton.hidden)missing.append(evidenceButton);}
     history.hidden = !rows.length;phoneHistory.hidden=!rows.length;clear(phoneHistory);
     const previous=rows.filter(r=>r.attempt<node?.attempts && r.checks?.some(c=>c.result==='failed')).sort((a,b)=>b.seq-a.seq)[0];
     phoneHistory.append(el('summary',t('history')));
@@ -2675,7 +2711,7 @@ function walker() {
 function inPhase(element, period) {element.style.animationDelay=-(performance.now()%period)+'ms';return element;}
 function nodeDescription(n) {return n.runLevel?`${t('runChecksTitle')}. ${t('runChecksAfter')}`:`${t(n.kind||'work')}. ${title(n)}. ${status(n)}. ${attempts(n)}. ${t('returnTimes',{n:cometCount(n)})}`;}
 function nodeCard(n, expanded = false, level = 'detail') {
-  const root=el('article',undefined,'node-card '+cardTone(n)+(['running','retrying'].includes(displayState(n,view.decisions))?' working':'')+(expanded?' expanded':''));root.dataset.node=n.id;if(planBlocked())root.classList.add('read-status');
+  const root=el('article',undefined,'node-card '+cardTone(n)+(['running','reviewing','retrying'].includes(displayState(n,view.decisions))?' working':'')+(expanded?' expanded':''));root.dataset.node=n.id;if(planBlocked())root.classList.add('read-status');
   if(planBlocked())root.append(el('p',t('cardUnread'),'unread-mark'));
   const change=planChanges?.find(c=>c.id===n.id);if(change)root.append(el('p',t(change.kind),'change-mark'));
   const header=button('',()=>{
@@ -2689,7 +2725,7 @@ function nodeCard(n, expanded = false, level = 'detail') {
     if (cometCount(n) || state === 'returned') marks.push('↩');
     if (view.decisions.some(d=>d.node===n.id)) marks.push('◆ '+t('yourTurn'));
     if ((view.planned_questions || []).some(q=>q.node===n.id)) marks.push(t('questionsMark'));
-    header.title = title(n)+' · '+status(n)+(marks.length?' · '+marks.join(' · '):'')+(cometCount(n)&&n.returned_by?' · '+t('returnedActor',{who:n.returned_by.session||who(n.returned_by)}):'');
+    header.title = title(n)+' · '+status(n)+(marks.length?' · '+marks.join(' · '):'')+(cometCount(n)&&n.returned_by?' · '+t('returnedActor',{who:who(n.returned_by)}):'');
     header.append(el('span',statusGlyph(state),'status-glyph'),el('strong',title(n),'node-title'));
 
 
@@ -2705,13 +2741,13 @@ function nodeCard(n, expanded = false, level = 'detail') {
   if(n.planned_checks?.some(c=>c.runs_own_files)){const mark=el('span',t('ownCheckMark'),'own-check-mark');mark.title=t('ownCheckEffect');reference.append(mark);}
   if(n.status==='passed'&&cometCount(n))reference.append(el('span',t('returnTrace',{n:cometCount(n)})));
 
-  if(n.attempts)reference.append(el('span',t('attemptShort',{n:n.attempts}),'attempt-caption'));
+  if(n.attempts)reference.append(el('span',attempts(n),'attempt-caption'));
   const decision=view.decisions.find(d=>d.node===n.id);
   const footer=el('div',undefined,'node-footer');
   if(!decision && displayState(n,view.decisions)==='returned') {
     const reason=returnedLine(n);
     const line=el('span',reason);line.title=line.textContent;footer.append(line);
-    clear(reference);reference.append(el('span',t('returnedActor',{who:n.returned_by?.session || t(n.returned_by?.role==='reviewer'?'returnReviewer':'returnLeader')})));
+    clear(reference);reference.append(el('span',t('returnedActor',{who:t(n.returned_by?.role==='reviewer'?'returnReviewer':'returnLeader')})));
   }
   const essentials=el('div',undefined,'node-essentials');
   essentials.append(el('p',nodeSentence(n,view.nodes,language),'node-sentence'));
@@ -2738,12 +2774,24 @@ function nodeCard(n, expanded = false, level = 'detail') {
   const answer=essentials.querySelector('.answered-result');if(answer)answer.addEventListener('toggle',()=>{if(root.isConnected&&!root.classList.contains('card-measure'))renderer?.remeasure();});
   return root;
 }
+function mapViewportRect(){const e=document.querySelector('.map-viewport');return e?contentRect(e):null;}
+function contentRect(element){const r=element.getBoundingClientRect();if(!Number.isFinite(element.clientWidth))return r;const left=r.left+(element.clientLeft||0),top=r.top+(element.clientTop||0);return {left,top,right:left+element.clientWidth,bottom:top+element.clientHeight};}
 function titleTextRect(title){
   if(!title)return null;
   if(!document.createRange)return title.getBoundingClientRect();
-  const range=document.createRange();range.selectNodeContents(title);const r=range.getBoundingClientRect(),b=title.getBoundingClientRect();
-  const left=Math.max(r.left,b.left),right=Math.min(r.right,b.right),top=Math.max(r.top,b.top),bottom=Math.min(r.bottom,b.bottom);
-  return {left,right,top,bottom,width:right-left,height:bottom-top};
+  const range=document.createRange();range.selectNodeContents(title);return range.getBoundingClientRect();
+}
+// The scroll edge may hide whole lines, but never bisect their letters.
+function wholeMapLines(card,viewport,scale) {
+  if(!document.createRange)return;
+  for(const text of card.querySelectorAll('.node-title,.node-status,.node-essentials p,.node-footer>span,.node-reference>span,.unread-mark,.change-mark,summary')){
+    text.style.clipPath='';
+    const range=document.createRange();range.selectNodeContents(text);
+    const lines=[...range.getClientRects()].filter(r=>r.width&&r.height),box=text.getBoundingClientRect();
+    if(!lines.length||lines.every(r=>r.top>=viewport.top-.5&&r.bottom<=viewport.bottom+.5))continue;
+    const whole=lines.filter(r=>r.top>=viewport.top-.5&&r.bottom<=viewport.bottom+.5);
+    text.style.clipPath=whole.length?`inset(${Math.max(0,(whole[0].top-box.top)/scale)}px 0 ${Math.max(0,(box.bottom-whole.at(-1).bottom)/scale)}px 0)`:'inset(100%)';
+  }
 }
 function createMap() {
   const map=$('map');map.tabIndex=0;
@@ -2798,12 +2846,13 @@ function createMap() {
     const groups={offLeft:[],offRight:[],offTop:[],offBottom:[]}; let visible=0;
     for(const n of data.nodes) {
       const p=layout.positions[n.id],x=p.x*scale+ox-viewport.scrollLeft,y=p.y*scale+oy-viewport.scrollTop;
-      const element=nodes.get(n.id),title=element?.querySelector('.node-title'),vr=viewport.getBoundingClientRect(),tr=title?.getBoundingClientRect();
+      const element=nodes.get(n.id),title=element?.querySelector('.node-title'),vr=contentRect(viewport),tr=titleTextRect(title);
       const rect=tr?{x:tr.left-vr.left,y:tr.top-vr.top,width:tr.width,height:tr.height}:{x,y,width:p.width*scale,height:p.height*scale};
-      const direction=offscreenDirection(rect,w,h);
+      const horizontal=x>=-.5&&x+p.width*scale<=w+.5;
+      const direction=offscreenDirection(horizontal?rect:{x,y,width:p.width*scale,height:p.height*scale},w,h);
       if(direction)groups[direction].push(n);
-      if(titleVisibility(rect,w,h))visible++;
-      if(element)element.style.visibility=intersectsViewport({x,y,width:p.width*scale,height:p.height*scale},w,h)?'visible':'hidden';
+      if(horizontal&&titleVisibility(rect,w,h))visible++;
+      if(element){element.style.visibility=horizontal&&intersectsViewport({x,y,width:p.width*scale,height:p.height*scale},w,h)?'visible':'hidden';wholeMapLines(element,vr,scale);}
     }
     for(const c of layout.chips){const chip=chips.get(c.first);if(chip)chip.hidden=scale<1 || !!chip.dataset.tooWide || !!offscreenDirection({x:c.x*scale+ox-viewport.scrollLeft,y:c.y*scale+oy-viewport.scrollTop,width:c.width*scale,height:c.height*scale},w,h);}
     // The viewport clips routes naturally: an off-screen neighbour leaves a visible continuing stub.
@@ -2814,7 +2863,7 @@ function createMap() {
       let b=overflowButtons.get(direction);
       if(!b){b=button('',()=>{},'small');overflowButtons.set(direction,b);overflow.append(b);}
       overflow.append(b);
-      b.textContent=(items.some(n=>!n.runLevel)?t('offCount',{direction:t(direction),n:items.filter(n=>!n.runLevel).length})+(items.some(n=>n.runLevel)?' + '+t('runChecksTitle'):''):t(direction)+' '+t('offFinal')) + (items.some(n=>['running','retrying','submitted'].includes(displayState(n,data.decisions))) ? t('offWorking',{n:items.filter(n=>['running','retrying','submitted'].includes(displayState(n,data.decisions))).length}) : '') + (items.some(n=>data.decisions.some(d=>d.node===n.id)) ? t('offNeeds',{n:items.filter(n=>data.decisions.some(d=>d.node===n.id)).length}) : '');
+      b.textContent=(items.some(n=>!n.runLevel)?t('offCount',{direction:t(direction),n:items.filter(n=>!n.runLevel).length})+(items.some(n=>n.runLevel)?' + '+t('runChecksTitle'):''):t(direction)+' '+t('offFinal')) + (items.some(n=>['running','reviewing','retrying','submitted'].includes(displayState(n,data.decisions))) ? t('offWorking',{n:items.filter(n=>['running','reviewing','retrying','submitted'].includes(displayState(n,data.decisions))).length}) : '') + (items.some(n=>data.decisions.some(d=>d.node===n.id)) ? t('offNeeds',{n:items.filter(n=>data.decisions.some(d=>d.node===n.id)).length}) : '');
       b.onclick=()=>{
         const horizontal=['offLeft','offRight'].includes(direction),back=['offLeft','offTop'].includes(direction);
         const sorted=[...items].sort((a,b)=>(layout.positions[a.id][horizontal?'x':'y']-layout.positions[b.id][horizontal?'x':'y'])*(back?-1:1));
@@ -2916,7 +2965,7 @@ function createMap() {
     for(const route of layout.routes) {
       const {chip:c}=route;
       const d=roundedRoute(route.points);
-      const flowing=route.gateState==='open'&&['running','retrying'].includes(displayState(data.nodes.find(n=>n.id===route.to)||{}, data.decisions));
+      const flowing=route.gateState==='open'&&['running','reviewing','retrying'].includes(displayState(data.nodes.find(n=>n.id===route.to)||{}, data.decisions));
       const line=svg('path',{d,'data-from':route.from,'data-to':route.to,class:'edge-path '+route.gateState+(route.relation==='reviews'?' review':'')+(flowing?' flowing':''),'marker-end':`url(#arrow-${route.gateState})`});
       drawing.append(svg('path',{d,class:'edge-underlay'}),flowing?inPhase(line,2000):line);
       if(!c||chips.has(c.first))continue;

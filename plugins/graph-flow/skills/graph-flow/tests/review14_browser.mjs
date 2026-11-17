@@ -49,7 +49,7 @@ try {
     }
     await evaluate(`document.querySelector('.panel-body').scrollTo(0,180)`);await delay(150);
     assert(await evaluate(`(()=>{const b=document.querySelector('.panel-bar').getBoundingClientRect(),p=document.querySelector('.panel-body').getBoundingClientRect();return b.bottom<=p.top+.5&&document.querySelector('.panel-bar').textContent.includes('안내 단계 0')})()`),'E2 header and selected title stay outside the scroll surface');
-    assert(await evaluate(`(()=>{const b=document.querySelector('.panel-body'),top=b.getBoundingClientRect().top;return [...b.querySelectorAll('p,h3,summary,pre')].filter(e=>e.getClientRects().length).every(e=>{const r=document.createRange();r.selectNodeContents(e);const t=r.getBoundingClientRect();return !(t.top<top-.5&&t.bottom>top+.5)})})()`),'E2 no letters are clipped at the top after scrolling');
+    assert(await evaluate(`(()=>{const b=document.querySelector('.panel-body'),top=b.getBoundingClientRect().top;return [...b.querySelectorAll('p,h3,summary,pre')].filter(e=>e.getClientRects().length).every(e=>{const r=document.createRange();r.selectNodeContents(e);const t=r.getBoundingClientRect();const h=e.closest('.fact-section')?.querySelector('h3')?.getBoundingClientRect();return !(t.top<top-.5&&t.bottom>top+.5)||h&&h.top<=top+.5&&h.bottom>=t.bottom})})()`),'E2 no letters are clipped at the top after scrolling');
   }
   await evaluate(`document.querySelector('#accessible').open=true`);await delay(100);
   assert(await evaluate(`document.querySelector('.plan-actions button.primary').disabled`),'list view cannot approve');

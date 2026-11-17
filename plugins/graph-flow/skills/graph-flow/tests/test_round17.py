@@ -68,7 +68,7 @@ assert(detailCardHeight(n)>=detailCardHeight({...n,planned_checks:[{type:'cmd'}]
 assert(layeredLayout([n],[],[],true,{level:'overview'}).positions.a.height>=104);
 ''')
         source = PAGE.read_text()
-        self.assertIn("if(ownChecks)box.append(el('p',t('ownCheckEffect')", source)
+        self.assertIn("if(ownChecks)box.append(el('p',t('ownCheckCards',", source)
         self.assertIn('.overview-card .own-check-mark{position:static;grid-column:1/-1}', HTML.read_text())
 
     def test_d4_action_counts_plan_counts_and_actual_title_rectangles(self):
@@ -113,14 +113,14 @@ assert(STRINGS.ko.supersededNotice.includes('{old}'));assert(STRINGS.ko.supersed
 
     def test_d7_reading_gates_explain_lock_and_prior_reading(self):
         self.js(r'''
-assert(STRINGS.ko.graphReadDone.includes('화면 밖'));
-assert(STRINGS.ko.changesReadReason.includes('모두'));
+assert(STRINGS.ko.readOffscreen.includes('화면 밖'));assert(!STRINGS.ko.graphReadDone.includes('화면 밖'));
+assert(STRINGS.ko.changesReadReason.includes('읽어 주세요'));
 assert(STRINGS.ko.oldReadReason.includes('계속'));
 assert(STRINGS.ko.planGraphReason.includes('{action}'));
 assert(!STRINGS.ko.preapprovalExplanation.includes('승인하면'));
 ''')
         source = PAGE.read_text()
-        self.assertIn("reason||t('graphReadDone'", source)
+        self.assertIn('graphReadDone()', source)
         self.assertIn("!oldResults.every(n=>planRead.has('result:'+n.id))?t('oldReadReason')", source)
 
     def test_d8_labels_commands_context_and_log_are_unambiguous(self):
@@ -138,7 +138,7 @@ assert.equal(uniqueChecks([c,{...c,timeout_s:10}]).length,2);
         self.assertNotIn("n.title+' ('+n.node+')'", source)
         reading = source.split('function openDecision(')[1].split('function leaveDecision')[0]
         self.assertEqual(reading.count("t('freeEffect')"), 0)
-        self.assertEqual(reading.count("t('details')"), 1)
+        self.assertEqual(reading.count("t('details')"), 2)
 
     def test_d9_answers_scope_body_and_outputs_are_readable(self):
         self.js(r'''
@@ -218,7 +218,7 @@ class ModelPresentationTests(unittest.TestCase):
         from test_review15 import Recovery15Tests
         nid, did = Recovery15Tests.prepare(self, 'hold_review')
         decision = next(d for d in self.view()['decisions'] if d['id']==did)
-        self.assertIn('safety', decision['failed'][0])
+        self.assertIn('safety', decision['review_lenses'])
         self.assertNotIn("['", decision['failed'][0])
         self.assertEqual(self.view()['nodes'][1]['status'], 'passed')
         self.accept(did)

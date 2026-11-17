@@ -70,5 +70,5 @@ assert.equal(statusGlyph('preapprovalSubmitted'),'⇥');
         css=server.PAGE_PATH.read_text()
         self.assertNotIn('.edge-clipped .node-card>*{visibility:hidden}',css)
         self.assertNotIn('.node-card.unused{border-style:dashed',css)
-        self.assertIn("const direction=offscreenDirection(rect,w,h)",page)
-        self.assertIn("if(titleVisibility(rect,w,h))visible++",page)
+        self.assertIn("const direction=offscreenDirection(",page)
+        self.assertIn("if(horizontal&&titleVisibility(rect,w,h))visible++",page)

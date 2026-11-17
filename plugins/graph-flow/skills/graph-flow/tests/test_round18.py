@@ -145,7 +145,7 @@ const effect=get('decision').querySelectorAll('[data-effect]').find(e=>e.dataset
 assert(effect.textContent.includes('통과하지 못한 검토 의견'));assert(!effect.textContent.includes('실패한 검사'));
 assert(effect.textContent.includes('진행 담당자가 남은 통과 조건을 확인해요'));
 get('flow-tab').click();live.plan_approval={id:'d20',status:'answered',verified:false,source:'terminal',question:'이 계획대로 시작할까요?'};live.decisions=[];api.applyView(live);
-assert(get('attention').textContent.includes('계획에 대한 내 답'));assert(get('attention').textContent.includes('터미널에서 보낸 내 답'));assert(get('attention').textContent.includes('결정 d20'));
+assert(get('attention').textContent.includes('계획 답의 서명'));assert(get('attention').textContent.includes('터미널에서 온 답이에요. 서명을 확인할 수 없어요.'));assert(get('attention').textContent.includes('결정 d20'));
 """)
 
     def test_e12_changed_file_notice_names_decision_and_card(self):

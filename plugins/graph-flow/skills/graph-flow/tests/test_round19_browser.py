@@ -3,6 +3,8 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
+import time
 import subprocess
 import tempfile
 import threading
@@ -51,4 +53,18 @@ class Browser19Tests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
         finally:
             httpd.shutdown(); httpd.server_close(); thread.join(5)
+            # A timed-out Node process cannot run its finally block. Own only this profile.
+            profile = '--user-data-dir=' + str(self.root / 'chrome-profile')
+            for attempt in range(20):
+                rows = subprocess.check_output(['/bin/ps', '-axo', 'pid=,command='], text=True).splitlines()
+                owned = [int(row.split(None, 1)[0]) for row in rows if profile in row]
+                if not owned:
+                    break
+                for pid in owned:
+                    try:
+                        os.kill(pid, signal.SIGTERM if attempt < 15 else signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                time.sleep(.1)
+            self.assertFalse(owned, 'isolated Chrome helpers must stop')
         self.assertFalse(thread.is_alive())

@@ -291,7 +291,7 @@ class ServerTests(unittest.TestCase):
         view = server._view(current, derived, events, project)
         for decision in view["decisions"]:
             self.assertEqual(decision["failed"], ["The result is complete",
-                "A check without a description did not pass.", "A case is missing (review · correctness)"])
+                "A check without a description did not pass.", "A case is missing (review)"])
             self.assertEqual(decision["verified"], ["scope"])
             self.assertEqual(decision["trajectory_reasons"], ["timed_out", "left_its_files"])
         # A later successful result replaces that failure, but not the timeout fact.
@@ -302,7 +302,7 @@ class ServerTests(unittest.TestCase):
         view = server._view(current, derived, events, project)
         self.assertEqual(view["decisions"][0]["verified"], ["The result is complete", "scope"])
         self.assertEqual(view["decisions"][0]["failed"], [
-            "A check without a description did not pass.", "A case is missing (review · correctness)"])
+            "A check without a description did not pass.", "A case is missing (review)"])
         derived["nodes"]["build"]["reviews"][0]["target_submission"] = -1
         self.assertNotIn("A case is missing", server._view(current, derived, events, project)["decisions"][0]["failed"])
 
@@ -626,7 +626,7 @@ class ServerTests(unittest.TestCase):
                                         "purpose": "human_check", "commit": None, "artifact_hashes": {},
                                             "context": {}, "has_evidence": False,
                                             "verified": [], "unverified": [], "worker_note": None,
-                                        "record_purpose": "human_check", "files": [], "failed": [], "failed_reviews": 0, "free": False, "replaces_refused": None, "replaces_outcome": None, "author_context": context, "trajectory_reasons": []}])
+                                        "record_purpose": "human_check", "files": [], "failed": [], "failed_reviews": 0, "review_lenses": [], "free": False, "replaces_refused": None, "replaces_outcome": None, "author_context": context, "trajectory_reasons": []}])
         self.assertEqual(view["lessons"], [{"text": active["text"], "node_title": "Done"},
                                          {"text": unknown["text"], "node_title": None}])
         self.assertEqual(view["counts"], {"done": 1, "doing": 1, "waiting": 2, "needs_you": 1, "returned": 1, "returns_total": 1})
