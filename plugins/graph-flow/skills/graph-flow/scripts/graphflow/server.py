@@ -12,6 +12,7 @@ import stat
 import subprocess
 import sys
 import time
+import threading
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlencode, urlsplit
@@ -57,8 +58,16 @@ def _runs(root):
 
 def _snapshot(run_dir):
     # Read-only transactions take the existing run lock without appending events.
-    with store.transaction(run_dir) as tx:
-        return tx.plan, tx.events, state.derive(tx.plan, tx.events)
+    try:
+        with store.transaction(run_dir) as tx:
+            return tx.plan, tx.events, state.derive(tx.plan, tx.events)
+    except core.GFError as exc:
+        if exc.code != "plan_tampered":
+            raise
+        events = store.events(run_dir)
+        derived = state.derive(None, events)
+        derived["run"]["plan_error"] = True
+        return None, events, derived
 
 
 def _run(project, run):
@@ -89,7 +98,7 @@ def _project_list():
                 try:
                     _, events, derived = _snapshot(run)
                     nodes = derived["nodes"].values()
-                    item.update(status=derived["run"]["status"], nodes=len(derived["nodes"]),
+                    item.update(status=derived["run"]["status"], plan_error=derived["run"].get("plan_error", False), nodes=len(derived["nodes"]),
                                 passed=sum(n["status"] == "passed" for n in nodes),
                                 open_decisions=len(decisions.open_decisions(derived)),
                                 last_event=events[-1]["ts"] if events else None)
@@ -260,7 +269,7 @@ def _timeline(nodes, events, lessons):
             add(event, "started")
         elif kind == "plan.set":
             add(event, "planned", revision=data.get("revision"),
-                count=len(_mapping(data.get("fingerprints"))))
+                count=len(_mapping(data.get("fingerprints"))), counts=data.get("node_counts"))
         elif kind == "node.assign" and nid:
             assigned[nid] = {k: v for k, v in data.items()
                              if k in ("executor", "model", "effort", "provider") and _text(v)}
@@ -305,7 +314,7 @@ def _timeline(nodes, events, lessons):
             ask = _mapping(asked.get(data["id"]))
             add(event, "answered", decision=data["id"], node=ask.get("node"),
                 node_title=title(ask.get("node")), question=_text(ask.get("question")),
-                outcome=_text(data.get("outcome")), answer=_text(data.get("answer")))
+                outcome=_text(data.get("outcome")), answer=_text(data.get("answer")), purpose=ask.get("purpose"))
         elif kind == "decision.superseded":
             add(event, "superseded", decision=data.get("id"), revision=data.get("revision"))
         elif kind == "gate.final":
@@ -316,14 +325,46 @@ def _timeline(nodes, events, lessons):
     return sorted(rows, key=lambda row: row["seq"])
 
 
+def _node_checks(node):
+    checks = list(node.get("checks", []))
+    implicit = {"work": "scope", "review": "cites"}.get(node.get("kind"))
+    if implicit and not any(c.get("type") == implicit for c in checks):
+        checks.append({"id": implicit, "type": implicit})
+    return checks
+
+
+def _plan_summary(plan):
+    nodes = plan.get("nodes", [])
+    questions = []
+    for node in nodes:
+        if node.get("kind") == "decision":
+            questions.append({"node": node["id"], "kind": node.get("decision_kind"), "question": node.get("question")})
+        for check in node.get("checks", []):
+            if check.get("type") == "human":
+                questions.append({"node": node["id"], "kind": "review", "question": check.get("prompt") or check.get("title") or node.get("goal", "")})
+        if node.get("effective_lane", node.get("lane")) == 3 and node.get("kind") != "decision":
+            questions.append({"node": node["id"], "kind": "authorization", "question": node.get("goal", "")})
+    from .plan import node_counts
+    counts = node_counts(nodes)
+    counts.update(checks=sum(len(_node_checks(n)) for n in nodes) +
+                  len(plan.get("integration_checks", [])) + len(plan.get("promoted_checks", [])),
+                  decisions=len(questions))
+    return counts, questions
+
+
+def _planned_check(check):
+    return dict(check, command=check.get("run"))
+
+
 def _view(current, derived, events, project):
     current = current or {}
     nodes = {n["id"]: n for n in current.get("nodes", [])}
-    opened = decisions.open_decisions(derived)
+    opened = [] if derived["run"].get("plan_error") else decisions.open_decisions(derived)
     view = {"title": _text(current.get("title"), _text(current.get("goal"))), "nodes": [],
             "language": "ko" if re.search(r"[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]",
                 " ".join([_text(current.get("title"))] +
-                         [_text(n.get(k)) for n in nodes.values() for k in ("title", "summary")])) else "en",
+                         [_text(n.get(k)) for n in nodes.values() for k in ("title", "summary")] +
+                         [_text(d.get("question")) for d in derived["decisions"].values()])) else "en",
             "run": derived["run"]["id"], "project": pathlib.Path(project).name,
             "edges": [], "decisions": [], "answered": [], "lessons": [], "timeline": [],
             "counts": dict.fromkeys(("done", "doing", "waiting", "needs_you", "returned", "returns_total"), 0),
@@ -360,7 +401,9 @@ def _view(current, derived, events, project):
                        and r.get("status") == "passed" and submission is not None
                        and r.get("target_submission") == submission for r in _objects(st["reviews"]))
         view["nodes"].append({"id": nid, "title": title(nid),
-                              "summary": _text(node.get("summary"), _text(node.get("goal"))),
+                              "summary": _text(node.get("summary"), _text(node.get("goal"))), "goal": node.get("goal", ""),
+                              "owns": list(node.get("owns", [])), "needs": list(node.get("needs", [])),
+                              "reads": list(node.get("reads", [])), "declared_outputs": list(node.get("outputs", [])),
                               "kind": node["kind"], "target": node.get("target"), "status": st["status"],
                               "answered": node["kind"] == "decision" and any(
                                   d.get("node") == nid and d.get("status") == "answered" and not d.get("stale")
@@ -374,8 +417,7 @@ def _view(current, derived, events, project):
                               "started": _text(_mapping(starts.get(nid)).get("ts"), None),
                               "inputs": [], "outputs": []})
         view["nodes"][-1]["planned_checks"] = [
-            {"id": c["id"], "title": _text(c.get("title")), "type": c["type"],
-             "command": _text(c.get("run"), None)} for c in _objects(node.get("checks"))]
+            _planned_check(c) for c in _node_checks(node)]
         view["nodes"][-1]["deliverables"] = list(node.get("owns", [])) + list(node.get("outputs", []))
         returns = [e for e in events if e.get("type") == "gate.verdict"
                    and e["data"].get("node") == nid and e["data"].get("rejection")]
@@ -403,6 +445,8 @@ def _view(current, derived, events, project):
 
     presented = {n["id"]: n for n in view["nodes"]}
     for edge in view["edges"]:
+        if edge["relation"] == "reviews":
+            continue
         presented[edge["to"]]["inputs"].append({"label": edge["label"],
             "other_title": title(edge["from"]), "delivered": edge["delivered"]})
         presented[edge["from"]]["outputs"].append({"label": edge["label"],
@@ -481,16 +525,18 @@ def _view(current, derived, events, project):
                 node_title = title(source["node"])
             view["lessons"].append({"text": constraint["text"], "node_title": node_title})
     view["timeline"] = _timeline(nodes, events, lesson_texts)
+    view["plan_error"] = derived["run"].get("plan_error", False)
+    view["key_mismatch"] = derived["run"].get("key_mismatch", False)
     approval = state.plan_approval(derived)
     view["plan_approval"] = None if approval is None else {
         key: approval.get(key) for key in ("id", "status", "outcome", "answer", "verified", "question", "plan_identity")}
-    checks = [c for n in nodes.values() for c in n.get("checks", [])]
-    view["plan_counts"] = {"work": sum(n.get("kind") == "work" for n in nodes.values()),
-                           "checks": len(checks) + len(current.get("integration_checks", [])),
-                           "decisions": int(bool(approval)) + sum(n.get("kind") == "decision" for n in nodes.values())
-                           + sum(c.get("type") == "human" for c in checks)
-                           + sum(n.get("effective_lane", n.get("lane")) == 3 and n.get("kind") != "decision"
-                                 for n in nodes.values())}
+    view["plan_counts"], view["planned_questions"] = _plan_summary(current)
+    view["goal"] = current.get("goal", "")
+    view["constraints"] = [c["text"] for c in current.get("constraints", [])]
+    view["integration_checks"] = [_planned_check(c) for c in current.get("integration_checks", [])]
+    view["promoted_checks"] = [_planned_check(c) for c in current.get("promoted_checks", [])]
+    view["superseded"] = [{"id": d["id"], "replacement": (approval or {}).get("id")}
+                          for d in derived["decisions"].values() if d.get("status") == "superseded"]
     return view
 
 
@@ -769,11 +815,18 @@ try {
                 if path == "/api/evidence":
                     return self._send(200, _evidence(run, query.get("path", [""])[0]), "text/plain; charset=utf-8")
                 with store.locked(run / ".lock"):
-                    current = store.read_plan(run)
+                    try:
+                        current = store.read_plan(run)
+                    except core.GFError as exc:
+                        if exc.code != "plan_tampered":
+                            raise
+                        current = None
                     events = store.events(run)
                     derived = state.derive(current, events)
+                    if current is None and store._last_plan_set(events):
+                        derived["run"]["plan_error"] = True
                     result = {"plan": current, "state": derived,
-                              "ready": graph.available(current or {}, derived), "trace": trace.trace(run),
+                              "ready": graph.available(current or {}, derived), "trace": None if derived["run"].get("plan_error") else trace.trace(run),
                               "view": _view(current, derived, events, store.project_of(run))}
                 return self._json(200, result)
             raise _HTTPError(404, "not_found", "unknown route")
@@ -821,6 +874,12 @@ def serve(host="127.0.0.1", port=0):
     pid = os.getpid()
     port = httpd.server_address[1]
     url = "http://127.0.0.1:%s/?t=%s" % (port, token)
+    previous_handlers = {}
+    def interrupted(signum, frame):
+        raise KeyboardInterrupt
+    if threading.current_thread() is threading.main_thread():
+        for signum in (signal.SIGTERM, signal.SIGHUP):
+            previous_handlers[signum] = signal.signal(signum, interrupted)
     try:
         with store.locked(home / ".lock"):
             store.atomic_write(path, json.dumps({"url": url, "port": port, "token": token,
@@ -831,6 +890,8 @@ def serve(host="127.0.0.1", port=0):
         except KeyboardInterrupt:
             pass
     finally:
+        for signum, handler in previous_handlers.items():
+            signal.signal(signum, handler)
         httpd.server_close()
         with store.locked(home / ".lock"):
             try:

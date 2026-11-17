@@ -52,9 +52,9 @@ const STRINGS = {
     "findHint": "결정 번호 또는 일 이름",
     "findNone": "“{text}”에 맞는 결정이나 일이 이 흐름에 없어요. 다른 흐름이면 위에서 흐름을 바꿔 주세요.",
     "jumpNoRun": "이 주소가 가리키는 흐름을 찾지 못했어요.",
-    "roleLeader": "리더 세션",
-    "roleWorker": "작업자 세션",
-    "roleReviewer": "검토자 세션",
+    "roleLeader": "진행 담당자",
+    "roleWorker": "작업 담당자",
+    "roleReviewer": "검토 담당자",
     "ifApproved": "이대로 하면",
     "ifRejected": "돌려보내면",
     "undo": "나중에 바꾸려면",
@@ -67,7 +67,7 @@ const STRINGS = {
     "sending": "보내고 있어요…",
     "answerFailed": "답을 보내지 못했어요. 연결을 확인하고 다시 해 주세요.",
     "stale": "이미 답했거나 일이 바뀌었어요. 최신 흐름을 다시 읽어 주세요.",
-    "answered": "답을 보냈어요. 리더 세션이 다음 확인 때 반영해요. 세션이 멈춰 있으면 채팅에서 “답했어요”라고 알려 주세요.",
+    "answered": "답을 보냈어요. 진행 담당자이 다음 확인 때 반영해요. 세션이 멈춰 있으면 채팅에서 “답했어요”라고 알려 주세요.",
     "details": "자세한 근거 보기",
     "loadEvidence": "근거 읽기",
     "noEvidence": "읽을 근거 기록이 없어요.",
@@ -82,7 +82,7 @@ const STRINGS = {
     "loading": "흐름을 읽고 있어요…",
     "lessons": "배운 것",
     "noLessons": "아직 기록된 배움이 없어요.",
-    "complete": "모든 일이 끝났어요 · 일 {total}개",
+    "complete": "모든 일이 끝났어요",
     "unnamed": "이 일",
     "handoff": "넘길 결과",
     "overview": "진행 중 {doing} · 끝남 {done}/{total}",
@@ -132,7 +132,7 @@ const STRINGS = {
     "graph": "그래프",
     "nothingTitle": "지금은 답할 일이 없어요",
     "doingNow": "지금 하는 중",
-    "idle": "지금 진행 중인 일이 없어요. 리더 세션이 다음 일을 시작하면 여기에 나타나요.",
+    "idle": "지금 진행 중인 일이 없어요. 진행 담당자이 다음 일을 시작하면 여기에 나타나요.",
     "log": "일어난 일",
     "logEmpty": "아직 기록된 일이 없어요.",
     "filterEmpty": "여기에 해당하는 기록이 없어요.",
@@ -141,9 +141,9 @@ const STRINGS = {
     "filterReturned": "되돌아온 것",
     "onlyNode": "“{title}”의 기록만 보는 중",
     "showAll": "전체 보기",
-    "evStarted": "흐름을 시작했어요",
-    "evPlanned": "계획을 정했어요 · 일 {n}개",
-    "evReplanned": "계획을 바꿨어요 · {rev}번째 계획 · 일 {n}개",
+    "evStarted": "실행 기록을 만들었어요",
+    "evPlanned": "계획을 올렸어요",
+    "evReplanned": "계획을 바꿨어요 · {rev}번째 계획",
     "evRunning": "{n}번째 시도 중",
     "evSubmitted": "{n}번째 시도 제출 · 검사를 기다려요",
     "evPassed": "{n}번째 시도 통과",
@@ -163,10 +163,10 @@ const STRINGS = {
     "checkPassed": "통과",
     "checkFailed": "실패",
     "checkTimedOut": "시간 초과",
-    "exitCode": "종료 코드 {n}",
+    "exitCode": "명령 반환값 {n}",
     "seconds": "{n}초",
-    "gateRun": "리더 세션이 확인했어요",
-    "workerRun": "작업자 세션이 확인했어요",
+    "gateRun": "진행 담당자이 확인했어요",
+    "workerRun": "작업 담당자이 확인했어요",
     "outside": "맡은 파일 밖을 건드림: {files}",
     "changedFiles": "바뀐 파일",
     "unsure": "확신이 낮은 부분",
@@ -206,13 +206,13 @@ const STRINGS = {
     "closeDetails": "자세한 내용 닫기",
     "mapDirection": "왼쪽에서 오른쪽으로",
     "checkMet": "✓ {title}",
-    "workingHere": "작업자 세션이 진행 중이에요",
+    "workingHere": "작업 담당자이 진행 중이에요",
     "offLeft": "← 왼쪽",
     "offRight": "오른쪽 →",
     "offTop": "↑ 위쪽",
     "offBottom": "↓ 아래쪽",
     "offCount": "{direction} {n}개",
-    "visibleCards": "전체 {total}개 중 {n}개가 보여요",
+    "visibleCards": "{summary} · {n}개가 보여요",
     "graphEdges": "화면 밖의 일로 이동해요",
     "history": "이 일의 시도와 검사 기록",
     "currentAttempt": "지금 시도",
@@ -222,11 +222,11 @@ const STRINGS = {
     "previousReason": "이전에 돌아온 까닭: {reason}",
     "offWorking": " · 진행 {n}",
     "offNeeds": " · 내가 할 일 {n}",
-    "workerDetails": "담당 세션 · 받는 것 · 넘기는 것",
+    "workerDetails": "담당자 · 받는 것 · 넘기는 것",
     "attemptRecord": "{n}번째 시도의 검사와 메모",
     "earlierFailure": "✕ {n}번째 시도에서 “{reason}” 확인이 통과하지 못했어요",
     "findDecisionHint": "{id} 또는 일 이름",
-    "scopeCheck": "맡은 파일만 고쳤는지",
+    "scopeCheck": "맡은 파일만 고쳤어요",
     "noCurrentChecks": "지금 시도의 검사 결과도 아직 없어요.",
     "revisionHint": "고칠 곳을 적으면 보낼 수 있어요",
     "nodeRef": "일 {id}",
@@ -252,21 +252,21 @@ const STRINGS = {
     "acceptBlind": "자료 없이 받아들이기",
     "minZoom": "글자를 읽을 수 있는 최소 크기예요",
     "readGateHint": "파일이나 근거를 먼저 열어 주세요",
-    "approveEffect": "받아들이기로 한 답이 리더 세션에 전달돼요",
-    "revisionEffect": "고칠 곳이 리더 세션에 전달돼요",
-    "answerEffect": "답이 리더 세션에 전달돼요",
+    "approveEffect": "받아들이기로 한 답이 진행 담당자에 전달돼요",
+    "revisionEffect": "고칠 곳이 진행 담당자에 전달돼요",
+    "answerEffect": "답이 진행 담당자에 전달돼요",
     "retryEffect": "다음은 최대 {max}번 중 {n}번째 시도예요",
     "decisionWork": "관련 일 · {title}",
     "fitAll": "전체 보기",
     "readScale": "읽기 크기",
-    "planSummary": "작업 {work}개 · 검사 {checks}개 · 예정된 질문 {decisions}번",
+    "planSummary": "일 {work}개 · 검토 {review}개 · 결정 {decision}개",
     "planStart": "시작",
-    "planStartEffect": "승인하면 리더가 이 계획의 일을 시작할 수 있어요.",
-    "planBackEffect": "고칠 내용을 리더에게 보내요. 새 계획을 기다려 주세요.",
+    "planStartEffect": "시작하면 담당자가 이 계획의 일을 시작할 수 있어요.",
+    "planBackEffect": "고칠 내용을 담당자에게 보내요.",
     "planSentBack": "계획을 돌려보냈어요",
     "planWaiting": "계획을 확인해 주세요",
     "planSentNote": "내가 보낸 내용",
-    "planWaitingRevision": "리더가 계획을 고치면 여기에 보여요.",
+    "planWaitingRevision": "담당자가 고친 새 계획을 기다리고 있어요.",
     "planChecks": "확인할 것",
     "plannedCommand": "실행할 명령",
     "planDeliverables": "만들 결과",
@@ -274,8 +274,8 @@ const STRINGS = {
     "purposePlan": "시작하기 전에 계획을 확인해 주세요.",
     "untitledCheck": "설명이 아직 없는 검사예요",
     "ranCommand": "실행한 명령",
-    "returnedBy": "{who}에서 돌려보냈어요 · 통과하지 못한 내용: {reason}",
-    "returnedShort": "{who} · 미통과: {reason}",
+    "returnedBy": "{who}가 돌려보냈어요 · {reason} — 통과하지 못했어요",
+    "returnedShort": "{reason} — 통과하지 못했어요",
     "returnLeader": "리더",
     "returnReviewer": "검토자",
     "recordOrder": "기록 {n}",
@@ -284,7 +284,42 @@ const STRINGS = {
     "checkingKey": "◷ 검사받는 중",
     "reviewKey": "⌕ 검토 작업",
     "returnedKey": "↩ 고치러 돌아옴",
-    "pendingKey": "○ 시작 전"
+    "pendingKey": "○ 시작 전",
+    "planChecklist": "확인할 것 · 검사 {checks}개 · 예정된 질문 {decisions}번",
+    "planReturned": "돌려보낸 계획",
+    "planUnverified": "답이 확인되지 않았어요",
+    "planUnverifiedHelp": "이 답으로는 일을 시작할 수 없어요. 담당자에게 계획을 다시 올려 달라고 한 뒤 새 질문에 답해 주세요.",
+    "planKeyMismatch": "이 창의 확인 키가 실행을 만들 때의 키와 달라요. 원래 실행을 만든 환경에서 대시보드를 다시 열어 주세요.",
+    "planTampered": "계획 파일이 기록과 달라요",
+    "planTamperedHelp": "안전을 위해 계획과 실행을 잠갔어요. 담당자에게 기록된 원본을 복구하고 계획을 다시 올려 달라고 해 주세요.",
+    "planGoal": "실제로 할 일",
+    "planOwns": "고칠 수 있는 파일",
+    "planNeeds": "먼저 받아야 할 것",
+    "planReads": "읽을 자료",
+    "labelOnly": "이름·요약·검사 제목은 설명용이에요. 아래 지시와 파일, 명령을 기준으로 확인해 주세요.",
+    "planIntegration": "전체 결과 검사",
+    "planPromoted": "이 계획에 포함된 고정 검사",
+    "planQuestions": "예정된 질문 {decisions}번 · 어디에서 물을까요?",
+    "planCardChecks": "검사 {n}개 · {first}",
+    "planCardDelivery": "결과 · {files}",
+    "planCardQuestion": "? 여기서 물어요 · {n}번",
+    "noPlannedChecks": "별도 검사가 없어요",
+    "supersededNotice": "{old} 질문은 새 계획의 질문으로 바뀌었어요.",
+    "supersededLink": "현재 질문 {id} 보기",
+    "checkNotMet": "{title} — 통과하지 못했어요",
+    "lineKinds": "선의 뜻",
+    "stateKinds": "일의 상태",
+    "markKinds": "표시",
+    "fromTab": "{tab}에서 온 질문이에요",
+    "backToTab": "← {tab}로 돌아가기",
+    "endedAttempt": "완료된 시도",
+    "commandScope": "실행 위치 · {cwd} / 제한 시간 · {seconds}초",
+    "checkPrompt": "사람에게 물을 내용",
+    "checkHost": "확인 도구 · {tool} / 기대 결과 · {expect}",
+    "planItems": "전체 항목 {n}개",
+    "answeredPlan": "이 계획대로 시작하기로 답했어요",
+    "exitSuccess": "정상 종료 (값 {n})",
+    "exitFailure": "확인이 필요해요 (값 {n})"
   },
   "en": {
     "flow": "Whole flow",
@@ -338,9 +373,9 @@ const STRINGS = {
     "findHint": "Decision ID or work name",
     "findNone": "No decision or task in this flow matches “{text}”. If it belongs to another flow, switch flows above.",
     "jumpNoRun": "The flow this address points to was not found.",
-    "roleLeader": "Leader session",
-    "roleWorker": "Worker session",
-    "roleReviewer": "Reviewer session",
+    "roleLeader": "Coordinator",
+    "roleWorker": "Worker",
+    "roleReviewer": "Reviewer",
     "ifApproved": "If you proceed",
     "ifRejected": "If sent back",
     "undo": "How to undo",
@@ -368,7 +403,7 @@ const STRINGS = {
     "loading": "Reading the flow…",
     "lessons": "What we learned",
     "noLessons": "No lessons recorded yet.",
-    "complete": "Everything is done · {total} tasks",
+    "complete": "Everything is done",
     "unnamed": "This task",
     "handoff": "Handoff",
     "overview": "In progress {doing} · Finished {done}/{total}",
@@ -427,9 +462,9 @@ const STRINGS = {
     "filterReturned": "Came back",
     "onlyNode": "Showing only “{title}”",
     "showAll": "Show all",
-    "evStarted": "The flow started",
-    "evPlanned": "Plan set · {n} tasks",
-    "evReplanned": "Plan changed · revision {rev} · {n} tasks",
+    "evStarted": "The run record was created",
+    "evPlanned": "Plan posted",
+    "evReplanned": "Plan changed · revision {rev}",
     "evRunning": "attempt {n} in progress",
     "evSubmitted": "attempt {n} submitted · waiting to be checked",
     "evPassed": "attempt {n} passed",
@@ -449,7 +484,7 @@ const STRINGS = {
     "checkPassed": "passed",
     "checkFailed": "failed",
     "checkTimedOut": "timed out",
-    "exitCode": "exit code {n}",
+    "exitCode": "Command return value {n}",
     "seconds": "{n}s",
     "gateRun": "checked by the leader session",
     "workerRun": "checked by the worker session",
@@ -498,7 +533,7 @@ const STRINGS = {
     "offTop": "↑ Above",
     "offBottom": "↓ Below",
     "offCount": "{direction}: {n}",
-    "visibleCards": "Showing {n} of {total} cards",
+    "visibleCards": "{summary} · Visible: {n}",
     "graphEdges": "Go to work beyond this view",
     "history": "Attempts and checks for this work",
     "currentAttempt": "Current attempt",
@@ -508,7 +543,7 @@ const STRINGS = {
     "previousReason": "Earlier return reason: {reason}",
     "offWorking": " · working {n}",
     "offNeeds": " · Your turn {n}",
-    "workerDetails": "Assigned session · Inputs · Outputs",
+    "workerDetails": "Worker · inputs · outputs",
     "attemptRecord": "Checks and notes for attempt {n}",
     "earlierFailure": "✕ In attempt {n}, “{reason}” did not pass",
     "findDecisionHint": "{id} or work name",
@@ -545,14 +580,14 @@ const STRINGS = {
     "decisionWork": "About · {title}",
     "fitAll": "Fit all",
     "readScale": "Readable size",
-    "planSummary": "{work} pieces of work · {checks} checks · {decisions} planned questions",
+    "planSummary": "Work: {work} · Reviews: {review} · Decisions: {decision}",
     "planStart": "Start",
-    "planStartEffect": "Approval lets the leader start this plan’s work.",
-    "planBackEffect": "Send changes to the leader, then wait for a revised plan.",
+    "planStartEffect": "Start lets the coordinator begin this plan’s work.",
+    "planBackEffect": "Send the changes to the coordinator.",
     "planSentBack": "The plan was sent back",
     "planWaiting": "Review the plan",
     "planSentNote": "Your requested changes",
-    "planWaitingRevision": "The revised plan will appear here.",
+    "planWaitingRevision": "Waiting for the coordinator’s revised plan.",
     "planChecks": "Planned checks",
     "plannedCommand": "Planned command",
     "planDeliverables": "Deliverables",
@@ -560,8 +595,8 @@ const STRINGS = {
     "purposePlan": "Review the plan before work starts.",
     "untitledCheck": "A check without a description",
     "ranCommand": "Command run",
-    "returnedBy": "Returned by {who} · Did not pass: {reason}",
-    "returnedShort": "{who} · Failed: {reason}",
+    "returnedBy": "Returned by {who} · {reason} — did not pass",
+    "returnedShort": "{reason} — did not pass",
     "returnLeader": "Leader",
     "returnReviewer": "Reviewer",
     "recordOrder": "Record {n}",
@@ -570,7 +605,42 @@ const STRINGS = {
     "checkingKey": "◷ Being checked",
     "reviewKey": "⌕ Review work",
     "returnedKey": "↩ Returned for changes",
-    "pendingKey": "○ Not started"
+    "pendingKey": "○ Not started",
+    "planChecklist": "Review · Checks: {checks} · Planned questions: {decisions}",
+    "planReturned": "Returned plan",
+    "planUnverified": "Your answer could not be verified",
+    "planUnverifiedHelp": "This answer cannot start work. Ask the coordinator to post the plan again, then answer the new question.",
+    "planKeyMismatch": "This window’s verification key differs from the run’s original key. Reopen the dashboard in the original environment.",
+    "planTampered": "The plan file differs from its record",
+    "planTamperedHelp": "The plan and execution are locked. Ask the coordinator to restore the recorded original and post the plan again.",
+    "planGoal": "Actual instruction",
+    "planOwns": "Files allowed to change",
+    "planNeeds": "Required inputs",
+    "planReads": "Files to read",
+    "labelOnly": "Names, summaries and check titles are labels only. Review the instructions, files and commands below.",
+    "planIntegration": "Integration checks",
+    "planPromoted": "Fixed checks in this plan",
+    "planQuestions": "Planned questions: {decisions} · Where will you be asked?",
+    "planCardChecks": "Checks: {n} · {first}",
+    "planCardDelivery": "Delivers · {files}",
+    "planCardQuestion": "? You will be asked here · {n}",
+    "noPlannedChecks": "No separate checks",
+    "supersededNotice": "Question {old} was replaced by a new plan’s question.",
+    "supersededLink": "View current question {id}",
+    "checkNotMet": "{title} — did not pass",
+    "lineKinds": "Lines",
+    "stateKinds": "Task states",
+    "markKinds": "Marks",
+    "fromTab": "Question opened from {tab}",
+    "backToTab": "← Back to {tab}",
+    "endedAttempt": "Completed attempt",
+    "commandScope": "Directory · {cwd} / Time limit · {seconds}s",
+    "checkPrompt": "Question for you",
+    "checkHost": "Tool · {tool} / Expected result · {expect}",
+    "planItems": "Items: {n}",
+    "answeredPlan": "Agreed to start with this plan",
+    "exitSuccess": "Completed successfully (value {n})",
+    "exitFailure": "Needs checking (value {n})"
   }
 };
 // UI_STRINGS_END
@@ -697,7 +767,7 @@ export function checkTitle(check, language = 'en') {
   return (!check.title || check.title === check.id) && check.id === 'scope' ? STRINGS[language].scopeCheck : check.title || STRINGS[language].untitledCheck;
 }
 export function checkWording(check, language = 'en', attempt = check.attempt) {
-  const key = check.result === 'passed' ? 'checkMet' : attempt ? 'checksFailed' : 'failureUnknownAttempt';
+  const key = check.result === 'passed' ? 'checkMet' : 'checkNotMet';
   return STRINGS[language][key].replace('{title}', checkTitle(check, language)).replace('{names}', checkTitle(check, language)).replace('{n}', attempt);
 }
 // Every clipped card belongs to one nearest boundary, including diagonal corners.
@@ -772,10 +842,10 @@ export function layeredLayout(nodes, edges, decisions = [], sort = true, options
     const cost=crossings();if(cost<bestCost){bestCost=cost;best=layers.map(ids=>[...ids]);}
   }
   layers.splice(0,layers.length,...best);
-  const widths=layers.map(ids=>Math.max(208,...ids.filter(id=>byId.has(id)).map(id=>Math.min(280,Math.ceil(textWidth(byId.get(id).title,18,9))+40))));
+  const widths=layers.map(ids=>Math.max(264,...ids.filter(id=>byId.has(id)).map(id=>Math.min(280,Math.ceil(textWidth(byId.get(id).title,18,9))+40))));
   for(const v of vertices.values()) {
     v.width=widths[v.layer];
-    v.height=v.dummy?44:Math.max(120,40+14*Math.max(links.filter(e=>e.from===v.id).length,links.filter(e=>e.to===v.id).length))+Math.max(0,Math.ceil(textWidth(v.node.title,18,9)/(v.width-40))-1)*26;
+    v.height=v.dummy?44:Math.max(v.node.planned_checks || v.node.deliverables ? 236 : 120,40+14*Math.max(links.filter(e=>e.from===v.id).length,links.filter(e=>e.to===v.id).length))+Math.max(0,Math.ceil(textWidth(v.node.title,18,9)/(v.width-40))-1)*26;
   }
   const gap=18,margin=20;
   const total=ids=>ids.reduce((s,id)=>s+vertices.get(id).height,0)+Math.max(0,ids.length-1)*gap;
@@ -899,7 +969,8 @@ async function api(path, body, text = false) {
   return text ? response.text() : response.json();
 }
 function query(route, extra = {}, target = chosen) { return route + '?' + new URLSearchParams({project:target.project, run:target.run, ...extra}); }
-function notice(key, retry = false) { const box = $('notice'); clear(box); box.hidden = !key; if (key) box.append(el('span', STRINGS[language][key] === undefined ? key : t(key))); if (retry) box.append(button(t('retry'), () => refresh(true))); }
+let replacementDecision = null;
+function notice(key, retry = false) { const box = $('notice'); clear(box); box.hidden = !key; if (key) box.append(el('span', STRINGS[language][key] === undefined ? key : t(key))); if (retry) box.append(button(t('retry'), () => refresh(true))); if(key && replacementDecision)box.append(button(t('supersededLink',{id:replacementDecision}),()=>openDecision(replacementDecision),'primary')); }
 function title(node) { return node && node.title && node.title !== node.id ? node.title : t('unnamed'); }
 function otherTitle(value) { return view.nodes.some(n => n.id === value && n.title === value) ? t('unnamed') : value || t('unnamed'); }
 // Legacy plans may have only an artifact path; keep that technical fallback out of normal views.
@@ -915,7 +986,7 @@ function sessionName(session) {
 }
 function who(actor) {
   const role = {leader:'roleLeader', worker:'roleWorker', reviewer:'roleReviewer', human:'roleHuman'}[actor?.role];
-  return [role ? t(role) : '', sessionName(actor?.session)].filter(Boolean).join(' · ');
+  return [...new Set([role ? t(role) : '', sessionName(actor?.session)].filter(Boolean))].join(' · ');
 }
 // The log groups dates separately so every timestamp has the same width.
 function clock(stamp, seconds = false) {
@@ -968,26 +1039,68 @@ function handoffsCard(key, rows, direction) {
   for (const row of rows) list.append(el('li', `${label(row.label)} · ${t(direction)} ${otherTitle(row.other_title)} · ${t(row.delivered ? 'delivered' : 'notDelivered')}`));
   c.append(list); return c;
 }
+function plannedChecks(parent, checks) {
+  const list = el('ul', undefined, 'checks planned-checks');
+  for (const c of checks || []) {
+    const item = el('li'); item.append(el('strong', checkTitle(c, language)));
+    if (c.command) { item.append(el('p', t('plannedCommand'), 'muted'), el('pre', c.command, 'planned-command'), el('p', t('commandScope', {cwd:c.cwd || '.', seconds:c.timeout_s || 600}), 'muted')); }
+    if (c.prompt) item.append(el('p', t('checkPrompt') + ' · ' + c.prompt));
+    if (c.type === 'host') item.append(el('p', t('checkHost', c)));
+    list.append(item);
+  }
+  if (!list.children.length) list.append(el('li', t('noPlannedChecks')));
+  parent.append(list);
+}
+function planFacts(parent, node) {
+  parent.append(el('p', t('labelOnly'), 'muted'), el('h3', t('planGoal')), el('p', node.goal || node.summary || ''));
+  for (const [key, rows] of [['planOwns',node.owns || []],['planReads',node.reads || []],['planDeliverables',node.deliverables || node.declared_outputs || []]]) {
+    parent.append(el('h3', t(key))); textList(parent, rows);
+  }
+  parent.append(el('h3', t('planNeeds')));
+  textList(parent, (node.needs || []).map(n => `${n.artifact} · ${t('from')} ${otherTitle(view.nodes.find(p => p.id === n.from)?.title || n.from)} (${n.from})`));
+  parent.append(el('h3', t('planChecks'))); plannedChecks(parent, node.planned_checks);
+}
 let planBanner = null;
 function planAttention(box) {
   const approval = view.plan_approval;
-  const blocked = approval && !(approval.status === 'answered' && approval.verified && approval.outcome === 'approved');
+  const blocked = view.plan_error || view.key_mismatch || approval && !(approval.status === 'answered' && approval.verified && approval.outcome === 'approved');
   if (!blocked) { planBanner = null; return false; }
   box.hidden = false; box.classList.add('plan-banner');
-  const key = JSON.stringify([chosen, approval.id, approval.status]);
+  const key = JSON.stringify([chosen, approval?.id, approval?.status, view.plan_error, view.key_mismatch]);
   if (planBanner?.key === key && box.firstElementChild) {
     box.querySelector('.plan-summary').textContent = t('planSummary', view.plan_counts);
     return true;
   }
   clear(box);
-  const heading = el('h2', approval.status === 'open' ? approval.question : t('planSentBack'));
+  const unverified = view.key_mismatch || approval?.status === 'answered' && !approval.verified;
+  const heading = el('h2', view.plan_error ? t('planTampered') : unverified ? t('planUnverified') : approval.status === 'open' ? approval.question : t('planSentBack'));
   heading.id = 'plan-question'; box.setAttribute('aria-labelledby', heading.id);
   box.append(heading, el('p', t('planSummary', view.plan_counts), 'plan-summary'));
   planBanner = {key};
+  if (view.plan_error || unverified) {
+    box.append(el('p', t(view.plan_error ? 'planTamperedHelp' : 'planUnverifiedHelp')));
+    if (view.key_mismatch) box.append(el('p', t('planKeyMismatch')));
+    return true;
+  }
   if (approval.status !== 'open') {
     box.append(el('p', t('planSentNote'), 'eyebrow'), el('p', approval.answer || ''), el('p', t('planWaitingRevision'), 'muted'));
     return true;
   }
+  const facts = el('div', undefined, 'plan-overview');
+  facts.append(el('p', t('planChecklist', view.plan_counts), 'eyebrow'), el('p', view.goal), el('p', t('labelOnly'), 'muted'));
+  if (view.planned_questions?.length) {
+    const qs = el('details'); qs.open = !!rowOpen.get('plan-questions'); qs.addEventListener('toggle',()=>rowOpen.set('plan-questions',qs.open));
+    qs.append(el('summary', t('planQuestions', view.plan_counts)));
+    for (const q of view.planned_questions) {
+      const line=el('p'); line.append(button(`${otherTitle(view.nodes.find(n=>n.id===q.node)?.title)} · ${purposeWording(q.kind,language)}`,()=>selectNode(q.node),'link'),el('span',' · '+q.question)); qs.append(line);
+    }
+    facts.append(qs);
+  }
+  const runChecks=el('div',undefined,'plan-run-checks');
+  for (const [key, checks] of [['planIntegration',view.integration_checks],['planPromoted',view.promoted_checks]]) if (checks?.length) { const group=el('section'); group.append(el('h3',t(key))); plannedChecks(group,checks); runChecks.append(group); }
+  if(runChecks.children.length) facts.append(runChecks);
+  if (view.constraints?.length) textList(facts,view.constraints);
+  box.append(facts);
   const session = decisionController.open(approval.id);
   const actions = el('div', undefined, 'plan-actions'), start = button(t('planStart'), () => send('approved'), 'primary');
   const startGroup = el('div'); startGroup.append(start, el('p', t('planStartEffect'), 'muted'));
@@ -1051,18 +1164,9 @@ function panel() {
     const ask = card(t('yourTurn'), question(d) || purposeWording(d.purpose, language), true);
     ask.append(refChip(d.id, `${d.id} · ${title(node)}`, true), button(t('read'), () => openDecision(d.id), 'primary')); p.append(ask);
   }
-  p.append(el('p', status(node), 'eyebrow'), el('h2', title(node)), el('p', node.summary || ''));
+  p.append(el('p', status(node), 'panel-status '+cardTone(node)), el('h2', title(node)));
   if (view.plan_approval && !(view.plan_approval.verified && view.plan_approval.outcome === 'approved')) {
-    const deliverables = node.deliverables || [];
-    if (deliverables.length) { p.append(el('h3', t('planDeliverables'))); textList(p, deliverables); }
-    p.append(handoffsCard('received', node.inputs, 'from'), el('h3', t('planChecks')));
-    const list = el('ul', undefined, 'checks');
-    for (const c of node.planned_checks || []) {
-      const item = el('li'); item.append(el('strong', c.title || (c.type === 'scope' ? t('scopeCheck') : t('untitledCheck'))));
-      if(c.command) { const command=el('p', t('plannedCommand')+': ', 'muted');command.append(el('code', c.command));item.append(command); }
-      list.append(item);
-    }
-    p.append(list, reference); p.scrollTop=scroll; return;
+    planFacts(p, node); p.append(reference); p.scrollTop=scroll; return;
   }
   if (displayState(node,view.decisions)==='returned') p.append(el('p',t('returnedBy',{who:t(node.returned_by?.role==='reviewer'?'roleReviewer':'roleLeader'),reason:node.returned_reason||t('noReason')})));
   p.append(reference, el('p', attempts(node)));
@@ -1071,7 +1175,7 @@ function panel() {
   const list = el('ol', undefined, 'panel-history');
   let earlier=false;
   for (const r of rows) {
-    const item = el('li'); item.className=r.attempt===node.attempts?'current-history':'earlier-history'; if(r.attempt===node.attempts || !earlier)item.append(el('strong',t(r.attempt===node.attempts?'currentAttempt':'earlierAttempt')));if(r.attempt!==node.attempts)earlier=true;item.append(wording(rowSentence(r),'p'));
+    const item = el('li'); item.className=r.attempt===node.attempts?'current-history':'earlier-history'; if(r.attempt===node.attempts || !earlier)item.append(el('strong',t(view.complete?'endedAttempt':r.attempt===node.attempts?'currentAttempt':'earlierAttempt')));if(r.attempt!==node.attempts)earlier=true;item.append(wording(rowSentence(r),'p'));
     const extra=el('details');extra.open=!!rowOpen.get('panel:'+r.id);extra.addEventListener('toggle',()=>rowOpen.set('panel:'+r.id,extra.open)); extra.append(el('summary',t('attemptRecord',{n:r.attempt})));
     const checks=el('ul',undefined,'checks');r.checks.forEach(c=>checks.append(checkLine(c, r.attempt)));extra.append(checks);
     for(const [key,values] of [['workerNote',r.notes?[r.notes]:[]],['changedFiles',r.files||[]],['findings',r.findings||[]],['unsure',r.unsure||[]]])if(values.length){extra.append(el('p',t(key),'eyebrow'));textList(extra,values);}
@@ -1080,7 +1184,7 @@ function panel() {
   }
   p.append(list);
   const more=el('details');more.open=!!rowOpen.get('panel:'+node.id);more.addEventListener('toggle',()=>rowOpen.set('panel:'+node.id,more.open));more.append(el('summary',t('workerDetails')));
-  if(node.summary)more.append(el('p',node.summary));
+  planFacts(more, node);
     more.append(handoffsCard('received',node.inputs,'from'),handoffsCard('outputs',node.outputs,'to'));
   if(view.complete){const files=[...new Set(rows.flatMap(r=>r.state==='passed'?r.files||[]:[]))];if(files.length){p.append(el('h3',t('resultLocations')));textList(p,files);}}
   p.append(more,button(t('showInLog'),()=>showNode(node.id),'small'));
@@ -1094,11 +1198,12 @@ function rowSentence(r) {
   const n = r.attempt || 1;
   if (r.kind === 'superseded') return t('evSuperseded');
   if (r.kind === 'started') return t('evStarted');
-  if (r.kind === 'planned') return r.revision > 1 ? t('evReplanned', {rev:r.revision, n:r.count}) : t('evPlanned', {n:r.count});
+  if (r.kind === 'planned') return (r.revision > 1 ? t('evReplanned', {rev:r.revision}) : t('evPlanned')) + ' · ' + (r.counts ? t('planSummary',r.counts) : t('planItems',{n:r.count}));
   if (r.kind === 'final') return r.result === 'passed' ? t('evFinalPassed') : [t('evFinalFailed'), ...(r.failed || [])].join(' · ');
   if (r.kind === 'learned') return `${t('evLearned')} · ${r.text}`;
   if (r.kind === 'reopened') return [t('evReopened'), r.reason].filter(Boolean).join(' · ');
   if (r.kind === 'asked') return [t('evAsked'), r.question].filter(Boolean).join(' · ');
+  if (r.kind === 'answered' && r.purpose === 'plan_approval' && r.outcome === 'approved') return [t('answeredPlan'),r.answer].filter(Boolean).join(' · ');
   if (r.kind === 'answered') return [t(({approved:'answeredApproval', revision_requested:'answeredRevision', rejected:'answeredRejection'})[r.outcome] || 'evAnswered'), r.answer].filter(Boolean).join(' · ');
   const failed = (r.checks || []).filter(c => c.result === 'failed').map(c => checkTitle(c, language)), passed = (r.checks || []).filter(c => c.result === 'passed').length;
   const current = view.nodes.find(node => node.id === r.node && node.attempts === r.attempt);
@@ -1119,7 +1224,7 @@ function checkLine(c, attempt) {
   const result = c.timed_out ? t('checkTimedOut') : t(c.result === 'failed' ? 'checkFailed' : 'checkPassed');
   item.append(wording(checkWording(c, language, attempt),'strong'));
   if(c.timed_out)item.append(el('span', ' · '+result));
-  if (c.command) { const run = el('p', undefined, 'muted'); run.append(el('span', t('ranCommand')+': '), el('code', c.command), el('span', [c.exit_code === null || c.exit_code === undefined ? '' : ' → ' + t('exitCode', {n:c.exit_code}), typeof c.duration_ms === 'number' ? t('seconds', {n:(c.duration_ms / 1000).toFixed(2)}) : ''].filter(Boolean).join(' · '))); item.append(run); }
+  if (c.command) { const run = el('p', undefined, 'muted'); run.append(el('span', t('ranCommand')+': '), el('code', c.command), el('span', [c.exit_code === null || c.exit_code === undefined ? '' : ' → ' + t(c.exit_code === 0 ? 'exitSuccess' : 'exitFailure', {n:c.exit_code}), typeof c.duration_ms === 'number' ? t('seconds', {n:(c.duration_ms / 1000).toFixed(2)}) : ''].filter(Boolean).join(' · '))); item.append(run); }
   if (c.violations?.length) item.append(el('p', t('outside', {files:c.violations.join(', ')})));
   if (c.log) {
     const output = el('pre'); output.hidden = true; output.tabIndex = 0;
@@ -1144,7 +1249,7 @@ function logRow(r, anchor = true, inline = false) {
   text.append(wording(rowSentence(r))); head.append(text);
   const by = [who(r.by), r.kind === 'attempt' && r.worker?.model ? t('modelName',{model:r.worker.model}) : ''].filter(Boolean).join(' · ');
   if (by) head.append(el('span', by, 'row-who'));
-  if (r.kind === 'attempt' && !inline) item.append(el('p',t(isEarlier?'earlierAttempt':'currentAttempt'),'eyebrow'));
+  if (r.kind === 'attempt' && !inline) item.append(el('p',t(view.complete?'endedAttempt':isEarlier?'earlierAttempt':'currentAttempt'),'eyebrow'));
   item.append(head);
   if (r.kind !== 'attempt') return item;
   const extra = [['reason', r.reason && !r.checks.some(c => c.result === 'failed') ? [r.reason] : []], ['findings', r.findings || []], ['workerNote', r.notes ? [r.notes] : []], ['unsure', r.unsure || []], ['changedFiles', r.files || []]].filter(([, values]) => values.length);
@@ -1244,6 +1349,7 @@ function showGraph() { if (!showMode('flow')) return; attention(); panel(); }
 function selectNode(id) { const n=view.nodes.find(n=>n.id===id),d=view.decisions.find(d=>d.node===id); if(n?.kind==='decision'&&d){openDecision(d.id);return;} if (!showMode('flow')) return; selected = selected === id ? null : id; panel(); if (renderer) renderer.select(selected); if (selected && matchMedia('(max-width:760px)').matches) $('panel').scrollIntoView({block:'start',behavior:reduced.matches?'auto':'smooth'}); }
 function focusHeading(heading) { heading.tabIndex = -1; heading.focus({preventScroll:true}); }
 function openDecision(id, focus = true) {
+  replacementDecision=null; decisionNotice=''; notice('');
   if (view.decisions.find(d => d.id === id)?.purpose === 'plan_approval') {
     showGraph(); attention(); if (focus) $('plan-question')?.focus({preventScroll:true}); return;
   }
@@ -1255,6 +1361,7 @@ function openDecision(id, focus = true) {
   if (mode !== 'decision') cameFrom = mode;
   showMode('decision'); const box = $('decision'); clear(box);
   const reading = card(t('yourTurn'), null, true); reading.firstElementChild.remove(); reading.classList.add('reading');
+  reading.append(el('p',t('fromTab',{tab:t(cameFrom==='home'?'home':'graph')}),'muted'), button(t('backToTab',{tab:t(cameFrom==='home'?'home':'graph')}),leaveDecision,'link'));
   const introduction = el('div'); reading.append(introduction);
   const report = el('div', undefined, 'worker-report'), note = el('div', undefined, 'speech');
   report.append(el('p',t('workerNote'),'eyebrow'),note); reading.append(report);
@@ -1388,7 +1495,7 @@ function openDecision(id, focus = true) {
     history.hidden = !rows.length;phoneHistory.hidden=!rows.length;clear(phoneHistory);
     const previous=rows.filter(r=>r.attempt<node?.attempts && r.checks?.some(c=>c.result==='failed')).sort((a,b)=>b.seq-a.seq)[0];
     phoneHistory.append(el('summary',t('history')));
-    const phoneRows=el('ol',undefined,'log');[...rows].sort((a,b)=>b.seq-a.seq).forEach(r=>{const row=logRow({...r,notes:r.attempt===node.attempts?null:r.notes,files:r.attempt===node.attempts?(r.files||[]).filter(f=>!decision.files?.some(file=>file.path===f)):r.files},false,true);row.prepend(el('p',t(r.attempt===node.attempts?'currentAttempt':'earlierAttempt'),'eyebrow'));phoneRows.append(row);});phoneHistory.append(phoneRows);
+    const phoneRows=el('ol',undefined,'log');[...rows].sort((a,b)=>b.seq-a.seq).forEach(r=>{const row=logRow({...r,notes:r.attempt===node.attempts?null:r.notes,files:r.attempt===node.attempts?(r.files||[]).filter(f=>!decision.files?.some(file=>file.path===f)):r.files},false,true);row.prepend(el('p',t(view.complete?'endedAttempt':r.attempt===node.attempts?'currentAttempt':'earlierAttempt'),'eyebrow'));phoneRows.append(row);});phoneHistory.append(phoneRows);
     phoneHistory.open=!!rowOpen.get('decision:'+decision.id);phoneHistory.ontoggle=()=>rowOpen.set('decision:'+decision.id,phoneHistory.open);
     if (rows.length) {
       history.append(el('h3', t('history')));
@@ -1441,6 +1548,8 @@ function jump(target) {
   const miss = text => { decisionNotice = t('findNone', {text}); notice(decisionNotice); return false; };
   if (target.decision) {
     const id = target.decision.toLowerCase();
+    const old=view.superseded?.find(d=>d.id===id);
+    if(old?.replacement) { replacementDecision=old.replacement; decisionNotice=t('supersededNotice',{old:id}); showMode('home'); home(); notice(decisionNotice); return true; }
     if (view.decisions.some(d => d.id === id)) { openDecision(id); return true; }
     const row = [...view.timeline].reverse().find(r => r.decision === id); if (!row) return miss(target.decision);
     decisionNotice = ''; notice(''); if (!showMode('home')) return false;
@@ -1471,8 +1580,10 @@ function applyView(next) {
   view = next; fingerprint = nextFingerprint; if (!view.nodes.some(n => n.id === selected)) selected = null; if (!view.nodes.some(n => n.id === logNode)) logNode = null;
   const firstDecision=view.decisions[0]?.id || view.timeline.find(r=>r.decision)?.decision;
   $('find-text').placeholder=firstDecision?t('findDecisionHint',{id:firstDecision}):t('findHint');
-  $('title').textContent = view.title || t('brand'); $('where').textContent = [view.project, view.run].filter(Boolean).join(' · ');
-  $('subtitle').textContent = view.plan_approval && !(view.plan_approval.verified && view.plan_approval.outcome==='approved') ? (view.plan_approval.status==='open'?t('planWaiting'):'') : view.complete ? t('complete', {total:view.nodes.length}) : t('overview', {total:view.nodes.length, done:view.counts.done, doing:view.counts.doing, needs:view.counts.needs_you});
+  $('title').textContent = view.title || t('brand'); $('where').textContent = '';
+  const sent = view.plan_approval?.verified && ['rejected','revision_requested'].includes(view.plan_approval.outcome);
+  $('flow').classList.toggle('sent-plan',!!sent); $('flow').classList.toggle('plan-unavailable',!!view.plan_error);
+  $('subtitle').textContent = view.plan_error ? '' : view.plan_approval && !(view.plan_approval.verified && view.plan_approval.outcome==='approved') ? (view.plan_approval.status==='open'?t('planWaiting'):'') : view.complete ? t('complete', {total:view.nodes.length})+' · '+t('planSummary',view.plan_counts || {work:0,review:0,decision:0}) : t('overview', {total:view.nodes.length, done:view.counts.done, doing:view.counts.doing, needs:view.counts.needs_you});
   if(view.complete){const resultNode=[...view.nodes].reverse().find(n=>n.kind==='work'&&view.timeline.some(r=>r.node===n.id&&r.files?.length));if(resultNode)$('subtitle').append(button(t('results'),()=>selectNode(resultNode.id),'link result-action'));}
   accessible(); attention(); panel(); home(); showMode(mode); if (renderer && mode === 'flow') renderer.update(view, selected);
   if (mode === 'decision' && decisionController.session) openDecision(decisionController.session.target.id, false);
@@ -1512,7 +1623,7 @@ async function refresh(force = false) {
     if (!chosen) { resetView(); notice(decisionNotice || (projects.some(p => p.error) ? 'unreadable' : 'noRun')); return; }
     if (available && available.error) { resetView(); notice(decisionNotice || 'unreadable', true); return; }
     const data = await api(query('/api/run')); if (currentGeneration !== generation || document.hidden || decisionController.session?.busy) return;
-    notice(decisionNotice || (!data.plan ? 'noPlan' : '')); applyView(data.view);
+    notice(decisionNotice || (data.view.plan_error ? '' : !data.plan ? 'noPlan' : '')); applyView(data.view);
     if (pendingJump && view && !decisionController.session?.busy) { const target = pendingJump; pendingJump = null; jump(target); }
   } catch (error) { if (currentGeneration === generation) notice(error.status === 401 ? 'unauthorized' : error.status === 400 || error.status === 404 || error.status === 500 ? 'unreadable' : 'lost', true); }
   finally { loading = false; if (queuedRefresh) { queuedRefresh = false; refresh(true); } else schedule(); }
@@ -1571,7 +1682,13 @@ function nodeCard(n, expanded = false) {
     const reason=n.returned_reason || t('noReason');
     const line=el('span',t('returnedShort',{who:t(n.returned_by?.role==='reviewer'?'returnReviewer':'returnLeader'),reason}));line.title=line.textContent;footer.append(line);
   }
-  root.append(header,footer,reference);
+  const essentials=el('div',undefined,'node-essentials');
+  const files=[...new Set(n.deliverables || [])];
+  if(files.length)essentials.append(el('p',t('planCardDelivery',{files:files.join(', ')})));
+  if(n.planned_checks?.length)essentials.append(el('p',t('planCardChecks',{n:n.planned_checks.length,first:checkTitle(n.planned_checks[0],language)})));
+  const questions=(view.planned_questions || []).filter(q=>q.node===n.id);
+  if(questions.length)essentials.append(el('p',t('planCardQuestion',{n:questions.length}),'planned-question'));
+  root.append(header,essentials,footer,reference);
   return root;
 }
 function createMap() {
@@ -1598,12 +1715,13 @@ function createMap() {
     for(const n of data.nodes) {
       const p=layout.positions[n.id],x=p.x*scale+ox-viewport.scrollLeft,y=p.y*scale+oy-viewport.scrollTop;
       const direction=offscreenDirection({x,y,width:p.width*scale,height:p.height*scale},w,h);
-      if(direction)groups[direction].push(n);else visible++;
-      const element=nodes.get(n.id); if(element)element.style.visibility=direction?'hidden':'visible';
+      if(direction)groups[direction].push(n);
+      if(x<w && y<h && x+p.width*scale>0 && y+p.height*scale>0)visible++;
+      const element=nodes.get(n.id); if(element)element.style.visibility='visible';
     }
     for(const c of layout.chips){const chip=chips.get(c.first);if(chip)chip.hidden=scale<1 || !!chip.dataset.tooWide || !!offscreenDirection({x:c.x*scale+ox-viewport.scrollLeft,y:c.y*scale+oy-viewport.scrollTop,width:c.width*scale,height:c.height*scale},w,h);}
     // The viewport clips routes naturally: an off-screen neighbour leaves a visible continuing stub.
-    visibleCount.textContent=t('visibleCards',{n:visible,total:data.nodes.length});
+    visibleCount.textContent=t('visibleCards',{n:visible,summary:t('planSummary',data.plan_counts || {work:0,review:0,decision:0})});
     for(const [direction,b] of overflowButtons)b.hidden=!groups[direction].length;
     for(const [direction,items] of Object.entries(groups))if(items.length) {
       let b=overflowButtons.get(direction);
@@ -1661,15 +1779,18 @@ function createMap() {
       seen.set(n.id,{tone:cardTone(n),comets:cometCount(n)});
     }
     layout=layeredLayout(data.nodes,data.edges.map(e=>({...e,label:e.label?label(e.label):''})),data.decisions,true,{language});
-    clear(key);
+    clear(key); key.append(el('strong',t('lineKinds')));
+    name.textContent=$('flow').classList.contains('sent-plan')?t('planReturned'):t('graph');mapTitle.classList.toggle('returned-title',$('flow').classList.contains('sent-plan'));
     for(const [state,word] of [['open','lineSampleOpen'],['closed','lineSampleClosed'],['review','lineSampleReview']]){
       if(!layout.routes.some(r=>(r.relation==='reviews'?'review':r.gateState==='open'?'open':'closed')===state))continue;
       const sample=el('span',undefined,'line-sample '+state),caption=el('span',t(word));caption.dataset.i18n=word;sample.append(el('i'),caption);key.append(sample);
     }
-    for(const [state,word] of [['submitted','checkingKey'],['returned','returnedKey'],['notStarted','pendingKey']]) {
-      if(data.nodes.some(n=>displayState(n,data.decisions)===state))key.append(el('span',t(word),'state-key'));
-    }
-    if(data.nodes.some(n=>n.kind==='review')) { const mark=el('span',undefined,'state-key review-key'); mark.append(typeIcon('review'),el('span',t('review')));key.append(mark); }
+    const states=el('div',undefined,'state-legend'); states.append(el('strong',t('stateKinds')));
+    for(const state of [...new Set(data.nodes.map(n=>displayState(n,data.decisions)))]) states.append(el('span',`${statusGlyph(state)} ${t(state)}`,'state-key state-'+state));
+    if(data.nodes.some(n=>n.kind==='review') || data.planned_questions?.length)states.append(el('strong',t('markKinds')));
+    if(data.nodes.some(n=>n.kind==='review')) { const mark=el('span',undefined,'state-key review-key'); mark.append(typeIcon('review'),el('span',t('review')));states.append(mark); }
+    if(data.planned_questions?.length)states.append(el('span','? '+t('planQuestions',data.plan_counts),'state-key'));
+    key.append(states);
     // Reorder existing controls without replacing them: tab order follows the drawing.
     for(const id of layout.order){const e=nodes.get(id);setRect(e,layout.positions[id]);stage.append(e);}
     if(drawing)drawing.remove();drawing=svg('svg',{width:layout.bounds.width,height:layout.bounds.height,class:'edge-layer','aria-hidden':'true'});

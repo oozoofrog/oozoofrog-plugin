@@ -55,8 +55,12 @@ def answer(run_dir, decision_id, outcome, answer_text, source, actor):
             raise core.GFError("answer_required", "describe what to change before sending the plan back")
         if source not in ("dashboard", "terminal"):
             raise core.GFError("bad_source", "invalid answer source: %s" % source)
+        if derived["run"].get("key_mismatch"):
+            raise core.GFError("human_key_mismatch", "This GF_HOME key differs from the run's recorded human key", core.EXIT_STATE)
+        if not derived["run"].get("human_key_sha256"):
+            tx.append("human.key", {"human_key_sha256": core.key_fingerprint()}, actor)
         data = {"id": decision_id, "outcome": outcome, "answer": answer_text,
-                "source": source, "sig": core.human_sig(derived["run"]["id"], decision_id, outcome, answer_text)}
+                "source": source, "sig": core.human_sig(derived["run"]["id"], decision_id, outcome, answer_text, decision)}
         tx.append("decision.answer", data, actor)
     return data
 
@@ -82,9 +86,12 @@ def open_decisions(state, node_id=None):
                    and (node_id is None or d["node"] == node_id)), key=lambda d: d["seq"])
 
 
-def verify(run_id, decision_id, answer_data):
+def verify(run_id, decision_id, answer_data, decision=None):
     try:
-        expected = core.human_sig(run_id, decision_id, answer_data["outcome"], answer_data["answer"])
+        modern = answer_data["sig"].startswith("v2:")
+        if modern and decision is None or not modern and decision and decision.get("purpose") == "plan_approval":
+            return False
+        expected = core.human_sig(run_id, decision_id, answer_data["outcome"], answer_data["answer"], decision if modern else None)
         return expected is not None and hmac.compare_digest(
             expected.encode("utf-8"), answer_data["sig"].encode("utf-8"))
     except Exception:

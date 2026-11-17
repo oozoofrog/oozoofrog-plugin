@@ -11,6 +11,8 @@ SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 from graphflow import checks, core, merge, plan, state, store
 
+from human_support import legacy_run
+
 ACTOR = {"role": "leader", "node": None, "session": "merge-test"}
 
 
@@ -34,7 +36,7 @@ class MergeTests(unittest.TestCase):
         self.write("alpha.txt", "base alpha\n")
         self.write("beta.txt", "base beta\n")
         self.base = self.commit()
-        self.run = store.init_run(self.repo, "merge", ACTOR)
+        self.run = legacy_run(self.repo, "merge", ACTOR)
         self.set_plan()
 
     def git(self, *args):

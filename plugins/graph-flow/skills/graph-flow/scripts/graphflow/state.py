@@ -56,8 +56,10 @@ def plan_identity(plan):
 
 def plan_approval(derived):
     identity = derived.get("run", {}).get("plan_identity")
-    if identity is None:
-        return None  # Pre-0.3 records retain their existing dispatch contract.
+    if not derived.get("run", {}).get("approval_required", bool(identity)):
+        return None  # Only histories without a marker or identity are legacy.
+    if not identity:
+        return {}
     matches = [d for d in derived.get("decisions", {}).values()
                if d.get("purpose") == "plan_approval" and d.get("plan_identity") == identity
                and not d.get("stale")]
@@ -65,6 +67,11 @@ def plan_approval(derived):
 
 
 def require_plan_approval(derived):
+    run = derived.get("run", {})
+    if run.get("plan_error"):
+        raise core.GFError("plan_tampered", "Plan differs from the recorded structural identity", core.EXIT_STATE)
+    if run.get("key_mismatch") and run.get("approval_required"):
+        raise core.GFError("human_key_mismatch", "This GF_HOME key differs from the run's recorded human key", core.EXIT_STATE)
     approval = plan_approval(derived)
     if approval is not None and not (approval.get("status") == "answered"
             and approval.get("verified") and approval.get("outcome") == "approved"):
@@ -145,6 +152,12 @@ def derive(plan, events):
     run_id = None
     plan_revision = 0
     current_identity = None
+    approval_required = any(
+        (e.get("type") == "run.init" and (_data(e).get("approval_required") or _data(e).get("schema_version", 1) >= 2))
+        or (e.get("type") == "plan.set" and _data(e).get("plan_identity") is not None) for e in events)
+    pinned_key = next((_data(e).get("human_key_sha256") for e in events
+                      if e.get("type") in ("run.init", "human.key") and _data(e).get("human_key_sha256")), None)
+    key_mismatch = bool(pinned_key and pinned_key != core.key_fingerprint())
     host = []
     final = None
     decisions = {}
@@ -176,8 +189,7 @@ def derive(plan, events):
                 run_id = d["run_id"]
 
         elif t == "plan.set":
-            if "plan_identity" in d:
-                current_identity = d["plan_identity"]
+            current_identity = d.get("plan_identity")
             last_reset_seq = max(last_reset_seq, seq)
             if d.get("revision") is not None:
                 plan_revision = d["revision"]
@@ -335,7 +347,10 @@ def derive(plan, events):
             dec["stale"] = True
         sig = sigs.get(did)
         if dec["status"] == "answered" and isinstance(sig, str):
-            expected = core.human_sig(run_id, did, dec["outcome"], dec["answer"])
+            modern = sig.startswith("v2:")
+            is_plan = dec.get("purpose") == "plan_approval"
+            expected = (core.human_sig(run_id, did, dec["outcome"], dec["answer"], dec if modern else None)
+                        if not is_plan or modern and pinned_key and not key_mismatch else None)
             if expected is not None:
                 dec["verified"] = hmac.compare_digest(
                     expected.encode("utf-8"), sig.encode("utf-8"))
@@ -409,6 +424,10 @@ def derive(plan, events):
             "id": run_id,
             "plan_revision": plan_revision,
             "plan_identity": current_identity,
+            "approval_required": approval_required,
+            "human_key_sha256": pinned_key,
+            "key_mismatch": key_mismatch,
+            "plan_error": bool(current_identity and plan_identity(plan or {}) != current_identity),
             "status": "complete" if complete else "open",
             "host": host,
             "final": final,

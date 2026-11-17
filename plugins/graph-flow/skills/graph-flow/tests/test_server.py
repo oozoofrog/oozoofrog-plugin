@@ -20,6 +20,8 @@ SCRIPTS = pathlib.Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 from graphflow import assign, checks, core, decisions, gate, learn, plan, server, state, store
 
+from human_support import legacy_run
+
 ACTOR = {"role": "leader", "node": None, "session": "server-test"}
 REVIEWER = {"role": "reviewer", "node": "review", "session": "review-test"}
 CMD = {"id": "unit", "type": "cmd", "run": "printf checked"}
@@ -42,7 +44,7 @@ class ServerTests(unittest.TestCase):
             self.git(root, "init", "-q")
             self.git(root, "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
                      "-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "-m", "initial")
-            run = store.init_run(root, "run%d" % index, ACTOR)
+            run = legacy_run(root, "run%d" % index, ACTOR)
             raw = {"schema_version": 1, "goal": "server test", "nodes": [
                 {"id": "build", "kind": "work", "goal": "build", "owns": ["built.txt"],
                  "lane": 3, "grade": "scoped", "checks": [dict(CMD)]},
@@ -383,7 +385,7 @@ class ServerTests(unittest.TestCase):
         for index, project in enumerate(data["projects"]):
             self.assertEqual(project["name"], self.projects[index].name)
             run = project["runs"][0]
-            self.assertEqual(set(run), {"id", "status", "nodes", "passed", "open_decisions", "last_event"})
+            self.assertEqual(set(run), {"id", "status", "nodes", "passed", "open_decisions", "last_event", "plan_error"})
             self.assertEqual((run["id"], run["status"], run["nodes"], run["passed"], run["open_decisions"]),
                              (self.runs[index].name, "open", 2, 1, 1))
             self.assertEqual(run["last_event"], store.events(self.runs[index])[-1]["ts"])
@@ -392,7 +394,7 @@ class ServerTests(unittest.TestCase):
         status, data = self.json_request("GET", "/api/projects")
         self.assertEqual(status, 200)
         self.assertIn("error", data["projects"][1])
-        self.assertIn("error", data["projects"][0]["runs"][0])
+        self.assertTrue(data["projects"][0]["runs"][0]["plan_error"])
         self.assertEqual(self.json_request("GET", "/api/queue"), (200, {"queue": []}))
 
     def test_queue_evidence_checks_files_order_and_freshness(self):
@@ -495,7 +497,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(learned["text"], "Keep it small")
 
     def test_run_without_plan(self):
-        run = store.init_run(self.projects[0], "empty", ACTOR)
+        run = legacy_run(self.projects[0], "empty", ACTOR)
         status, data = self.json_request("GET", "/api/run?" + urlencode(
             {"project": str(self.projects[0]), "run": run.name}))
         self.assertEqual(status, 200)
@@ -505,13 +507,15 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(data["view"].pop("project"), pathlib.Path(self.projects[0]).name)
         self.assertEqual(data["view"], {"title": "", "language": "en", "nodes": [], "edges": [], "decisions": [], "answered": [],
                                       "lessons": [], "complete": False, "run": "empty",
-                                      "plan_approval": None, "plan_counts": {"work": 0, "checks": 0, "decisions": 0},
+                                      "plan_approval": None, "plan_counts": {"work": 0, "review": 0, "decision": 0, "checks": 0, "decisions": 0},
+                                  "plan_error": False, "key_mismatch": False, "goal": "", "planned_questions": [],
+                                  "integration_checks": [], "promoted_checks": [], "superseded": [], "constraints": [],
                                       "counts": {"done": 0, "doing": 0, "waiting": 0,
                                                  "needs_you": 0, "returned": 0, "returns_total": 0}})
 
     def test_view_mixed_flow_history_context_edges_and_lessons(self):
         project = self.projects[0]
-        run = store.init_run(project, "presentation", ACTOR)
+        run = legacy_run(project, "presentation", ACTOR)
         context = {"why": "Choose the wording", "if_approved": "Use this wording",
                    "if_rejected": "Revise the wording", "undo": "Restore the earlier wording"}
         raw = {"schema_version": 1, "title": "A flow for people", "goal": "Assemble the result", "nodes": []}
@@ -577,7 +581,8 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         view = data["view"]
         self.assertEqual(set(view), {"title", "language", "nodes", "edges", "decisions", "answered", "lessons", "counts", "complete",
-                                     "run", "project", "timeline", "plan_approval", "plan_counts"})
+                                     "run", "project", "timeline", "plan_approval", "plan_counts", "plan_error", "key_mismatch",
+                                 "goal", "planned_questions", "integration_checks", "promoted_checks", "superseded", "constraints"})
         self.assertEqual(view["title"], raw["title"])
         self.assertFalse(view["complete"])
         self.assertEqual([n["id"] for n in view["nodes"]], [n["id"] for n in current["nodes"]])

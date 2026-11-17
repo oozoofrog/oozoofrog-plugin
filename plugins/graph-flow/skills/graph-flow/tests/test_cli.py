@@ -147,6 +147,7 @@ class CLITests(unittest.TestCase):
 
     def test_optional_constraints(self):
         learn = types.ModuleType('graphflow.learn')
+        learn.fixed_checks = mock.Mock(return_value=[])
         learn.applying = mock.Mock(return_value=[{'id': 'c1'}])
         with mock.patch.dict(sys.modules, {'graphflow.learn': learn}):
             self.assertEqual(self.set_plan()['constraints_applied'], ['c1'])

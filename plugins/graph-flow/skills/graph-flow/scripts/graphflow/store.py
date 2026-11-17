@@ -14,7 +14,7 @@ import time
 
 from .core import EXIT_IO, EXIT_STATE, EXIT_USAGE, GFError, gf_home, now
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 LOCK_TIMEOUT_S = 30
 GITIGNORE_LINES = ("runs/", ".lock")
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
@@ -159,9 +159,12 @@ def init_run(project_root, run_id, actor):
         (run_dir / ".lock").touch()
     except OSError as e:
         raise GFError("io_error", "cannot create run: %s" % e, EXIT_IO)
+    from . import core, decisions
+    decisions.ensure_key()
     with transaction(run_dir) as tx:
         tx.append("run.init", {"run_id": run_id, "project_root": str(root),
-                               "schema_version": SCHEMA_VERSION}, actor)
+                               "schema_version": SCHEMA_VERSION, "approval_required": True,
+                               "human_key_sha256": core.key_fingerprint()}, actor)
     register_project(root)
     return run_dir
 
@@ -240,19 +243,28 @@ def _last_plan_set(evs):
     return None
 
 
-def _load_plan(run_dir, revision):
+def _load_plan(run_dir, revision, recorded=None):
+    from . import state
     path = _plan_path(run_dir, revision)
+    if recorded is None:
+        recorded = next((e["data"] for e in reversed(events(run_dir))
+                         if e.get("type") == "plan.set" and e["data"].get("revision") == revision), {})
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        raw = path.read_bytes()
+        plan = json.loads(raw.decode("utf-8"))
     except (OSError, ValueError) as e:
-        raise GFError("io_error", "cannot read plan revision %d: %s" % (revision, e), EXIT_IO)
+        raise GFError("plan_tampered", "Cannot verify plan revision %d: %s" % (revision, e), EXIT_STATE)
+    if (hashlib.sha256(raw).hexdigest() != recorded.get("plan_sha256") or
+            recorded.get("plan_identity") and state.plan_identity(plan) != recorded["plan_identity"]):
+        raise GFError("plan_tampered", "Plan revision %d differs from its recorded hash or identity" % revision, EXIT_STATE)
+    return plan
 
 
 def read_plan(run_dir):
     ev = _last_plan_set(events(run_dir))
     if ev is None:
         return None
-    return _load_plan(run_dir, int(ev["data"]["revision"]))
+    return _load_plan(run_dir, int(ev["data"]["revision"]), ev["data"])
 
 
 # ---------------------------------------------------------------- transactions
@@ -272,7 +284,7 @@ class Transaction(object):
             self.plan = None
         else:
             self.revision = int(last["data"]["revision"])
-            self.plan = _load_plan(run_dir, self.revision)
+            self.plan = _load_plan(run_dir, self.revision, last["data"])
 
     def _make(self, type_, data, actor):
         seq = (self.events[-1]["seq"] if self.events else 0) + 1
@@ -291,7 +303,7 @@ class Transaction(object):
             if revision in self._written_plans:
                 self.plan = self._written_plans[revision]
             else:
-                self.plan = _load_plan(self.run_dir, revision)
+                self.plan = _load_plan(self.run_dir, revision, data)
             self.revision = revision
         return self._make(type_, data, actor)
 

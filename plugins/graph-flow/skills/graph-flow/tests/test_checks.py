@@ -14,6 +14,8 @@ SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 from graphflow import checks, core, plan, state, store
 
+from human_support import legacy_run
+
 ACTOR = {"role": "leader", "node": None, "session": "checks-test"}
 CMD = {"id": "unit", "type": "cmd", "run": "printf 'out\\n'; printf 'err\\n' >&2"}
 
@@ -65,7 +67,7 @@ class ChecksCase(unittest.TestCase):
         for file in ("owned.txt", "other.txt", "deleted.txt", "owned/child.txt"):
             self.write(file, "first\nsecond\n")
         self.commit()
-        self.run = store.init_run(self.repo, "checks", ACTOR)
+        self.run = legacy_run(self.repo, "checks", ACTOR)
         self.set_plan([work()])
 
     def git(self, *args):

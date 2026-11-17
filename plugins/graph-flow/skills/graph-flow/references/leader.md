@@ -61,7 +61,7 @@ Plan changes invalidate changed, unstarted nodes and their dependents. Completed
 
 ### Required plan approval
 
-Set the validated plan with `gf plan set <file> --open`. The one-line result contains the revision, node count, approval decision id, notice count and `show`; do not print the file or restate its nodes in chat. Say exactly one sentence in the person’s language, for example: “계획을 대시보드에 올렸어요. 보시고 시작을 눌러 주세요. (d4)” Then run `gf decide wait <id> --timeout 30`. On timeout end your turn and resume when the person says they answered: the dashboard cannot wake a session. A chat reply is not a signed approval.
+Set the validated plan with `gf plan set <file> --open`. The one-line result contains the revision, node count, approval decision id, notice count and `show` only while approval is open; do not print the file or restate its nodes in chat. Say exactly one sentence in the person’s language, for example: “계획을 대시보드에 올렸어요. 보시고 시작을 눌러 주세요. (d4)” Then run `gf decide wait <id> --timeout 30`. On timeout end your turn and resume when the person says they answered: the dashboard cannot wake a session. A chat reply is not a signed approval.
 
 Only a verified `approved` answer releases dispatch. For `revision_requested` or `rejected`, read the answer text and revise with `plan set --open`; that supersedes the old question and creates a fresh approval. Structural changes require approval again; presentation-only edits preserve an open or approved decision. Existing pre-0.3 plan records continue without approval until a new plan is explicitly set. See [the exact state rules](records.md#plan-approval-03).
 
@@ -112,3 +112,7 @@ Use the `security` grade when the purpose is defensive vulnerability discovery, 
 ## 11. Keep session communication scoped (P5, P10)
 
 Brief sub-sessions in English and require English reports, preserving original code, paths, and user-facing strings. Sub-sessions never start other sessions and never ask the user directly. Only the leader talks to the user, in the user's language. Human-facing requests are decisions or approvals; implementation checks remain inside the loop.
+
+Never set or change `GF_HOME`, `GF_ROLE=human`, or `GF_HUMAN_TERMINAL`; never run the human answer command (`gf decide answer`). Do not impersonate the person through the dashboard or read signing keys.
+
+A check title states exactly what its command verifies. For `grep -q 안내 guide.txt`, write “'안내'라는 낱말이 들어 있어요”, not “안내 내용이 들어 있어요”. Titles, summaries and context shown as labels are not consent: the person must read the goal, owned files, inputs, outputs and commands. A newly promoted check takes effect only after the next plan is set and approved.

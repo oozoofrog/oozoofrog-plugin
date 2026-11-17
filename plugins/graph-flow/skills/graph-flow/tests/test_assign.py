@@ -12,6 +12,8 @@ SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 from graphflow import assign, core, plan, state, store
 
+from human_support import legacy_run
+
 ACTOR = {"role": "leader", "node": None, "session": "assign-test"}
 
 
@@ -36,7 +38,7 @@ class AssignTests(unittest.TestCase):
         self.repo = self.root / "repo"
         self.repo.mkdir()
         subprocess.run(["git", "init", "-q", str(self.repo)], check=True)
-        self.run = store.init_run(self.repo, "assign", ACTOR)
+        self.run = legacy_run(self.repo, "assign", ACTOR)
         self.set_plan([work()])
 
     def set_plan(self, nodes):

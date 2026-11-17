@@ -42,6 +42,9 @@ def _set_plan(args, actor):
         if problems:
             raise core.GFError("invalid_plan", json.dumps(problems), core.EXIT_NEGATIVE)
         normalized, notices = plan.normalize(raw)
+        learn = importlib.import_module("graphflow.learn")
+        normalized["promoted_checks"] = learn.fixed_checks(store.project_of(args.run))
+        normalized["constraints"] = learn.applying(store.project_of(args.run), normalized)
         prior = state.derive(tx.plan, tx.events)
         identity = state.plan_identity(normalized)
         approval = state.plan_approval(prior)
@@ -62,17 +65,10 @@ def _set_plan(args, actor):
                  and (approval["status"] == "open" or
                       approval["status"] == "answered" and approval.get("verified")
                       and approval["outcome"] == "approved"))
-        try:
-            learn = importlib.import_module("graphflow.learn")
-        except ModuleNotFoundError as exc:
-            if exc.name != "graphflow.learn":
-                raise
-            ids = []
-        else:
-            ids = [c["id"] for c in learn.applying(store.project_of(args.run), normalized)]
+        ids = [c["id"] for c in normalized["constraints"]]
         revision, sha = tx.write_plan(normalized)
         tx.append("plan.set", {"revision": revision, "plan_sha256": sha,
-                               "plan_identity": identity,
+                               "plan_identity": identity, "node_counts": plan.node_counts(normalized["nodes"]),
                                "fingerprints": {n["id"]: state.fingerprint(n) for n in normalized["nodes"]},
                                "constraints_applied": ids}, actor)
         tx.append("constraint.apply", {"ids": ids}, actor)
@@ -92,8 +88,7 @@ def _set_plan(args, actor):
         else:
             did = approval["id"]
     result = {"revision": revision, "nodes": len(normalized["nodes"]), "decision": did,
-              "notices": len(notices), "constraints_applied": ids,
-              "show": "gf open --decision %s" % did}
+              "notices": len(notices), "constraints_applied": ids}
     if not reuse or approval["status"] == "open":
         _show(args, result, did)
     return result
@@ -232,6 +227,7 @@ def _loop(args, actor):
         return {"ready": graph.ready(current_plan or {"nodes": []}, derived)}
     if path == ("route",):
         current_plan, derived = _snapshot(args.run)
+        state.require_plan_approval(derived)
         definition = plan.node_by_id(current_plan, node)
         current = dict(derived["nodes"][node])
         if definition["kind"] == "review":

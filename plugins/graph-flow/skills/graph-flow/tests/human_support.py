@@ -23,3 +23,12 @@ def human_answer(run, decision, outcome, answer):
     result = json.loads(out.getvalue())
     assert code == 0, result
     return result
+
+
+def legacy_run(project, name, actor):
+    """Explicit 0.2 fixture: no approval marker/identity anywhere in its history."""
+    run = store.init_run(project, name, actor)
+    events = store.events(run)
+    events[0]["data"] = {"run_id": name, "project_root": str(project.resolve()), "schema_version": 1}
+    (run / "events.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events))
+    return run

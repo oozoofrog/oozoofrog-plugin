@@ -10,6 +10,8 @@ from unittest import mock
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scripts"))
 from graphflow import checks, gate, plan, state, store, trace
 
+from human_support import legacy_run
+
 ACTOR = {"role": "leader", "node": None, "session": "trace-test"}
 
 
@@ -44,7 +46,7 @@ class TraceTests(unittest.TestCase):
 
     def new_run(self, name):
         with mock.patch.object(store, "now", return_value="2026-11-15T00:00:00Z"):
-            return store.init_run(self.repo, name, ACTOR)
+            return legacy_run(self.repo, name, ACTOR)
 
     def append(self, run, kind, node=None, second=0, **data):
         if node is not None:

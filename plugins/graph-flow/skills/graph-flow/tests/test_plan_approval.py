@@ -151,6 +151,8 @@ class PlanApprovalTests(unittest.TestCase):
         self.assertEqual(self.snapshot()[1]['nodes']['a']['status'], 'running')
 
     def test_grandfathered_record_works_until_explicit_new_plan_set(self):
+        from human_support import legacy_run
+        self.run = legacy_run(self.project, "legacy", core.actor_from_env())
         normalized, _ = plan.normalize(self.raw)
         with store.transaction(self.run) as tx:
             rev, sha = tx.write_plan(normalized)

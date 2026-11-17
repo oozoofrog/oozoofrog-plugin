@@ -190,8 +190,11 @@ def _optional(module, function, default, *args):
     return getattr(imported, function)(*args)
 
 
-def _integration(plan, root):
-    return list(plan.get("integration_checks") or []) + _optional("learn", "fixed_checks", [], root)
+def _integration(plan, root, derived):
+    # Promotions are frozen by plan set; legacy plans retain their old fixed-check contract.
+    fixed = plan.get("promoted_checks", [] if derived["run"].get("approval_required") else None)
+    return list(plan.get("integration_checks") or []) + (fixed if fixed is not None else
+                                                        _optional("learn", "fixed_checks", [], root))
 
 
 def _token(revision, st):
@@ -201,8 +204,7 @@ def _token(revision, st):
 def _preconditions(plan, state, node_id):
     node = planmod.node_by_id(plan, node_id)
     st = state["nodes"][node_id]
-    if node["kind"] == "decision":
-        statemod.require_plan_approval(state)
+    statemod.require_plan_approval(state)
     if not graph.needs_satisfied(plan, state, node_id):
         raise core.GFError("needs_unsatisfied", "node needs are not satisfied", core.EXIT_STATE)
     if node["kind"] != "decision" and not graph.has_current_submission(st):
@@ -237,7 +239,7 @@ def gate(run_dir, node_id, cwd, actor):
         results.append(checks.run_scope(run_dir, node_id, "gate", directory, actor))
         if node.get("effective_lane", node["lane"]) >= 2:
             integration_results = [checks.run_cmd(run_dir, "_run", c, "gate", directory, actor)
-                                   for c in _integration(plan, root)]
+                                   for c in _integration(plan, root, derived)]
     elif node["kind"] == "review":
         results.append(checks.run_cites(run_dir, node_id, "gate", directory, actor))
     rollbacks = (_optional("trace", "rollbacks", 0, root, run_dir, node["owns"])
@@ -281,10 +283,11 @@ def gate_final(run_dir, cwd, actor):
     directory = pathlib.Path(cwd if cwd is not None else root).resolve()
     with store.transaction(run_dir) as tx:
         plan, revision = tx.plan, tx.revision
-        statemod.require_plan_approval(statemod.derive(plan, tx.events))
+        derived = statemod.derive(plan, tx.events)
+        statemod.require_plan_approval(derived)
     tested_head = _head(directory)
     results = [checks.run_cmd(run_dir, "_run", c, "gate", directory, actor)
-               for c in _integration(plan or {}, root)]
+               for c in _integration(plan or {}, root, derived)]
     failed = [r["check"] for r in results if r["result"] == "failed"]
     data = {"result": "failed" if failed else "passed", "failed_checks": failed,
             "tested_head": tested_head}

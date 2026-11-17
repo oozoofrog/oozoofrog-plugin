@@ -12,6 +12,8 @@ SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 from graphflow import core, decisions, plan, state, store
 
+from human_support import legacy_run
+
 ACTOR = {"role": "leader", "node": None, "session": "test"}
 HUMAN = {"role": "human", "node": None, "session": None}
 
@@ -26,7 +28,7 @@ class DecisionsTests(unittest.TestCase):
         self.repo = self.root / "repo"
         self.repo.mkdir()
         subprocess.run(["git", "init", "-q", str(self.repo)], check=True)
-        self.run = store.init_run(self.repo, "r1", ACTOR)
+        self.run = legacy_run(self.repo, "r1", ACTOR)
         self.set_plan()
 
     def tearDown(self):
@@ -116,25 +118,27 @@ class DecisionsTests(unittest.TestCase):
         data = self.ask()
         answer = self.answer(data["id"])
         self.assertEqual(store.events(self.run)[-1]["data"], answer)
-        self.assertEqual(answer["sig"], core.human_sig("r1", data["id"], "approved", "Yes ✓"))
-        self.assertTrue(decisions.verify("r1", data["id"], answer))
+        self.assertEqual(answer["sig"], core.human_sig("r1", data["id"], "approved", "Yes ✓", data))
+        self.assertTrue(decisions.verify("r1", data["id"], answer, data))
         self.assertTrue(self.derive()["decisions"][data["id"]]["verified"])
         self.error("already_answered", 4, self.answer, data["id"])
         (self.home / "human.key").write_bytes(b'x' * 32)
         self.assertFalse(self.derive()["decisions"][data["id"]]["verified"])
-        self.assertFalse(decisions.verify("r1", data["id"], answer))
+        self.assertFalse(decisions.verify("r1", data["id"], answer, data))
 
     def test_nonhuman_actors_cannot_answer_or_create_key(self):
         data = self.ask()
+        original_key = (self.home / "human.key").read_bytes()
         for role in ("leader", "worker", "reviewer"):
             actor = {"role": role, "node": None if role == "leader" else "a", "session": "agent"}
             for source in ("terminal", "dashboard"):
                 with self.subTest(role=role, source=source):
                     self.error("forbidden", core.EXIT_FORBIDDEN, self.answer,
                                data["id"], source=source, actor=actor)
-                    self.assertFalse((self.home / "human.key").exists())
+                    self.assertEqual((self.home / "human.key").read_bytes(), original_key)
 
     def test_nonhuman_actor_is_refused_before_validation_or_io(self):
+        original_key = (self.home / "human.key").read_bytes()
         for role in ("leader", "worker", "reviewer"):
             with self.subTest(role=role):
                 with mock.patch.object(decisions, "ensure_key") as key, \
@@ -144,7 +148,7 @@ class DecisionsTests(unittest.TestCase):
                                {"role": role, "node": None, "session": None})
                 key.assert_not_called()
                 transaction.assert_not_called()
-                self.assertFalse((self.home / "human.key").exists())
+                self.assertEqual((self.home / "human.key").read_bytes(), original_key)
 
     def test_all_outcomes_and_sources(self):
         for kind in ("review", "authorization", "direction", "information"):
@@ -173,9 +177,10 @@ class DecisionsTests(unittest.TestCase):
         self.assertFalse(decisions.verify("other", data["id"], answer))
         self.assertFalse(decisions.verify("r1", "other", answer))
         (self.home / "human.key").unlink()
-        self.assertFalse(decisions.verify("r1", data["id"], answer))
+        self.assertFalse(decisions.verify("r1", data["id"], answer, data))
 
     def test_ensure_key_mode_stability_and_atomic_install(self):
+        (self.home / "human.key").unlink()
         with mock.patch.object(store.os, "replace", wraps=store.os.replace) as replace:
             path = decisions.ensure_key()
             self.assertEqual(replace.call_count, 1)

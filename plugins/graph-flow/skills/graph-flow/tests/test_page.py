@@ -20,6 +20,8 @@ S = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(S / 'scripts'))
 from graphflow import checks, decisions, gate, learn, plan, server, state, store
 
+from human_support import legacy_run
+
 ACTOR = {'role': 'leader', 'node': None, 'session': 'dashboard-demo'}
 
 
@@ -40,7 +42,7 @@ def build_demo_run(gf_home, project_dir):
         '-c', 'commit.gpgsign=false', 'commit', '-q', '--allow-empty', '-m', 'Demo foundation')
     head = git('rev-parse', 'HEAD').decode().strip()
     decisions.ensure_key()
-    run = store.init_run(project, 'dashboard-demo', ACTOR)
+    run = legacy_run(project, 'dashboard-demo', ACTOR)
     context = {'why': '처음 읽는 사람이 따라 할 수 있는지는 직접 읽어 주셔야 해요.',
                'if_approved': '읽기 쉬운 설명으로 받아들이고 내보내기를 준비해요.',
                'if_rejected': '적어 주신 곳을 고쳐 다시 가져와요.',
@@ -238,9 +240,9 @@ for(const status of ['running','submitted','awaiting_approval','replan']) {
 assert.equal(displayState({id:'work',status:'running',attempts:2},[]),'retrying');
 for(const language of ['en','ko']) {
   const failed=checkWording({id:'screen',title:'A screen exists',result:'failed'},language);
-  assert(failed.startsWith('✕'));assert(failed.includes('“A screen exists”'));
+  assert(failed.includes('—')); assert(failed.includes('A screen exists'));
   assert(checkWording({id:'screen',title:'A screen exists',result:'passed'},language).startsWith('✓'));
-  assert(checkWording({id:'screen',title:'A screen exists',result:'failed'},language,2).includes('2'));
+  assert(checkWording({id:'screen',title:'A screen exists',result:'failed'},language,2).includes('—'));
   assert(!checkTitle({id:'scope',title:'scope'},language).includes('scope'));
 }
 """)
@@ -355,7 +357,7 @@ for (const question of ['Approve deploy for prod?','Approve hold for another?','
     def test_dom_uses_controller_and_preserves_composing_input_on_refresh(self):
         self.run_controller(r"""
 class Element {
-  constructor(tag) { this.tagName=tag; this.children=[]; this.dataset={}; this.listeners={}; this.hidden=false; this.disabled=false; this.value=''; this._text=''; this.style={setProperty(){}}; this.classList={remove:name=>{this.className=(this.className||'').split(' ').filter(c=>c!==name).join(' ');},add:name=>{this.className=((this.className||'')+' '+name).trim();},toggle:(name,on)=>{const classes=new Set((this.className||'').split(' ').filter(Boolean));if(on??!classes.has(name))classes.add(name);else classes.delete(name);this.className=[...classes].join(' ');return classes.has(name);}}; }
+  constructor(tag) { this.tagName=tag; this.children=[]; this.dataset={}; this.listeners={}; this.hidden=false; this.disabled=false; this.value=''; this._text=''; this.style={setProperty(){}}; this.classList={contains:name=>(this.className||'').split(' ').includes(name),remove:name=>{this.className=(this.className||'').split(' ').filter(c=>c!==name).join(' ');},add:name=>{this.className=((this.className||'')+' '+name).trim();},toggle:(name,on)=>{const classes=new Set((this.className||'').split(' ').filter(Boolean));if(on??!classes.has(name))classes.add(name);else classes.delete(name);this.className=[...classes].join(' ');return classes.has(name);}}; }
   prepend(...children) { for(const c of children){if(c.parent)c.remove();c.parent=this;} this.children.unshift(...children); }
   remove() { if(this.parent)this.parent.children=this.parent.children.filter(c=>c!==this); }
   get firstElementChild() { return this.children[0]; }
@@ -462,7 +464,7 @@ get('flow-tab').click(); assert.equal(get('flow').hidden,false); assert.equal(ge
 // Open through the HTML fallback; map and panel route to the same openDecision.
 get('decision-list').querySelector('button').click();
 assert.match(get('decision').textContent,/attempt 1 came back/);
-assert.match(get('decision').textContent,/In attempt 1, “Unit passes” did not pass/);
+assert.match(get('decision').textContent,/Unit passes — did not pass/);
 assert.match(get('decision').textContent,/a.py/);
 assert.equal(get('flow-tab')['aria-pressed'],'false','reading must not claim to be the graph');
 const input=get('answer-text'), actions=get('answer-actions'), buttons=actions.querySelectorAll('button[data-outcome]');
@@ -503,14 +505,14 @@ assert.equal(get('panel').hidden,false);
 live.title='Another run';live.run=second.run;live.project='Project';
 location.hash='#project=%2Fproject&run=second';docEvents['window:hashchange']();await settle();
 assert.equal(get('title').textContent,'Another run','cross-run navigation updates the header');
-assert.equal(get('where').textContent,'Project · second');
+assert.equal(get('where').textContent,'');
 assert.equal(get('panel').hidden,true);assert.equal(get('panel').onscroll,null);
 // Consent stays on the graph and keeps the person's draft through polling.
 const approval={id:'d20',purpose:'plan_approval',kind:'authorization',status:'open',question:'Start this plan?',files:[],failed:[],context:{}};
-live.plan_approval=approval;live.plan_counts={work:1,checks:2,decisions:1};live.decisions=[approval];
+live.plan_approval=approval;live.plan_counts={work:1,review:0,decision:0,checks:2,decisions:0};live.decisions=[approval];
 docEvents.visibilitychange();await settle();
 assert.match(get('attention').textContent,/Start this plan\?/);
-assert.match(get('attention').textContent,/1 pieces of work · 2 checks · 1 planned questions/);
+assert.match(get('attention').textContent,/Work: 1 · Reviews: 0 · Decisions: 0/);
 const planInput=get('plan-changes'),planActions=get('attention').querySelector('.plan-actions').querySelectorAll('button');
 assert.equal(planActions[0].textContent,'Send back');assert.equal(planActions[0].disabled,true);
 assert.equal(planActions[1].textContent,'Start');assert.equal(planActions[1].disabled,false);

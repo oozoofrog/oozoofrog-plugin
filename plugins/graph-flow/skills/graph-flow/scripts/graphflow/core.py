@@ -1,6 +1,7 @@
 """Errors, exit codes, actor identity, clock and home directory."""
 import hashlib
 import hmac
+import json
 import os
 import pathlib
 from datetime import datetime, timezone
@@ -58,7 +59,15 @@ def gf_home():
     return pathlib.Path.home() / ".graph-flow"
 
 
-def human_sig(run_id, decision_id, outcome, answer_text):
+def key_fingerprint():
+    try:
+        key = (gf_home() / "human.key").read_bytes()
+    except OSError:
+        return None
+    return hashlib.sha256(key).hexdigest() if key else None
+
+
+def human_sig(run_id, decision_id, outcome, answer_text, decision=None):
     """HMAC-SHA256 hex over the answer, keyed with $GF_HOME/human.key; None when unreadable."""
     try:
         key = (gf_home() / "human.key").read_bytes()
@@ -67,4 +76,10 @@ def human_sig(run_id, decision_id, outcome, answer_text):
     if not key:
         return None
     message = "\n".join([str(run_id), str(decision_id), str(outcome), answer_text or ""])
-    return hmac.new(key, message.encode("utf-8"), hashlib.sha256).hexdigest()
+    if decision is not None:
+        binding = {k: decision.get(k) for k in
+                   ("kind", "purpose", "plan_identity", "node", "submission", "check", "question", "evidence")}
+        message = json.dumps([2, run_id, decision_id, outcome, answer_text or "", binding],
+                             sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    signature = hmac.new(key, message.encode("utf-8"), hashlib.sha256).hexdigest()
+    return "v2:" + signature if decision is not None else signature

@@ -17,7 +17,7 @@ Use the tool invocation printed in the brief. Below, `gf` abbreviates it. `gf st
 
 ## Work-node loop
 
-1. If start returns `plan_not_approved`, report its decision id to the leader and stop before editing; never change role or answer it. Already-running attempts continue through check/submit while a revised plan waits. Run `gf start <node>` before changing files. For a worktree, pass `gf start <node> --cwd <worktree>` and use that same working tree for checks and submission; the default is the leader's project root. A start consumes one attempt. Do not start again merely to run another check.
+1. If start returns `plan_not_approved`, report its decision id to the leader and stop before editing; never change role or answer it. Already-running attempts can continue editing and submit while a revised plan waits; checks, briefs, routing, merge and gates wait for approval. Run `gf start <node>` before changing files. For a worktree, pass `gf start <node> --cwd <worktree>` and use that same working tree for checks and submission; the default is the leader's project root. A start consumes one attempt. Do not start again merely to run another check.
 2. Optionally run `gf red <node> <check> --cwd <worktree>` before the implementation to establish that the check can catch the missing behavior. A check already green is a notice, not evidence that the whole goal is complete.
 3. Make only the brief's changes inside `owns`. Preserve pre-existing edits. Never repair files outside your scope, including stray edits from a rejected attempt; report them to the leader instead. Fix only the latest rejection's SCOPE; report a necessary scope change to the leader instead of editing outside it.
 4. Run each `gf check run <node> <check> --cwd <worktree>`, inspect failure evidence, correct the implementation, and repeat until green. Do not weaken checks or continue indefinitely with the same failure. For a declared host check, invoke the named host tool and record actual evidence using `gf check record <node> <check> --result passed --note "tool, observed result, evidence location"`; use `failed` for a failed observation. Finish these records before submitting.
@@ -40,3 +40,5 @@ Write the findings JSON to a session scratch artifact outside project source. Ev
 ## Return to the leader
 
 Report at most 20 lines: node and submission id, commit/branch if present, changed artifacts, actual commands with exit codes (host tools have no exit code), remaining uncertainty, and decision ids/blockers. Reviewers also report their verdict and cited findings. Do not claim acceptance before the leader's gate.
+
+Never set or change `GF_HOME`, `GF_ROLE=human`, or `GF_HUMAN_TERMINAL`; never run the human answer command (`gf decide answer`). Do not impersonate the person through the dashboard or read signing keys.

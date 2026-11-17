@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `graph-flow` 0.3.0, round 8: verify every plan revision against its recorded hash and structural identity; bind versioned human signatures to decision meaning, pin the run's key fingerprint, and prevent legacy downgrades. Freeze promoted checks and worker constraints at plan approval, block execution during unapproved replanning, and clean up the dashboard on SIGTERM/SIGHUP. Show executable instructions, files, checks and planned questions; distinguish tampered, unverified and returned plans; link replaced questions to their current decision and keep clipped cards visible.
+
 - `graph-flow` 0.3.0: require signed human plan approval before dispatch, bound to structural identity; preserve consent across presentation edits and grandfather pre-0.3 records. Record send-back text and superseded questions, preserve running/completed contracts during re-planning, and enforce CLI/MCP parity. Add a plan-review banner on the graph, planned check details, and one-command `--open` at approval, decisions and completion (`GF_NO_OPEN=1` suppresses only the browser). Keep human answers and credentials outside agent access.
 
 - `graph-flow` dashboard, round 7: draw only handoff/review relations and put returns on redo cards; distinguish checking and review marks; fit readable graphs, hide partial cards with direction counts, retain selection zoom, and separate parallel ports by 14px. Prioritize current attempts, simplify questions and notes, unify action order, label executed commands, show prose in proportional type, remove phone graph switching and duplicate counts, and link completed runs to recorded result locations.

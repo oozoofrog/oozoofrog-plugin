@@ -260,12 +260,14 @@ class ShapeTests(EnvCase):
         s = state.derive(None, log.events)
         self.assertEqual(s["nodes"], {})
         self.assertEqual(s["decisions"], {})
-        self.assertEqual(s["run"], {"id": RUN, "plan_revision": 0, "plan_identity": None, "status": "open",
+        self.assertEqual(s["run"], {"id": RUN, "plan_revision": 0, "plan_identity": None, "status": "open", "approval_required": False,
+                                 "human_key_sha256": None, "key_mismatch": False, "plan_error": False,
                                     "host": ["t3_delegate"], "final": None})
 
     def test_empty_events(self):
         s = state.derive(None, [])
-        self.assertEqual(s, {"run": {"id": None, "plan_revision": 0, "plan_identity": None, "status": "open",
+        self.assertEqual(s, {"run": {"id": None, "plan_revision": 0, "plan_identity": None, "status": "open", "approval_required": False,
+                                 "human_key_sha256": None, "key_mismatch": False, "plan_error": False,
                                      "host": [], "final": None},
                              "nodes": {}, "decisions": {}})
 

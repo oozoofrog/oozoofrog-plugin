@@ -91,10 +91,12 @@ def _token(tx, st, phase):
     return token
 
 
-def _capture(run_dir, node_id, phase, kind=None, check=None):
+def _capture(run_dir, node_id, phase, kind=None, check=None, submission=False):
     if phase not in ("loop", "gate"):
         raise _error("bad_phase", "phase must be loop or gate", _core.EXIT_USAGE)
     with _store.transaction(run_dir) as tx:
+        if not submission:
+            _state.require_plan_approval(_state.derive(tx.plan, tx.events))
         if node_id == "_run" and check is not None:
             _state.derive(tx.plan, tx.events)
             node, st = None, {"attempts": 0}
@@ -130,13 +132,14 @@ def _check(node, check_id, kind):
 
 def _allowed_cmd(run_dir, tx, node, check):
     allowed = list((tx.plan or {}).get("integration_checks") or [])
+    allowed.extend((tx.plan or {}).get("promoted_checks") or [])
     if node is not None:
         allowed.extend(node.get("checks") or [])
     if check.get("type") == "cmd" and check in allowed:
         return
     fixed = _store.project_of(run_dir) / ".graph-flow" / "checks.json"
     try:
-        if fixed.exists():
+        if not _state.derive(tx.plan, tx.events)["run"].get("approval_required") and fixed.exists():
             allowed.extend(_json.loads(fixed.read_text(encoding="utf-8")).get("checks", []))
     except (OSError, ValueError) as exc:
         raise _error("io_error", "cannot read fixed checks: %s" % exc, _core.EXIT_IO)
@@ -261,6 +264,7 @@ def run_cites(run_dir, node_id, phase, cwd, actor):
 
 def record_host(run_dir, node_id, check_id, result, note, actor):
     with _store.transaction(run_dir) as tx:
+        _state.require_plan_approval(_state.derive(tx.plan, tx.events))
         node, st = _node(tx, node_id, running=True)
         _check(node, check_id, "host")
         if result not in ("passed", "failed"):
@@ -325,7 +329,7 @@ def submit(run_dir, node_id, commit, branch, notes, low_confidence, cwd, actor):
         raise _error("bad_notes", "notes must be a string or null", _core.EXIT_USAGE)
     if not isinstance(low_confidence, list) or any(not isinstance(v, str) for v in low_confidence):
         raise _error("bad_low_confidence", "low_confidence must be a list of strings", _core.EXIT_USAGE)
-    _, st, token = _capture(run_dir, node_id, "loop", "work")
+    _, st, token = _capture(run_dir, node_id, "loop", "work", submission=True)
     directory = _cwd(run_dir, cwd)
     if commit is not None:
         try:

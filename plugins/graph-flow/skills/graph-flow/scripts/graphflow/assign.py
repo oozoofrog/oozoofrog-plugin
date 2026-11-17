@@ -101,7 +101,8 @@ def brief(run_dir, node_id):
     lines += ["The scope is always compared at the gate."]
     learn = _optional_module("learn")
     if learn is not None:
-        constraints = [c["text"] for c in learn.applying(store.project_of(run_dir), current_plan)
+        frozen = current_plan.get("constraints", [] if derived["run"].get("approval_required") else None)
+        constraints = [c["text"] for c in (frozen if frozen is not None else learn.applying(store.project_of(run_dir), current_plan))
                        if not c.get("scope", {}).get("paths") or
                        plan.overlaps(c["scope"]["paths"], node["owns"])]
         if constraints:

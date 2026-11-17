@@ -41,6 +41,7 @@ def merge(run_dir, node_ids, actor):
     node_ids = list(node_ids)
     with store.transaction(run_dir) as tx:
         derived = state.derive(tx.plan, tx.events)
+        state.require_plan_approval(derived)
         nodes = {nid: plan.node_by_id(tx.plan, nid) for nid in node_ids}
         captured = {}
         for nid in node_ids:

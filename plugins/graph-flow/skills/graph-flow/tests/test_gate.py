@@ -14,6 +14,8 @@ SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 from graphflow import checks, core, decisions, gate, graph, plan, state, store
 
+from human_support import legacy_run
+
 ACTOR = {"role": "leader", "node": None, "session": "gate-test"}
 HUMAN = {"role": "human", "node": None, "session": None}
 CMD = {"id": "unit", "type": "cmd", "run": "true"}
@@ -329,7 +331,7 @@ class GateCase(unittest.TestCase):
             self.write(name, "good\n")
         self.commit()
         self.main = self.git("symbolic-ref", "--short", "HEAD")
-        self.run = store.init_run(self.repo, "gate-test", ACTOR)
+        self.run = legacy_run(self.repo, "gate-test", ACTOR)
         self.set_plan([work()])
 
     def git(self, *args):

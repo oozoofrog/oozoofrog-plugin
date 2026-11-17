@@ -304,3 +304,9 @@ def validate(plan):
             if not isinstance(node_id, str) or node_id not in reviewed:
                 problem("V9", node_id if isinstance(node_id, str) else None, "work at effective lane 2 or 3 requires a review")
     return problems
+
+
+def node_counts(nodes):
+    """The same work/review/decision totals for plan records and every view."""
+    return {kind: sum(n.get("kind") == kind for n in nodes)
+            for kind in ("work", "review", "decision")}

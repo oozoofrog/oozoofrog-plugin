@@ -14,6 +14,8 @@ SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 from graphflow import assign, core, gate, learn, plan, state, store
 
+from human_support import legacy_run
+
 ACTOR = {"role": "leader", "node": None, "session": "learn-test"}
 
 
@@ -42,7 +44,7 @@ class LearnTests(unittest.TestCase):
         self.git("config", "user.name", "Learn Test")
         self.git("config", "user.email", "test@example.invalid")
         self.git("commit", "-q", "--allow-empty", "-m", "fixture")
-        self.run = store.init_run(self.repo, "learning", ACTOR)
+        self.run = legacy_run(self.repo, "learning", ACTOR)
         self.meta = self.repo / ".graph-flow"
         self.constraints_path = self.meta / "constraints.jsonl"
         self.checks_path = self.meta / "checks.json"
@@ -472,7 +474,7 @@ class LearnTests(unittest.TestCase):
         self.assertEqual(result["result"], "failed")
         self.assertEqual(result["failed_checks"], ["fx_" + c["id"]])
         self.assertEqual(self.events("gate.final")[-1]["data"], result)
-        later = store.init_run(self.repo, "later", ACTOR)
+        later = legacy_run(self.repo, "later", ACTOR)
         self.assertEqual(gate.gate_final(later, None, ACTOR)["failed_checks"], ["fx_c1"])
         learn.retire(self.repo, c["id"], "Replace failing fixture", ACTOR)
         self.assertEqual(gate.gate_final(self.run, None, ACTOR)["result"], "passed")
