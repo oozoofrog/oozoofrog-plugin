@@ -222,9 +222,10 @@ class Recovery15Tests(unittest.TestCase):
 
     def test_s6_recovery_documentation_names_working_commands(self):
         base=Path(__file__).parents[1]
-        for name in ('references/records.md','references/leader.md','SKILL.md'):
+        for name in ('references/records.md','references/leader.md'):
             text=(base/name).read_text()
             self.assertIn('max_attempts',text);self.assertIn('superseded',text)
+        self.assertIn('(references/leader.md)', (base/'SKILL.md').read_text())
 
 
 class Screen15Tests(unittest.TestCase):

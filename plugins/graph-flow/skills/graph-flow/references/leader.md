@@ -1,8 +1,10 @@
 # Leader procedure
 
-Use the [record contract](records.md) for field shapes and [executors](executors.md) when starting sessions. In the examples, replace placeholders with observed values; `gf` means the invocation in [SKILL.md](../SKILL.md). Keep the same run through resumed sessions. Let the tool write its events; never edit them to change a verdict.
+Use the [plan contract](plan.md) for field shapes and [executors](executors.md) when starting sessions. In the examples, replace placeholders with observed values; `gf` means the invocation in [SKILL.md](../SKILL.md). Keep the same run through resumed sessions. Let the tool write its events; never edit them to change a verdict.
 
 ## 1. Inspect the real project (P1, P6, P12)
+
+As the leader, check `command -v graph-flow` once when you first use this skill for a person. If it finds nothing, tell them in one sentence that `gf setup` puts the commands `graph-flow` and `gf` in `~/.local/bin` so they can run commands such as `graph-flow open` from their own terminal, and ask whether to install it. Many shells already give `gf` another meaning (oh-my-zsh aliases it to `git fetch`), so when you tell the person what to type, write `graph-flow`. Run `gf setup` only after a yes, relay its message, and if it reports that the directory is not on PATH, give them the printed `export` line to add to their shell profile instead of editing the profile yourself. After a no, do not ask again in that session. `gf setup --remove` undoes it. Keep invoking the skill's own copy yourself; the command on PATH is for the person.
 
 Read project instructions, the affected code, existing tests, manifests, branch, and local edits. Identify the requested outcome, acceptance evidence, and existing authorization separately. Run `gf status` with no run selected to list this project's runs, their status and their open decisions; select the matching run, set `GF_RUN` to its `run` path, then run `gf status` again. Do not create a second run to escape a failure.
 
@@ -16,7 +18,7 @@ Ask only for direction, missing information that inspection cannot recover, tast
 
 When a run exists, record a question with `gf decide ask --open --kind direction --question "Which outcome takes priority?"`; use `information` for missing facts. Agent-authored `decide ask` questions are always free and non-binding; they cannot create holds, human checks, trajectory, lane-3, decision-node or plan approvals. Include a concrete recommendation and, when available, the reviewable artifact. Preserve earlier answers and their source in context; do not ask again merely to populate the log. Keep design acceptance separate from permission to publish, delete, or access anything. Silence and a wait timeout grant neither. The dashboard is the person's surface: do not start `gf serve`, read its token or key files, or call its HTTP API from an agent session; tell the person the command to run instead.
 
-Use an `authorization` or `review` decision node when downstream work must wait, giving it a named output such as `approval`. Only acceptance releases dependents; send-back keeps them blocked until the plan is revised. Direction/information nodes cannot have dependents. Once it is ready, `gf gate <decision-node> --open` records the question with the correct binding. A free question does not create a dependency: the leader must keep affected work undispatched until it is resolved. Only a person uses `gf decide answer <id> --outcome answered --answer "choice"` through the human terminal, or answers on the dashboard. Never impersonate that role, set its terminal flag, read its signing key, or translate a chat answer into a signed answer yourself. Open the browser without asking at plan approval, a waiting decision, and run completion. Use the creating command’s `--open`; it prints no address. An explicit request to see the dashboard can also use `gf open`.
+Use an `authorization` or `review` decision node when downstream work must wait, giving it a named output such as `approval`. Only acceptance releases dependents; send-back keeps them blocked until the plan is revised. Direction/information nodes cannot have dependents. Once it is ready, `gf gate <decision-node> --open` records the question with the correct binding. A free question does not create a dependency: the leader must keep affected work undispatched until it is resolved. Open the browser without asking at plan approval, a waiting decision, and run completion. Use the creating command’s `--open`; it prints no address. An explicit request to see the dashboard can also use `gf open`.
 
 When you tell the person that something waits for them, never give an id alone. A decision asking the person to accept a result must name the file(s) to read so the dashboard can show them; ask a question with nothing attached as a direction or information question instead. Quote the question in full, name the node by its title, add the decision id in parentheses, and use `--open` on the creating ask/gate command so their browser opens on that decision (use the returned `show` command only if it was not opened); `gf decide ask` returns this command as `show`. Point at a node the same way with `gf open --node <node>`. The dashboard shows the same decision id and node id beside each title and has a find box that accepts either, so a person can also get from your message to the page by typing the id. Set `GF_SESSION` to the name the person sees for this session (the thread or tab title); without it only the host's chat id is recorded, which the person cannot match to a tab by eye. Pass each worker's session name in its brief environment as well. The dashboard shows these names as who asked and who is working. Run `gf open --stop` when they ask to close it. Do not run `gf serve`, send requests to the dashboard, or operate its page.
 
@@ -24,7 +26,7 @@ When you tell the person that something waits for them, never give an id alone. 
 
 Read `gf brief --plan` and `gf learn list`. Apply only constraints whose evidence, scope, and review condition still fit. Write a plan using the contract's schema; include the user's requirements and integration checks that exercise the assembled result.
 
-Write the plan and node `title`, node `summary`, input `label`, check `title`, and decision-node/human-check `context` in the user's language. Name what the person receives and what a decision changes, using the [presentation field limits](records.md#3-plan). For example, for a Korean request: `{"title":"내보내기 만들기","summary":"사용자에게 모든 메모의 JSON 사본을 제공합니다.","needs":[{"from":"collect","artifact":"notes","label":"모은 메모"}],"checks":[{"id":"review","type":"human","title":"원본 메모가 모두 포함됐는지 확인","context":{"why":"공유 전 결과를 확인합니다.","if_approved":"이 사본을 사용합니다.","if_rejected":"누락된 메모를 보완합니다.","undo":"이전 사본으로 돌아갈 수 있습니다."}}]}`. These fields describe the flow; changing only their wording preserves accepted work.
+Write the plan and node `title`, node `summary`, input `label`, check `title`, and decision-node/human-check `context` in the user's language. Name what the person receives and what a decision changes, using the [presentation field limits](plan.md#plan-contract). For example, for a Korean request: `{"title":"내보내기 만들기","summary":"사용자에게 모든 메모의 JSON 사본을 제공합니다.","needs":[{"from":"collect","artifact":"notes","label":"모은 메모"}],"checks":[{"id":"review","type":"human","title":"원본 메모가 모두 포함됐는지 확인","context":{"why":"공유 전 결과를 확인합니다.","if_approved":"이 사본을 사용합니다.","if_rejected":"누락된 메모를 보완합니다.","undo":"이전 사본으로 돌아갈 수 있습니다."}}]}`. Presentation-only fields preserve accepted work; see plan.md for the exact wording exclusions.
 
 - Split by blast radius: one bounded deliverable per work node. Declare exact `owns` paths, necessary `reads`, inputs, outputs, and a `max_attempts` no greater than three. Combine overlapping work or serialize it through a real artifact dependency.
 - For each `needs` edge, name both the producer and the artifact that crosses. The artifact must be under the producer's `owns` or in its named `outputs`. Delete edges that mean only “and then.”
@@ -40,6 +42,8 @@ Write the plan and node `title`, node `summary`, input `label`, check `title`, a
 Add a lane 1 `review` node with one `lens` and the work node as `target` for every effective lane 2 or 3 node. Its reviewer must use another model family. Name the target artifact in `needs`; a review can start once its target is submitted, before that target passes. Use grades `bulk`, `scoped`, `daily`, `large`, and `security` to route difficulty; see the [model table](executors.md).
 
 For consequential actions, separate the reviewable preparation, an authorization decision node, and the action that consumes its approval. A post-submission lane 3 gate does not authorize an earlier external action. Reuse authorization only for the same scope and artifact; material changes require a new decision.
+
+A check title states exactly what will be checked, without claiming success before execution. For `grep -q 안내 guide.txt`, write “'안내'라는 낱말이 있는지”. The screen prefixes planned titles with “확인할 것” and labels executed results separately. Plan approval is separate from later gate answers: the person must read the goal, owned files, inputs, outputs and commands. A newly promoted check takes effect only after the next plan is set and approved.
 
 ## 4. Validate and save (P1, P3, P4, P7, P9)
 
@@ -63,9 +67,9 @@ Plan changes invalidate changed, unstarted nodes and their dependents. Completed
 
 Set the validated plan with `gf plan set <file> --open`. The one-line result contains the revision, node count, approval decision id, notice count and `show` only while approval is open; do not print the file or restate its nodes in chat. Say exactly one sentence in the person’s language, for example: “계획을 대시보드에 올렸어요. 보시고 시작을 눌러 주세요. (d4)” Then run `gf decide wait <id> --timeout 30`. On timeout end your turn and resume when the person says they answered: the dashboard cannot wake a session. A chat reply is not a signed approval.
 
-Only a verified `approved` answer releases dispatch. For `revision_requested` or `rejected`, read the answer text and revise with `plan set --open`; that supersedes the old question and creates a fresh approval. Every new revision requires approval again; an identical re-post creates no revision and preserves the current question. Presentation changes preserve completed work, but require approval of the new revision. Existing pre-0.3 runs wait for approval too. Re-post the run's own `plans/NNNN.json` with `plan set`, then obtain one human approval to continue. See [the exact state rules](records.md#plan-approval-03).
+Only a verified `approved` answer releases dispatch. For `revision_requested` or `rejected`, read the answer text and revise with `plan set --open`; that supersedes the old question and creates a fresh approval. Wording-only revisions retain current plan approval and completed work; an identical re-post creates no revision. Structural changes require fresh approval. See [the field exclusions](plan.md#revisions) and [older-run recovery](records.md#continuing-an-older-run).
 
-Use `GF_NO_OPEN=1` for headless runs/tests; this suppresses only the browser. With MCP-only access, tell the person to run the result’s `graph-flow open` command. Never try to answer, inspect credentials or drive the dashboard. Ordinary commands without a new waiting decision do not open it. `webbrowser.open` requests reuse of the current browser window where supported; it cannot guarantee reuse of a particular existing tab.
+Use `GF_NO_OPEN=1` for headless runs/tests; this suppresses only the browser. With MCP-only access, tell the person to run the result’s `graph-flow open` command. Ordinary commands without a new waiting decision do not open it. `webbrowser.open` requests reuse of the current browser window where supported; it cannot guarantee reuse of a particular existing tab.
 
 ## 5. Fan out ready nodes (P4, P5, P6, P9, P12)
 
@@ -85,6 +89,8 @@ On the second attempt, escalate once: raise effort for an incomplete or defectiv
 
 `replan` means the bounded attempt budget is exhausted, not permission for a fourth attempt. Diagnose the scope, inputs, or check and change the plan with `gf plan validate` and `gf plan set`. Preserve the history and explain the substantive plan change; never reset a node just to repeat the same work.
 
+Gate scope checks compare the frozen file list of the submission, before any integration commands. Integration commands may create files in the tested tree; those outputs do not become worker changes at the next gate. Inspect new edits explicitly and submit again when the submitted work changes. Planned lane-3 and human-check questions are asked after submission, before acceptance; they never authorize work that has already happened.
+
 ## 7. Handle the other verdicts (P1, P7, P9, P10)
 
 | Verdict | Next action |
@@ -95,9 +101,22 @@ On the second attempt, escalate once: raise effort for an incomplete or defectiv
 
 Do not convert `hold` or `unverified` into pass by rewriting evidence. A timeout leaves a decision pending. Keep existing submissions when only review evidence or an approval is missing; starting again consumes an attempt and changes the submission binding.
 
+### Recover without losing the current submission
+
+A refusal from `start` changes nothing. If a rejected human check or declined hold uses the last attempt, revise the contract and raise `max_attempts` (or replace the node) with `plan set`, obtain fresh plan approval, then start the revised work. After send-back on a decision node, revise its question and re-post the plan. Rejections do not freeze nodes.
+
+For changed submitted bytes, run `gate` again; it asks about the current evidence without spending an attempt. Staleness is recorded as `decision.superseded` and cannot be reversed by moving the project back or restoring a file. When `decide wait` returns stale, follow its recovery instead of waiting for a hidden question. After a move, re-post the current plan and obtain approval; an earlier key recovery remains valid for pinning.
+
+For `active_plan_change` on an approved decision node, gate it, use `gf reopen <decision> --reason <reason>`, then revise and re-post. Otherwise preserve running/completed contracts and add a new node. Only a verified approval still in force protects a waiting node; an answer alone does not. Old submitted files shown during upgrade are informational after plan approval; later edits still require any gate acceptance specified by the contract.
+
+If a completed review prevents revising rejected work, follow `active_plan_change`: reopen the review with `gf reopen <review> --reason <reason>`, then re-post the target’s revised plan.
+
+
+For lost/rotated keys and continuing old runs, use [records.md recoveries](records.md#continuing-an-older-run); re-post the run’s own `plans/NNNN.json` when instructed there.
+
 ## 8. Close and report (P7, P10, P12)
 
-After every required node passes, run `gf gate --final --open`, then `gf status` and `gf trace`. The final gate runs integration and fixed checks; verify that status actually says complete. Do not call a partially verified run finished.
+After every required node passes, run `gf gate --final --open`, then `gf status` and `gf trace --conformance`. The final gate runs integration and fixed checks; verify that status actually says complete. Do not call a partially verified run finished. Trace reports planned/unplanned human answers, wait times, and observed failing checks alongside P1–P12 measurements; use `gf --json trace --conformance` for the same stable numbers.
 
 Report in the user's language: the delivered outcome; per-node model/provider and attempts; a check table with actual commands, exit codes, and evidence; open decisions; and what was not verified. Obtain command/exit details from status and recorded evidence, not from trace totals alone. For host checks, report the tool's observed result and “no exit code.” Provide concise visible progress during execution from recorded state, without asking the user to supervise checks.
 
@@ -113,23 +132,4 @@ Use the `security` grade when the purpose is defensive vulnerability discovery, 
 
 Brief sub-sessions in English and require English reports, preserving original code, paths, and user-facing strings. Sub-sessions never start other sessions and never ask the user directly. Only the leader talks to the user, in the user's language. Human-facing requests are decisions or approvals; implementation checks remain inside the loop.
 
-Never set or change `GF_HOME`, `GF_ROLE=human`, or `GF_HUMAN_TERMINAL`; never run the human answer command (`graph-flow decide answer`). Do not impersonate the person through the dashboard or read signing keys.
-
-A check title states exactly what will be checked, without claiming success before execution. For `grep -q 안내 guide.txt`, write “'안내'라는 낱말이 있는지”. The screen prefixes planned titles with “확인할 것” and labels executed results separately. Titles, summaries and context shown as labels are not consent: the person must read the goal, owned files, inputs, outputs and commands. A newly promoted check takes effect only after the next plan is set and approved.
-
-If the human key is lost or rotated, ask the person to confirm key recovery on the dashboard, or use their own terminal for `GF_ROLE=human GF_HUMAN_TERMINAL=1 graph-flow --run <run-path> key repin`, then approve the plan again. Never run this recovery command as the agent. For a 0.2.x run, post its current plan with `gf plan set <file>` and wait for one approval before any new execution, including gates.
-
-Agents must never read or WRITE `$GF_HOME/human.key`. First-use pinning cannot be made safe against a writer on the same OS account: planting a known key before the first human answer is part of the accepted same-account limit. Human `key repin` always generates a fresh key; agent setup and server startup do not create one.
-
-Gate scope checks compare the frozen file list of the submission, before any integration commands. Integration commands may create files in the tested tree; those outputs do not become worker changes at the next gate. Inspect new edits explicitly and submit again when the submitted work changes. Planned lane-3 and human-check questions are asked after submission, before acceptance; they never authorize work that has already happened.
-
-
-### Recover without losing the current submission
-
-A refusal from `start` changes nothing. If a rejected human check or declined hold uses the last attempt, revise the contract and raise `max_attempts` (or replace the node) with `plan set`, obtain fresh plan approval, then start the revised work. After send-back on a decision node, revise its question and re-post the plan. Rejections do not freeze nodes.
-
-For changed submitted bytes, run `gate` again; it asks about the current evidence without spending an attempt. Staleness is recorded as `decision.superseded` and cannot be reversed by moving the project back or restoring a file. When `decide wait` returns stale, follow its recovery instead of waiting for a hidden question. After a move, re-post the current plan and obtain approval; an earlier key recovery remains valid for pinning.
-
-For `active_plan_change` on an approved decision node, gate it, use `gf reopen <decision> --reason <reason>`, then revise and re-post. Otherwise preserve running/completed contracts and add a new node. Only a verified approval still in force protects a waiting node; an answer alone does not. Old submitted files shown during upgrade are informational after plan approval; later edits still require any gate acceptance specified by the contract.
-
-If a completed review prevents revising rejected work, follow `active_plan_change`: reopen the review with `gf reopen <review> --reason <reason>`, then re-post the target’s revised plan.
+Follow the [human identity rule](../SKILL.md#human-identity).

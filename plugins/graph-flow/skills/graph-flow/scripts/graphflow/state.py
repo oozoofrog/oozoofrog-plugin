@@ -1,4 +1,4 @@
-"""Replay of the event log into state (records.md sections 3, 5, 6, 7).
+"""Replay of the event log into state (plan.md and records.md sections 5, 6, 7).
 
 `derive(plan, events)` verifies filesystem-bound consent using store.EventLog context.
 Recorded fingerprints and recorded filesystem locations are never trusted.

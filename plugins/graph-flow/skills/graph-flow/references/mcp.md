@@ -76,3 +76,7 @@ The first and last server responses have this shape; the intervening `tools/list
 `ping` returns an empty result. Unknown methods return `-32601`; malformed JSON returns `-32700`. A bad input line does not end the server loop. Initialization echoes the client's protocol version, or uses `2025-06-18` when it is omitted.
 
 `plan_set` always records required plan approval. `ready_nodes`, `assign_node`, work `node_brief`, and `node_start` return `isError: true`, code `plan_not_approved`, until the human signs approval. `run_status`, planning `node_brief` and decision list/wait remain available. Every new revision requires fresh approval; an identical re-post reuses the current decision. Pre-0.3 runs also wait for approval: re-post the run’s own plans/NNNN.json with plan_set and approve once to continue unchanged work. Results with `show` tell the leader to ask the person to run `graph-flow open [--decision <id>]` in the terminal; MCP does not expose `--open` or an answer tool. The leader does not restate the plan, waits with `decision_wait`, and ends its turn on timeout because the dashboard cannot wake it.
+
+`run_trace` accepts optional `conformance: true` and returns the same `human`, `stuck`, node `cmd_checks`, `integrity` and P1–P12 `conformance` measurements as `gf --json trace --conformance`; see [trace records](records.md#9-trace-p12).
+
+Follow the [human identity rule](../SKILL.md#human-identity).

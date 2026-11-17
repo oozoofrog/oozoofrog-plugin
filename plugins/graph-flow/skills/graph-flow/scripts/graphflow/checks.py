@@ -1,4 +1,4 @@
-"""Execute checks and record node work (records.md sections 4, 5 and 11)."""
+"""Execute checks and record node work (records.md sections 4, 5; developer module contracts)."""
 import json as _json
 import os as _os
 import pathlib as _pathlib

@@ -25,6 +25,7 @@ class MetricsTests(unittest.TestCase):
 
     def test_conformance_human_answers_waits_and_mcp(self):
         with mock.patch.object(store, 'now', return_value='2026-11-17T00:00:00Z'):
+            self.run = store.init_run(self.project, 'timed', {'role': 'leader'})
             did = self.set_plan()['decision']
         with mock.patch.object(store, 'now', return_value='2026-11-17T00:00:10Z'):
             self.accept(did)
@@ -55,6 +56,15 @@ class MetricsTests(unittest.TestCase):
         self.assertEqual(store.events(self.run), before)
         if CAPTURE:
             Path(CAPTURE).write_text(output.getvalue() + '\n' + json.dumps(result, ensure_ascii=False, indent=2) + '\n')
+
+    def test_conformance_attempt_budget_does_not_sum_reopened_attempts(self):
+        self.accept(self.set_plan()['decision'])
+        with store.transaction(self.run) as tx:
+            for attempt in (1, 2, 1):
+                tx.append('node.start', {'node': 'a', 'attempt': attempt}, {'role': 'leader'})
+        result = self.call('trace', '--conformance')['conformance']
+        self.assertEqual(result['P2']['max_attempts'], 2)
+        self.assertEqual(result['P12']['attempts'], 3)
 
     def test_all_human_kinds_and_superseded_waits(self):
         # Historical activity is counted from records, not re-authorized today.
@@ -115,6 +125,16 @@ class MetricsTests(unittest.TestCase):
         self.assertFalse(self.call('check', 'run', 'a', 'text')['failed_before'])
         self.call('submit', 'a'); self.call('gate', 'a')
         self.assertEqual(self.call('trace')['conformance']['P1']['passed_checks_never_observed_failing'], 1)
+
+    def test_run_level_checks_include_failure_history(self):
+        self.raw['integration_checks'] = [{'id': 'all', 'type': 'cmd', 'run': 'test -s guide.txt'}]
+        self.accept(self.set_plan()['decision'])
+        self.assertFalse(self.call('gate', '--final', code=1)['result'] == 'passed')
+        self.call('start', 'a'); (self.project / 'guide.txt').write_text('Guide')
+        self.call('submit', 'a'); self.call('gate', 'a'); self.call('gate', '--final')
+        observed = self.call('trace')['run_cmd_checks']['all']
+        self.assertTrue(observed['failure_observed'])
+        self.assertTrue(observed['passes'][0]['failed_before'])
 
     def test_trivial_checks_are_notices_in_validate_and_set(self):
         for index, command in enumerate((' true ', ':', 'exit 0', '', '  ', 'test -f guide.txt')):

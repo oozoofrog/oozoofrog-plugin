@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `graph-flow` agent guidance: slim the entry skill, consolidate the human-identity rule, split the planner contract into `references/plan.md`, and move maintainer signatures/view models to `plugins/graph-flow/docs/implementation.md`. Relocate recovery guidance, document measured conformance and the deliberate plan-approval addition to P10, and keep answer-signing machinery frozen.
+
 - `graph-flow`: status, trace, decision listings and dashboard reads retain available records and recovery advice when plan integrity or the event log fails. Dispatch guards and signing, key and move handling are unchanged.
 
 - `graph-flow`: approved wording-only plan revisions retain consent and dispatch. Revision logs identify nodes whose wording feeds later human questions; existing gate questions still supersede and re-ask through the existing gate path. Structural identity exclusions are unchanged.

@@ -201,10 +201,11 @@ class Review10Tests(unittest.TestCase):
 
     def test_small_docs_cover_upgrade_location_key_writes_and_clipping(self):
         root = Path(__file__).resolve().parents[1]
-        for name in ('SKILL.md', 'references/leader.md', 'references/worker.md',
-                     'references/records.md', 'references/dashboard.md'):
+        for name in ('SKILL.md', 'references/worker.md'):
             text = (root / name).read_text().lower()
             self.assertRegex(text, r'read.{0,20}write.{0,30}human.key')
+        for name in ('leader', 'records', 'dashboard'):
+            self.assertIn('../SKILL.md#human-identity', (root / ('references/%s.md' % name)).read_text())
         for name in ('leader', 'mcp'):
             text = (root / ('references/%s.md' % name)).read_text()
             self.assertNotIn('continue without approval', text)

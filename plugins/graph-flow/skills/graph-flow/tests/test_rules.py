@@ -77,7 +77,7 @@ class PlanRules(unittest.TestCase):
             self.assertTrue(any(field in p['message'] for p in plan.validate({'schema_version':1,'goal':'test','nodes':[f.work()],field:'ignored'})))
 
     def test_every_node_and_run_field_has_an_enforced_or_presentation_consumer(self):
-        # Labels are intentionally instructions, not machine claims (records.md section 3).
+        # Labels are intentionally instructions, not machine claims (plan.md).
         labels={'title','summary','goal','reads','context','requirement'}
         enforced={'id','kind','needs','owns','outputs','checks','lane','effective_lane','grade','max_attempts','target','lens','question','decision_kind'}
         values=dict(title='Readable title',summary='Summary',goal='Goal',reads=['README.md'],context={'why':'Reason'},requirement='R',needs=[],owns=[],outputs=['artifact'],checks=[],lane=1,effective_lane=1,grade='daily',max_attempts=2,target='w',lens='correctness',question='Accept?',decision_kind='authorization',unknown='ignored')

@@ -51,8 +51,8 @@ class PlanTests(unittest.TestCase):
         self.assertNotIn(code, [p["code"] for p in problems], problems)
 
     def test_contract_example(self):
-        records = (SCRIPTS.parent / "references" / "records.md").read_text(encoding="utf-8")
-        section = records.split("## 3. Plan", 1)[1].split("## 4.", 1)[0]
+        records = (SCRIPTS.parent / "references" / "plan.md").read_text(encoding="utf-8")
+        section = records.split("# Plan contract", 1)[1]
         example = json.loads(re.search(r"```json\s*\n(.*?)\n```", section, re.S).group(1))
         self.assertEqual([], plan.validate(example))
 

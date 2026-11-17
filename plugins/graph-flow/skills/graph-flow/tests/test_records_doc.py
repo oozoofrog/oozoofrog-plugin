@@ -9,16 +9,18 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 TEXT = (ROOT / "references" / "records.md").read_text(encoding="utf-8")
+PLAN = (ROOT / "references" / "plan.md").read_text(encoding="utf-8")
+IMPLEMENTATION = (ROOT.parents[1] / "docs" / "implementation.md").read_text(encoding="utf-8")
 
 
 def section11_modules():
-    part = TEXT.split("## 11. Modules", 1)[1]
+    part = IMPLEMENTATION.split("## 11. Modules", 1)[1]
     return re.findall(r"^\| `([a-z_]+\.py)` \|", part, re.M)
 
 
 class RecordsDocTests(unittest.TestCase):
     def test_json_blocks_parse(self):
-        blocks = re.findall(r"```json\n(.*?)```", TEXT, re.S)
+        blocks = re.findall(r"```json\n(.*?)```", TEXT + PLAN + IMPLEMENTATION, re.S)
         self.assertTrue(blocks)
         for i, b in enumerate(blocks):
             try:
@@ -36,7 +38,7 @@ class RecordsDocTests(unittest.TestCase):
 
     def test_validation_codes_and_gate_rules(self):
         for i in range(1, 9):
-            self.assertRegex(TEXT, r"`V%d`" % i)
+            self.assertRegex(PLAN, r"`V%d`" % i)
         for i in range(1, 8):
             self.assertRegex(TEXT, r"\| R%d \|" % i)
 

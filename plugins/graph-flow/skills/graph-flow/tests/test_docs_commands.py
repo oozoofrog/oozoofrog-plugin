@@ -16,7 +16,7 @@ from graphflow import cli
 
 DOCUMENTS = [SKILL / "SKILL.md"] + [
     SKILL / "references" / (name + ".md")
-    for name in ("leader", "worker", "executors")
+    for name in ("leader", "worker", "executors", "records", "plan")
 ]
 PENDING_LINKS = {
     SKILL / "references" / "mcp.md",
@@ -46,7 +46,8 @@ def command_examples(markdown):
                     if argument and all(char in ";&|" for char in argument):
                         break
                     arguments.append(argument)
-                if arguments:
+                # Generic synopsis placeholders are not concrete command examples.
+                if arguments and "<command>" not in arguments and arguments != ["..."]:
                     yield arguments
 
 
@@ -97,6 +98,7 @@ class DocumentationCommandsTests(unittest.TestCase):
     def test_extraction_covers_spans_fences_and_shell_commands(self):
         sample = (
             "Prose gf ignored. `gf status` and ``gf brief --plan``.\n\n"
+            "Synopsis: `gf ...` and `gf [--json] <command> [args]`.\n\n"
             "```sh\npython3 -B scripts/gf --json ready; gf trace\n```\n\n"
             "~~~sh\ngf assign node \\\n  --executor subagent\n~~~\n"
         )

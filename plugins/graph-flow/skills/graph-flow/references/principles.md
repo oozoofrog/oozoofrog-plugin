@@ -26,6 +26,12 @@ A graph without loops produces unverified work in parallel. A loop without a gra
 | P11 | **Build the learning edge.** An accepted result goes back to the splitter as a constraint, not as output: ACCEPTED, DERIVED, LANDS IN the splitter's brief. A failure not turned into a permanent constraint will be met again. | A per-project constraint store. `gf plan set` injects matching constraints into the plan and records which were applied. `gf learn promote` turns a machine-checkable constraint into a fixed check on every run. |
 | P12 | **Measure the path, not only the answer. A verdict that does not change what runs next is a report.** | The event log records every attempt, check, rejection, and duration; `gf trace` aggregates them. A gate verdict directly changes the output of `gf ready`. |
 
+### P10 in this tool
+
+Plan approval before dispatch is a deliberate, user-mandated addition to the article's “one step”: P10 here means plan approval plus planned decisions, while `trace --conformance` counts every other stop as unplanned. Answer signing protects against accidental impersonation by an agent using the same account; that machinery is frozen and must not be extended.
+
+A change that adds a refusal or a human stop must name the principle it serves.
+
 ## Node kinds
 
 The article names four kinds of node. graph-flow maps them as follows.

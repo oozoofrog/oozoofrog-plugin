@@ -53,3 +53,5 @@ Uncommitted work in a shared tree is serial: `gf start` returns `shared_busy` wh
 A command whose process has an exit code is a `cmd` check: `swift test`, `xcodebuild`, or the project's build wrapper can qualify. Put the actual established invocation in the plan and let `gf check run <node> <check>` execute and capture it; comply with project build/cache instructions. An IDE's build, test, or preview tool without an exit code is a `host` check, even when it reports success. Record its observation with `gf check record <node> <check> --result passed --note "observed evidence"`; do not invent an exit code.
 
 A lane 2 or 3 node with only host checks should receive an additional meaningful cmd check for its gate. Add it to the plan before work when possible; the gate has no option to inject a command. A later plan change invalidates the affected node and its dependents, so revalidate and resubmit. If the result has no machine-checkable behavior, retain the human check and raised lane and disclose the verification limit instead of adding a ceremonial command.
+
+Follow the [human identity rule](../SKILL.md#human-identity).

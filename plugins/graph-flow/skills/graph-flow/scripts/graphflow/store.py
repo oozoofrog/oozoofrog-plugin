@@ -1,4 +1,4 @@
-"""Files, locking, transactions and plan revisions (records.md sections 1, 3, 5)."""
+"""Files, locking, transactions and plan revisions (plan.md and records.md sections 1, 5)."""
 import contextlib
 import errno
 import fcntl

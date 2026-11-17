@@ -5,45 +5,48 @@ description: Use when a user asks to plan, split, delegate, verify, or track mul
 
 # graph-flow
 
-Turn multi-step work into bounded nodes with explicit dependencies, owned files, and checks that can fail. Run a produce/check/correct loop inside each node and use gate evidence to choose what runs next. Keep decisions, attempts, and acceptance in durable records so another session can resume the run.
+Use bounded work nodes with dependencies, owned files and checks that can fail. Keep decisions, attempts and acceptance in durable records.
 
 ## Find the tool and your role
 
-Invoke `python3 <skill-dir>/scripts/gf`; `<skill-dir>` is the base directory the host prints when it loads this skill. Below, `gf` abbreviates that invocation; it does not require a command on PATH. With MCP available, the same commands exist as tools; see [MCP](references/mcp.md).
+Invoke `python3 <skill-dir>/scripts/gf`; `<skill-dir>` is the directory the host prints when loading this skill. Below, `gf` abbreviates this invocation, not a PATH command. MCP offers the same commands; see [MCP](references/mcp.md).
 
-As the leader, check `command -v graph-flow` once when you first use this skill for a person. If it finds nothing, tell them in one sentence that `gf setup` puts the commands `graph-flow` and `gf` in `~/.local/bin` so they can run commands such as `graph-flow open` from their own terminal, and ask whether to install it. Many shells already give `gf` another meaning (oh-my-zsh aliases it to `git fetch`), so when you tell the person what to type, write `graph-flow`. Run `gf setup` only after a yes, relay its message, and if it reports that the directory is not on PATH, give them the printed `export` line to add to their shell profile instead of editing the profile yourself. After a no, do not ask again in that session. `gf setup --remove` undoes it. Keep invoking the skill's own copy yourself; the command on PATH is for the person.
-
-If a brief sets `GF_ROLE=worker` or `GF_ROLE=reviewer`, read [worker.md](references/worker.md) only, skip the other references, and follow your brief. Otherwise, this session is the leader: read [leader.md](references/leader.md).
+If the brief sets `GF_ROLE=worker` or `GF_ROLE=reviewer`, read [worker.md](references/worker.md) only and follow the brief. Otherwise read [leader.md](references/leader.md), including first-use setup.
 
 ## Run the loop
 
-1. Inspect the project and existing runs: with no run selected, `gf status` lists this project's runs with their status and open decisions. To continue one, set `GF_RUN` to its `run` path and run `gf status` again; initialize a new run with `gf init` only when needed, then record observed capabilities with `gf host set`.
-2. Ask free direction/information questions with `gf decide ask --open`; use gate-created authorization/review decision nodes for choices that release work; use `gf decide wait` without blocking unrelated nodes.
-3. Read `gf brief --plan`; write checks before work, split by blast radius, and use `gf plan validate` followed by `gf plan set <file> --open`. This always asks the person to approve the plan before any dispatch.
-4. Do not print or restate the plan in chat. Say one sentence in the person’s language: “계획을 대시보드에 올렸어요. 보시고 시작을 눌러 주세요. (<decision id>)” Then `gf decide wait <id> --timeout 30`. On timeout end the turn; the dashboard cannot wake a session. Resume when the person says they answered. After approval, select `gf ready` nodes, inspect `gf route`, record `gf assign`, and deliver each `gf brief` to its executor.
-5. Inside a work node, use `gf start`, optionally `gf red`, then produce, run `gf check run`, correct, and `gf submit`.
-6. Integrate committed work with `gf merge`; receive `gf review submit` from independent reviewers and run `gf gate <node> --open` on the review and its target.
-7. On rejection, read its scope and revise that node only. If attempts are exhausted, re-post a revised contract with higher `max_attempts` or a replacement node; a rejected/declined answer does not prevent re-planning. After decision send-back, revise the question and re-post. Changed submitted bytes need `gf gate` again, without another attempt. Stale answers are permanently `superseded`; follow `decide wait` recovery. For an approved decision protected from re-plan, gate it then `gf reopen <decision> --reason <reason>` before revising; on `replan`, change the plan with `gf plan set <file> --open`. A structural change needs fresh approval; every new revision needs approval; posting an identical plan creates no revision.
-8. Close with `gf gate --final --open` and `gf trace`; report checks, attempts, open decisions, and unverified work.
-9. Derive a few constraints with `gf learn add`, promote executable ones with `gf learn promote`, and retire stale ones with `gf learn retire`.
+Follow [leader.md](references/leader.md) for the commands, approval handoff and recoveries.
 
-## Three overriding rules
+1. Inspect the project and `gf status`; select an existing `GF_RUN` or `gf init` a new run. Record observed host capabilities.
+2. Resolve missing direction through decisions; keep unrelated work moving.
+3. Read `gf brief --plan`, write checks before work, split by blast radius, then `gf plan validate` and `gf plan set <file> --open`.
+4. Let the person review the dashboard plan. Do not restate the plan in chat. After approval, use `gf ready`, `gf route`, `gf assign` and `gf brief` to dispatch.
+5. Within a node: `gf start`, optional `gf red`, produce, `gf check run`, correct, `gf submit`.
+6. Merge committed work, receive independent reviews, and gate the review and its target.
+7. Return only the rejected scope. Follow leader.md recovery for exhausted attempts, stale decisions or revised contracts. Wording-only revisions retain approval; structural changes require approval.
+8. Close with `gf gate --final --open` and `gf trace --conformance`; report evidence and unverified work.
+9. Derive, promote and retire a few evidence-based constraints with `gf learn add`, `gf learn promote` and `gf learn retire`.
+
+## Four overriding rules
 
 - A check is something a program can evaluate and that can fail.
 - Nothing reaches a person except a decision or an approval, and only a person answers.
-- Only the gate/plan code creates binding approvals, from the approved contract and current evidence ids and hashes. Agent questions never change gate verdicts. Unknown or inapplicable plan fields are errors; command checks on review nodes execute at their gate.
+- Only gate/plan code creates binding approvals from the contract and current evidence. Agent questions never change verdicts. Unknown or inapplicable plan fields are errors.
 - A rejection returns one node with its scope, never the batch.
 
-## Read only what the role needs
-
-- [Principles](references/principles.md): resolve a design question by P1–P12.
-- [Records](references/records.md): plan fields, role permissions, evidence, and state transitions.
-- [Leader](references/leader.md): inspect, plan, dispatch, gate, and learn.
-- [Worker](references/worker.md): execute or review one brief.
-- [Executors](references/executors.md): choose a host, model, account, and isolation.
-- [MCP](references/mcp.md): invoke commands through tool access.
-- [Dashboard](references/dashboard.md): show recorded progress and let a person answer decisions. Open without asking at exactly three moments: plan approval (`plan set --open`), a waiting decision (`decide ask --open` or `gate <node> --open`), and completion (`gate --final --open`). Use `GF_NO_OPEN=1` only to suppress the browser in headless use; it never skips approval. On MCP-only hosts, relay the returned `graph-flow open` command.
+## Human identity
 
 Never set or change `GF_HOME`, `GF_ROLE=human`, or `GF_HUMAN_TERMINAL`; never run the human answer command (`gf decide answer`). Do not impersonate the person through the dashboard, read or WRITE `human.key`, or edit files under `.graph-flow/runs/**`. These rules prevent accidental impersonation, not a malicious process running as the same OS account.
 
-Execution records are unsigned and can be falsified with file access; direct project editing bypasses the tool. Signed approval binds the question, plan and evidence, not execution.
+Execution records are unsigned; file access can falsify them and direct project editing bypasses the tool. Signed approval binds the question, plan and evidence, not execution.
+
+## Reference index
+
+- [Principles](references/principles.md): P1–P12 design rules.
+- [Plan](references/plan.md): planner contract and validation.
+- [Records](references/records.md): states, events, gates, metrics and recoveries.
+- [Leader](references/leader.md): inspect, plan, dispatch, gate and learn.
+- [Worker](references/worker.md): execute or review one brief.
+- [Executors](references/executors.md): host, model and isolation selection.
+- [MCP](references/mcp.md): tool access.
+- [Dashboard](references/dashboard.md): recorded progress and human decisions. Open at plan approval, a waiting decision and completion using the creating command's `--open`. `GF_NO_OPEN=1` suppresses browser launch only; on MCP-only hosts relay the returned `graph-flow open` command.

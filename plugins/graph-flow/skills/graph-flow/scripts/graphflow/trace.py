@@ -54,7 +54,12 @@ def trace(run_dir):
         summary["passed"] += int(passed)
         for key in ("attempts", "rejections"):
             summary[key] += metrics[key]
+    result["run_cmd_checks"] = command_metrics({"id": "_run", "checks":
+        (current or {}).get("integration_checks", []) + (current or {}).get("promoted_checks", [])}, events, run_dir)
     result["conformance"] = conformance(current, events, result)
+    if any(i["code"] == "plan_tampered" for i in result["integrity"]):
+        for principle in ("P1", "P3", "P4", "P5"):
+            result["conformance"][principle] = {"measurable": False, "observation": "not measurable from records"}
     if any(i["code"] in ("log_corrupt", "log_sequence") for i in result["integrity"]):
         result["conformance"] = {"P%d" % i: {"measurable": False, "observation": "not measurable from records"} for i in range(1, 13)}
     return result
@@ -176,12 +181,14 @@ def command_metrics(node, events, run_dir):
 def conformance(current, events, metrics):
     nodes = (current or {}).get("nodes", [])
     work = [n for n in nodes if n["kind"] == "work"]
-    cmd = [c for n in metrics["nodes"].values() for c in n["cmd_checks"].values()]
+    cmd = [c for n in metrics["nodes"].values() for c in n["cmd_checks"].values()] + list(metrics["run_cmd_checks"].values())
     starts = {}
+    max_attempts = 0
     for event in events:
         if event["type"] == "node.start":
             nid = event["data"].get("node")
             starts[nid] = starts.get(nid, 0) + 1
+            max_attempts = max(max_attempts, event["data"].get("attempt", starts[nid]))
     counts = {"work_nodes": len(work), "work_nodes_with_cmd": sum(any(c["type"] == "cmd" for c in n["checks"]) for n in work),
               "checks_never_observed_failing": sum(not c["failure_observed"] for c in cmd),
               "passed_checks_never_observed_failing": sum(c["passed"] and not c["failure_observed"] for c in cmd)}
@@ -189,7 +196,7 @@ def conformance(current, events, metrics):
     unknown = {"measurable": False, "observation": "not measurable from records"}
     observations = {
         "P1": dict(counts, observation="work nodes with a cmd check: %(work_nodes_with_cmd)d/%(work_nodes)d; checks never observed failing: %(checks_never_observed_failing)d; passed checks never observed failing: %(passed_checks_never_observed_failing)d" % counts),
-        "P2": {"max_attempts": max(starts.values(), default=0), "replan": metrics["stuck"]["replan"]},
+        "P2": {"max_attempts": max_attempts, "replan": metrics["stuck"]["replan"]},
         "P3": {"edges": sum(len(n.get("needs", [])) for n in nodes),
                "edges_with_named_artifact": sum(bool(e.get("artifact")) for n in nodes for e in n.get("needs", []))},
         "P4": {"nodes": len(nodes), "nodes_with_owns": sum(bool(n.get("owns")) for n in nodes)},
