@@ -73,11 +73,11 @@ def review_submit(run_dir, node_id, verdict, findings, actor): ...   # fills tar
 
 # gate.py
 def evaluate(plan, state, node_id, gate_results, integration_results, rollbacks): ...
-#   pure. gate_results / integration_results: lists of check.result data from this gate run.
+#   pure. gate_results / integration_results contain executed check.result data from this gate run.
 #   returns {"verdict", "rule", "failed": [the failing results], "asks": [decision.ask data without "id"]}
 def build_rejection(node, node_state, failed, tails): ...   # tails: map of log path to list of last lines; returns the rejection object
-def gate(run_dir, node_id, cwd, actor): ...     # preconditions, runs checks, appends asks and gate.verdict; returns the verdict data
-def gate_final(run_dir, cwd, actor): ...        # appends gate.final; returns its data
+def gate(run_dir, node_id, cwd, actor): ...     # runs eligible checks, appends asks and gate.verdict with any skipped_checks or notices
+def gate_final(run_dir, cwd, actor): ...        # runs every integration/promoted check, appends gate.final; returns its data
 def reopen(run_dir, node_id, reason, actor): ...  # node must be passed; appends node.reopen; returns {"node", "invalidated": [ids in plan order]}
 def render_rejection(rejection): ...            # UNIT/VERDICT/REASON/EVIDENCE/SCOPE, plus RESTORE for scope violations
 
@@ -139,6 +139,8 @@ def remove(bin_dir=None): ...                   # removes the ones it wrote
 ```
 
 The MCP tool list and the dashboard's HTTP API are specified by the units that own `mcp.py` and `server.py`, in `skills/graph-flow/references/mcp.md` and `skills/graph-flow/references/dashboard.md`; both call only the functions above.
+
+Integration check `requires_passed` is validated by `plan.validate` and kept in the approved plan. `gate.gate` considers a declared check at effective lane 2 and 3 work gates and at any listed producer's work gate. It runs the check once all listed producers outside the gated node have passed. It rechecks the basis and passed status of those producers before recording a verdict. Skips go on the verdict for trace and display (P12). Deterministic failures retain the gate's existing rules (P1, P7), and waiting for producer evidence avoids returning an earlier unit for work it cannot yet verify (P3, P8). The P10 baseline stays at plan approval plus planned decisions. The change adds zero human stops or verdict/refusal states and creates no graph nodes, edges or sub-sessions.
 
 ## 12. Dashboard presentation view
 
@@ -206,7 +208,7 @@ The MCP tool list and the dashboard's HTTP API are specified by the units that o
 
 The dashboard HTTP contract and fixed public static allowlist are in [dashboard.md](../skills/graph-flow/references/dashboard.md#get-staticname). Only those GET static requests skip token authentication; every request still needs the loopback Host check, and all APIs still require the token.
 
-The dashboard view also exposes `plan_approval` (id/status/outcome/answer/verified/question/plan_identity; null values when no approval has been posted), `plan_counts` (work nodes, declared checks including integration, scheduled human questions excluding this approval), and node `planned_checks`/`deliverables`. Planned question counts exclude unforeseen free questions and retry approvals. The timeline includes plan set, approval asked, answer text and superseded events.
+The dashboard view also exposes `plan_approval` (id/status/outcome/answer/verified/question/plan_identity; null values when no approval has been posted), `plan_counts` (work nodes, declared checks including integration, scheduled human questions excluding this approval), and node `planned_checks`/`deliverables`. Planned question counts exclude unforeseen free questions and retry approvals. The timeline includes plan set, approval asked, answer text and superseded events. Attempt rows expose `skipped_checks` from the node gate separately from executed `checks`. Planned integration checks expose `requires_passed` for the scheduling explanation.
 
 This protects against mistakes and drift, not against an agent that deliberately forges on the same OS account. Such an agent can impersonate the human terminal or rewrite the log and key fingerprint; a genuine security boundary requires a separate identity or external signing authority.
 

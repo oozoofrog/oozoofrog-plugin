@@ -99,7 +99,7 @@ class MCPTests(unittest.TestCase):
 
     def test_role_tool_lists_and_schemas(self):
         expected = {
-            'leader': {'plan_set', 'assign_node', 'gate_node'},
+            'leader': {'plan_set', 'assign_node', 'gate_node', 'run_trace'},
             'worker': {'node_start', 'check_run', 'node_submit', 'decision_ask', 'run_status'},
             'reviewer': {'review_submit', 'node_start', 'run_status'},
             'human': set(),
@@ -112,6 +112,8 @@ class MCPTests(unittest.TestCase):
                 self.assertEqual(names, {name for name, tool in mcp.TOOLS.items()
                                        if role != 'human' and role in cli.COMMANDS[tool['command']]['roles']})
                 self.assertFalse(any('answer' in name for name in names))
+                if role != 'leader':
+                    self.assertNotIn('run_trace', names)
                 if role == 'worker':
                     self.assertTrue(names.isdisjoint({'plan_set', 'gate_node', 'assign_node'}))
                 if role == 'reviewer':

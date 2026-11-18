@@ -12,7 +12,8 @@ from unittest import mock
 
 SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
-from graphflow import checks, core, decisions, gate, graph, plan, state, store
+from graphflow import checks, core, decisions, gate, graph, plan, server, state, store
+from graphflow import trace as trajectory_trace
 
 from human_support import legacy_run, approve_current_plan, refresh_contract
 
@@ -583,6 +584,228 @@ class ScenarioTests(GateCase):
         before = store.events(self.run)
         self.error("not_merged", self.gate)
         self.assertEqual(store.events(self.run), before)
+
+
+class RunCheckPrerequisiteTests(GateCase):
+    def prepare_eval_chain(self, **check_fields):
+        integration = dict(CMD, id="all-tasks-sound", title="All tasks are sound",
+                           run="sh runner.txt", **check_fields)
+        self.set_plan([
+            work("runner", lane=2, checks=[dict(CMD, run="test -s runner.txt")]),
+            review(id="review-runner", target="runner", needs=[{"from": "runner", "artifact": "runner.txt"}]),
+            work("tasks", owns=["tasks/"], checks=[dict(CMD, run="test -s tasks/output.txt")],
+                 needs=[{"from": "runner", "artifact": "runner.txt"}]),
+            work("guide", lane=2, needs=[{"from": "tasks", "artifact": "tasks/output.txt"}]),
+            review(id="review-guide", target="guide", needs=[{"from": "guide", "artifact": "guide.txt"}]),
+        ], [integration])
+        self.start("runner")
+        self.write("runner.txt", 'test "$(cat tasks/output.txt)" = ready\n')
+        self.submit("runner")
+        self.pass_review("runner")
+
+    def pass_review(self, target):
+        reviewer = "review-" + target
+        self.assign(target, "openai")
+        self.assign(reviewer, "claude")
+        self.start(reviewer)
+        checks.review_submit(self.run, reviewer, "pass", [], ACTOR)
+        self.assertEqual(self.gate(reviewer)["verdict"], "pass")
+
+    def run_check_results(self):
+        return [e["data"] for e in self.events("check.result") if e["data"]["node"] == "_run"]
+
+    def test_eval_chain_waits_for_passed_producers_then_runs_at_work_and_final_gates(self):
+        self.prepare_eval_chain(requires_passed=["tasks"])
+        self.assertNotIn("tasks", graph.ready(self.plan, self.derived()))
+        human_before = trajectory_trace.trace(self.run)["conformance"]["P10"]
+        outcome = self.gate("runner")
+        self.assertEqual((outcome["verdict"], outcome["rule"], outcome["asks"]), ("pass", "R7", []))
+        skipped = [{"check": "all-tasks-sound", "title": "All tasks are sound", "pending_nodes": ["tasks"]}]
+        self.assertEqual(outcome["skipped_checks"], skipped)
+        self.assertEqual(self.events("gate.verdict")[-1]["data"]["skipped_checks"], skipped)
+        self.assertEqual(self.run_check_results(), [])
+        self.assertIn("tasks", graph.ready(self.plan, self.derived()))
+        metrics = trajectory_trace.trace(self.run)
+        self.assertEqual(metrics["nodes"]["runner"]["checks_run"], 2)
+        self.assertEqual(metrics["nodes"]["runner"]["checks_skipped"], 1)
+        self.assertEqual(metrics["run_cmd_checks"]["all-tasks-sound"]["passes"], [])
+        self.assertFalse(metrics["run_cmd_checks"]["all-tasks-sound"]["passed"])
+        self.assertFalse(metrics["run_cmd_checks"]["all-tasks-sound"]["failure_observed"])
+        self.assertEqual(metrics["conformance"]["P1"]["checks_never_observed_failing"], 4)
+        self.assertEqual(metrics["conformance"]["P1"]["passed_checks_never_observed_failing"], 1)
+        self.assertEqual(metrics["conformance"]["P6"]["command_results"], 1)
+        self.assertEqual(metrics["conformance"]["P12"]["run_checks_skipped"], 1)
+        self.assertEqual(metrics["conformance"]["P10"], human_before)
+        current, events, derived = store.snapshot(self.run)
+        view = server._view(current, derived, events, self.repo)
+        self.assertEqual(view["integration_checks"][0]["requires_passed"], ["tasks"])
+        row = next(r for r in view["timeline"] if r["kind"] == "attempt" and r["node"] == "runner")
+        self.assertEqual(row["skipped_checks"], skipped)
+        self.assertEqual([r["id"] for r in row["checks"]], ["unit", "scope"])
+
+        self.start("tasks")
+        self.write("tasks/output.txt", "ready\n")
+        self.submit("tasks")
+        self.assertEqual(self.gate("tasks")["verdict"], "pass")
+        self.assertEqual([r["result"] for r in self.run_check_results()], ["passed"])
+        self.start("guide")
+        self.submit("guide")
+        self.pass_review("guide")
+        outcome = self.gate("guide")
+        self.assertEqual(outcome["verdict"], "pass")
+        self.assertNotIn("skipped_checks", outcome)
+        self.assertEqual([r["result"] for r in self.run_check_results()], ["passed", "passed"])
+        self.assertEqual(gate.gate_final(self.run, None, ACTOR)["result"], "passed")
+
+        self.write("tasks/output.txt", "wrong\n")
+        final = gate.gate_final(self.run, None, ACTOR)
+        self.assertEqual((final["result"], final["failed_checks"]), ("failed", ["all-tasks-sound"]))
+        self.assertEqual([r["result"] for r in self.run_check_results()], ["passed", "passed", "passed", "failed"])
+        metrics = trajectory_trace.trace(self.run)
+        self.assertEqual(metrics["conformance"]["P1"]["checks_never_observed_failing"], 3)
+        self.assertEqual(metrics["conformance"]["P1"]["passed_checks_never_observed_failing"], 3)
+        self.assertEqual(metrics["conformance"]["P12"]["run_checks_skipped"], 1)
+
+    def test_wrong_producer_output_rejects_producer_and_skips_at_later_unrelated_gate(self):
+        self.set_plan([
+            work("p", lane=2, checks=[dict(CMD, run="test -s p.txt")]),
+            review(id="review-p", target="p", needs=[{"from": "p", "artifact": "p.txt"}]),
+            work(lane=2), review(),
+        ], [dict(CMD, id="whole", run="grep -qx ready p.txt", requires_passed=["p"])])
+        self.start("p")
+        self.write("p.txt", "wrong\n")
+        self.submit("p")
+        self.pass_review("p")
+        outcome = self.gate("p")
+        self.assertEqual((outcome["verdict"], outcome["rule"]), ("reject", "R1"))
+        self.assertIn("whole", outcome["rejection"]["reason"])
+        self.assertNotIn("skipped_checks", outcome)
+
+        self.assign("w", "openai")
+        self.assign("v", "claude")
+        self.start()
+        self.submit()
+        self.redo_review()
+        outcome = self.gate()
+        self.assertEqual(outcome["verdict"], "pass")
+        self.assertEqual(outcome["skipped_checks"][0]["pending_nodes"], ["p"])
+        self.assertEqual([(r["check"], r["result"]) for r in self.run_check_results()],
+                         [("whole", "failed")])
+
+    def test_lane1_producer_is_rejected_when_its_declared_check_fails(self):
+        self.prepare_eval_chain(requires_passed=["tasks"])
+        self.assertEqual(self.gate("runner")["verdict"], "pass")
+        self.start("tasks")
+        self.write("tasks/output.txt", "wrong\n")
+        self.submit("tasks")
+        outcome = self.gate("tasks")
+        self.assertEqual((outcome["verdict"], outcome["rule"]), ("reject", "R1"))
+        self.assertIn("all-tasks-sound", outcome["rejection"]["reason"])
+        self.assertEqual([r["result"] for r in self.run_check_results()], ["failed"])
+        self.assertNotIn("guide", graph.ready(self.plan, self.derived()))
+
+    def test_two_producers_skip_at_first_gate_and_run_at_second(self):
+        self.set_plan([work("p"), work(needs=[{"from": "p", "artifact": "p.txt"}])],
+                      [dict(CMD, id="whole", run="test -s p.txt && test -s w.txt", requires_passed=["p", "w"])])
+        self.start("p")
+        self.submit("p")
+        outcome = self.gate("p")
+        self.assertEqual(outcome["verdict"], "pass")
+        self.assertEqual(outcome["skipped_checks"][0]["pending_nodes"], ["w"])
+        self.assertEqual(self.run_check_results(), [])
+
+        self.start()
+        self.submit()
+        outcome = self.gate()
+        self.assertEqual(outcome["verdict"], "pass")
+        self.assertNotIn("skipped_checks", outcome)
+        self.assertEqual([r["result"] for r in self.run_check_results()], ["passed"])
+
+    def test_review_prerequisite_does_not_hide_circular_run_check_notice(self):
+        self.set_plan([work(lane=2), review(),
+                       work("later", needs=[{"from": "w", "artifact": "w.txt"}])],
+                      [dict(CMD, id="whole", run="test -s later.txt", requires_passed=["v"])])
+        notices = plan.circular_run_checks(self.plan)
+        self.assertEqual([(n["code"], n["node"], n["later"], n["paths"]) for n in notices],
+                         [("circular_run_check", "w", "later", ["later.txt"])])
+        self.start()
+        self.submit()
+        self.redo_review()
+        outcome = self.gate()
+        self.assertEqual((outcome["verdict"], outcome["rule"]), ("reject", "R1"))
+        self.assertIn("whole", outcome["rejection"]["reason"])
+
+    def test_same_eval_chain_without_declaration_rejects_runner_and_advises(self):
+        self.prepare_eval_chain()
+        self.assertFalse(plan.circular_run_checks(self.plan))
+        outcome = self.gate("runner")
+        self.assertEqual((outcome["verdict"], outcome["rule"], outcome["asks"]), ("reject", "R1", []))
+        self.assertIn("all-tasks-sound", outcome["rejection"]["reason"])
+        self.assertNotIn("skipped_checks", outcome)
+        self.assertEqual([(r["check"], r["result"]) for r in self.run_check_results()],
+                         [("all-tasks-sound", "failed")])
+        self.assertEqual(outcome["notices"], self.events("gate.verdict")[-1]["data"]["notices"])
+        self.assertEqual(outcome["notices"][0]["code"], "run_check_failed_after_node_checks_passed")
+        self.assertIn("requires_passed", outcome["notices"][0]["message"])
+        self.assertNotIn("tasks", graph.ready(self.plan, self.derived()))
+
+    def test_final_gate_runs_even_with_pending_producers(self):
+        self.prepare_eval_chain(requires_passed=["review-runner", "runner", "tasks"])
+        self.assertEqual(self.gate("runner")["skipped_checks"][0]["pending_nodes"], ["tasks"])
+        self.assertEqual(self.status("tasks")["status"], "pending")
+        final = gate.gate_final(self.run, None, ACTOR)
+        self.assertEqual((final["result"], final["failed_checks"]), ("failed", ["all-tasks-sound"]))
+        self.assertEqual([r["result"] for r in self.run_check_results()], ["failed"])
+
+    def test_skipped_check_does_not_inherit_other_check_results_for_same_command(self):
+        command = "test -s w.txt"
+        self.set_plan([work("p"), work(lane=2), review()], [
+            dict(CMD, id="after-p", run=command, requires_passed=["p"]),
+            dict(CMD, id="always", run=command),
+        ])
+        self.assign("w", "openai")
+        self.assign("v", "claude")
+        self.start()
+        self.submit()
+        self.redo_review()
+        outcome = self.gate()
+        self.assertEqual(outcome["verdict"], "pass")
+        self.assertEqual([check["check"] for check in outcome["skipped_checks"]], ["after-p"])
+        self.assertEqual([r["check"] for r in self.run_check_results()], ["always"])
+        metrics = trajectory_trace.trace(self.run)
+        scoped = metrics["run_cmd_checks"]["after-p"]
+        self.assertFalse(scoped["passed"])
+        self.assertFalse(scoped["failure_observed"])
+        self.assertEqual(scoped["passes"], [])
+        self.assertTrue(metrics["run_cmd_checks"]["always"]["passed"])
+        self.assertEqual(metrics["conformance"]["P1"]["passed_checks_never_observed_failing"], 2)
+
+    def test_concurrent_producer_reopen_discards_stale_node_verdict(self):
+        self.set_plan([work("p"), work(lane=2), review()],
+                      [dict(CMD, id="whole", run="grep -qx good w.txt", requires_passed=["p"])])
+        self.assign("w", "openai")
+        self.assign("v", "claude")
+        self.start("p")
+        self.submit("p")
+        self.assertEqual(self.gate("p")["verdict"], "pass")
+        self.start()
+        self.write("w.txt", "wrong\n")
+        self.submit()
+        self.redo_review()
+        original = checks.run_cmd
+
+        def reopen_after_check(run_dir, nid, check, *args):
+            result = original(run_dir, nid, check, *args)
+            if nid == "_run":
+                gate.reopen(self.run, "p", "producer changed", ACTOR)
+            return result
+
+        with mock.patch.object(checks, "run_cmd", reopen_after_check):
+            self.error("stale_result", self.gate)
+        self.assertEqual(self.status()["status"], "submitted")
+        outcome = self.gate()
+        self.assertEqual((outcome["verdict"], outcome["asks"]), ("pass", []))
+        self.assertEqual(outcome["skipped_checks"][0]["pending_nodes"], ["p"])
 
 
 class ExecutionTests(GateCase):

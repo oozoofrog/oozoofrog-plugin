@@ -47,11 +47,11 @@ All tools accept optional `run`. In the table, brackets mark optional arguments,
 | `constraint_add` | `learn add` | `from_node`, `text`, `review_when`, `[paths[]]`, `[tags[]]`, `[project]` | L |
 | `constraint_promote` | `learn promote` | `id`, `run_command`, `[project]` | L |
 | `constraint_retire` | `learn retire` | `id`, `reason`, `[project]` | L |
-| `run_trace` | `trace` | None | L, W, R |
+| `run_trace` | `trace` | None | L |
 | `host_set` | `host set` | `capabilities[]` | L |
 | `run_init` | `init` | `run_id`, `[project]` | L |
 
-`executor` is `inline`, `subagent`, `workflow`, `t3`, or `background`; `family` is `claude`, `openai`, or `other`; `isolation` is `shared` or `worktree`. `result` is `passed` or `failed`; a review `verdict` is `pass` or `fail`. The CLI validates these values. Optional arrays, when supplied, contain at least one string; `findings` may be empty. The `inputSchema` returned by `tools/list` describes each argument.
+`executor` is `inline`, `subagent`, `workflow`, `t3`, or `background`; `family` is `claude`, `openai`, or `other`; `isolation` is `shared` or `worktree`. `result` is `passed` or `failed`; a review `verdict` is `pass` or `fail`. The CLI validates these values. Optional arrays, when supplied, contain at least one string; `findings` may be empty. The `inputSchema` returned by `tools/list` describes each argument. The `plan` object follows the [plan contract](plan.md#enforced-fields-and-presentation-labels), including optional `integration_checks[].requires_passed`. A listed producer's work gate can run the check at any effective lane after the other listed producers pass. Other work gates can run it at effective lane 2 or 3 after all listed producers pass. `gate_node` returns `skipped_checks` when an otherwise eligible work gate defers checks for pending producers. With `final: true`, it runs all integration checks.
 
 Answers to decisions are **not available through MCP (P10)**. Agents can ask, list, and wait; a person answers through the dashboard or the verified human terminal path described in [records.md section 7](records.md#7-decisions). There is no decision-answer, dashboard-start, or MCP-start tool. A host that reaches graph-flow only through MCP asks the person to run `graph-flow open` in their terminal to see the dashboard.
 

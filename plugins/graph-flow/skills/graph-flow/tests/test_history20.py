@@ -65,5 +65,3 @@ class History20Tests(unittest.TestCase):
             outcome=gate.evaluate(case.plan,case.state,case.node['id'],[],[],rollbacks)
             self.assertEqual(outcome['verdict'],expected)
             if expected=='needs_approval':self.assertEqual(outcome['rule'],'R5')
-
-

@@ -29,9 +29,10 @@ def rejection_checks(current, events, verdict):
             latest = {}
         elif event["type"] == "check.result" and item.get("node") in (nid, "_run") and item.get("phase") == "gate":
             latest[(item["node"], item.get("check"))] = item
+    skipped = {entry["check"] for entry in data.get("skipped_checks", [])}
     result = []
     for key, item in latest.items():
-        if item.get("result") != "failed":
+        if item.get("result") != "failed" or (key[0] == "_run" and key[1] in skipped):
             continue
         cid = item.get("check")
         if not ((log and item.get("log") == log) or "check %s " % cid in reason
@@ -80,6 +81,10 @@ def trace(run_dir):
                    "duration_ms": _duration(first, last),
                    "checks_run": sum(e["type"] == "check.result" for e in recent),
                    "rollbacks": rollbacks(store.project_of(run_dir), run_dir, node["owns"])}
+        skipped = sum(len(e["data"].get("skipped_checks", []))
+                      for e in recent if e["type"] == "gate.verdict")
+        if skipped:
+            metrics["checks_skipped"] = skipped
         assignments = [e["data"] for e in events if e["type"] == "node.assign" and e["data"].get("node") == nid]
         assignment = assignments[-1] if assignments else {}
         metrics.update(executor=assignment.get("executor"), model=assignment.get("model"),
@@ -205,6 +210,7 @@ def command_metrics(node, events, run_dir):
             continue
         records = [e for e in events if e["type"] in ("check.red", "check.result")
                    and e["data"].get("node") == node["id"]
+                   and ("requires_passed" not in check or e["data"].get("check") == check["id"])
                    and checks.recorded_command(e, run_dir) == check["run"]]
         failures = [e["seq"] for e in records if e["data"].get("failed_first") is True
                     or e["data"].get("result") == "failed"]
@@ -270,6 +276,10 @@ def conformance(current, events, metrics):
         "P11": {"constraints_applied": len(applied), "constraints_added": sum(e["type"] == "constraint.add" for e in events)},
         "P12": {"refusals": "not measurable from records", "attempts": sum(starts.values()), "rejections": sum(e["type"] == "gate.verdict" and e["data"].get("verdict") == "reject" for e in events),
                 "superseded_decisions": metrics["stuck"]["superseded_decisions"], "unverified_at_final": metrics["stuck"]["unverified_at_final"]}}
+    skipped = sum(len(e["data"].get("skipped_checks", []))
+                  for e in events if e["type"] == "gate.verdict")
+    if skipped:
+        observations["P12"]["run_checks_skipped"] = skipped
     for principle, observation in observations.items():
         if "observation" not in observation:
             if principle == "P10":

@@ -1,6 +1,6 @@
 # Principles
 
-graph-flow implements the article "Loops and Graphs: how to stop babysitting agents and only approve the last step" (Hanako, 2026-08-23). Every command, record field, and instruction in this skill cites one or more of the principles below by number. When a design question comes up, the principle decides it; when two readings are possible, pick the one the tool can enforce.
+graph-flow implements the article "Loops and Graphs: how to stop babysitting agents and only approve the last step" (Hanako, 2026-08-23). See the [original article](https://x.com/hanakoxbt/status/2091515787366306154) and [maintainer design sources](../../../docs/design-sources.md). Every command, record field, and instruction in this skill cites one or more of the principles below by number. When a design question comes up, the principle decides it; when two readings are possible, pick the one the tool can enforce.
 
 Two layers:
 
@@ -14,10 +14,10 @@ A graph without loops produces unverified work in parallel. A loop without a gra
 | # | Principle | What the tool enforces |
 | --- | --- | --- |
 | P1 | **Check first.** A check is a condition a program can evaluate and that can fail. "Looks good", "the model is confident", and "no errors were raised" are not checks. | `gf plan validate` rejects a work node with no check. `gf red` runs a new check before the work and records whether it failed. `cmd` checks are executed by `gf` and judged by exit code. |
-| P2 | **The loop lives inside the node.** Produce, check, correct, repeat until green, at most three attempts. If three corrections fail, the fault is in the plan, and the loop cannot see the plan. | Every `gf start` consumes one attempt. The fourth start is refused and the node becomes `replan`. |
+| P2 | **The loop lives inside the node.** Produce, check, correct, repeat until green, at most three attempts. If three corrections fail, the fault is in the plan, and the loop cannot see the plan. | Each successful `gf start` consumes one attempt. At the attempt limit, another start is refused. A grade 1 gate failure on the last attempt yields `replan`. |
 | P3 | **An edge is a real dependency.** "And then" is not an edge. If you cannot name the artifact that crosses, there is no edge and the wait is waste. | Every `needs` entry must name the producing node and the artifact. `gf plan validate` rejects an unnamed edge and an artifact the producer does not own. |
-| P4 | **Split by blast radius, not by folder.** The splitter decides more than any other node. | Every node declares `lane` and `owns`. Nodes that can run at the same time must not own overlapping paths. Only one node at a time may work uncommitted in a shared tree; parallel work uses separate worktrees and committed submissions. |
-| P5 | **One unit, one lens, own context.** Workers that share a window converge on one opinion with echoes. | `gf brief` emits only that node's goal, inputs, scope, checks, and constraints. The worker and reviewer roles cannot read other nodes' results. |
+| P4 | **Split by blast radius, not by folder.** The splitter decides more than any other node. | Every node must declare `lane`. Omitted `owns` defaults to an empty list, which permits no file changes. Nodes that can run at the same time must not own overlapping paths. Only one node at a time may work uncommitted in a shared tree; parallel work uses separate worktrees and committed submissions. |
+| P5 | **One unit, one lens, own context.** Workers that share a window converge on one opinion with echoes. | `gf brief` gives the node's goal, inputs, scope, checks, and constraints along with relevant run and review context. `gf status` scopes workers to their own node and reviewers to their own node and its target. Run-wide trace is available to leaders and humans. |
 | P6 | **Use code where there is exactly one correct answer.** Merging, ranking, deduplicating, comparing: if the transformation can be described without the words judge, decide, assess, or summarize, it is code. | Merge, scope comparison, verdict computation, readiness, and aggregation are `gf` commands, never model output. |
 | P7 | **The gate reads evidence in order:** deterministic results, then the trajectory of this run, then how often this node's work was rolled back before, and the model's own assessment last. Confidence is the only input the model can influence. | Evidence carries a grade (1 deterministic, 2 observed, 3 history, 4 opinion). `gf gate` evaluates by grade order. Opinion alone never opens a gate and never overturns a grade 1 result. |
 | P8 | **Return the unit, not the batch.** A rejection carries UNIT, VERDICT, REASON, EVIDENCE, SCOPE. Without the scope line a returned unit grows. | `gf gate` builds the rejection record from the failed check. Other nodes' passed status is never touched by a rejection. |
@@ -28,7 +28,7 @@ A graph without loops produces unverified work in parallel. A loop without a gra
 
 ### P10 in this tool
 
-Plan approval before dispatch is a deliberate, user-mandated addition to the article's “one step”: P10 here means plan approval plus planned decisions, while `trace --conformance` counts every other stop as unplanned. Answer signing protects against accidental impersonation by an agent using the same account; that machinery is frozen and must not be extended.
+Plan approval before dispatch is a deliberate, user-mandated addition to the article's “one step.” P10 here means plan approval plus planned decisions. `trace --conformance` classifies recorded answers as planned or unplanned and reports open decisions separately. An unanswered approval raises only the open count. Answer signing protects against accidental impersonation by an agent using the same account; that machinery is frozen and must not be extended.
 
 A change that adds a refusal or a human stop must name the principle it serves.
 

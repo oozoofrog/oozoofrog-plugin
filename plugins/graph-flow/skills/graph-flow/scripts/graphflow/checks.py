@@ -202,7 +202,8 @@ def run_cmd(run_dir, node_id, check, phase, cwd, actor):
     with _store.transaction(run_dir) as tx:
         _recheck(tx, node_id, phase, token)
         if data["result"] == "passed":
-            data["failed_before"] = failure_observed(tx.events, node_id, check["run"], run_dir)
+            check_id = check["id"] if "requires_passed" in check else None
+            data["failed_before"] = failure_observed(tx.events, node_id, check["run"], run_dir, check_id=check_id)
             if before_work and _first_observation(tx.events, node_id, st, check["id"]):
                 data["passes_before_work"] = True
         tx.append("check.result", data, actor)
@@ -404,8 +405,9 @@ def recorded_command(event, run_dir):
         return None
 
 
-def failure_observed(events, node, command, run_dir):
+def failure_observed(events, node, command, run_dir, *, check_id=None):
     return any(e.get("data", {}).get("node") == node
+        and (check_id is None or e["data"].get("check") == check_id)
         and (e["type"] == "check.red" and e["data"].get("failed_first") is True
              or e["type"] == "check.result" and e["data"].get("result") == "failed")
         and recorded_command(e, run_dir) == command for e in events)

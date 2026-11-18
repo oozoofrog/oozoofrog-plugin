@@ -297,6 +297,8 @@ def _timeline(nodes, events, lessons, verified_decisions=None, repin_seq=0):
             row["state"] = {"pass": "passed", "reject": "returned", "replan": "replan",
                             "needs_approval": "needs_you", "hold": "held"}.get(verdict, row["state"])
             row["reason"] = _text(_mapping(data.get("rejection")).get("reason"), row["reason"])
+            if data.get("skipped_checks") or "skipped_checks" in row:
+                row["skipped_checks"] = _objects(data.get("skipped_checks"))
             if verdict in ("reject", "replan"):
                 row["returned_by"] = actor_of(event)
             touch(row, event)

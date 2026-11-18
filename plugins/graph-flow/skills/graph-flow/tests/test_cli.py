@@ -137,6 +137,15 @@ class CLITests(unittest.TestCase):
         with mock.patch.object(cli.state, 'derive', side_effect=RuntimeError('oops')):
             self.assertEqual(self.call('status', code=5)['code'], 'internal')
 
+    def test_trace_is_limited_to_leader_and_human(self):
+        self.set_plan()
+        for role, node in [('worker', 'a'), ('reviewer', 'r')]:
+            with self.subTest(role=role):
+                self.assertEqual(self.call('--role', role, '--node', node, 'trace', code=3)['code'], 'forbidden')
+        for role in ['leader', 'human']:
+            with self.subTest(role=role):
+                self.assertIn('conformance', self.call('--role', role, 'trace'))
+
     def test_registry_role_table(self):
         self.assertEqual(len(cli.COMMANDS), 32)
         for path, entry in cli.COMMANDS.items():

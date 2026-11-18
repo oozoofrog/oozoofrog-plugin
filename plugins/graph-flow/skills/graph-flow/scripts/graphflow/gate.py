@@ -233,7 +233,7 @@ def _optional(module, function, default, *args):
     return getattr(imported, function)(*args)
 
 
-def _integration(plan, root, derived):
+def _integration(plan):
     # Only commands frozen into the approved plan can execute.
     return list(plan.get("integration_checks") or []) + list(plan.get("promoted_checks") or [])
 
@@ -273,15 +273,26 @@ def gate(run_dir, node_id, cwd, actor):
         if submission.get("target_submission") != target.get("id"):
             raise core.GFError("review_outdated", "review is for an old submission", core.EXIT_STATE)
     tested_head = _head(directory)
-    results, integration_results = [], []
+    results, integration_results, skipped_checks = [], [], []
+    checked_producers = set()
     if node["kind"] == "work":
         for check in node["checks"]:
             if check["type"] == "cmd":
                 results.append(checks.run_cmd(run_dir, node_id, check, "gate", directory, actor))
         results.append(checks.run_scope(run_dir, node_id, "gate", directory, actor))
-        if node.get("effective_lane", node["lane"]) >= 2:
-            integration_results = [checks.run_cmd(run_dir, "_run", c, "gate", directory, actor)
-                                   for c in _integration(plan, root, derived)]
+        lane = node.get("effective_lane", node["lane"])
+        for check in _integration(plan):
+            producers = check.get("requires_passed", [])
+            if lane < 2 and node_id not in producers:
+                continue
+            other_producers = [nid for nid in producers if nid != node_id]
+            pending = [nid for nid in other_producers if derived["nodes"][nid]["status"] != "passed"]
+            if pending:
+                skipped_checks.append({"check": check["id"], "title": check.get("title") or check["id"],
+                                       "pending_nodes": pending})
+                continue
+            integration_results.append(checks.run_cmd(run_dir, "_run", check, "gate", directory, actor))
+            checked_producers.update(other_producers)
     elif node["kind"] == "review":
         for check in node["checks"]:
             if check["type"] == "cmd":
@@ -298,7 +309,10 @@ def gate(run_dir, node_id, cwd, actor):
                 (current_st["status"] == "passed" if node["kind"] == "decision"
                  else not graph.has_current_submission(current_st)) or
                 any(e["seq"] > started_seq and e["type"] == "gate.verdict"
-                    and e["data"].get("node") == node_id for e in tx.events)):
+                    and e["data"].get("node") == node_id for e in tx.events) or
+                any(current["nodes"][nid]["status"] != "passed" or
+                    current["nodes"][nid]["basis"] != derived["nodes"][nid]["basis"]
+                    for nid in checked_producers)):
             raise core.GFError("stale_result", "node, plan or verdict changed during gate", core.EXIT_STATE)
         outcome = evaluate(tx.plan, current, node_id, results, integration_results, rollbacks)
         ask_ids = []
@@ -327,6 +341,16 @@ def gate(run_dir, node_id, cwd, actor):
                 "submission": submission.get("id"), "verdict": outcome["verdict"],
                 "rule": outcome["rule"], "message": outcome.get("message"), "rejection": rejection, "tested_head": tested_head,
                 "merged_head": _head(root) if submission.get("commit") else None}
+        if skipped_checks:
+            data["skipped_checks"] = skipped_checks
+        if integration_results and all(r["result"] == "passed" for r in results):
+            undeclared = {c["id"] for c in plan.get("integration_checks", []) if "requires_passed" not in c}
+            notices = [{"code": "run_check_failed_after_node_checks_passed", "node": node_id, "check": r["check"],
+                        "message": ("Run check %s failed after this node's command and scope checks passed. "
+                                    "If it needs another node's outputs, declare requires_passed." % r["check"])}
+                       for r in integration_results if r["result"] == "failed" and r["check"] in undeclared]
+            if notices:
+                data["notices"] = notices
         tx.append("gate.verdict", data, actor)
     return dict(data, asks=ask_ids)
 
@@ -345,7 +369,7 @@ def gate_final(run_dir, cwd, actor):
             raise core.GFError("not_merged", "%s is not merged into project HEAD" % nid, core.EXIT_STATE)
     tested_head = _head(directory)
     results = [checks.run_cmd(run_dir, "_run", c, "gate", directory, actor)
-               for c in _integration(plan or {}, root, derived)]
+               for c in _integration(plan or {})]
     failed = [r["check"] for r in results if r["result"] == "failed"]
     data = {"result": "failed" if failed else "passed", "failed_checks": failed,
             "tested_head": tested_head, "project_head": _head(root)}

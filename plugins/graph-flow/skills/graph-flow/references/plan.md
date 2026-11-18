@@ -10,7 +10,7 @@
   "requirements": [{"id": "R1", "text": "Every note is exported"}],
   "tags": ["python"],
   "integration_checks": [
-    {"id": "all-tests", "type": "cmd", "run": "python3 -m unittest -v"}
+    {"id": "all-tests", "type": "cmd", "run": "python3 -m unittest -v", "requires_passed": ["export"]}
   ],
   "nodes": [
     {
@@ -91,9 +91,9 @@ Required top-level fields: `schema_version` (must be `1`), `goal` (non-empty str
 | Code | Rejects | Principle |
 | --- | --- | --- |
 | `V1` | Missing or mistyped required field, unknown `kind`, bad `schema_version`; a present presentation string with the wrong type, empty text, or length over its limit; decision/human-check `context` with the wrong type or an unknown key | |
-| `V2` | Duplicate or malformed node id or check id; more than one `scope` check or more than one `cites` check in a node | |
-| `V3` | A `needs` entry whose `from` does not exist, whose `artifact` is empty, or whose `artifact` is neither equal to or under one of the producer's `owns` nor in its `outputs` | P3 |
-| `V4` | A dependency cycle | P3 |
+| `V2` | Duplicate or malformed node id or check id; duplicate node id in `requires_passed`; more than one `scope` check or more than one `cites` check in a node | |
+| `V3` | An unknown node id in `requires_passed`; a `needs` entry whose `from` does not exist, whose `artifact` is empty, or whose `artifact` is neither equal to or under one of the producer's `owns` nor in its `outputs` | P3 |
+| `V4` | A dependency cycle or a `requires_passed` entry equal to its own check id | P3 |
 | `V5` | A `work` node whose raw `checks` list is empty; a `cmd` check without `run`; a `review` node without `target` and `lens`, whose `target` is not a `work` node, or whose `lane` is not 1; a `decision` node without `question` and a valid `decision_kind`, or with checks; an entry of `integration_checks` that is not a `cmd` check | P1 |
 | `V6` | `lane` missing or not 1, 2, 3 | P9 |
 | `V7` | Two nodes with overlapping `owns` and no dependency path between them in either direction (they could run at the same time). Two path lists overlap when any pair is equal or one is under the other | P4 |
@@ -125,7 +125,7 @@ A new structural `plan set` atomically appends `plan.set` with `plan_identity`, 
 
 An identical re-post creates no revision and reuses the current open or verified-approved decision. A wording-only revision retains a currently verified-approved decision and dispatch; it records `wording_only`, `approval_reused` and any `question_wording_changed` nodes in `plan.set`. All other new revisions ask fresh approval; old plan decisions receive `decision.superseded` (`id`, replacement `revision`), retain their answer/text, and are closed and stale. `decide wait` returns superseded immediately. Sending back requires nonempty text on both dashboard and terminal paths. The normal human-role and signature requirements apply; there is no skip flag, environment bypass or agent-answer tool.
 
-Until current approval is answered, verified and approved, `ready`, `assign`, work/review `brief`, `start` (including worker/reviewer starts), `route`, `red`, `check run`, `merge`, every node gate, and the final gate refuse with exit 4, `plan_not_approved`, the decision id and `gf open --decision <id>`. MCP calls the same checks. `status`/dashboard return an empty ready list without failing. Planning briefs, validation, plan set, status, trace, decision list/wait remain usable.
+Until current approval is answered, verified and approved, `ready`, `assign`, work/review `brief`, `start` (including worker/reviewer starts), `route`, `red`, `check run`, `merge`, every node gate, and the final gate refuse with exit 4, `plan_not_approved`, the decision id and `gf open --decision <id>`. MCP calls the same checks. `status`/dashboard return an empty ready list without failing. Planning briefs, validation, plan set, status, trace, decision list/wait remain usable by their [authorized roles](records.md#2-identity-and-roles).
 
 During re-planning, **new starts wait; existing work continues**. Completed nodes retain accepted submissions, running nodes can submit; checks and gates wait for the new approval. To preserve those contracts safely, `plan set` refuses structural edits/removal of a running, submitted or passed node, or a producer it depends on (`active_plan_change`, exit 4). Add a new node for a changed requirement. Unstarted changed nodes and their dependents still follow the basis invalidation rule. Wording-only edits preserve all accepted work. A check already executing across a revision can still return `stale_result` under the existing race guard; rerun that check, not the worker attempt.
 
@@ -151,6 +151,8 @@ Unknown or inapplicable fields are rejected by name. All kinds accept identifier
 
 Every check also accepts `id`, `type`, and the presentation `title`. Work accepts cmd/scope/host/human; review accepts cmd/cites/host/human; decision accepts no checks. Run integration/promoted checks accept cmd only. The full command runs, with cwd and timeout enforced. No other check shows a planned command. Scope is compared against the submitted file list so gate integration output cannot contaminate the next comparison; commands still run in the tested tree, not a sandbox.
 
+An `integration_checks` command may declare `requires_passed`, a non-empty list of distinct existing producer node ids. A reference to the check's own id is invalid. Only integration commands accept this field (V1). A listed producer's work gate runs the command at any effective lane once every other listed producer has passed. Other work gates run it at effective lane 2 or 3 once every listed producer has passed. Omitted declarations preserve the default of running at every effective lane 2 and 3 work gate. The final gate always runs every integration and promoted check. The declaration controls when to collect check evidence and leaves graph readiness to `needs` (P1, P3, P7, P8, P10, P12).
+
 Run fields are schema_version, goal, title, summary, context, requirements, tags, nodes, integration_checks, promoted_checks and constraints. Local promoted checks/constraints are merged by id; a conflicting supplied record is rejected, never silently replaced. The local `.graph-flow/checks.json` is validated by the same command schema, with file and field in errors. Titles, summaries, context, needs labels, reads, outputs, requirement text, constraint text/provenance and check provenance are documented presentation/instruction fields, not machine assertions. `needs`/named outputs enforce graph order; `owns`, checks, lane and attempt limits enforce gate behavior. Constraint scope/tags select inherited instructions; the approved command is the machine enforcement for a promoted constraint.
 
 All binding decisions carry a gate/plan issuer in the signed binding. Agent `decide ask` accepts only free direction/information questions. Gate requests bind the approved node contract, current submission, check/review records with ids and hashes, trajectory and rollback context. The gate recomputes the request and accepts only an identical verified approval. A passed review with a fail verdict therefore creates a new gate-owned hold; an earlier status question cannot override it. Rejected decision nodes stay out of ready and explain how to revise/re-post. Only current plan approval and open decisions participate in project-location mismatch; answered old questions remain history after a move.
@@ -161,7 +163,8 @@ Trivially successful cmd checks (`true`, `:`, `exit 0`, or an empty/whitespace-o
 
 ### Diagnostic notices
 
-Notices are advisory: they add no validation problem, refusal, gate rule or required answer. `plan validate` and `plan set` include them, and the plan screen names the affected work and check.
+Notices are advisory and leave validation, verdicts and approval requirements unchanged.
 
-- `circular_run_check`: a literal command path (including `--option=path`, quoted paths and relative `cwd`) is owned by a later node that directly or transitively depends on a work node with effective lane 2 or 3. The notice names the run check, gate node, later owner and path. It does not inspect script code or infer default inputs, variable expansion or arbitrary shell behavior. In the first real run, `all-tasks-sound` named only `run_task.py`; its default `tasks/` input was hidden inside that script, so path-token detection alone cannot diagnose that exact command. Spell the input path in the command to expose this dependency at planning time.
+- `circular_run_check` flags literal command paths (including `--option=path`, quoted paths and relative `cwd`) owned by a later node that depends directly or transitively on a work node whose gate can run the integration check. The notice names the run check, gate node, later owner and path in `plan validate`, `plan set` and the plan screen. Suppression requires another listed producer whose direct or transitive `needs` require the earlier work node to pass. A review's dependency on its target requires only a submission, even when the target appears in `needs`. The detector reads literal paths. Script defaults such as the first run's implicit `tasks/` input need an explicit `requires_passed` declaration.
+- `run_check_failed_after_node_checks_passed` is recorded by the node gate when an undeclared integration check fails and the node's command and scope checks pass. It suggests checking for a missing producer declaration and leaves the verdict unchanged.
 - `passes_before_work`: a passing `red` observation, or the first observation of a command check in an attempt, records that no owned-file change from the attempt's Git snapshot was observed before executing it. It is not proof that no thinking or unrecorded external work happened. The node and plan show this notice; `trace --conformance` counts unique node/attempt/check observations as `checks passing before work: N`. Repeated observations of the same check in the same attempt count once. Historical records lacking this observation are not relabelled. With a run selected, validation also displays its recorded notices.

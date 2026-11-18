@@ -51,5 +51,3 @@ class Notices20Tests(unittest.TestCase):
         self.assertEqual(view['nodes'][0]['notices'][0]['check'],'text')
         for command,key in [(('plan','validate',str(f.root/'plan.json')),'notices'),(('plan','set',str(f.root/'plan.json')),'normalization_notices')]:
             self.assertEqual(len([n for n in f.call(*command)[key] if n['code']=='passes_before_work']),2)
-
-

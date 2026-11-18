@@ -71,7 +71,7 @@ def _read_checks(meta):
         unknown = set(document) - {"schema_version", "checks"}
         if unknown:
             raise ValueError("unknown field: " + ", ".join(sorted(unknown)))
-        probe = {"schema_version": 1, "goal": "Validate saved checks", "integration_checks": document["checks"],
+        probe = {"schema_version": 1, "goal": "Validate saved checks", "promoted_checks": document["checks"],
                  "nodes": [{"id": "validation", "kind": "decision", "goal": "validate", "lane": 1,
                             "question": "Validate?", "decision_kind": "information"}]}
         problems = planmod.validate(probe)

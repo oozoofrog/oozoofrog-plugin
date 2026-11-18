@@ -23,7 +23,10 @@ FIELDS = {
     "node": _field("string", "Target node id; workers and reviewers remain bound to GF_NODE."),
     "check": _field("string", "Check id declared in the node's plan."),
     "cwd": _field("string", "Working tree directory in which to start, check, submit, or gate."),
-    "plan": _field("object", "Complete plan as a JSON object; validated by the CLI."),
+    "plan": _field("object", "Complete plan as a JSON object, validated by the CLI. Integration cmd checks may declare "
+                   "requires_passed as a non-empty list of distinct producer node IDs, different from the check ID. "
+                   "Each producer's own work gate can run the check at any lane once the other producers pass. "
+                   "Other work gates run it at effective lane 2 or 3 once all producers pass. The final gate always runs it."),
     "executor": _field("string", "Executor: inline, subagent, workflow, t3, or background."),
     "model": _field("string", "Assigned model name."),
     "effort": _field("string", "Assigned reasoning effort."),

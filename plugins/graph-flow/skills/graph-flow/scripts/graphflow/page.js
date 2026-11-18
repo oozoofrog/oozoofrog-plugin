@@ -446,6 +446,9 @@ const STRINGS = {
     "whenTrajectory": "수정이 세 번 이상이거나 시간 초과, 범위 이탈, 되돌림이 있으면 결과를 받기 전에 물어요.",
     "crossFamily": "결과를 받기 전에 작업한 쪽과 다른 모델 계열의 검토가 필요해요.",
     "alsoNodeChecks": "이 검사는 {tasks}의 결과를 받을 때와 전체 결과를 확인할 때 실행돼요.",
+    "conditionalNodeChecks": "전체 결과를 확인할 때는 모든 검사를 실행해요. 개별 작업은 2·3단계이거나 검사에 필요한 작업으로 지정된 경우에도 검사해요.",
+    "checkRequiresPassed": "이 검사에 필요한 작업은 {tasks}이에요. 개별 작업을 검사할 때는 지금 확인하는 작업을 제외한 나머지 필수 작업이 먼저 통과해야 해요.",
+    "checkSkipped": "아직 통과하지 않은 작업이 있어 이번 게이트에서 건너뛰었어요 ({tasks}).",
     "requirements": "요청한 내용",
     "viewPlan": "계획 보기",
     "ownCheckMark": "⚠ 검사 파일도 수정 가능",
@@ -1120,6 +1123,9 @@ const STRINGS = {
     "whenTrajectory": "Asked before acceptance after three attempts, a timeout, a scope violation, or a rollback.",
     "crossFamily": "Acceptance requires a review from a different model family than the worker.",
     "alsoNodeChecks": "These checks run when accepting {tasks} and when checking the whole result.",
+    "conditionalNodeChecks": "The final gate runs all these checks. Lane 2 and 3 work gates and listed producers' own work gates can also run them.",
+    "checkRequiresPassed": "This check requires {tasks}. At a work gate, every listed task besides the current one must have passed.",
+    "checkSkipped": "Skipped at this gate while waiting for {tasks} to pass.",
     "requirements": "Requirements",
     "viewPlan": "View plan",
     "ownCheckMark": "⚠ Check file can also change",
@@ -1451,7 +1457,7 @@ export function checkExecutionFields(c,language='en') {
     environment:words.checkEnvironment,shell:format('checkShell',c.shell)};
 }
 export function uniqueChecks(checks) {
-  const seen=new Set();return checks.filter(c=>{if(c.type!=='cmd')return true;const key=JSON.stringify([c.run||c.command,c.cwd,c.timeout_s,c.shell,c.environment]);if(seen.has(key))return false;seen.add(key);return true;});
+  const seen=new Set();return checks.filter(c=>{if(c.type!=='cmd')return true;const key=JSON.stringify([c.run||c.command,c.cwd,c.timeout_s,c.shell,c.environment,c.requires_passed]);if(seen.has(key))return false;seen.add(key);return true;});
 }
 export function createDecisionController() {
   let session = null, view = null, chosen = null;
@@ -2002,6 +2008,7 @@ function plannedChecks(parent, checks) {
     }
     if (c.type === 'human') item.append(el('p',t('whenAfterWork')+(c.prompt&&c.prompt!==checkTitle(c,language)?' '+c.prompt:'')));
     if (c.type === 'host') item.append(el('p', t('checkHost', c)));
+    if (c.requires_passed?.length) item.append(el('p', t('checkRequiresPassed', {tasks:taskNames(c.requires_passed)})));
     list.append(item);
   }
   if (!list.children.length) list.append(el('li', t('noPlannedChecks')));
@@ -2028,15 +2035,26 @@ function planNotices(parent, notices) {
   for(const n of notices)box.append(el('p',n.code==='circular_run_check'?t('qCircular',{gate:n.gate_title,check:n.title,later:n.later_title}):t('qBeforeWork',{title:n.title,n:n.attempt})));
   parent.append(box);
 }
+function taskNames(ids) {
+  return ids.map(id=>view.nodes.find(n=>n.id===id)?.title || id).join(', ');
+}
+function runCheckSchedule(checks) {
+  const work = view.nodes.filter(n=>n.kind==='work');
+  const tasks = work.filter(n=>n.lane>=2).map(title);
+  const declared = checks.filter(c=>c.requires_passed?.length);
+  const producerGate = declared.some(c=>work.some(n=>c.requires_passed.includes(n.id)));
+  return el('p', t(!tasks.length&&!producerGate?'onlyFinalChecks':declared.length?'conditionalNodeChecks':'alsoNodeChecks', {tasks:tasks.join(', ')}));
+}
 function runFacts(parent) {
   planNotices(parent,view.notices);
   relationFacts(parent,flowNode('_run_checks'));
   contractDetails(parent,view.run_contract);
   if(view.summary)parent.append(el('p',view.summary));authorNote(parent,view.context);
   if(view.requirements?.length){parent.append(el('h3',t('requirements')));textList(parent,view.requirements.map(r=>r.id+' · '+r.text));}
-  if(view.integration_checks?.length||view.promoted_checks?.length)parent.append(el('p',t(view.nodes.some(n=>n.kind==='work'&&n.lane>=2)?'alsoNodeChecks':'onlyFinalChecks',{tasks:view.nodes.filter(n=>n.kind==='work'&&n.lane>=2).map(title).join(', ')})));
+  const runChecks = uniqueChecks([...(view.integration_checks||[]),...(view.promoted_checks||[])]);
+  if(runChecks.length)parent.append(runCheckSchedule(runChecks));
   parent.append(el('h3',t('runChecksGoal')),el('p',view.goal));
-  for (const [key, checks] of [['planIntegration',uniqueChecks([...(view.integration_checks||[]),...(view.promoted_checks||[])])]]) {
+  for (const [key, checks] of [['planIntegration',runChecks]]) {
     if (checks?.length) { parent.append(el('h3',t(key))); plannedChecks(parent,checks); }
   }
   if (view.constraints?.length) { parent.append(el('h3',t('runConstraints'))); textList(parent,view.constraints); }
@@ -2069,7 +2087,11 @@ function planFacts(parent, node) {
   if(artifacts.length){parent.append(el('h3',t('planArtifacts')));textList(parent,artifacts.map(value=>value===t('genericOutput')?(node.owns?.join(', ')||t('handoff')):outputLabel(value)));}
   const checks=(node.planned_checks||[]).filter(c=>c.type!=='human'||!questions.length);
   if(checks.length){parent.append(el('h3',t('planChecks')));plannedChecks(parent,checks);}
-  if(node.kind==='work'&&node.lane>=2){parent.append(el('p',t('crossFamily')));if(view.integration_checks?.length||view.promoted_checks?.length){parent.append(el('p',t(view.nodes.some(n=>n.kind==='work'&&n.lane>=2)?'alsoNodeChecks':'onlyFinalChecks',{tasks:view.nodes.filter(n=>n.kind==='work'&&n.lane>=2).map(title).join(', ')})));plannedChecks(parent,[...(view.integration_checks||[]),...(view.promoted_checks||[])]);}}
+  if(node.kind==='work'&&node.lane>=2){
+    parent.append(el('p',t('crossFamily')));
+    const runChecks = [...(view.integration_checks||[]),...(view.promoted_checks||[])];
+    if(runChecks.length){parent.append(runCheckSchedule(runChecks));plannedChecks(parent,runChecks);}
+  }
   if (node.lens) parent.append(el('h3',t('planLens')),el('p',Array.isArray(node.lens)?node.lens.join(' · '):node.lens));
   if(node.kind!=='decision'){const settings=el('details');settings.append(el('summary',t('executionSettings')),el('p',t('planBehaviour',{lane:node.lane,max:node.max_attempts})),el('p',t('planIsolation')),el('p',t('planMerge')));parent.append(settings);}
   if(node.reviewers?.length)parent.append(el('p',t('planReviewers',{value:node.reviewers.map(id=>otherTitle(flowNode(id)?.title||id)).join(', ')})));
@@ -2304,9 +2326,9 @@ function panel() {
   for (const r of rows) {
     const item = el('li'); item.className=r.attempt===node.attempts?'current-history':'earlier-history'; if(r.attempt===node.attempts || !earlier)item.append(el('strong',view.complete?t('attemptShort',{n:r.attempt}):attemptHeading(r,r.attempt!==node.attempts)));if(r.attempt!==node.attempts)earlier=true;if(r.attempt!==node.attempts)item.append(wording(rowSentence(r),'p'));
     const extra=el('details');extra.open=!!rowOpen.get('panel:'+r.id);extra.addEventListener('toggle',()=>rowOpen.set('panel:'+r.id,extra.open)); extra.append(el('summary',t('attemptRecord',{n:r.attempt})));
-    const checks=el('ul',undefined,'checks');r.checks.forEach(c=>checks.append(checkLine(c, r.attempt)));extra.append(checks);
+    extra.append(attemptChecks(r));
     for(const [key,values] of [['workerNote',r.notes?[r.notes]:[]],['changedFiles',r.files||[]],['findings',r.findings||[]],['unsure',r.unsure||[]]])if(values.length){extra.append(el('p',t(key),'eyebrow'));textList(extra,values);}
-    if(r.checks.length||r.notes||r.files?.length||r.findings?.length||r.unsure?.length)item.append(extra);
+    if(r.checks.length||r.skipped_checks?.length||r.notes||r.files?.length||r.findings?.length||r.unsure?.length)item.append(extra);
     list.append(item);
   }
   p.append(list);
@@ -2371,6 +2393,17 @@ function checkLine(c, attempt) {
   }
   return item;
 }
+function attemptChecks(row) {
+  const list = el('ul', undefined, 'checks');
+  for (const check of row.checks) list.append(checkLine(check, row.attempt));
+  for (const check of row.skipped_checks || []) {
+    const item = el('li', undefined, 'check-skipped');
+    item.append(el('strong', check.title || check.check),
+      el('p', t('checkSkipped', {tasks:taskNames(check.pending_nodes)})));
+    list.append(item);
+  }
+  return list;
+}
 function logRow(r, anchor = true, inline = false) {
   const isEarlier=r.kind==='attempt' && view.timeline.some(row=>row.kind==='attempt'&&row.node===r.node&&row.seq>r.seq);
   const item = el('li', undefined, rowTone(r)+(isEarlier?' earlier-history':' current-history')); if (anchor) item.id = r.id;
@@ -2387,11 +2420,11 @@ function logRow(r, anchor = true, inline = false) {
   item.append(head);
   if (r.kind !== 'attempt') return item;
   const extra = [['reason', r.reason && !r.checks.some(c => c.result === 'failed') ? [r.reason] : []], ['findings', r.findings || []], ['workerNote', r.notes ? [r.notes] : []], ['unsure', r.unsure || []], ['changedFiles', r.files || []]].filter(([, values]) => values.length);
-  if (!r.checks.length && !extra.length) return item;
+  if (!r.checks.length && !r.skipped_checks?.length && !extra.length) return item;
   const details = el(inline ? 'div' : 'details'); details.open = rowOpen.has(r.id) ? rowOpen.get(r.id) : !isEarlier && (r.state === 'returned' || r.state === 'replan');
   details.addEventListener('toggle', () => rowOpen.set(r.id, details.open));
   if (!inline) details.append(el('summary', t('rowDetails')));
-  if (r.checks.length) { const checks = el('ul', undefined, 'checks'); r.checks.forEach(c => checks.append(checkLine(c, r.attempt))); details.append(checks); }
+  if (r.checks.length || r.skipped_checks?.length) details.append(attemptChecks(r));
   for (const [key, values] of extra) { details.append(el('p', t(key), 'eyebrow')); textList(details, values); }
   item.append(details); return item;
 }

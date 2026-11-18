@@ -30,6 +30,7 @@ Write the plan and node `title`, node `summary`, input `label`, check `title`, a
 
 - Split by blast radius: one bounded deliverable per work node. Declare exact `owns` paths, necessary `reads`, inputs, outputs, and a `max_attempts` no greater than three. Combine overlapping work or serialize it through a real artifact dependency.
 - For each `needs` edge, name both the producer and the artifact that crosses. The artifact must be under the producer's `owns` or in its named `outputs`. Delete edges that mean only “and then.”
+- Add `requires_passed` to an integration check that needs particular nodes' outputs, including inputs a script chooses by default. List the producer ids. Each listed producer's work gate runs the check at any lane once the other listed producers have passed. Other work gates run it at effective lane 2 or 3 once all listed producers have passed. The final gate always runs the check.
 - Write a meaningful `cmd` check for each work node **before** its implementation. Make the check able to refute the requested behavior. Do not substitute a scope comparison, confidence, or a command that always succeeds. If no machine check exists, declare `human` honestly and inspect normalization's raised lane and approval requirement.
 - Choose the lane by reversibility and blast radius, separately from model grade:
 
@@ -84,6 +85,8 @@ Read the submission and actual evidence. For committed work, run `gf merge <node
 Dispatch and gate required review nodes before gating their targets: `gf gate <review-node> --open`, then `gf gate <work-node> --open`. A review gate executes its command checks and validates citations; its pass does not erase a reviewer's fail verdict. Let deterministic results outrank observations, trajectory/history, and opinion.
 
 On `reject`, read all five fields: UNIT, VERDICT, REASON, EVIDENCE, SCOPE. Read the named log when present. After a scope rejection, the leader restores the out-of-scope paths before reassigning, never by discarding another node's accepted or in-flight work; coordinate recovery of only the offending edits. Reassign **only** that node and regenerate its brief so the rejection travels with the task. Preserve every unrelated accepted node. The target's next start makes its old review stale, so review the new submission again.
+
+When the verdict includes `run_check_failed_after_node_checks_passed`, read the failing check's log first. If it shows a missing producer output, revise the plan by adding `requires_passed` or moving the check to the producing node. Get the revised plan approved before spending another attempt.
 
 On the second attempt, escalate once: raise effort for an incomplete or defective implementation; raise the model when the approach was wrong. Use `gf route <node>` again and record the actual choice with `gf assign`. Routing recognizes an `approach:` rejection prefix, but the CLI has no failure-classification command; if the evidence proves an approach failure, choose the higher model explicitly in the assignment and explain it in the report. Do not edit rejection records or escalate repeatedly without new evidence.
 

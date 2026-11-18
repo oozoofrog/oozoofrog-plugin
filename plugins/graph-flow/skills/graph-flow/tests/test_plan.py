@@ -70,6 +70,36 @@ class PlanTests(unittest.TestCase):
         for attempts in (1, 2, 3):
             self.assertEqual([], plan.validate(document(work(max_attempts=attempts))))
 
+    def test_integration_requires_passed_rejects_invalid_declarations(self):
+        value = document(work("runner", lane=2), review("runner"),
+                         work("tasks", needs=[{"from": "runner", "artifact": "runner.py"}]),
+                         work("all"))
+        check = {"id": "all", "type": "cmd", "run": "test -s tasks.py", "requires_passed": ["tasks"]}
+        value["integration_checks"] = [check]
+        self.assertEqual([], plan.validate(value))
+        normalized, _ = plan.normalize(value)
+        self.assertEqual(normalized["integration_checks"][0]["requires_passed"], ["tasks"])
+        self.assertFalse(plan.circular_run_checks(normalized))
+        check["requires_passed"] = ["runner"]
+        for lane in (1, 2):
+            with self.subTest(lane=lane):
+                value["nodes"][0]["lane"] = lane
+                notices = plan.circular_run_checks(plan.normalize(value)[0])
+                self.assertEqual([(n["node"], n["later"]) for n in notices], [("runner", "tasks")])
+        value["nodes"][0]["lane"] = 2
+
+        for invalid, code in [(None, "V1"), ("tasks", "V1"), ([], "V1"), ([{}], "V1"),
+                              (["tasks", "tasks"], "V2"), (["missing"], "V3"), (["all"], "V4")]:
+            with self.subTest(requires_passed=invalid):
+                check["requires_passed"] = invalid
+                self.assertProblem(value, code, None)
+        check["requires_passed"] = ["tasks"]
+        value["promoted_checks"] = [value.pop("integration_checks")[0]]
+        self.assertProblem(value, "V1", None)
+        value.pop("promoted_checks")
+        value["nodes"][0]["checks"] = [check]
+        self.assertProblem(value, "V1", "runner")
+
     def test_v2_node_ids_and_duplicates(self):
         for node_id in ("Upper", "-start", "", "a" * 65, "a\n", "a/b"):
             with self.subTest(node_id=node_id):

@@ -386,7 +386,8 @@ def _register(paths, roles, needs_run=True, own_node_only=False):
 
 
 _register("init,plan set,host set,ready,route,assign,brief,merge,gate,reopen,learn add,learn promote,learn retire", "leader")
-_register("plan validate,learn list,trace", "leader worker reviewer human")
+_register("plan validate,learn list", "leader worker reviewer human")
+_register("trace", "leader human")
 _register("status", "leader worker reviewer human", own_node_only=True)
 _register("start", "leader worker reviewer", own_node_only=True)
 _register("red,check run,check record,submit", "leader worker", own_node_only=True)
@@ -578,6 +579,8 @@ def main(argv=None):
         print(output["brief"], end="" if output["brief"].endswith("\n") else "\n")
     elif output.get("rejection"):
         print(gate.render_rejection(output["rejection"]))
+        for notice in output.get("notices", []):
+            print(notice["message"])
     else:
         print(output.get("message") or json.dumps(output, ensure_ascii=False))
     return code

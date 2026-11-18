@@ -655,6 +655,31 @@ assert.equal(get('decision').querySelector('.evidence'),null,'free questions nev
 assert.doesNotMatch(get('decision').textContent,/What the gate checked/);
 """)
 
+    def test_run_check_prerequisites_and_skips_are_visible_without_result_marks(self):
+        self.run_dom(r"""
+const api=globalThis.surfaceTest;
+const runner={...live.nodes[0],kind:'work',lane:2,contract:{},status:'passed',planned_checks:[]};
+const tasks={...runner,id:'tasks',title:'Evaluation tasks',lane:1,status:'pending',attempts:0};
+const check={id:'all',title:'All tasks are sound',type:'cmd',command:'sh runner.txt',requires_passed:['tasks']};
+const row={...live.timeline[0],state:'passed',checks:[],reason:null,skipped_checks:[{check:'all',title:check.title,pending_nodes:['tasks']}]};
+live={...live,nodes:[runner,tasks],decisions:[],timeline:[row],integration_checks:[
+  {...check,id:'always',requires_passed:undefined},check
+]};
+api.applyView(live);
+const run=new Element('section');api.runFacts(run);
+assert.match(run.textContent,/The final gate runs all these checks/);
+assert.match(run.textContent,/This check requires Evaluation tasks\. At a work gate, every listed task besides the current one must have passed/);
+assert.equal(run.querySelector('.planned-checks').children.length,2);
+api.selectNode(runner.id);
+const skip=get('panel').querySelector('.check-skipped');
+assert.match(skip.textContent,/All tasks are sound.*Skipped at this gate while waiting for Evaluation tasks to pass/);
+assert(!skip.classList.contains('check-failed'));
+assert.doesNotMatch(skip.textContent,/passed|failed/);
+api.applyView({...live,nodes:[tasks],timeline:[],integration_checks:[check]});
+const laneOne=new Element('section');api.runFacts(laneOne);
+assert.match(laneOne.textContent,/listed producers' own work gates can also run them/);
+""")
+
     def test_b8_state_names_match_every_surface(self):
         self.run_dom(r"""
 const api=globalThis.surfaceTest;

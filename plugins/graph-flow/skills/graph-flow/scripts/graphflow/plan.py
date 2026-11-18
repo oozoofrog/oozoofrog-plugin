@@ -34,13 +34,17 @@ def _index(plan):
     return {n["id"]: n for n in _nodes(plan) if isinstance(n.get("id"), str)}
 
 
-def _edges(plan):
+def _edges(plan, *, passed_only=False):
     edges = {}
     for node_id, node in _index(plan).items():
         parents = [need["from"] for need in _list(node.get("needs"))
                    if isinstance(need, dict) and isinstance(need.get("from"), str)]
         if node.get("kind") == "review" and isinstance(node.get("target"), str):
-            parents.append(node["target"])
+            if passed_only:
+                # Review needs only a submission from its target, even in needs.
+                parents = [parent for parent in parents if parent != node["target"]]
+            else:
+                parents.append(node["target"])
         edges[node_id] = parents
     return edges
 
@@ -96,6 +100,7 @@ def node_by_id(plan, node_id):
 def circular_run_checks(plan):
     """Notice literal later-owned paths; never infer a script's hidden inputs."""
     notices, nodes = [], _nodes(plan)
+    passed_edges = _edges(plan, passed_only=True)
     for check in _list(plan.get("integration_checks")):
         if not isinstance(check, dict) or check.get("type") != "cmd" or not isinstance(check.get("run"), str):
             continue
@@ -112,8 +117,14 @@ def circular_run_checks(plan):
             candidate = pathlib.PurePosixPath(str(check.get("cwd", "."))) / value
             if not candidate.is_absolute() and ".." not in candidate.parts:
                 paths.add(str(candidate))
+        producers = [nid for nid in _list(check.get("requires_passed")) if isinstance(nid, str)]
         for gate_node in nodes:
-            if gate_node.get("kind") != "work" or gate_node.get("effective_lane", gate_node.get("lane", 0)) not in (2, 3):
+            gate_id = gate_node.get("id")
+            if gate_node.get("kind") != "work":
+                continue
+            if gate_node.get("effective_lane", gate_node.get("lane", 0)) not in (2, 3) and gate_id not in producers:
+                continue
+            if any(producer != gate_id and _reaches(passed_edges, producer, gate_id) for producer in producers):
                 continue
             for later in nodes:
                 if not depends(plan, later.get("id"), gate_node.get("id")):
@@ -216,17 +227,18 @@ def validate(plan):
             else:
                 text(value, key, 300, node)
 
-    def checks(values, node):
+    def checks(values, node, integration_count=0):
         seen = set()
         singleton_types = set()
-        for check in _list(values):
+        for index, check in enumerate(_list(values)):
             if not isinstance(check, dict):
                 problem("V1", node, "check must be an object")
                 continue
             kind = check.get("type")
             type_fields = {"cmd": "run cwd timeout_s from_constraint added", "scope": "", "cites": "",
                            "host": "tool expect", "human": "prompt context"}
-            known(check, "id type title " + (type_fields.get(kind, "") if isinstance(kind,str) else ""), node)
+            optional = " requires_passed" if kind == "cmd" and index < integration_count else ""
+            known(check, "id type title " + (type_fields.get(kind, "") if isinstance(kind, str) else "") + optional, node)
             check_id = check.get("id")
             if not isinstance(check_id, str) or not _ID.fullmatch(check_id):
                 problem("V2", node, "malformed check id: %r" % check_id)
@@ -294,8 +306,9 @@ def validate(plan):
             field(requirement, "text", str, None)
     if any(not isinstance(tag, str) for tag in _list(plan.get("tags"))):
         problem("V1", None, "tags must contain strings")
-    run_checks = _list(plan.get("integration_checks")) + _list(plan.get("promoted_checks"))
-    checks(run_checks, None)
+    integration = _list(plan.get("integration_checks"))
+    run_checks = integration + _list(plan.get("promoted_checks"))
+    checks(run_checks, None, integration_count=len(integration))
     for field_name in ("requirements", "constraints"):
         ids = set()
         for item in _list(plan.get(field_name)):
@@ -325,8 +338,24 @@ def validate(plan):
         if isinstance(check, dict) and check.get("type") != "cmd":
             problem("V5", None, "integration checks must be cmd checks")
 
-    seen = set()
     indexed = _index(plan)
+    for check in integration:
+        if not isinstance(check, dict) or check.get("type") != "cmd" or "requires_passed" not in check:
+            continue
+        producers = check["requires_passed"]
+        label = "integration check %r requires_passed" % check.get("id")
+        if not isinstance(producers, list) or not producers or any(not isinstance(nid, str) for nid in producers):
+            problem("V1", None, label + " must be a non-empty list of node ids")
+            continue
+        if len(set(producers)) != len(producers):
+            problem("V2", None, label + " contains duplicate node ids")
+        for nid in producers:
+            if nid == check.get("id"):
+                problem("V4", None, label + " cannot refer to its own check id: " + nid)
+            elif nid not in indexed:
+                problem("V3", None, label + " references unknown node: " + nid)
+
+    seen = set()
     for node in _list(plan.get("nodes")):
         if not isinstance(node, dict):
             problem("V1", None, "node must be an object")
