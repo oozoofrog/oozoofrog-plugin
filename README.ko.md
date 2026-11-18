@@ -16,7 +16,7 @@
 
 설치 후 호출 예: `$korean-product-writing로 이 화면의 제목·설명·버튼을 사실과 조건을 유지해 다듬어 주세요.` 실제 설치나 자동 호출을 시험했다는 뜻은 아닙니다.
 
-`auto-flow`와 `guided-execution`은 폐기했습니다. 여러 단계의 계획·분담·검증 작업에는 [graph-flow](#graph-flow)를 사용하세요. 기존 설치본은 호스트의 Plugin 제거 기능으로 정리하며, Codex에서는 설정과 캐시를 함께 정리합니다. Marketplace 항목 삭제만으로 설치본이 제거되지는 않습니다. [제거 안내](docs/plugin-installation.md#retired-plugins)를 참고하세요.
+`auto-flow`와 `guided-execution`은 폐기했습니다. 여러 단계의 계획·분담·검증 작업에는 [graph-flow](https://github.com/oozoofrog/graph-flow)를 사용하세요. 기존 설치본은 호스트의 Plugin 제거 기능으로 정리하며, Codex에서는 설정과 캐시를 함께 정리합니다. Marketplace 항목 삭제만으로 설치본이 제거되지는 않습니다. [제거 안내](docs/plugin-installation.md#retired-plugins)를 참고하세요.
 
 ## Jev Client
 
@@ -58,16 +58,6 @@ skills-only Plugin `0.3.0`을 제공합니다. Plugin에 모델·런타임·생�
 ## 모델 선택
 
 [모델 선택](plugins/model-advisor/skills/model-advisor/SKILL.md) (`model-advisor` 0.1.1)은 작업에 맞는 Claude 모델(Haiku 5.5, Sonnet 5.5, Opus 5.5, Fable 5.2)과 effort를 추천합니다. 넘겨 달라고 하면 이 대화 없이도 시작할 수 있는 지시문을 써서, 그 모델·effort로 서브에이전트를 부르거나 `claude --bg`로 백그라운드 Claude Code 세션을 띄웁니다. 띄운 뒤 `claude logs`에서 실제 모델을 확인하고 `claude attach <id>`로 여는 방법을 알려 줍니다. 현재 세션의 모델은 바꾸지 못하므로 `/compact`, `/model`, `/effort` 순서를 안내합니다. 백그라운드 세션은 `claude` CLI와 신뢰 승인을 마친 프로젝트 폴더가 필요합니다. 모델별 기준과 가격은 2026-11-09 claude.dev 글을 따릅니다. Codex에서는 스킬만 쓸 수 있습니다. [설치](docs/plugin-installation.md#model-advisor)를 확인하세요.
-
-## Graph Flow
-
-| Plugin | 용도 |
-| --- | --- |
-| `graph-flow@oozoofrog-plugin` | [여러 단계의 작업을 그래프로 계획·분담·검증하고 진행 상황 확인](plugins/graph-flow/skills/graph-flow/SKILL.md) |
-
-`graph-flow` 0.2.1은 작업을 노드로 나누고 의존 관계, 노드별 세션 배정, 실패할 수 있는 검사와 시도 기록을 남깁니다. 계획·분담·검증·진행 추적, 사람의 판단이나 대시보드가 필요한 여러 단계의 작업에 사용합니다. 단순 수정과 조율이 필요 없는 일반 질문은 대상에서 제외합니다. Codex에서는 `$graph-flow`, Claude Code에서는 `/graph-flow:graph-flow`로 호출합니다. 예: “이 작업을 검사 가능한 노드로 나누고 세션별로 배정해 진행 상황을 기록해 주세요.” Python 3과 Git이 필요하며, 두 Plugin에 MCP 설정을 포함합니다. Workflow 실행에는 호스트의 Workflow 도구가 추가로 필요합니다.
-
-대시보드를 보려면 세션에 “대시보드 열어 줘”라고 하면 됩니다. 에이전트가 `gf open`을 실행해 브라우저를 열고, 대시보드가 꺼져 있으면 함께 띄웁니다. 다 보면 닫아 달라고 하면 됩니다. 터미널에서 직접 `graph-flow open`이나 `graph-flow serve`를 실행해도 됩니다. 스킬을 처음 쓸 때 에이전트가 `gf setup` 실행을 제안합니다. 이 명령은 `~/.local/bin`에 `graph-flow`와 `gf` 두 명령을 만듭니다. oh-my-zsh처럼 `gf`가 이미 `git fetch`의 별칭인 셸에서는 `graph-flow`를 쓰세요. 두 명령은 이후에는 설치된 버전 가운데 가장 새 것을 실행합니다. `gf setup --remove`로 지웁니다. 설치하지 않았다면 `gf`는 `python3 <skill-dir>/scripts/gf`의 줄임말이며, `<skill-dir>`에는 설치된 스킬 경로를 넣습니다. 에이전트는 대시보드를 열어 주기만 하고 답하지는 않습니다. 결정 요청을 기록하고 사용자의 답변을 기다립니다. [설치](docs/plugin-installation.md#graph-flow)와 [대시보드 규약](plugins/graph-flow/skills/graph-flow/references/dashboard.md)을 참고하세요.
 
 ## 설치
 

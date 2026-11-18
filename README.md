@@ -32,7 +32,7 @@ These commands fetch the published remote marketplace, not unpublished changes i
 
 A local package, remote publication, installation and enablement, skill exposure in a new chat, and verified behavior are separate states. Check each state relevant to your task; repository tests alone do not establish installation or runtime behavior.
 
-`auto-flow` and `guided-execution` are retired; use [graph-flow](#graph-flow) for multi-step planning, delegation, and verified execution. Remove existing installations through your host's Plugin removal feature; in Codex, this also clears settings and caches. Removing marketplace entries does not uninstall existing copies; see [retirement guidance](docs/plugin-installation.md#retired-plugins).
+`auto-flow` and `guided-execution` are retired; use [graph-flow](https://github.com/oozoofrog/graph-flow) for multi-step planning, delegation, and verified execution. Remove existing installations through your host's Plugin removal feature; in Codex, this also clears settings and caches. Removing marketplace entries does not uninstall existing copies; see [retirement guidance](docs/plugin-installation.md#retired-plugins).
 
 ## Choose a Plugin
 
@@ -52,7 +52,6 @@ Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed 
 | `openai-decisions@oozoofrog-plugin` | [Call the OpenAI Decisions API](plugins/openai-decisions/skills/openai-decisions/SKILL.md) for text, JSON, image classification, probabilities, and rubric scores; see [scope and prerequisites](#openai-decisions). |
 | `handoff@oozoofrog-plugin` | [Keep work state in a project-local handoff document](plugins/handoff/skills/handoff/SKILL.md) so a new Claude Code session continues after `/clear` without relying on compaction; see [Handoff](#handoff). |
 | `model-advisor@oozoofrog-plugin` | [Recommend a Claude model and effort for a task](plugins/model-advisor/skills/model-advisor/SKILL.md), and on request hand the task to a subagent or background Claude Code session running that model; see [Model Advisor](#model-advisor). |
-| `graph-flow@oozoofrog-plugin` | [Plan, delegate, verify, and track multi-step work as a graph](plugins/graph-flow/skills/graph-flow/SKILL.md), with per-node checks, human decisions, and a progress dashboard; see [Graph Flow](#graph-flow). |
 
 ## Examples
 
@@ -64,7 +63,6 @@ Use $local-ai-studio with my existing local Whisper model to transcribe this rec
 Use $interface-first-design to review this product screen's actions, states, and recovery paths.
 Use $c4fy to map this repository's architecture with source evidence, including code structure for the components that need it.
 Use $high-council-implementation to prepare an implementation prompt with the best available high-tier model for my review and choice of implementation model.
-Use $graph-flow to plan this project as bounded nodes, record unsettled human decisions, and implement and verify the requested feature.
 ```
 
 These are requests, not examples of verified results.
@@ -80,14 +78,6 @@ The Plugin writes `_context/handoff/<branch>.md` inside the project (ignored by 
 작업 설명을 받아 어떤 Claude 모델(Haiku 5.5, Sonnet 5.5, Opus 5.5, Fable 5.2)과 effort가 어울리는지 판단해 추천하고, 원하면 그 모델·effort로 띄운 서브에이전트나 백그라운드 Claude Code 세션에 지시를 넘긴다. "이 작업은 어떤 모델이 좋을까", "Opus로 충분해?", "Fable이 필요한가", "effort 올릴까?", "Sonnet 세션으로 넘겨줘", "추천 모델로 돌려줘", "이건 Haiku한테 맡겨", 큰 작업을 시작하기 전 모델·effort 선택 상담, 작업 중 결과가 부족해 모델이나 effort를 올릴지 판단할 때, 서브에이전트에 쓸 모델을 고를 때 사용한다. API 파라미터·마이그레이션 질문은 다루지 않는다. 현재 세션의 모델은 바꾸지 못하므로 그 경우 `/model`·`/effort`를 안내한다.
 
 The skill picks a starting model and effort from the task type, applies upgrade and downgrade signals, and states its assumptions. When asked to hand off, it writes a self-contained brief and either calls a subagent with that `model` and `effort`, or starts `claude --bg --model <alias> --effort <level>` in the project folder and checks the model shown by `claude logs`. It cannot change the current session's model; it points to `/compact`, `/model` and `/effort` instead. Background handoff needs the `claude` CLI and a trusted project folder. Model guidance, prices and benchmark figures follow the claude.dev post of 2026-11-09. In Codex only the skill is available. See [installation](docs/plugin-installation.md#model-advisor).
-
-## Graph Flow
-
-Use when a user asks to plan, split, delegate, verify, or track multi-step work with checks that can fail, per-node sub-session assignment, human decision points, or a progress dashboard, or explicitly invokes graph-flow. Exclude simple edits and ordinary questions that need no coordination.
-
-`graph-flow` 0.2.1 records dependencies, per-node assignments, checks, attempts, and human decisions so work can resume in another session. Invoke `$graph-flow` in Codex or `/graph-flow:graph-flow` in Claude Code, for example: “Plan this work as a graph with checks, and track progress.” Python 3 and Git are required. Both Plugins include MCP configuration; Workflow execution additionally needs the host's Workflow tool.
-
-To see the dashboard, ask the session to open it: the agent runs `gf open`, which opens your browser and starts the dashboard if it is not running. Ask it to close the dashboard when you are done. You can also run `graph-flow open` or `graph-flow serve` in your own terminal. The first time you use the skill, the agent offers to run `gf setup`, which writes the commands `graph-flow` and `gf` to `~/.local/bin`. Use `graph-flow` where the shell already gives `gf` another meaning (oh-my-zsh aliases it to `git fetch`). Both follow the newest installed version, and `gf setup --remove` deletes it. Without it, `gf` means `python3 <skill-dir>/scripts/gf`, where `<skill-dir>` is the installed skill directory. The agent opens the dashboard but does not answer on it: it records decision requests and waits for your answer. See [installation](docs/plugin-installation.md#graph-flow) and the [dashboard contract](plugins/graph-flow/skills/graph-flow/references/dashboard.md).
 
 ## Local AI Studio
 
