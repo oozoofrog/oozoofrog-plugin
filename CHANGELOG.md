@@ -2,6 +2,55 @@
 
 ## Unreleased
 
+- Retire `auto-flow` and `guided-execution`: remove both Plugins, marketplace entries, dedicated distribution checks, the guided-execution CI step, and their usage/validation documentation. Use `graph-flow` for multi-step planning, delegation, and verified execution. Existing installations require removal through the host; user workspaces and handoff data are preserved without migration.
+
+- `auto-flow` 0.3.0: add a `security` tier for defensive reviews, threat models and attack-scenario tests of the user's own systems (Fable 5.2/high execution, Opus/high verification, at most 2 units, gpt-6-astra/high cross review in T3 Code). Security units work from code and synthetic data only and report `blocked: "safeguard"` instead of working around Fable's safeguards; verification can return kind `safeguard`, which is never escalated automatically. The Workflow returns `safeguardBlocked`, and the leader may hand only those units to a Claude Mythos 5.2 background session (`claude --bg --model claude-mythos-5-2`) after asking the user each time, stating that Mythos requires an Anthropic-verified organization and 30-day data retention; a rejected model ID is reported, never substituted.
+
+- `jev-client` 0.2.0 and `openai-decisions` 0.3.0 share one calling contract for use from other skills, scripts and hooks. Exit codes: `2` bad arguments or request, `3` not ready (no key or CLI), `4` API failure or timeout that may have been billed; codes 2 and 3 send nothing. `status` prints `ready` and `contract` and exits `3` when not ready (`openai-decisions status` previously exited `1`). `jev-client ask --summary` and `openai-decisions create --summary` print the same summary shape (`yesno`, `choice`, `score`, plus `refusal`/`unknown`); the default output is still the raw response. `jev-client ask` now requires `model` before sending, rejects a non-numeric `--timeout` instead of using 60, and accepts `--long-context`. `openai-decisions` accepts list-form question `instructions` for per-question images. `tools/jev-client/Scripts/install.sh` also links `openai-decisions` into `~/.local/bin`.
+
+- Agent-using skills work in English except for the answer to the user (`auto-flow` 0.2.0, `guided-execution` 0.6.1, `model-advisor` 0.1.1, `high-council-implementation` 0.1.0). The session that received the request is the leader; it translates the user's instruction into English before passing it on, briefs every sub-session in English, and answers the user in the user's language. `auto-flow`'s Workflow prompts, phase descriptions, logs, notes and its `flow-planner` and `flow-verifier` agents are now English, and each sub-session is told to work and reply in English, report only to the leader, not ask the user, and start no further sub-sessions.
+
+- Rename `astra-implementation-prompt` to `high-council-implementation` 0.1.0. The prompt author and optional council reviewers are chosen from the high-tier models the host's current tool schemas actually accept instead of a fixed Astra author and Sol or Terra implementer; an unavailable model is reported, never substituted. The old Plugin name is no longer distributed; uninstall it and install `high-council-implementation@oozoofrog-plugin`.
+
+- Add `jev-client` 0.1.0: a Swift command (`tools/jev-client`, installed by `Scripts/install.sh`) that lists TypeSafe models, sends System One requests, and saves TypeSafe or OpenAI API keys in the login Keychain from a hidden prompt, the pasteboard, stdin or a secret file. Keys are written through `security -i` stdin, kept out of argv and redacted from API errors; requests are not retried. The OpenAI key goes to `local.openai-decisions`/`openai`, which `openai-decisions` reads first.
+
+- Remove `jev-native`: the Plugin, both marketplace entries, the pinned `tools/jev-native` source snapshot and its provenance note. Run records under `~/Library/Application Support/JEV Native` are user data and are not touched.
+
+- `openai-decisions` 0.2.0: bundle `scripts/openai-decisions`, a dependency-free Python 3 command over the official OpenAI CLI's `openai decisions create` (1.51.2 or later), used the same way from Codex and Claude Code. `status` reports the CLI version and the available credential source without an API call; `create` converts the `state`/`image_urls`/`timeout_seconds` request (or passes a native one through), passes `prompt_cache_key`, `prompt_cache_options` and `safety_identifier` through, validates questions before the call, reads the key from `OPENAI_API_KEY` or Keychain into the child environment only, refuses a custom `OPENAI_BASE_URL` before reading Keychain, and never retries a timeout. The skill no longer refers to the removed `openai_decide` MCP/Pi tool.
+
+- Add `auto-flow` 0.1.0: task-tiered Claude model/effort planning, execution, integrated verification and one escalation, plus T3 Code cross-provider review and execution sharing using local usage data. Resolve scripts from the loaded skill directory; try namespaced plugin agents, bare names, then the default agent while logging fallbacks. Codex receives the skill only; the Workflow script and two agents require Claude Code, and cross-provider steps require T3 Code. Add both marketplace entries, bilingual catalog documentation and distribution/fallback tests.
+
+- Make `plugins/<plugin>/skills/<skill>/` the only source of every skill. Remove the 12 top-level standalone copies and `scripts/sync_skill_mirrors.py`; distribution tests, CI and documentation links now read the Plugin copy and fail if a top-level copy returns. Standalone installation uses the same Plugin skill folder.
+
+- `handoff`: the Stop hook no longer asks for a handoff in unattended T3 Code delegated threads, where no one can `/clear` and the request only adds a costly turn on a large context.
+
+- Add `model-advisor` 0.1.0: recommend a Claude model and effort for a task, and on request hand it to a subagent (`model`, `effort`) or a background Claude Code session (`claude --bg --model --effort`) with a self-contained brief, then confirm the running model from `claude logs`. Prices are written without dollar signs so skill arguments are not substituted into them. Codex receives the skill only.
+
+- Add `handoff` 0.1.0: project-local handoff documents in `_context/handoff/<branch>.md` with Claude Code SessionStart, Stop, PreCompact and PostCompact hooks. Stale handoffs (age, commit distance, diverged history, pre-compaction) are reduced to a pointer; finished and orphaned handoffs are archived and old archives expire. Codex receives the skill only.
+
+- Add a Claude Code marketplace (`.claude-plugin/marketplace.json`) and per-Plugin Claude manifests for all 11 Plugins, using the same `<plugin>@oozoofrog-plugin` selectors. `swift-intelligence` and `winpilot` declare Claude-specific MCP settings rooted at `${CLAUDE_PLUGIN_ROOT}`; Codex manifests and `.mcp.json` files are unchanged.
+
+- Remove `team-coordination`, `audit`, `outcome-brief`, `verify-work`, `choice-interview`, `obsidian-projects`, and `korean-travel-guidebook` from standalone sources, Plugin mirrors, and the marketplace. Retire the bundled team harness, its CI and installation guidance. Preserve historical records and user data; installed copies require separate removal.
+
+- Move Mac desktop and iOS Simulator automation into the independent [Mac Pilot repository](https://github.com/oozoofrog/mac-pilot), removing their source packages, duplicate mirrors and catalog entries here while preserving user data at the new project.
+
+- Add `astra-implementation-prompt`: draft an implementation prompt with Astra Max, review it, and optionally start an approved Sol Ultra or Terra Ultra implementation chat.
+
+- Add an independent generated Xcode project and real Run Script verification for normal/incremental builds, configuration rechecks, lint/missing/non-executable tool failures and recovery, with Script Sandbox enabled and object reuse evidence.
+
+- Add a pinned SwiftPM/SwiftLint 0.65.1 example and reproducible real-build verification for source/configuration incremental rechecks, non-executable/missing tool failures, recovery and executable output. Preserve initial verifier failures and distinguish this Mac result from standalone Xcode/CI/device execution.
+
+
+- Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
+- Remove the unused team profile `desired_overlay` helper from all distribution copies.
+
+
+## Graph Flow [0.3.0] — 2026-11-18
+
+- Graph Flow: integration checks with declared producers run at each listed producer's own work gate at any effective lane once the other producers pass. Other work gates run them at effective lane 2 or 3 once all listed producers pass. The final gate always runs all integration and promoted checks. An undeclared integration check failure after passing node command and scope checks adds an advisory to check for a missing prerequisite. The dashboard displays skipped checks and conformance reports skip counts. CLI trace is limited to leaders and humans, and MCP trace is exposed only to leaders.
+
+- Graph Flow: document the two design sources and add a maintainer checklist for orchestration changes.
+
 - Graph Flow uses `gpt-6.2-sol` for scoped and daily Codex work and `gpt-6.2-astra` for large and security work. The OpenAI escalation ladder uses the same models.
 
 - Graph Flow: keep the selected card's full opening explanation visible in the sticky desktop panel below the stacked plan question and choices.
@@ -55,49 +104,7 @@
 
 - `graph-flow` 0.1.1: add `gf open`, which opens the dashboard in the person's default browser and starts a detached `gf serve` when none is running, and `gf open --stop`, which stops it. Neither prints the address or the token, so an agent session may run them when the person asks to see or close the dashboard. Answering stays with the person: an agent session still never runs `gf serve`, reads `server.json` or `human.key`, sends requests to the dashboard, or operates its page. Add `gf setup`, which writes a `gf` command to `~/.local/bin` (or `--bin-dir`) that runs the newest installed version, refuses to replace a file it did not write, and reports the `export` line when the directory is not on PATH; `gf setup --remove` deletes it. The skill has the leader offer this once when `gf` is not on PATH and run it only after the person agrees. The dashboard now moves: a walking frog, glow and blinking pip on a running card, dashes flowing along open routes into it, a one-time pop when a card starts or finishes, a one-time shake when it is returned, and a pop and waving frog at completion. Motion repeats what text and colour already say and is off under `prefers-reduced-motion`. The decision view shows only recorded sections instead of repeating "Not recorded", says why sending is unavailable, and labels the way back as leaving unanswered; the history view names returned attempts as checks that did not pass. Agent messages and the dashboard now share references: the page shows each decision id with who asked and when, and each node id with its model and session; a find box takes either; `gf open --decision <id>` and `gf open --node <id>` open the browser on that item, and `gf decide ask` returns the command as `show`. The leader is told to quote the question, name the node by title and open the decision instead of citing an id alone.
 
-- Retire `auto-flow` and `guided-execution`: remove both Plugins, marketplace entries, dedicated distribution checks, the guided-execution CI step, and their usage/validation documentation. Use `graph-flow` for multi-step planning, delegation, and verified execution. Existing installations require removal through the host; user workspaces and handoff data are preserved without migration.
-
 - Add `graph-flow` 0.1.0 to both repository marketplaces using its existing Codex discovery metadata and MCP configuration alongside the existing Plugins. Document graph-based planning, per-node delegation and checks, human decisions, invocation, and the user-run `gf serve` dashboard. Add distribution contracts and isolated Python graph-flow tests to CI.
-
-- `auto-flow` 0.3.0: add a `security` tier for defensive reviews, threat models and attack-scenario tests of the user's own systems (Fable 5.2/high execution, Opus/high verification, at most 2 units, gpt-6-astra/high cross review in T3 Code). Security units work from code and synthetic data only and report `blocked: "safeguard"` instead of working around Fable's safeguards; verification can return kind `safeguard`, which is never escalated automatically. The Workflow returns `safeguardBlocked`, and the leader may hand only those units to a Claude Mythos 5.2 background session (`claude --bg --model claude-mythos-5-2`) after asking the user each time, stating that Mythos requires an Anthropic-verified organization and 30-day data retention; a rejected model ID is reported, never substituted.
-
-- `jev-client` 0.2.0 and `openai-decisions` 0.3.0 share one calling contract for use from other skills, scripts and hooks. Exit codes: `2` bad arguments or request, `3` not ready (no key or CLI), `4` API failure or timeout that may have been billed; codes 2 and 3 send nothing. `status` prints `ready` and `contract` and exits `3` when not ready (`openai-decisions status` previously exited `1`). `jev-client ask --summary` and `openai-decisions create --summary` print the same summary shape (`yesno`, `choice`, `score`, plus `refusal`/`unknown`); the default output is still the raw response. `jev-client ask` now requires `model` before sending, rejects a non-numeric `--timeout` instead of using 60, and accepts `--long-context`. `openai-decisions` accepts list-form question `instructions` for per-question images. `tools/jev-client/Scripts/install.sh` also links `openai-decisions` into `~/.local/bin`.
-
-- Agent-using skills work in English except for the answer to the user (`auto-flow` 0.2.0, `guided-execution` 0.6.1, `model-advisor` 0.1.1, `high-council-implementation` 0.1.0). The session that received the request is the leader; it translates the user's instruction into English before passing it on, briefs every sub-session in English, and answers the user in the user's language. `auto-flow`'s Workflow prompts, phase descriptions, logs, notes and its `flow-planner` and `flow-verifier` agents are now English, and each sub-session is told to work and reply in English, report only to the leader, not ask the user, and start no further sub-sessions.
-
-- Rename `astra-implementation-prompt` to `high-council-implementation` 0.1.0. The prompt author and optional council reviewers are chosen from the high-tier models the host's current tool schemas actually accept instead of a fixed Astra author and Sol or Terra implementer; an unavailable model is reported, never substituted. The old Plugin name is no longer distributed; uninstall it and install `high-council-implementation@oozoofrog-plugin`.
-
-- Add `jev-client` 0.1.0: a Swift command (`tools/jev-client`, installed by `Scripts/install.sh`) that lists TypeSafe models, sends System One requests, and saves TypeSafe or OpenAI API keys in the login Keychain from a hidden prompt, the pasteboard, stdin or a secret file. Keys are written through `security -i` stdin, kept out of argv and redacted from API errors; requests are not retried. The OpenAI key goes to `local.openai-decisions`/`openai`, which `openai-decisions` reads first.
-
-- Remove `jev-native`: the Plugin, both marketplace entries, the pinned `tools/jev-native` source snapshot and its provenance note. Run records under `~/Library/Application Support/JEV Native` are user data and are not touched.
-
-- `openai-decisions` 0.2.0: bundle `scripts/openai-decisions`, a dependency-free Python 3 command over the official OpenAI CLI's `openai decisions create` (1.51.2 or later), used the same way from Codex and Claude Code. `status` reports the CLI version and the available credential source without an API call; `create` converts the `state`/`image_urls`/`timeout_seconds` request (or passes a native one through), passes `prompt_cache_key`, `prompt_cache_options` and `safety_identifier` through, validates questions before the call, reads the key from `OPENAI_API_KEY` or Keychain into the child environment only, refuses a custom `OPENAI_BASE_URL` before reading Keychain, and never retries a timeout. The skill no longer refers to the removed `openai_decide` MCP/Pi tool.
-
-- Add `auto-flow` 0.1.0: task-tiered Claude model/effort planning, execution, integrated verification and one escalation, plus T3 Code cross-provider review and execution sharing using local usage data. Resolve scripts from the loaded skill directory; try namespaced plugin agents, bare names, then the default agent while logging fallbacks. Codex receives the skill only; the Workflow script and two agents require Claude Code, and cross-provider steps require T3 Code. Add both marketplace entries, bilingual catalog documentation and distribution/fallback tests.
-
-- Make `plugins/<plugin>/skills/<skill>/` the only source of every skill. Remove the 12 top-level standalone copies and `scripts/sync_skill_mirrors.py`; distribution tests, CI and documentation links now read the Plugin copy and fail if a top-level copy returns. Standalone installation uses the same Plugin skill folder.
-
-- `handoff`: the Stop hook no longer asks for a handoff in unattended T3 Code delegated threads, where no one can `/clear` and the request only adds a costly turn on a large context.
-
-- Add `model-advisor` 0.1.0: recommend a Claude model and effort for a task, and on request hand it to a subagent (`model`, `effort`) or a background Claude Code session (`claude --bg --model --effort`) with a self-contained brief, then confirm the running model from `claude logs`. Prices are written without dollar signs so skill arguments are not substituted into them. Codex receives the skill only.
-
-- Add `handoff` 0.1.0: project-local handoff documents in `_context/handoff/<branch>.md` with Claude Code SessionStart, Stop, PreCompact and PostCompact hooks. Stale handoffs (age, commit distance, diverged history, pre-compaction) are reduced to a pointer; finished and orphaned handoffs are archived and old archives expire. Codex receives the skill only.
-
-- Add a Claude Code marketplace (`.claude-plugin/marketplace.json`) and per-Plugin Claude manifests for all 11 Plugins, using the same `<plugin>@oozoofrog-plugin` selectors. `swift-intelligence` and `winpilot` declare Claude-specific MCP settings rooted at `${CLAUDE_PLUGIN_ROOT}`; Codex manifests and `.mcp.json` files are unchanged.
-
-- Remove `team-coordination`, `audit`, `outcome-brief`, `verify-work`, `choice-interview`, `obsidian-projects`, and `korean-travel-guidebook` from standalone sources, Plugin mirrors, and the marketplace. Retire the bundled team harness, its CI and installation guidance. Preserve historical records and user data; installed copies require separate removal.
-
-- Move Mac desktop and iOS Simulator automation into the independent [Mac Pilot repository](https://github.com/oozoofrog/mac-pilot), removing their source packages, duplicate mirrors and catalog entries here while preserving user data at the new project.
-
-- Add `astra-implementation-prompt`: draft an implementation prompt with Astra Max, review it, and optionally start an approved Sol Ultra or Terra Ultra implementation chat.
-
-- Add an independent generated Xcode project and real Run Script verification for normal/incremental builds, configuration rechecks, lint/missing/non-executable tool failures and recovery, with Script Sandbox enabled and object reuse evidence.
-
-- Add a pinned SwiftPM/SwiftLint 0.65.1 example and reproducible real-build verification for source/configuration incremental rechecks, non-executable/missing tool failures, recovery and executable output. Preserve initial verifier failures and distinguish this Mac result from standalone Xcode/CI/device execution.
-
-
-- Generate the auto-sync launchd plist with Python `plistlib` while preserving launch arguments and settings.
-- Remove the unused team profile `desired_overlay` helper from all distribution copies.
 
 ## Guided Execution [0.6.0] — 2026-11-11
 
