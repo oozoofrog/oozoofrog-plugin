@@ -65,6 +65,7 @@ IDs come from `list`; categories and descriptions come from each `task.json`.
 
 ## Controlled comparisons
 
+The comparison method follows [Diane Sarkis’s end-to-end eval guidance](https://claude.com/resources/articles/building-agents-when-to-fold-subagents-into-your-main-agent-loop).
 For each comparison below, run every task at least twice per arm, starting each
 run with a fresh `setup` destination and separate graph-flow run records.
 Alternate arm order. Hold prompt, starting files, model/settings, checks, review

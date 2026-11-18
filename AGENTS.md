@@ -5,6 +5,7 @@
 - Each skill has one source: `plugins/<plugin>/skills/<skill>/`. Do not add a top-level copy of a skill package.
 - Keep trigger language aligned across `SKILL.md`, the Plugin manifests, UI metadata, and `README.md`.
 - Prefer `references/` for long guidance and keep top-level instructions lean.
+- Before changing graph-flow and again before finishing, read the [graph-flow design sources](plugins/graph-flow/docs/design-sources.md) and apply the change checklist.
 - Skills intended for marketplace delivery need a Plugin manifest and marketplace entry; placing a skill in `.agents/skills/` only makes it repository-scoped. Verify the published catalog and installed skill path before reporting marketplace availability.
 
 ## Output Contract
