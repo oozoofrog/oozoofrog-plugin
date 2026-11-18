@@ -14,7 +14,7 @@
 
 ## Review Rules
 - Apply checks to the changed skill/package and affected distribution surfaces. Run relevant checks once; repeat only after related changes, failures, or new evidence.
-- When adding, renaming, or removing a Plugin, update the expected marketplace inventory in `scripts/tests/test_plugin_distribution.py` and run the repository distribution tests. Preserve unrelated in-progress entries and files.
+- When adding, renaming, or removing a Plugin, update the expected marketplace inventory in `scripts/tests/test_plugin_distribution.py` and run the repository distribution tests. When removing a Plugin, also remove its dedicated checks and update its installation guidance. Preserve unrelated in-progress entries and files.
 - Check trigger wording consistency between `SKILL.md`, both Plugin manifests, UI metadata, and `README.md`.
 - Check local links and path references for breakage, and user-visible additions against `CHANGELOG.md`.
 - If a rule was missing and caused rework, update the relevant context document instead of fixing code only.
