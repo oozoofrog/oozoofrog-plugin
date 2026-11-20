@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- `handoff` 0.1.1: republish the Stop hook change for unattended T3 Code delegated threads under a new version. It shipped as 0.1.0, so installations made before it did not update.
+
+- `evidence-first-engineering` 0.1.1: the report always uses the five headings, and a bug that does not reproduce leads to a request for the exact command, environment, full error output and original input. The earlier changes shipped as 0.1.0, so existing installations did not update.
+
 - Add `evidence-first-engineering` 0.1.0, a skills-only Plugin for an evidence-first senior engineering workflow: restate the goal, gather how and why context, reproduce bugs, fix root causes, verify by running the change instead of adding mechanical tests, add no comments, confirm irreversible actions, and report goal, changes, verification, basis and remaining work. Adapted from a user-supplied X post; project and user instructions take precedence.
 
 - `graph-flow` moved to [oozoofrog/graph-flow](https://github.com/oozoofrog/graph-flow). Version 0.2.1 was the last version distributed from this marketplace. Remove existing installations through your host, then install from the new marketplace using the [migration instructions](docs/plugin-installation.md#graph-flow-migration). User run data in project `.graph-flow/` folders is untouched.
