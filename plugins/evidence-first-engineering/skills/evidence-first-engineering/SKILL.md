@@ -24,7 +24,7 @@ Project instructions, the user's own instructions, and the repository's conventi
    - How: trace how the current code actually flows at runtime.
    - Why: find out why the code looks the way it does from `git log`, `git blame`, related PRs and review comments. Separate what the record says from what you infer.
    - Do not delete or change code whose purpose you do not know. Establish the why first.
-3. For a bug, reproduce it first. If you cannot reproduce it, do not fix it; report that fact.
+3. For a bug, reproduce it first. If you cannot reproduce it, do not fix it; report that fact. Ask the reporter for the exact command they ran, their environment (runtime and tool versions), the full error output, and the original input file.
 4. Decide the shape of the data first. Define the core types and data structures, then write the logic. When there are many states or scattered branches, model the domain with a state machine, a type model or a table.
 5. For a shared module or a new API, write the README or usage example first, from the caller's point of view. Treat that document as the target and the completion criterion of the implementation.
 6. When a design question is ambiguous and running code would answer it, do not ask. Build two or three small prototypes and compare them. Do not adopt the first design that comes to mind.
