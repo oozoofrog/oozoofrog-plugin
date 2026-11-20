@@ -129,6 +129,17 @@ codex plugin add interface-first-design@oozoofrog-plugin
 
 새 작업에서 `$interface-first-design` 또는 `$interface-first-design:interface-first-design`으로 호출합니다. [스킬](../plugins/interface-first-design/skills/interface-first-design/SKILL.md)과 [가상 예시](../plugins/interface-first-design/skills/interface-first-design/references/examples.md)를 참고하세요. 패키지 검사 통과, 원격 카탈로그 반영, 설치 성공, 새 세션 노출, 실제 제품 UI 동작 검증은 각각 확인해야 합니다.
 
+## Evidence-First Engineering
+
+`evidence-first-engineering` 0.1.0은 증거 우선 작업 방식을 담은 skills-only Plugin입니다. 별도 런타임·MCP·hooks·인증 정보를 포함하지 않습니다.
+
+```bash
+claude plugin install evidence-first-engineering@oozoofrog-plugin
+codex plugin add evidence-first-engineering@oozoofrog-plugin
+```
+
+새 대화에서 `$evidence-first-engineering` 또는 `$evidence-first-engineering:evidence-first-engineering`으로 호출합니다. 설치·활성화와 새 대화의 스킬 노출은 각각 확인해야 합니다.
+
 ## Refactor
 
 `refactor` 0.2.0은 동작 보존 리팩토링과 요청한 SwiftLint 빌드 통합을 수행하는 skills-only Plugin입니다. 통합 시 [빌드 통합 지침](../plugins/refactor/skills/refactor/references/swiftlint-build.md)에 따라 프로젝트 구조에 맞춰 빌드 파일을 수정하고 실제 실행을 검증합니다. 별도 런타임·MCP·hooks를 설치하지 않습니다. Swift 작업은 분석 전용 요청에서도 SwiftLint 진단을 반드시 사용합니다. 도구가 없으면 요청 권한과 저장소·환경 제약에 따라 설치합니다. 진단을 확보하지 못하면 원인과 필요한 조치를 보고하고 작업을 미완료로 남깁니다.

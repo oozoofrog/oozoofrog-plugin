@@ -52,6 +52,7 @@ Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed 
 | `openai-decisions@oozoofrog-plugin` | [Call the OpenAI Decisions API](plugins/openai-decisions/skills/openai-decisions/SKILL.md) for text, JSON, image classification, probabilities, and rubric scores; see [scope and prerequisites](#openai-decisions). |
 | `handoff@oozoofrog-plugin` | [Keep work state in a project-local handoff document](plugins/handoff/skills/handoff/SKILL.md) so a new Claude Code session continues after `/clear` without relying on compaction; see [Handoff](#handoff). |
 | `model-advisor@oozoofrog-plugin` | [Recommend a Claude model and effort for a task](plugins/model-advisor/skills/model-advisor/SKILL.md), and on request hand the task to a subagent or background Claude Code session running that model; see [Model Advisor](#model-advisor). |
+| `evidence-first-engineering@oozoofrog-plugin` | [Work as an evidence-first senior engineer](plugins/evidence-first-engineering/skills/evidence-first-engineering/SKILL.md): restate the goal, fix root causes, verify by running the change, and report evidence; see [Evidence-First Engineering](#evidence-first-engineering). |
 
 ## Examples
 
@@ -63,6 +64,7 @@ Use $local-ai-studio with my existing local Whisper model to transcribe this rec
 Use $interface-first-design to review this product screen's actions, states, and recovery paths.
 Use $c4fy to map this repository's architecture with source evidence, including code structure for the components that need it.
 Use $high-council-implementation to prepare an implementation prompt with the best available high-tier model for my review and choice of implementation model.
+Use $evidence-first-engineering to fix this bug at its root cause, verify it by running the app, and report the evidence.
 ```
 
 These are requests, not examples of verified results.
@@ -88,6 +90,10 @@ Local Whisper uses a separate `whisper-cli` workflow and can reuse verified weig
 ## High Council Implementation
 
 Use when the user asks a high-tier model or a council of them to prepare an implementation prompt for review and a later user-selected implementation session. Do not use for ordinary implementation requests. The author and any council reviewers are chosen from the high-tier models the host's current tool schemas actually accept, not from a fixed vendor; an unavailable model is reported, never substituted. Agents are briefed in English and the user's instruction is translated before it is passed on; the leader session answers the user in the user's language. The full prompt is presented for review; the user chooses the implementation model and whether to start a new session. Preparing a prompt alone does not authorize implementation or session creation. See the [workflow](plugins/high-council-implementation/skills/high-council-implementation/references/workflow.md).
+
+## Evidence-First Engineering
+
+Use when the user asks the agent to work as an evidence-first senior engineer on a coding task, such as proving every change by running it, restating the goal before editing, fixing the root cause instead of guarding the symptom, adding no comments or mechanical tests, and reporting goal, changes, evidence and open decisions. 실행 증거 우선, 근본 원인 수정, 주석·기계적 테스트 없는 작업 방식을 요청할 때 사용한다. Not for review-only, behavior-preserving refactoring, or quick questions. The skills-only Plugin contains instructions only. It prefers running the changed software over new tests, adds no comments, and asks before irreversible actions. Project and user instructions take precedence. See the [skill](plugins/evidence-first-engineering/skills/evidence-first-engineering/SKILL.md) and its [source](plugins/evidence-first-engineering/skills/evidence-first-engineering/references/sources.md).
 
 ## Interface First Design
 
