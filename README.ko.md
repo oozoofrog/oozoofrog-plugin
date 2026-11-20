@@ -59,6 +59,10 @@ skills-only Plugin `0.3.0`을 제공합니다. Plugin에 모델·런타임·생�
 
 [모델 선택](plugins/model-advisor/skills/model-advisor/SKILL.md) (`model-advisor` 0.1.1)은 작업에 맞는 Claude 모델(Haiku 5.5, Sonnet 5.5, Opus 5.5, Fable 5.2)과 effort를 추천합니다. 넘겨 달라고 하면 이 대화 없이도 시작할 수 있는 지시문을 써서, 그 모델·effort로 서브에이전트를 부르거나 `claude --bg`로 백그라운드 Claude Code 세션을 띄웁니다. 띄운 뒤 `claude logs`에서 실제 모델을 확인하고 `claude attach <id>`로 여는 방법을 알려 줍니다. 현재 세션의 모델은 바꾸지 못하므로 `/compact`, `/model`, `/effort` 순서를 안내합니다. 백그라운드 세션은 `claude` CLI와 신뢰 승인을 마친 프로젝트 폴더가 필요합니다. 모델별 기준과 가격은 2026-11-09 claude.dev 글을 따릅니다. Codex에서는 스킬만 쓸 수 있습니다. [설치](docs/plugin-installation.md#model-advisor)를 확인하세요.
 
+## 증거 우선 엔지니어링
+
+[증거 우선 엔지니어링](plugins/evidence-first-engineering/skills/evidence-first-engineering/SKILL.md) (`evidence-first-engineering` 0.1.0)은 코딩 작업을 시니어 엔지니어의 작업 방식으로 진행하게 합니다. 목표를 먼저 다시 설명하고, 증상 대신 근본 원인을 고치고, 변경을 직접 실행해 확인한 뒤, 목표·변경·검증·판단 근거·남은 일 순서로 보고합니다. 새 주석과 커버리지용 테스트는 추가하지 않고, 되돌릴 수 없는 작업은 먼저 확인받습니다. 프로젝트와 사용자 지침이 이 스킬보다 우선합니다. 리뷰만 하는 요청, 동작 보존 리팩토링, 짧은 질문에는 쓰지 않습니다. 지침만 담은 skills-only Plugin입니다. [설치](docs/plugin-installation.md#evidence-first-engineering)와 [출처](plugins/evidence-first-engineering/skills/evidence-first-engineering/references/sources.md)를 참고하세요.
+
 ## 설치
 
 필요한 Plugin만 선택해 설치합니다. 아래 명령은 해당 변경이 원격 marketplace에 반영된 뒤 사용할 수 있습니다.

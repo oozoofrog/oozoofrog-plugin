@@ -1,0 +1,25 @@
+{
+  "name": "evidence-first-engineering",
+  "version": "0.1.0",
+  "description": "Use when the user asks the agent to work as an evidence-first senior engineer on a coding task, such as proving every change by running it, restating the goal before editing, fixing the root cause instead of guarding the symptom, adding no comments or mechanical tests, and reporting goal, changes, evidence and open decisions. 실행 증거 우선, 근본 원인 수정, 주석·기계적 테스트 없는 작업 방식을 요청할 때 사용한다. Not for review-only, behavior-preserving refactoring, or quick questions.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "skills": "./skills/",
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
+  "interface": {
+    "displayName": "Evidence-First Engineering",
+    "shortDescription": "Prove changes by running them and fix root causes",
+    "longDescription": "Use when the user asks the agent to work as an evidence-first senior engineer on a coding task, such as proving every change by running it, restating the goal before editing, fixing the root cause instead of guarding the symptom, adding no comments or mechanical tests, and reporting goal, changes, evidence and open decisions. 실행 증거 우선, 근본 원인 수정, 주석·기계적 테스트 없는 작업 방식을 요청할 때 사용한다. Not for review-only, behavior-preserving refactoring, or quick questions.",
+    "developerName": "oozoofrog",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $evidence-first-engineering to fix this, verify it by running it, and report goal, changes and evidence."
+    ]
+  }
+}
