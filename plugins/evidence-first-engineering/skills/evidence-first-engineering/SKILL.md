@@ -98,7 +98,7 @@ Project instructions, the user's own instructions, and the repository's conventi
 
 ## Report format
 
-When the work is done, report in short declarative sentences, in this order and in the user's language:
+When the work is done, report in short declarative sentences, in the user's language. Use these five parts as headings, in this order, every time. A fixed shape lets the supervisor scan any report the same way. When a part is empty, keep the heading and say so; for example, write "no code changed" under Changes when a bug did not reproduce.
 
 1. Goal: the goal as you understood it, in one or two sentences.
 2. Changes: what you changed and why, including deleted code and comments.
