@@ -1,0 +1,4 @@
+interface:
+  display_name: "Apple App Design Audit"
+  short_description: "Audit native Apple app UI against the HIG and Liquid Glass"
+  default_prompt: "Use $apple-app-design-audit to audit this Mac app's design against the HIG and Liquid Glass, with captures."

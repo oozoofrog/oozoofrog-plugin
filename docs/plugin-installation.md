@@ -140,6 +140,17 @@ codex plugin add evidence-first-engineering@oozoofrog-plugin
 
 새 대화에서 `$evidence-first-engineering` 또는 `$evidence-first-engineering:evidence-first-engineering`으로 호출합니다. 설치·활성화와 새 대화의 스킬 노출은 각각 확인해야 합니다.
 
+## Apple App Design Audit
+
+`apple-app-design-audit` 0.1.0은 Apple 앱 디자인 점검 절차를 담은 skills-only Plugin입니다. 별도 런타임·MCP·hooks·인증 정보·Apple 문서 사본을 포함하지 않습니다. Apple 문서는 설치된 Xcode와 Xcode MCP에서 읽으므로 Xcode가 필요합니다.
+
+```bash
+claude plugin install apple-app-design-audit@oozoofrog-plugin
+codex plugin add apple-app-design-audit@oozoofrog-plugin
+```
+
+새 대화에서 `$apple-app-design-audit` 또는 `$apple-app-design-audit:apple-app-design-audit`으로 호출합니다. 설치·활성화와 새 대화의 스킬 노출은 각각 확인해야 합니다.
+
 ## Refactor
 
 `refactor` 0.2.0은 동작 보존 리팩토링과 요청한 SwiftLint 빌드 통합을 수행하는 skills-only Plugin입니다. 통합 시 [빌드 통합 지침](../plugins/refactor/skills/refactor/references/swiftlint-build.md)에 따라 프로젝트 구조에 맞춰 빌드 파일을 수정하고 실제 실행을 검증합니다. 별도 런타임·MCP·hooks를 설치하지 않습니다. Swift 작업은 분석 전용 요청에서도 SwiftLint 진단을 반드시 사용합니다. 도구가 없으면 요청 권한과 저장소·환경 제약에 따라 설치합니다. 진단을 확보하지 못하면 원인과 필요한 조치를 보고하고 작업을 미완료로 남깁니다.

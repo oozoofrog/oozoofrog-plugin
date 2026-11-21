@@ -53,6 +53,7 @@ Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed 
 | `handoff@oozoofrog-plugin` | [Keep work state in a project-local handoff document](plugins/handoff/skills/handoff/SKILL.md) so a new Claude Code session continues after `/clear` without relying on compaction; see [Handoff](#handoff). |
 | `model-advisor@oozoofrog-plugin` | [Recommend a Claude model and effort for a task](plugins/model-advisor/skills/model-advisor/SKILL.md), and on request hand the task to a subagent or background Claude Code session running that model; see [Model Advisor](#model-advisor). |
 | `evidence-first-engineering@oozoofrog-plugin` | [Work as an evidence-first senior engineer](plugins/evidence-first-engineering/skills/evidence-first-engineering/SKILL.md): restate the goal, fix root causes, verify by running the change, and report evidence; see [Evidence-First Engineering](#evidence-first-engineering). |
+| `apple-app-design-audit@oozoofrog-plugin` | [Audit and improve a native Apple app's design](plugins/apple-app-design-audit/skills/apple-app-design-audit/SKILL.md) against the HIG and Liquid Glass by running the app; see [Apple App Design Audit](#apple-app-design-audit). |
 
 ## Examples
 
@@ -65,6 +66,7 @@ Use $interface-first-design to review this product screen's actions, states, and
 Use $c4fy to map this repository's architecture with source evidence, including code structure for the components that need it.
 Use $high-council-implementation to prepare an implementation prompt with the best available high-tier model for my review and choice of implementation model.
 Use $evidence-first-engineering to fix this bug at its root cause, verify it by running the app, and report the evidence.
+Use $apple-app-design-audit to audit this Mac app's design against the HIG and Liquid Glass, with captures.
 ```
 
 These are requests, not examples of verified results.
@@ -94,6 +96,10 @@ Use when the user asks a high-tier model or a council of them to prepare an impl
 ## Evidence-First Engineering
 
 Use when the user asks the agent to work as an evidence-first senior engineer on a coding task, such as proving every change by running it, restating the goal before editing, fixing the root cause instead of guarding the symptom, adding no comments or mechanical tests, and reporting goal, changes, evidence and open decisions. 실행 증거 우선, 근본 원인 수정, 주석·기계적 테스트 없는 작업 방식을 요청할 때 사용한다. Not for review-only, behavior-preserving refactoring, or quick questions. The skills-only Plugin contains instructions only. It prefers running the changed software over new tests, adds no comments, and asks before irreversible actions. Project and user instructions take precedence. See the [skill](plugins/evidence-first-engineering/skills/evidence-first-engineering/SKILL.md) and its [source](plugins/evidence-first-engineering/skills/evidence-first-engineering/references/sources.md).
+
+## Apple App Design Audit
+
+Use when auditing or improving the design of a native SwiftUI or AppKit app for macOS, iOS, or iPadOS against Apple's Human Interface Guidelines and Liquid Glass, including toolbars, sidebars, search, empty and error states, Settings, Dark Mode, contrast, text size, and destructive actions. Reads current Apple guidance through Xcode MCP DocumentationSearch and the files bundled in Xcode. Not for web UI, cross-platform frameworks, App Store screenshots, or copy-only edits. The skills-only Plugin contains instructions only and bundles no Apple documents; it reads them from the installed Xcode. Xcode and a way to run and capture the app are required. See the [skill](plugins/apple-app-design-audit/skills/apple-app-design-audit/SKILL.md) and [validation scope](docs/validation/apple-app-design-audit.md).
 
 ## Interface First Design
 

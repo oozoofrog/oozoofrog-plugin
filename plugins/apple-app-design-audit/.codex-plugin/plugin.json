@@ -1,0 +1,25 @@
+{
+  "name": "apple-app-design-audit",
+  "version": "0.1.0",
+  "description": "Use when auditing or improving the design of a native SwiftUI or AppKit app for macOS, iOS, or iPadOS against Apple's Human Interface Guidelines and Liquid Glass, including toolbars, sidebars, search, empty and error states, Settings, Dark Mode, contrast, text size, and destructive actions. Reads current Apple guidance through Xcode MCP DocumentationSearch and the files bundled in Xcode. 맥앱·iOS 앱 디자인 점검, HIG·Liquid Glass 기준 검토, 디자인 개선 요청에 사용한다. Not for web UI, cross-platform frameworks, App Store screenshots, or copy-only edits.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "skills": "./skills/",
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
+  "interface": {
+    "displayName": "Apple App Design Audit",
+    "shortDescription": "Audit native Apple app UI against the HIG and Liquid Glass",
+    "longDescription": "Use when auditing or improving the design of a native SwiftUI or AppKit app for macOS, iOS, or iPadOS against Apple's Human Interface Guidelines and Liquid Glass, including toolbars, sidebars, search, empty and error states, Settings, Dark Mode, contrast, text size, and destructive actions. Reads current Apple guidance through Xcode MCP DocumentationSearch and the files bundled in Xcode. 맥앱·iOS 앱 디자인 점검, HIG·Liquid Glass 기준 검토, 디자인 개선 요청에 사용한다. Not for web UI, cross-platform frameworks, App Store screenshots, or copy-only edits.",
+    "developerName": "oozoofrog",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $apple-app-design-audit to audit this Mac app's design against the HIG and Liquid Glass, with captures."
+    ]
+  }
+}

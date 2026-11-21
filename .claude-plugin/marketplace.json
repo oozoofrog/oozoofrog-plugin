@@ -85,6 +85,12 @@
       "source": "./plugins/evidence-first-engineering",
       "description": "Use when the user asks the agent to work as an evidence-first senior engineer on a coding task, such as proving every change by running it, restating the goal before editing, fixing the root cause instead of guarding the symptom, adding no comments or mechanical tests, and reporting goal, changes, evidence and open decisions. 실행 증거 우선, 근본 원인 수정, 주석·기계적 테스트 없는 작업 방식을 요청할 때 사용한다. Not for review-only, behavior-preserving refactoring, or quick questions.",
       "category": "productivity"
+    },
+    {
+      "name": "apple-app-design-audit",
+      "source": "./plugins/apple-app-design-audit",
+      "description": "Use when auditing or improving the design of a native SwiftUI or AppKit app for macOS, iOS, or iPadOS against Apple's Human Interface Guidelines and Liquid Glass, including toolbars, sidebars, search, empty and error states, Settings, Dark Mode, contrast, text size, and destructive actions. Reads current Apple guidance through Xcode MCP DocumentationSearch and the files bundled in Xcode. 맥앱·iOS 앱 디자인 점검, HIG·Liquid Glass 기준 검토, 디자인 개선 요청에 사용한다. Not for web UI, cross-platform frameworks, App Store screenshots, or copy-only edits.",
+      "category": "productivity"
     }
   ]
 }

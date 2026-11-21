@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add `apple-app-design-audit` 0.1.0, a skills-only Plugin for auditing and improving native Apple app design against the HIG and Liquid Glass: read current guidance through Xcode MCP `DocumentationSearch` and the guides bundled in Xcode, check API availability in the SDK, run the app across a state matrix, report findings with captures and sources, ask only about what the user can see, fix with system components first, and verify in the running app. Includes a twelve-item checklist and fixes for WKWebView Dark Mode and scroll edge, toolbar overflow, toolbar titles, and sandboxed Trash recovery, taken from a macOS document app audit.
+
 - `handoff` 0.1.1: republish the Stop hook change for unattended T3 Code delegated threads under a new version. It shipped as 0.1.0, so installations made before it did not update.
 
 - `evidence-first-engineering` 0.1.1: the report always uses the five headings, and a bug that does not reproduce leads to a request for the exact command, environment, full error output and original input. The earlier changes shipped as 0.1.0, so existing installations did not update.
