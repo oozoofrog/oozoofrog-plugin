@@ -1,0 +1,455 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		835339120D56DFF15CE87EFE /* ClipLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7060FEC51981518572A675B5 /* ClipLibrary.swift */; };
+		876342D69C89E5C74E02B48D /* ClipTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CD8D48E31D9994B081134C0 /* ClipTests.swift */; };
+		926676E0AE99A5CFD4BD6048 /* ClipsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4D46213DAA62D4067323E7C /* ClipsApp.swift */; };
+		9BA144F9BC1900872C1FC95A /* ClipsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4D46213DAA62D4067323E7C /* ClipsApp.swift */; };
+		B13473C544577AF118F02FCC /* ClipLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7060FEC51981518572A675B5 /* ClipLibrary.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		2C349EADBC11D11F3F0A8243 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C6C9CB6E8124C0992069D8B7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0697402D97C12B1FE747F74C;
+			remoteInfo = Clips_macOS;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		4585A372610B743F530AEF75 /* Clips.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Clips.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		59C140E3F03E01E42976BA65 /* ClipsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClipsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7060FEC51981518572A675B5 /* ClipLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipLibrary.swift; sourceTree = "<group>"; };
+		8CD8D48E31D9994B081134C0 /* ClipTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipTests.swift; sourceTree = "<group>"; };
+		A4D46213DAA62D4067323E7C /* ClipsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipsApp.swift; sourceTree = "<group>"; };
+		B6D326C533F54A84DD915437 /* Clips.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Clips.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		11A88DBEE676F2C6DF55926F /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4585A372610B743F530AEF75 /* Clips.app */,
+				B6D326C533F54A84DD915437 /* Clips.app */,
+				59C140E3F03E01E42976BA65 /* ClipsTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		37CA3CE7E4A8482911B2D827 = {
+			isa = PBXGroup;
+			children = (
+				F8797E5502E267F8DC42C317 /* App */,
+				87DD259E5CD69A3828761D0F /* Tests */,
+				11A88DBEE676F2C6DF55926F /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		87DD259E5CD69A3828761D0F /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				8CD8D48E31D9994B081134C0 /* ClipTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		F8797E5502E267F8DC42C317 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				7060FEC51981518572A675B5 /* ClipLibrary.swift */,
+				A4D46213DAA62D4067323E7C /* ClipsApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		032B1B90E2E3D866F3F1CDB5 /* Clips_iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 44BD8A5D5674B982638857EA /* Build configuration list for PBXNativeTarget "Clips_iOS" */;
+			buildPhases = (
+				56DFCB154505C932674A27E7 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Clips_iOS;
+			packageProductDependencies = (
+			);
+			productName = Clips_iOS;
+			productReference = 4585A372610B743F530AEF75 /* Clips.app */;
+			productType = "com.apple.product-type.application";
+		};
+		0697402D97C12B1FE747F74C /* Clips_macOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9B10CEC5D08A98581ABBF845 /* Build configuration list for PBXNativeTarget "Clips_macOS" */;
+			buildPhases = (
+				3B34841D5BB4A311867D5B75 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Clips_macOS;
+			packageProductDependencies = (
+			);
+			productName = Clips_macOS;
+			productReference = B6D326C533F54A84DD915437 /* Clips.app */;
+			productType = "com.apple.product-type.application";
+		};
+		BB196439479527CE01D1A881 /* ClipsTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FC3C0326AE1F612A175E70D6 /* Build configuration list for PBXNativeTarget "ClipsTests" */;
+			buildPhases = (
+				EBDE3EB61F3B07F66923CF4B /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AB26961CFC88B9CD1430D606 /* PBXTargetDependency */,
+			);
+			name = ClipsTests;
+			packageProductDependencies = (
+			);
+			productName = ClipsTests;
+			productReference = 59C140E3F03E01E42976BA65 /* ClipsTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		C6C9CB6E8124C0992069D8B7 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = C3BCDC8AD71EE465DEC11F1D /* Build configuration list for PBXProject "ReviewMoment" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 37CA3CE7E4A8482911B2D827;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 11A88DBEE676F2C6DF55926F /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				032B1B90E2E3D866F3F1CDB5 /* Clips_iOS */,
+				0697402D97C12B1FE747F74C /* Clips_macOS */,
+				BB196439479527CE01D1A881 /* ClipsTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3B34841D5BB4A311867D5B75 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B13473C544577AF118F02FCC /* ClipLibrary.swift in Sources */,
+				9BA144F9BC1900872C1FC95A /* ClipsApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		56DFCB154505C932674A27E7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				835339120D56DFF15CE87EFE /* ClipLibrary.swift in Sources */,
+				926676E0AE99A5CFD4BD6048 /* ClipsApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EBDE3EB61F3B07F66923CF4B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				876342D69C89E5C74E02B48D /* ClipTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AB26961CFC88B9CD1430D606 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0697402D97C12B1FE747F74C /* Clips_macOS */;
+			targetProxy = 2C349EADBC11D11F3F0A8243 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		018AAC2C4921ADB088165D1C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Clips.app/Contents/MacOS/Clips";
+			};
+			name = Release;
+		};
+		3BC5712909BEC6291D692A70 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_NAME = Clips;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		4C7FF01CCDF80C14CFA89AE0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_NAME = Clips;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		4FF287C9B8EB4428C5E0CC6A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.oozoofrog.review-moment.$(TARGET_NAME:rfc1034identifier)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		5AE9C8A559D9D7549693CFFA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Clips.app/Contents/MacOS/Clips";
+			};
+			name = Debug;
+		};
+		7F2B61FBCC06E1B2C9FF8604 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_NAME = Clips;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		C033978E5B1334A359BBF7CD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.oozoofrog.review-moment.$(TARGET_NAME:rfc1034identifier)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		C107B18FE5E276E2ED36F508 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_NAME = Clips;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		44BD8A5D5674B982638857EA /* Build configuration list for PBXNativeTarget "Clips_iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7F2B61FBCC06E1B2C9FF8604 /* Debug */,
+				C107B18FE5E276E2ED36F508 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9B10CEC5D08A98581ABBF845 /* Build configuration list for PBXNativeTarget "Clips_macOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4C7FF01CCDF80C14CFA89AE0 /* Debug */,
+				3BC5712909BEC6291D692A70 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C3BCDC8AD71EE465DEC11F1D /* Build configuration list for PBXProject "ReviewMoment" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C033978E5B1334A359BBF7CD /* Debug */,
+				4FF287C9B8EB4428C5E0CC6A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FC3C0326AE1F612A175E70D6 /* Build configuration list for PBXNativeTarget "ClipsTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5AE9C8A559D9D7549693CFFA /* Debug */,
+				018AAC2C4921ADB088165D1C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = C6C9CB6E8124C0992069D8B7 /* Project object */;
+}

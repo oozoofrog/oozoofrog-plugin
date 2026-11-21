@@ -1,0 +1,10 @@
+{
+  "name": "review-moment",
+  "version": "0.1.0",
+  "description": "Choose an app-specific moment to request App Store ratings and reviews and implement it in an iOS or macOS app using StoreKit. 앱의 핵심 작업을 분석해 별점·리뷰 요청 시점을 고르고 구현할 때 사용한다.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin"
+}

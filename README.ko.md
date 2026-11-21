@@ -63,6 +63,10 @@ skills-only Plugin `0.3.0`을 제공합니다. Plugin에 모델·런타임·생�
 
 [증거 우선 엔지니어링](plugins/evidence-first-engineering/skills/evidence-first-engineering/SKILL.md) (`evidence-first-engineering` 0.1.0)은 코딩 작업을 시니어 엔지니어의 작업 방식으로 진행하게 합니다. 목표를 먼저 다시 설명하고, 증상 대신 근본 원인을 고치고, 변경을 직접 실행해 확인한 뒤, 목표·변경·검증·판단 근거·남은 일 순서로 보고합니다. 새 주석과 커버리지용 테스트는 추가하지 않고, 되돌릴 수 없는 작업은 먼저 확인받습니다. 프로젝트와 사용자 지침이 이 스킬보다 우선합니다. 리뷰만 하는 요청, 동작 보존 리팩토링, 짧은 질문에는 쓰지 않습니다. 지침만 담은 skills-only Plugin입니다. [설치](docs/plugin-installation.md#evidence-first-engineering)와 [출처](plugins/evidence-first-engineering/skills/evidence-first-engineering/references/sources.md)를 참고하세요.
 
+## App Store 리뷰 요청
+
+[Review Moment](plugins/review-moment/skills/review-moment/SKILL.md)는 iPhone·Mac 앱에서 사용자가 핵심 작업을 마치는 지점을 찾고 StoreKit 별점·리뷰 요청을 구현합니다.
+
 ## Apple 앱 디자인 점검
 
 [Apple 앱 디자인 점검](plugins/apple-app-design-audit/skills/apple-app-design-audit/SKILL.md) (`apple-app-design-audit` 0.1.0)은 macOS·iOS·iPadOS용 SwiftUI·AppKit 앱의 디자인을 Apple HIG와 Liquid Glass 기준으로 점검하고 고칩니다. 실제 앱을 실행해 화면 모양·접근성 설정·창 크기·콘텐츠 상태별 캡처를 모으고, 결함마다 원인 코드와 근거 문서를 붙여 보고합니다. Apple 문서는 Xcode MCP `DocumentationSearch`와 Xcode에 들어 있는 파일에서 읽으며, 사본을 포함하지 않습니다. 웹 UI, 크로스플랫폼 프레임워크, App Store 스크린샷, 문구만 고치는 작업에는 쓰지 않습니다. 지침만 담은 skills-only Plugin입니다. [설치](docs/plugin-installation.md#apple-app-design-audit)와 [검증 범위](docs/validation/apple-app-design-audit.md)를 참고하세요.

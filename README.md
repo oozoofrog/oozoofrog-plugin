@@ -54,6 +54,7 @@ Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed 
 | `model-advisor@oozoofrog-plugin` | [Recommend a Claude model and effort for a task](plugins/model-advisor/skills/model-advisor/SKILL.md), and on request hand the task to a subagent or background Claude Code session running that model; see [Model Advisor](#model-advisor). |
 | `evidence-first-engineering@oozoofrog-plugin` | [Work as an evidence-first senior engineer](plugins/evidence-first-engineering/skills/evidence-first-engineering/SKILL.md): restate the goal, fix root causes, verify by running the change, and report evidence; see [Evidence-First Engineering](#evidence-first-engineering). |
 | `apple-app-design-audit@oozoofrog-plugin` | [Audit and improve a native Apple app's design](plugins/apple-app-design-audit/skills/apple-app-design-audit/SKILL.md) against the HIG and Liquid Glass by running the app; see [Apple App Design Audit](#apple-app-design-audit). |
+| `review-moment@oozoofrog-plugin` | [Choose and implement an app-specific StoreKit review request](plugins/review-moment/skills/review-moment/SKILL.md) for iOS or macOS. |
 
 ## Examples
 

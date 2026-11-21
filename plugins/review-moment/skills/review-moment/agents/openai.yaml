@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Moment"
+  short_description: "Choose and implement a StoreKit review request moment"
+  default_prompt: "Use $review-moment to choose and implement a review request after a meaningful task in this app."
