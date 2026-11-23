@@ -4,7 +4,7 @@ tags: [behavior]
 runs: 3
 max_turns: 60
 timeout_seconds: 900
-allowed_tools: [Read, Glob, Grep, Skill, Bash, Edit, Write, TodoWrite]
+allowed_tools: [Read, Glob, Grep, Skill, Bash, Edit, Write, TodoWrite, Agent]
 expected_outcome: 'Spec with an AC ID table, ADR, plan whose verification cells reference AC IDs; no .py file written or edited.'
 ---
 

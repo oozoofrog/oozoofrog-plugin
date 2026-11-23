@@ -58,7 +58,7 @@ P = pstack, T = tstack, B = both (pstack and tstack), N = new, D = dual-brain. P
 - Instructions are in English. Replies and project records follow the language of the user or the project. The Korean keyword mapping follows the user's rule, not tstack's `keywords` mapping.
 - The journal is optional. trealworld case links are dropped.
 - The tstack `keywords`, `journal` and `self` checks are not ported. A repository test replaces `self`.
-- The two complementary dual-brain reviewers become an optional two-lens review mode with macro and micro lenses. The default stays one independent reviewer.
+- The two complementary dual-brain reviewers become the macro and micro lenses. They run on every substantive task at points fixed by pace-independent rules in `references/review.md`, not only in the review playbook: macro before a design is fixed, micro after consequential edits. The shared brief, the post-edit recheck, the debate on request and the micro agent's assigned implementation ownership come from the same source.
 - The dual-brain evidence bar for changes becomes the `evidence-before-change` principle.
 - dual-brain project memory is absorbed as rules for reading and writing records, not as a new store.
 - Agent reuse is limited to the same role, so an author never reviews its own work.

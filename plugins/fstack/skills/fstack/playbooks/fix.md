@@ -10,7 +10,7 @@
 4. If the cause is in the documents, work in this order: decision → check → code → other documents.
 5. Write a check that fails for the right reason. It is a test only under the test rule in `principles/see-it-fail.md`.
 6. Make the smallest fix at the root cause.
-7. Run the full suite. Repeat the experiment from step 2. Record a before/after table.
+7. Run the full suite. Repeat the experiment from step 2. Record a before/after table. For a consequential fix, run the micro lens on the final diff (`references/review.md`) and close each finding.
 8. Reinject the defect. Confirm that the new check catches it. Revert the defect.
 9. Run `playbooks/wrap-up.md`. If a commit is allowed, commit the fix separately from the records.
 

@@ -141,7 +141,7 @@ class FstackDistributionTests(unittest.TestCase):
         self.assertNotIn("disable-model-invocation", read(SKILL / "SKILL.md"))
         for manifest in (codex, claude):
             self.assertEqual(NAME, manifest["name"])
-            self.assertEqual("0.1.0", manifest["version"])
+            self.assertEqual("0.1.1", manifest["version"])
             self.assertEqual("https://github.com/oozoofrog/oozoofrog-plugin", manifest["repository"])
             self.assertEqual(sibling["author"], manifest["author"])
         for key in ("hooks", "mcpServers", "apps"):
@@ -348,10 +348,11 @@ class FstackDistributionTests(unittest.TestCase):
 
     def test_review_delegation_and_records_carry_the_absorbed_rules(self) -> None:
         review = read(SKILL / "references/review.md")
-        for heading in ("## Two-lens review", "## Macro lens brief", "## Micro lens brief", "## Reconcile"):
+        for heading in ("## When the lenses run", "## Shared brief", "## Two-lens review", "## Macro lens brief",
+                        "## Micro lens brief", "## Reconcile", "## After edits"):
             self.assertIn("\n" + heading + "\n", review)
         playbook = read(SKILL / "playbooks/review.md")
-        for phrase in ("one independent reviewer (default)", "two lenses (macro and micro)",
+        for phrase in ("otherwise one independent reviewer", "two lenses (macro and micro)",
                        "one focused follow-up for each material conflict", "no actionable findings"):
             self.assertIn(phrase, playbook)
         delegation = read(SKILL / "references/delegation.md")
