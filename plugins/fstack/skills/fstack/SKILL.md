@@ -67,7 +67,8 @@ Gates stop work in any pace. Details: `principles/stop-at-gates.md`.
 
 ## Report
 
-- Use `references/report.md`. Start with the goal.
+- Read `references/report.md` before you write the report. Every report, also for a one-line fix, uses its five headings in this order: Goal, Changes, Verification, Basis, Remaining (Korean: 목표, 변경, 검증, 근거, 남은 일). Write "none" under an empty heading.
+- State the review mode under Verification: independent, two-lens, or single-agent fallback. A skipped lens and its reason also go there.
 - Label each claim. A check that you did not run is "Inconclusive", not a pass.
 - In step pace, the last line is `Next step: <candidate>` or, in Korean, `다음 단계: <후보>`, on its own line. Do not start it.
 
