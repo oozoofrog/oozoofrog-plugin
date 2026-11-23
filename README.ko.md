@@ -73,7 +73,7 @@ skills-only Plugin `0.3.0`을 제공합니다. Plugin에 모델·런타임·생�
 
 ## 야생 학습 독서 코치 만들기
 
-[야생 학습 독서 코치 만들기](plugins/wild-reading-coach-builder/skills/wild-reading-coach-builder/SKILL.md)는 책의 PDF, EPUB, Markdown, 텍스트 또는 발췌문으로 개인 독서 코치를 만듭니다. 코치는 판본별 색인과 본문을 근거로 읽을 곳을 추천하고, 독자가 실제로 읽은 범위를 별도로 기록합니다.
+[야생 학습 독서 코치 만들기](plugins/wild-reading-coach-builder/skills/wild-reading-coach-builder/SKILL.md)는 책의 PDF, EPUB, Markdown, 텍스트 또는 발췌문으로 개인 독서 코치를 만듭니다. 코치는 판본별 색인과 본문을 근거로 읽을 곳을 추천하고, 독자가 실제로 읽은 범위를 별도로 기록합니다. 독자가 요청하면 로컬 실험 페이지를 만들어, 독자가 쓴 예측과 나중에 보고한 결과를 나란히 보여 줍니다.
 
 ## 설치
 
