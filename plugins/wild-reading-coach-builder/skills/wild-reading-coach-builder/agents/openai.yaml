@@ -1,0 +1,4 @@
+interface:
+  display_name: "야생 학습 독서 코치 만들기"
+  short_description: "새 책의 원문과 목차에서 나만의 야생 학습 독서 코치를 만듭니다."
+  default_prompt: "$wild-reading-coach-builder 이 책으로 야생 학습 독서 코치를 만들어 줘."

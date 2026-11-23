@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add `wild-reading-coach-builder` 0.1.0 for Codex and Claude Code. It builds a personal reading coach from a book or excerpts, with an edition-specific index and a private reader profile.
+
 - Add `review-moment` 0.1.0 for Claude Code and Codex to select, implement, and verify app-specific StoreKit review requests on iOS and macOS.
 
 - Add `apple-app-design-audit` 0.1.0, a skills-only Plugin for auditing and improving native Apple app design against the HIG and Liquid Glass: read current guidance through Xcode MCP `DocumentationSearch` and the guides bundled in Xcode, check API availability in the SDK, run the app across a state matrix, report findings with captures and sources, ask only about what the user can see, fix with system components first, and verify in the running app. Includes a twelve-item checklist and fixes for WKWebView Dark Mode and scroll edge, toolbar overflow, toolbar titles, and sandboxed Trash recovery, taken from a macOS document app audit.
