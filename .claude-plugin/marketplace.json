@@ -81,12 +81,6 @@
       "category": "productivity"
     },
     {
-      "name": "evidence-first-engineering",
-      "source": "./plugins/evidence-first-engineering",
-      "description": "Use when the user asks the agent to work as an evidence-first senior engineer on a coding task, such as proving every change by running it, restating the goal before editing, fixing the root cause instead of guarding the symptom, adding no comments or mechanical tests, and reporting goal, changes, evidence and open decisions. 실행 증거 우선, 근본 원인 수정, 주석·기계적 테스트 없는 작업 방식을 요청할 때 사용한다. Not for review-only, behavior-preserving refactoring, or quick questions.",
-      "category": "productivity"
-    },
-    {
       "name": "apple-app-design-audit",
       "source": "./plugins/apple-app-design-audit",
       "description": "Use when auditing or improving the design of a native SwiftUI or AppKit app for macOS, iOS, or iPadOS against Apple's Human Interface Guidelines and Liquid Glass, including toolbars, sidebars, search, empty and error states, Settings, Dark Mode, contrast, text size, and destructive actions. Reads current Apple guidance through Xcode MCP DocumentationSearch and the files bundled in Xcode. 맥앱·iOS 앱 디자인 점검, HIG·Liquid Glass 기준 검토, 디자인 개선 요청에 사용한다. Not for web UI, cross-platform frameworks, App Store screenshots, or copy-only edits.",
@@ -102,6 +96,12 @@
       "name": "wild-reading-coach-builder",
       "source": "./plugins/wild-reading-coach-builder",
       "description": "새 책의 PDF, EPUB, Markdown, 텍스트 또는 제공된 발췌로 야생 학습 방식의 개인 독서 코치 환경을 만들거나 새 판본을 준비할 때 사용한다. 책마다 근거 자료, 읽기 지도, 독립된 독자 기록을 갖춘 스킬을 생성한다.",
+      "category": "productivity"
+    },
+    {
+      "name": "fstack",
+      "source": "./plugins/fstack",
+      "description": "Use when the user asks for a disciplined engineering workflow that calibrates pace and documentation to the task: kickoff and open questions, spec, ADR and plan with traceable IDs, one plan task test-first, a reproduced bug fix, a throwaway prototype to settle a design fork, review against the spec, an autonomous run to a checkable exit condition, pending AI decisions, remaining work, or process reflection; also for fstack requests or pstack- or tstack-style requests. 작업 위험도에 맞춰 진행 속도와 문서 수준을 정하는 개발 방식(킥오프, spec·ADR·plan, 테스트 먼저, 자율 실행, 결정 확인)을 요청할 때 사용한다. Not for quick questions, single obvious edits, generic code review, behavior-preserving refactoring, session handoff, or model selection.",
       "category": "productivity"
     }
   ]

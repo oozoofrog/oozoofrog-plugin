@@ -1,4 +1,0 @@
-interface:
-  display_name: "Evidence-First Engineering"
-  short_description: "Prove changes by running them and fix root causes"
-  default_prompt: "Use $evidence-first-engineering to fix this, verify it by running it, and report goal, changes and evidence."

@@ -149,18 +149,6 @@
       "category": "Productivity"
     },
     {
-      "name": "evidence-first-engineering",
-      "source": {
-        "source": "local",
-        "path": "./plugins/evidence-first-engineering"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
       "name": "apple-app-design-audit",
       "source": {
         "source": "local",
@@ -189,6 +177,18 @@
       "source": {
         "source": "local",
         "path": "./plugins/wild-reading-coach-builder"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "fstack",
+      "source": {
+        "source": "local",
+        "path": "./plugins/fstack"
       },
       "policy": {
         "installation": "AVAILABLE",

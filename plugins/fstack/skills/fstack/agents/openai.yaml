@@ -1,0 +1,4 @@
+interface:
+  display_name: "fstack"
+  short_description: "Match pace and spec depth to risk; prove each step"
+  default_prompt: "Use $fstack to fix this bug: reproduce it, prove the fix, and report decisions and evidence."

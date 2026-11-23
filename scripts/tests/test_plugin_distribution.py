@@ -42,7 +42,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ['swift-intelligence', 'local-ai-studio', 'jev-client', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'high-council-implementation', 'openai-decisions', 'handoff', 'model-advisor', 'evidence-first-engineering', 'apple-app-design-audit', 'review-moment', 'wild-reading-coach-builder'],
+            ['swift-intelligence', 'local-ai-studio', 'jev-client', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'high-council-implementation', 'openai-decisions', 'handoff', 'model-advisor', 'apple-app-design-audit', 'review-moment', 'wild-reading-coach-builder', 'fstack'],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -276,7 +276,7 @@ class PluginDistributionTests(unittest.TestCase):
                      "ponytail-beck-tdd", "unreal-agent",
                      "team-coordination", "audit", "outcome-brief", "verify-work",
                      "choice-interview", "obsidian-projects", "korean-travel-guidebook",
-                     "auto-flow", "guided-execution"):
+                     "auto-flow", "guided-execution", "evidence-first-engineering"):
             self.assertFalse((REPO_ROOT / name / "SKILL.md").exists())
             self.assertFalse((REPO_ROOT / "plugins" / name / ".codex-plugin" / "plugin.json").exists())
 
