@@ -71,6 +71,10 @@ skills-only Plugin `0.3.0`을 제공합니다. Plugin에 모델·런타임·생�
 
 [Apple 앱 디자인 점검](plugins/apple-app-design-audit/skills/apple-app-design-audit/SKILL.md) (`apple-app-design-audit` 0.1.0)은 macOS·iOS·iPadOS용 SwiftUI·AppKit 앱의 디자인을 Apple HIG와 Liquid Glass 기준으로 점검하고 고칩니다. 실제 앱을 실행해 화면 모양·접근성 설정·창 크기·콘텐츠 상태별 캡처를 모으고, 결함마다 원인 코드와 근거 문서를 붙여 보고합니다. Apple 문서는 Xcode MCP `DocumentationSearch`와 Xcode에 들어 있는 파일에서 읽으며, 사본을 포함하지 않습니다. 웹 UI, 크로스플랫폼 프레임워크, App Store 스크린샷, 문구만 고치는 작업에는 쓰지 않습니다. 지침만 담은 skills-only Plugin입니다. [설치](docs/plugin-installation.md#apple-app-design-audit)와 [검증 범위](docs/validation/apple-app-design-audit.md)를 참고하세요.
 
+## 야생 학습 독서 코치 만들기
+
+[야생 학습 독서 코치 만들기](plugins/wild-reading-coach-builder/skills/wild-reading-coach-builder/SKILL.md)는 책의 PDF, EPUB, Markdown, 텍스트 또는 발췌문으로 개인 독서 코치를 만듭니다. 코치는 판본별 색인과 본문을 근거로 읽을 곳을 추천하고, 독자가 실제로 읽은 범위를 별도로 기록합니다.
+
 ## 설치
 
 필요한 Plugin만 선택해 설치합니다. 아래 명령은 해당 변경이 원격 marketplace에 반영된 뒤 사용할 수 있습니다.

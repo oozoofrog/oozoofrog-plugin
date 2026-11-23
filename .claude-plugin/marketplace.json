@@ -97,6 +97,12 @@
       "source": "./plugins/review-moment",
       "description": "Choose an app-specific moment to request App Store ratings and reviews and implement it in an iOS or macOS app using StoreKit. 앱의 핵심 작업을 분석해 별점·리뷰 요청 시점을 고르고 구현할 때 사용한다.",
       "category": "productivity"
+    },
+    {
+      "name": "wild-reading-coach-builder",
+      "source": "./plugins/wild-reading-coach-builder",
+      "description": "새 책의 PDF, EPUB, Markdown, 텍스트 또는 제공된 발췌로 야생 학습 방식의 개인 독서 코치 환경을 만들거나 새 판본을 준비할 때 사용한다. 책마다 근거 자료, 읽기 지도, 독립된 독자 기록을 갖춘 스킬을 생성한다.",
+      "category": "productivity"
     }
   ]
 }

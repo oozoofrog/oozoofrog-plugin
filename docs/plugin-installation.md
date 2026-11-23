@@ -79,6 +79,16 @@ WinPilot 0.5.1은 [스킬](../plugins/winpilot/skills/winpilot/SKILL.md)과 MCP 
 
 기존 `windows-pilot` 실행 파일명과 7개 MCP 도구명은 유지합니다. 기존 standalone 스킬·MCP 설정·개인 캡처·원본 폴더는 자동 삭제하지 않습니다. 동일 서버를 Plugin MCP와 수동 MCP 양쪽에 등록하지 마세요. 설치 상태와 현재 대화의 도구 노출은 별도로 확인하며 새 대화에서 `$winpilot`을 호출할 수 있습니다. [검증 범위](validation/winpilot.md)를 참고하세요.
 
+## Wild Reading Coach Builder
+
+책이나 발췌문을 준비한 뒤 `$wild-reading-coach-builder`로 해당 판본의 독서 코치를 만듭니다. 생성 스크립트에는 Python 3.9 이상이 필요합니다.
+
+```sh
+codex plugin add wild-reading-coach-builder@oozoofrog-plugin
+# Claude Code
+claude plugin install wild-reading-coach-builder@oozoofrog-plugin
+```
+
 ## 기존 Plugin
 
 
