@@ -16,7 +16,7 @@ MCP를 포함한 `swift-intelligence`와 `winpilot`은 Claude 매니페스트에
 
 ## Retired Plugins
 
-`auto-flow`와 `guided-execution`은 폐기하여 더 이상 게시하지 않습니다. 여러 단계의 계획·분담·검증 작업에는 [graph-flow](https://github.com/oozoofrog/graph-flow)를 사용하세요. 기존 설치본은 호스트의 Plugin 제거 기능으로 정리하세요. Codex에서는 제거 기능으로 설정과 캐시를 함께 정리합니다. Marketplace 항목 삭제만으로 설치본이 제거되지는 않습니다. `.agent-loop/` 작업 기록과 `_context/` 인계 문서 등 사용자 데이터는 보존합니다.
+`auto-flow`와 `guided-execution`은 폐기하여 더 이상 게시하지 않습니다. 여러 단계의 계획·분담·검증 작업에는 [graph-flow](https://github.com/oozoofrog/graph-flow)를 사용하세요. `evidence-first-engineering`도 폐기했습니다. 검증·근본 원인 수정·보고 방식은 [fstack](#fstack)이 이어받고, 코드 스타일은 프로젝트 관례를 따릅니다. 기존 설치본은 `claude plugin uninstall evidence-first-engineering@oozoofrog-plugin`과 `codex plugin remove evidence-first-engineering@oozoofrog-plugin`으로 제거합니다. 기존 설치본은 호스트의 Plugin 제거 기능으로 정리하세요. Codex에서는 제거 기능으로 설정과 캐시를 함께 정리합니다. Marketplace 항목 삭제만으로 설치본이 제거되지는 않습니다. `.agent-loop/` 작업 기록과 `_context/` 인계 문서 등 사용자 데이터는 보존합니다.
 
 ### Graph Flow migration
 
@@ -139,16 +139,16 @@ codex plugin add interface-first-design@oozoofrog-plugin
 
 새 작업에서 `$interface-first-design` 또는 `$interface-first-design:interface-first-design`으로 호출합니다. [스킬](../plugins/interface-first-design/skills/interface-first-design/SKILL.md)과 [가상 예시](../plugins/interface-first-design/skills/interface-first-design/references/examples.md)를 참고하세요. 패키지 검사 통과, 원격 카탈로그 반영, 설치 성공, 새 세션 노출, 실제 제품 UI 동작 검증은 각각 확인해야 합니다.
 
-## Evidence-First Engineering
+## fstack
 
-`evidence-first-engineering` 0.1.0은 증거 우선 작업 방식을 담은 skills-only Plugin입니다. 별도 런타임·MCP·hooks·인증 정보를 포함하지 않습니다.
+`fstack` 0.1.0은 진행 속도와 문서 수준을 작업에 맞춰 정하는 개발 방식을 담은 skills-only Plugin입니다. 지침과 표준 라이브러리만 쓰는 Python 검사 `scripts/trace.py`를 포함합니다. 별도 런타임·MCP·hooks·인증 정보를 포함하지 않습니다. `trace.py`에는 Python 3이 필요합니다.
 
 ```bash
-claude plugin install evidence-first-engineering@oozoofrog-plugin
-codex plugin add evidence-first-engineering@oozoofrog-plugin
+claude plugin install fstack@oozoofrog-plugin
+codex plugin add fstack@oozoofrog-plugin
 ```
 
-새 대화에서 `$evidence-first-engineering` 또는 `$evidence-first-engineering:evidence-first-engineering`으로 호출합니다. 설치·활성화와 새 대화의 스킬 노출은 각각 확인해야 합니다.
+새 대화에서 `$fstack` 또는 `$fstack:fstack`으로 호출합니다. refactor, handoff, model-advisor, graph-flow는 이름으로만 연결하며 함께 설치되지 않습니다. 설치되지 않은 스킬은 건너뛰고 대체 방법을 씁니다. 설치·활성화와 새 대화의 스킬 노출은 서로 다른 상태이므로 각각 확인해야 합니다. [스킬](../plugins/fstack/skills/fstack/SKILL.md)과 [출처](../plugins/fstack/skills/fstack/references/sources.md)를 참고하세요.
 
 ## Apple App Design Audit
 

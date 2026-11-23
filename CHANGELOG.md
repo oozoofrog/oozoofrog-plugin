@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add `fstack` 0.1.0, a skills-only Plugin that merges ideas from pstack (Lauren Tan, MIT), tstack (Toby Lee, MIT) and dual-brain (Hanmin Kim, MIT) into one router: pace (step by default, drive on explicit grant) and spec tier (T0–T2) chosen per task, gates G1–G3, a decision ledger, 11 playbooks, 12 principles, an optional two-lens (macro and micro) review with an evidence bar for findings, a disclosed single-agent fallback, and `trace.py`. Routing and behavior cases for `claude plugin eval` ship in `plugins/fstack/evals/`. It follows project conventions for code style and delegates refactoring, handoff, orchestration and model choice to existing Plugins.
+
+- Retire `evidence-first-engineering`. The marketplace no longer lists it. `fstack` carries its verification, root-cause and report rules, and code style follows each project's conventions instead of fixed rules. Remove existing installations through your host; see [Retired Plugins](docs/plugin-installation.md#retired-plugins).
+
 - Add `wild-reading-coach-builder` 0.1.0 for Codex and Claude Code. It builds a personal reading coach from a book or excerpts, with an edition-specific index and a private reader profile.
 
 - Add `review-moment` 0.1.0 for Claude Code and Codex to select, implement, and verify app-specific StoreKit review requests on iOS and macOS.
