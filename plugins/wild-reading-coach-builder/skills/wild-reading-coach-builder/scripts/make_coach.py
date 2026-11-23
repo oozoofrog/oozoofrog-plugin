@@ -19,6 +19,8 @@ def main():
     parser.add_argument("--title", required=True)
     parser.add_argument("--parent", type=Path, required=True)
     parser.add_argument("--references", type=Path, help="Reviewed folder containing INDEX.md")
+    parser.add_argument("--update-coaching", action="store_true",
+                        help="Replace the coaching instructions of the existing coach for this source")
     args = parser.parse_args()
     if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", args.name) or len(args.name) > 64:
         parser.error("Use a lowercase, hyphenated skill name of at most 64 characters.")
@@ -29,12 +31,18 @@ def main():
         digest = streaming_digest(source)
     marker = f"<!-- source-sha256: {digest} -->"
     target = args.parent / args.name
+    body = (Path(__file__).resolve().parents[1] / "assets/coaching.md").read_text()
     if target.exists() or target.is_symlink():
         skill = target / "SKILL.md"
         if skill.is_file() and marker in skill.read_text().splitlines() and (target / "references/INDEX.md").is_file():
-            print(f"Existing coach for this source: {target}")
+            if args.update_coaching:
+                update_coaching(skill, marker, body)
+            else:
+                print(f"Existing coach for this source: {target}")
             return
         parser.error(f"Destination belongs to another edition or is incomplete: {target}")
+    if args.update_coaching:
+        parser.error(f"No coach to update: {target}")
     if args.references is None:
         print(f"New source. Prepare references for {target}")
         return
@@ -44,7 +52,6 @@ def main():
         parser.error("The reviewed references need a nonempty INDEX.md.")
     if target.resolve().is_relative_to(refs):
         parser.error("The destination must be outside the references directory.")
-    body = (Path(__file__).resolve().parents[1] / "assets/coaching.md").read_text()
     description = f"Use for reading, discussing, or applying 《{title}》 with this book’s personal reading coach."
     args.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=args.parent, prefix=".prepare-coach-") as temporary:
@@ -63,6 +70,21 @@ def main():
         )
         staged.rename(target)
     print(f"Created {target}")
+
+
+def update_coaching(skill, marker, body):
+    earlier = skill.read_text()
+    lines = earlier.splitlines(keepends=True)
+    kept = "".join(lines[: [line.rstrip("\r\n") for line in lines].index(marker)])
+    updated = f"{kept}{marker}\n\n{body}"
+    if updated == earlier:
+        print(f"Coaching instructions are already current: {skill.parent}")
+        return
+    skill.with_name("SKILL.md.previous").write_text(earlier)
+    staged = skill.with_name(".SKILL.md.update")
+    staged.write_text(updated)
+    staged.replace(skill)
+    print(f"Updated coaching instructions: {skill.parent}")
 
 
 def streaming_digest(source):

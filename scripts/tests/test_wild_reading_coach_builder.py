@@ -135,3 +135,93 @@ class CoachingTextContractTests(unittest.TestCase):
             ], cwd=workspace, check=True, capture_output=True)
             published = (workspace / "coaches/observation-coach/SKILL.md").read_text(encoding="utf-8")
             self.assertIn("experiment.html", published)
+
+
+class BuilderInstructionTests(unittest.TestCase):
+    def assertBuilder(self, *phrases):
+        text = " ".join((BUILDER / "SKILL.md").read_text(encoding="utf-8").lower().split())
+        for phrase in phrases:
+            self.assertIn(phrase, text)
+
+    def test_ac3_2_check_includes_the_page_loop(self):
+        self.assertBuilder("a return visit, and the experiment page loop against this book",
+                           "the page holds no book text", "page use adds no confirmed reading")
+
+    def test_ac3_10_update_command_for_an_existing_coach(self):
+        self.assertBuilder("run the same command with `--update-coaching`", "skill.md.previous",
+                           "leaves the references and profile.md unchanged")
+
+
+class UpdateCoachingTests(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.workspace = Path(directory.name)
+        self.source = self.workspace / "book.md"
+        self.source.write_text("# Observation\n", encoding="utf-8")
+        refs = self.workspace / "reviewed"
+        refs.mkdir()
+        (refs / "INDEX.md").write_text("[Observation](observation.md)\n", encoding="utf-8")
+        self.parent = self.workspace / "coaches"
+        self.target = self.parent / "observation-coach"
+        self.run_script("--references", str(refs))
+        self.skill = self.target / "SKILL.md"
+        self.current = self.skill.read_text(encoding="utf-8")
+        body = (BUILDER / "assets/coaching.md").read_text(encoding="utf-8")
+        self.earlier = self.current[: -len(body)] + "Earlier instructions.\n"
+        self.skill.write_text(self.earlier, encoding="utf-8")
+        (self.target / "PROFILE.md").write_text("### E1 · 2026-11-24\n", encoding="utf-8")
+        (self.target / "experiment.html").write_text("<!doctype html>", encoding="utf-8")
+
+    def run_script(self, *extra, source=None, name="observation-coach"):
+        return subprocess.run([
+            sys.executable, "-X", "utf8", str(BUILDER / "scripts/make_coach.py"),
+            "--source", str(source or self.source), "--title", "Observation", "--name", name,
+            "--parent", str(self.parent), *extra,
+        ], cwd=self.workspace, capture_output=True, text=True)
+
+    def files(self, *excluded):
+        return {str(path.relative_to(self.target)): path.read_bytes()
+                for path in self.target.rglob("*") if path.is_file() and path.name not in excluded}
+
+    def test_ac3_7_update_replaces_only_the_instructions(self):
+        before = self.files("SKILL.md")
+        result = self.run_script("--update-coaching")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(self.current, self.skill.read_text(encoding="utf-8"))
+        self.assertEqual(before, self.files("SKILL.md", "SKILL.md.previous"))
+
+    def test_ac3_8_update_keeps_the_earlier_file_and_is_idempotent(self):
+        self.assertEqual(0, self.run_script("--update-coaching").returncode)
+        previous = self.target / "SKILL.md.previous"
+        self.assertEqual(self.earlier, previous.read_text(encoding="utf-8"))
+        before = self.files()
+        result = self.run_script("--update-coaching")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("already current", result.stdout)
+        self.assertEqual(before, self.files())
+
+    def test_ac3_9_update_refuses_a_missing_or_foreign_destination(self):
+        before = self.files()
+        self.assertEqual(0, self.run_script().returncode)
+        self.assertEqual(before, self.files())
+        missing = self.run_script("--update-coaching", name="absent-coach")
+        self.assertNotEqual(0, missing.returncode)
+        self.assertIn("No coach to update", missing.stderr)
+        self.assertFalse((self.parent / "absent-coach").exists())
+        other = self.workspace / "other.md"
+        other.write_text("# Another book\n", encoding="utf-8")
+        foreign = self.run_script("--update-coaching", source=other)
+        self.assertNotEqual(0, foreign.returncode)
+        self.assertIn("another edition", foreign.stderr)
+        self.assertEqual(before, self.files())
+
+
+class DistributionTests(unittest.TestCase):
+    def test_ac3_3_release_describes_the_experiment_page(self):
+        root = BUILDER.parents[3]
+        for manifest in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json"):
+            self.assertIn('"version": "0.2.0"', (BUILDER.parents[1] / manifest).read_text(encoding="utf-8"))
+        self.assertIn("`wild-reading-coach-builder` 0.2.0", (root / "CHANGELOG.md").read_text(encoding="utf-8"))
+        self.assertIn("experiment page", (root / "README.md").read_text(encoding="utf-8"))
+        self.assertIn("실험 페이지", (root / "README.ko.md").read_text(encoding="utf-8"))
