@@ -81,7 +81,7 @@ WinPilot 0.5.1은 [스킬](../plugins/winpilot/skills/winpilot/SKILL.md)과 MCP 
 
 ## Wild Reading Coach Builder
 
-책이나 발췌문을 준비한 뒤 `$wild-reading-coach-builder`로 해당 판본의 독서 코치를 만듭니다. 생성 스크립트에는 Python 3.9 이상이 필요합니다.
+책이나 발췌문을 준비한 뒤 `$wild-reading-coach-builder`로 해당 판본의 독서 코치를 만듭니다. 생성 스크립트에는 Python 3.9 이상이 필요합니다. 이미 만든 코치에 새 코칭 지시문을 넣으려면 코치를 만들 때 쓴 명령에 같은 원본 파일과 `--update-coaching`을 지정해 실행합니다. 독자 기록(`PROFILE.md`)과 책 자료는 바뀌지 않고, 이전 `SKILL.md`는 `SKILL.md.previous`로 남습니다.
 
 ```sh
 codex plugin add wild-reading-coach-builder@oozoofrog-plugin

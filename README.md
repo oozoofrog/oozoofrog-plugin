@@ -54,7 +54,7 @@ Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed 
 | `model-advisor@oozoofrog-plugin` | [Recommend a Claude model and effort for a task](plugins/model-advisor/skills/model-advisor/SKILL.md), and on request hand the task to a subagent or background Claude Code session running that model; see [Model Advisor](#model-advisor). |
 | `apple-app-design-audit@oozoofrog-plugin` | [Audit and improve a native Apple app's design](plugins/apple-app-design-audit/skills/apple-app-design-audit/SKILL.md) against the HIG and Liquid Glass by running the app; see [Apple App Design Audit](#apple-app-design-audit). |
 | `review-moment@oozoofrog-plugin` | [Choose and implement an app-specific StoreKit review request](plugins/review-moment/skills/review-moment/SKILL.md) for iOS or macOS. |
-| `wild-reading-coach-builder@oozoofrog-plugin` | [Build a personal reading coach](plugins/wild-reading-coach-builder/skills/wild-reading-coach-builder/SKILL.md) from a book or supplied excerpts. Each edition has a reading index, source references, and a private reading record. |
+| `wild-reading-coach-builder@oozoofrog-plugin` | [Build a personal reading coach](plugins/wild-reading-coach-builder/skills/wild-reading-coach-builder/SKILL.md) from a book or supplied excerpts. Each edition has a reading index, source references, and a private reading record. On request, the coach writes a local experiment page that shows the reader's prediction beside the result they report. |
 | `fstack@oozoofrog-plugin` | [Calibrate pace and spec depth to the task, prove each step, and record decisions](plugins/fstack/skills/fstack/SKILL.md); see [fstack](#fstack). |
 
 ## Examples

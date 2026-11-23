@@ -6,6 +6,8 @@
 
 - Retire `evidence-first-engineering`. The marketplace no longer lists it. `fstack` carries its verification, root-cause and report rules, and code style follows each project's conventions instead of fixed rules. Remove existing installations through your host; see [Retired Plugins](docs/plugin-installation.md#retired-plugins).
 
+- `wild-reading-coach-builder` 0.2.0: a generated coach records each reading experiment as a numbered entry in the reader profile. On request, it writes a local experiment page, `experiment.html`, where the reader drafts an action and a prediction and later sees the prediction beside the reported result. The page stores nothing and holds no book text. `make_coach.py --update-coaching` gives an existing coach the new instructions and keeps the earlier `SKILL.md` as `SKILL.md.previous`.
+
 - Add `wild-reading-coach-builder` 0.1.0 for Codex and Claude Code. It builds a personal reading coach from a book or excerpts, with an edition-specific index and a private reader profile.
 
 - Add `review-moment` 0.1.0 for Claude Code and Codex to select, implement, and verify app-specific StoreKit review requests on iOS and macOS.
