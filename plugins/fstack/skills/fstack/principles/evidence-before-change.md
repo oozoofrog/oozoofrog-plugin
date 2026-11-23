@@ -9,6 +9,7 @@ Act on a finding only when it names four things: the contract it breaks, the inp
 - Evidence can be a test, a counterexample or direct reasoning over the code. Not every defect needs a live repro.
 - Label a hypothesis that you did not test Inferred. Run a bounded check when the consequence is large enough.
 - Missing evidence means limited confidence. It is not a proven defect, and it is not a clean result.
+- An explicit redesign, style or optimization request sets its own acceptance criteria. It does not license changes to unrelated behavior.
 - Nothing needs a minimum count: not findings, alternatives, edits, tests or records. Leave optional preferences unapplied.
 - Close each material finding as Fixed, Rejected (with evidence) or Unresolved.
 

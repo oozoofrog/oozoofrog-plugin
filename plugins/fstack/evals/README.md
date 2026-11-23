@@ -11,7 +11,7 @@ Format: `claude plugin eval` (https://code.claude.com/docs/en/plugin-evals.md). 
 | 1 Routing, should fire | `route-fix-explicit-name-ko`, `route-cli-flag-spec-adr-ko`, `route-fix-drive-grant-ko`, `route-remaining-work-ko`, `route-dry-run-spec-adr-en` | `routing` | `tool_used: Skill` matching `fstack` (the skill is invoked as `fstack:fstack`) |
 | 1 Routing, must not fire | `route-neg-quick-question-ko`, `route-neg-readme-typo-ko`, `route-neg-refactor-ko`, `route-neg-handoff-ko`, `route-neg-model-choice-ko`, `route-neg-generic-review-en` | `routing` | `tool_used: Skill`, `min: 0`, `max: 0`, `arm: both` |
 | 1 Observe only | `observe-evidence-first-overlap-ko` | `observe` | `fstack-fired` indicator; not part of the pass rule |
-| 2 Behavior | `behavior-fix-step-pace-ko`, `behavior-fix-drive-grant-ko`, `behavior-design-docs-t2-ko` | `behavior` | deterministic `regex` / `tool_used` / `tool_order` / `file_exists`; one `llm` grader in each fix case |
+| 2 Behavior | `behavior-fix-step-pace-ko`, `behavior-fix-drive-grant-ko`, `behavior-design-docs-t2-ko` | `behavior` | deterministic `regex` / `tool_used` / `tool_order` / `file_exists`; one `llm` grader in each fix case; `lens-agents` in the design-docs case |
 
 Behavior prompts name fstack explicitly so routing noise does not mask behavior.
 
@@ -26,6 +26,8 @@ Limitations:
 - The heuristic can miss other writes, for example a Python script that writes through a helper.
 - It counts `> /dev/null` or a `>` comparison inside `python3 -c` as a write. A frame that comes after such a call fails.
 - Tool results and the injected skill text never match, because the pattern requires an assistant `text` block.
+
+`lens-agents` (`behavior-design-docs-t2-ko`, `arm: with-only`) requires at least two `Agent` calls: one agent for each lens. It counts calls and does not read the briefs. The fix cases do not allow the `Agent` tool, so a lens there can only be a single-agent fallback that the report discloses.
 
 `pace-not-drive` rejects a `Pace: drive` frame in any assistant text. `next-step-line` accepts only `Next step: <candidate>` or `다음 단계: <후보>` as the last non-empty line of the final message.
 
@@ -51,19 +53,19 @@ claude plugin eval . --tag routing --scaffold --trust-plugin -j 4 --threshold 0.
 claude plugin eval . --case 'route-neg-*' --scaffold --trust-plugin -j 4 --max-cost-usd 10 --no-publish --output-dir "$OUT"
 
 # Behavior (3 cases x 3 runs x 2 arms = 18 runs)
-claude plugin eval . --tag behavior --scaffold --allow-tools Bash Edit Write --trust-plugin -j 3 \
+claude plugin eval . --tag behavior --scaffold --allow-tools Bash Edit Write Agent --trust-plugin -j 3 \
   --max-cost-usd 60 --no-publish --output-dir "$OUT" --json "$OUT.json"
 
 # All, including the observe case (15 cases x 3 runs x 2 arms = 90 runs)
-claude plugin eval . --scaffold --allow-tools Bash Edit Write --trust-plugin -j 4 \
+claude plugin eval . --scaffold --allow-tools Bash Edit Write Agent --trust-plugin -j 4 \
   --max-cost-usd 80 --no-publish --output-dir "$OUT" --json "$OUT.json"
 
 # Parse-only check: loads every case, starts no run (exits 2, partial)
-claude plugin eval . --scaffold --allow-tools Bash Edit Write --trust-plugin --max-cost-usd 0 --no-publish --output-dir "$OUT"
+claude plugin eval . --scaffold --allow-tools Bash Edit Write Agent --trust-plugin --max-cost-usd 0 --no-publish --output-dir "$OUT"
 ```
 
 - `--scaffold` runs the case scaffold scripts. Without it, fixture cases run in an empty workspace.
-- `--allow-tools Bash Edit Write` is needed only by behavior cases. Routing cases use the read-only set `[Read, Glob, Grep, Skill]`.
+- `--allow-tools Bash Edit Write Agent` is needed only by behavior cases. `Agent` is used only by `behavior-design-docs-t2-ko`, where it starts the lens agents. Routing cases use the read-only set `[Read, Glob, Grep, Skill]`.
 - `--trust-plugin` is only for this local plugin.
 - `runs: 3` is set per case; `--runs 1 --ablation none` gives one cheap iteration run.
 - Do not use `--keep-temp` casually: on macOS, kept run directories go to `/tmp` (not `$TMPDIR`) with sealed subdirectories.

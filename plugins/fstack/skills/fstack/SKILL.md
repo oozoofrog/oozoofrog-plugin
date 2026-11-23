@@ -11,7 +11,7 @@ Precedence: user instructions > project rules (AGENTS.md, CLAUDE.md, ADR MUSTs) 
 
 ## Frame (right after this skill loads)
 
-- Restate the goal, the problem and the smallest artifact that meets the goal.
+- Restate the goal, the problem and the smallest artifact that meets the goal. Read the records that bear on the request (`references/records.md`).
 - Choose Pace and Spec tier from the request. Pace is `step` unless the user granted `drive`. Spec is `T1` unless the change creates or alters a contract that others rely on (public API, CLI surface, persisted schema, protocol) or the user asks for spec, ADR or plan; then it is `T2`. Details: `references/dials.md`.
 - Send the frame line as visible reply text right after this skill loads, before your next tool call and before any action that changes files. A line only in thinking, in a tool input or in the final report does not count. If a file you read later changes a dial, send a corrected frame line before the next file change. It is one literal line in the user's language. Keep the keys `Pace:` and `Spec:` in every language:
   - `Pace: step · Spec: T1 — internal bug with a clear repro`
@@ -59,14 +59,16 @@ Gates stop work in any pace. Details: `principles/stop-at-gates.md`.
 ## Delegation
 
 - The main session owns the playbook and its checklist. Details: `references/delegation.md`.
-- Each brief restates the goal, gives paths and states the bar. Give a reviewer paths only, never your conclusions.
+- A substantive task gets two lenses from independent agents: macro before the design is fixed, micro after consequential edits. `references/review.md` says when each runs. A trivial edit gets none.
+- Each brief restates the goal, gives paths and states the bar. Give a reviewer the target and the claims to verify, never your conclusions.
 - A subagent report is not evidence. Read the diff and the outputs yourself.
 - Fan out only across disjoint seams or competing shapes. Use only models that the host offers.
 - If no independent agent is available, run the passes yourself and say so. Never present your own passes as independent review.
 
 ## Report
 
-- Use `references/report.md`. Start with the goal.
+- Read `references/report.md` before you write the report. Every report, also for a one-line fix, uses its five headings in this order: Goal, Changes, Verification, Basis, Remaining (Korean: 목표, 변경, 검증, 근거, 남은 일). Write "none" under an empty heading.
+- State the review mode under Verification: independent, two-lens, or single-agent fallback. A skipped lens and its reason also go there.
 - Label each claim. A check that you did not run is "Inconclusive", not a pass.
 - In step pace, the last line is `Next step: <candidate>` or, in Korean, `다음 단계: <후보>`, on its own line. Do not start it.
 
@@ -79,7 +81,7 @@ Pick one playbook. Copy its steps to a checklist: the host's plan or todo tool, 
 - **Prototype** (`playbooks/prototype.md`). Settle a design fork with throwaway variants. ("prototype", "try both", "which layout", "프로토타입", "비교해 봐")
 - **Build** (`playbooks/build.md`). Implement one unit or plan task, test-first. ("do task 3", "next task", "implement", "작업 3 해", "다음 작업")
 - **Fix** (`playbooks/fix.md`). Reproduce and fix one defect or one review memo. ("fix this bug", "fix memo 1", "버그 고쳐", "메모 1 고쳐")
-- **Review** (`playbooks/review.md`). Explain and review a change, a design or a whole document, with one or two lenses. Findings only. ("review this commit", "explain the diff", "does every AC have a test", "macro and micro review", "리뷰", "문서 대조", "설계·코드 교차 검토")
+- **Review** (`playbooks/review.md`). Explain and review a change, a design or a whole document, with one or two lenses. Findings only; a requested fix continues in Fix. ("review this commit", "explain the diff", "does every AC have a test", "macro and micro review", "리뷰", "문서 대조", "설계·코드 교차 검토")
 - **Drive** (`playbooks/drive.md`). Run autonomously to a checkable exit predicate after an explicit grant. ("run until done", "don't stop", "끝까지 해", "자율로")
 - **Checkpoint** (`playbooks/checkpoint.md`). Report remaining work and confirm pending AI decisions. Read-only. ("what's left", "where are we", "approve the proposals", "남은 작업", "결정 확인")
 - **Figure it out** (`playbooks/figure-it-out.md`). Design the steps when no playbook fits, then execute. ("figure it out", "알아서 방법 찾아")

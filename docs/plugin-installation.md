@@ -141,7 +141,7 @@ codex plugin add interface-first-design@oozoofrog-plugin
 
 ## fstack
 
-`fstack` 0.1.0은 진행 속도와 문서 수준을 작업에 맞춰 정하는 개발 방식을 담은 skills-only Plugin입니다. 지침과 표준 라이브러리만 쓰는 Python 검사 `scripts/trace.py`를 포함합니다. 별도 런타임·MCP·hooks·인증 정보를 포함하지 않습니다. `trace.py`에는 Python 3이 필요합니다.
+`fstack` 0.1.1은 진행 속도와 문서 수준을 작업에 맞춰 정하는 개발 방식을 담은 skills-only Plugin입니다. 지침과 표준 라이브러리만 쓰는 Python 검사 `scripts/trace.py`를 포함합니다. 별도 런타임·MCP·hooks·인증 정보를 포함하지 않습니다. `trace.py`에는 Python 3이 필요합니다.
 
 ```bash
 claude plugin install fstack@oozoofrog-plugin
