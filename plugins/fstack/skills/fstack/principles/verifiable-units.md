@@ -9,7 +9,7 @@ Work as known-good → one change → check → next. The failing check lands be
 - Order the units so that the riskiest unknown comes first.
 - Confirm a known-good state before each unit.
 - Make one change. Run its check. Keep the change or revert it before the next unit.
-- In step pace, keep a change in the working tree. Make a local commit only on a user commit request or under a drive grant. Push stays G1.
+- Keep a change in the working tree. Commit only when the request or a project rule says to commit; a drive grant alone does not permit a commit. Push stays G1.
 - When commits stack, keep the failing check in the same or an earlier commit than the fix.
 
 **Stop:** Do not start a unit while the previous one is unverified. Do not batch all checks at the end.

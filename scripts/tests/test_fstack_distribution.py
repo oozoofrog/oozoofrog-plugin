@@ -26,7 +26,7 @@ REFERENCES = {"dials", "report", "doc-templates", "records", "review", "delegati
 PACKAGE_PATH = re.compile(r"`((?:playbooks|principles|references|scripts)/[^`\s]+)`")
 MODEL_ID = re.compile(r"claude-(?:opus|sonnet|haiku|fable)-\d|gemini-\d|gpt-\d")
 CURSOR_ONLY = ("bugbot", ".cursor/", "/loop", "AskQuestion", "poteto-agent", "pstack-models")
-TRIGGER_SHA256 = "04e53b288ae1abdbb7a83fee2d0cb530d2236498ce8526c307950d24f0edeb1a"
+TRIGGER_SHA256 = "63f2e4415d30a161f0dce470d71578f246b5ccbf083643230afdcdfa033b2cf7"
 MIT_TEMPLATE = """MIT License
 
 Copyright (c) 2026 {holder}
@@ -141,7 +141,7 @@ class FstackDistributionTests(unittest.TestCase):
         self.assertNotIn("disable-model-invocation", read(SKILL / "SKILL.md"))
         for manifest in (codex, claude):
             self.assertEqual(NAME, manifest["name"])
-            self.assertEqual("0.1.1", manifest["version"])
+            self.assertEqual("0.1.2", manifest["version"])
             self.assertEqual("https://github.com/oozoofrog/oozoofrog-plugin", manifest["repository"])
             self.assertEqual(sibling["author"], manifest["author"])
         for key in ("hooks", "mcpServers", "apps"):
@@ -274,7 +274,7 @@ class FstackDistributionTests(unittest.TestCase):
         for folder, names in (("playbooks", PLAYBOOKS), ("principles", PRINCIPLES), ("references", REFERENCES)):
             for name in names:
                 self.assertIn(f"`{folder}/{name}.md`", sources)
-        for pin in ("cursor/plugins@7a583913eb1b", "tobyilee/tstack@868dda2373da", "sleeplesshan/dual-brain", "v1.7.0"):
+        for pin in ("cursor/plugins@9e278fe4d4ec", "tobyilee/tstack@868dda2373da", "sleeplesshan/dual-brain", "v1.7.0"):
             self.assertIn(pin, sources)
         rows = {line.split(" | ")[0].strip("| `"): line for line in sources.splitlines() if line.startswith("| `")}
         for changed in ("principles/evidence-before-change.md", "playbooks/review.md", "playbooks/fix.md",

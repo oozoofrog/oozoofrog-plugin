@@ -6,8 +6,8 @@ Choose two dials: Pace and Spec tier. Send them as the frame line in visible rep
 
 | Pace | When | Behavior |
 |---|---|---|
-| `step` (default) | Always, unless the user granted drive | Finish the whole request without questions about reversible work. Keep changes in the working tree unless the user asks for a commit. Then stop and propose one next step in one line. |
-| `drive` | Only after an explicit grant, such as "run until done", "don't stop", "끝까지", "자율로" | Continue to the exit predicate across units (`playbooks/drive.md`). Fix blocking side issues. Local commits per kept change are allowed; push stays G1. |
+| `step` (default) | Always, unless the user granted drive | Finish the whole request without questions about reversible work. Keep changes in the working tree unless the request or a project rule says to commit. Then stop and propose one next step in one line. |
+| `drive` | Only after an explicit grant, such as "run until done", "don't stop", "끝까지", "자율로" | Continue to the exit predicate across units (`playbooks/drive.md`). Fix blocking side issues. The grant alone permits no commit: commit only when the request or a project rule says to commit, otherwise leave the changes in the working tree and say so in the report. Push stays G1. |
 
 A grant covers the task that it names. It does not carry over to the next request.
 
@@ -47,4 +47,6 @@ A fork that a run can settle goes to `playbooks/prototype.md`, not to a document
 | New project | `kickoff`, then T2 |
 | Overnight flaky-test hunt, "don't stop" | `fix` inside `drive`, T1, drive |
 | Two UI layouts and no precedent | `prototype`, then `build` at T1 |
+| "Which is better: read the whole file or line by line?" | `prototype`: measure both, then answer |
+| "Make X work with Y", with no named target | `kickoff` |
 | Purpose of the work is unclear | `kickoff` |
