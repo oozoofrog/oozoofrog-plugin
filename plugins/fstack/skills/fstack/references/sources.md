@@ -4,9 +4,11 @@ This skill adapts ideas from three MIT-licensed works. The text is rewritten in 
 
 | Source | Pin | Retrieved |
 |---|---|---|
-| pstack by Lauren Tan, in [cursor/plugins](https://github.com/cursor/plugins) | `cursor/plugins@7a583913eb1b` (pstack 0.15.46) | 2026-11-21 |
+| pstack by Lauren Tan, in [cursor/plugins](https://github.com/cursor/plugins) | `cursor/plugins@9e278fe4d4ec` (pstack 0.15.48) | 2026-11-24 |
 | tstack by Toby Lee, [tobyilee/tstack](https://github.com/tobyilee/tstack) | `tobyilee/tstack@868dda2373da` (tstack 0.2.2) | 2026-11-21 |
 | dual-brain by Hanmin Kim, [sleeplesshan/dual-brain](https://github.com/sleeplesshan/dual-brain) | v1.7.0 plus the 2026-11-07 documentation update (local copy, no commit) | 2026-11-23 |
+
+The pstack files were first read at `cursor/plugins@7a583913eb1b` (pstack 0.15.46, 2026-11-21). `reframe/SKILL.md` was read at the current pin. Between the two commits, pstack changed only `reframe/SKILL.md`, `poteto-help/SKILL.md`, its README, one guide page and its manifests; the other source files below are the same at both commits.
 
 ## File origins
 
@@ -15,7 +17,7 @@ P = pstack, T = tstack, B = both (pstack and tstack), N = new, D = dual-brain. P
 | File | Origin | Source files |
 |---|---|---|
 | `SKILL.md` | N (structure from B) | P `poteto-mode/SKILL.md`; T `t-mode/SKILL.md` |
-| `playbooks/kickoff.md` | T, with a P prototype hook | T `t-mode/playbooks/kickoff.md`; P `poteto-mode/playbooks/prototype.md` |
+| `playbooks/kickoff.md` | T, with P prototype, reframe and sharpen steps | T `t-mode/playbooks/kickoff.md`; P `poteto-mode/playbooks/prototype.md`, `reframe/SKILL.md`, `sharpen/SKILL.md` |
 | `playbooks/design-docs.md` | B | T `t-mode/playbooks/design-docs.md`; P `poteto-mode/playbooks/multi-phase-plan.md` |
 | `playbooks/prototype.md` | P | P `poteto-mode/playbooks/prototype.md` |
 | `playbooks/build.md` | B | T `t-mode/playbooks/plan-task.md`; P `poteto-mode/playbooks/feature.md` |
@@ -54,6 +56,8 @@ P = pstack, T = tstack, B = both (pstack and tstack), N = new, D = dual-brain. P
 - Spec weight is a dial (T0–T2) instead of "documents first" or "code is the spec".
 - Tests are added when T2 tracing, the project's rules or the user require them. Otherwise a rerunnable repro or a real-surface run proves the change. Every check must be seen failing.
 - Code-shape rules are not fixed in this skill, because code style changes over time. The project's rule files, linters and surrounding code decide them. Not adopted as rules: type-system discipline, boundary discipline, domain modeling, foundational thinking, caller migration, reader load and first-principles redesign.
+- pstack `reframe` and `sharpen` are commands that the user runs. Here they are two kickoff steps: candidate problems with a term and a telling sign each, then the request restated in the practitioner's terms with confirmed links. The ranked list of 8 to 12 terms and the neighboring-field analogies are not ported.
+- A drive grant covers the work, not a commit. pstack's autonomous run and the earlier versions of this skill allowed a local commit for each kept change; from 0.1.2 a commit needs the request or a project rule.
 - Experience-first, outcome-oriented execution and design-space exploration are folded into the prototype playbook and the delegation reference.
 - Instructions are in English. Replies and project records follow the language of the user or the project. The Korean keyword mapping follows the user's rule, not tstack's `keywords` mapping.
 - The journal is optional. trealworld case links are dropped.

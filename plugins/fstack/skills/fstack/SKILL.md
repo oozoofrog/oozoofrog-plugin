@@ -1,6 +1,6 @@
 ---
 name: fstack
-description: "Use when the user asks for a disciplined engineering workflow that calibrates pace and documentation to the task: kickoff and open questions, spec, ADR and plan with traceable IDs, one plan task test-first, a reproduced bug fix, a throwaway prototype to settle a design fork, review against the spec, an autonomous run to a checkable exit condition, pending AI decisions, remaining work, or process reflection; also for fstack requests or pstack- or tstack-style requests. 작업 위험도에 맞춰 진행 속도와 문서 수준을 정하는 개발 방식(킥오프, spec·ADR·plan, 테스트 먼저, 자율 실행, 결정 확인)을 요청할 때 사용한다. Not for quick questions, single obvious edits, generic code review, behavior-preserving refactoring, session handoff, or model selection."
+description: "Use for ordinary engineering work in a code repository, also when the request is short or vague: fix a bug or odd behavior, build or change a feature, a vague wish such as 'make X work with Y' (intent and open questions before code), a 'which of two approaches is better?' question (answer it by measuring a throwaway prototype, not from opinion), write a spec, ADR or plan, do the next plan task, review a change or diff, report what is left or which decisions are pending, or run autonomously until done; also for fstack requests or pstack- or tstack-style requests. 코드 저장소의 일반 개발 요청에 사용한다. 요청이 짧거나 모호해도 해당한다: 버그나 이상한 동작 수정, 기능 추가·변경, 'A를 B와 연동되게' 같은 막연한 요구, 'A랑 B 중 뭐가 나아요?' 같은 방식 선택 질문(실행해 측정), 설계 문서 작성, 다음 작업 진행, 변경분 리뷰, 남은 작업 확인, 끝까지 자율 진행. Not for factual questions about what existing code does or returns, one-line explanations, single obvious edits such as a typo, non-engineering questions, behavior-preserving refactoring, session handoff, or model selection."
 ---
 
 # fstack
@@ -22,14 +22,14 @@ Precedence: user instructions > project rules (AGENTS.md, CLAUDE.md, ADR MUSTs) 
 ## Always
 
 - Before a change → write the exit condition as a pass/fail sentence and the verification method.
-- A fork that a run can settle → `playbooks/prototype.md`. Do not ask, and do not write a document for it.
+- A fork that a run can settle → `playbooks/prototype.md`. Do not ask, and do not write a document for it. A "which of two approaches is better" question is such a fork when both can be run: measure both and answer from the numbers, not from reading the code alone.
 - Before you say "done" → `principles/see-it-fail.md` and `principles/real-surface.md`.
 - Adding or changing a test → only for T2 tracing, a project rule or the existing suite, or a user request. Otherwise the failing check is a rerunnable repro or a real-surface run (`principles/see-it-fail.md`).
 - A decision that no document made → `principles/decide-and-record.md`.
 - A project MUST is in the way → `principles/rules-as-written.md`.
 - Writing project documents → `references/doc-templates.md`.
 - Code shape (comments, structure, naming, data shape, boundaries) → follow the project conventions: its rule files, linters and formatters, and the code around the change.
-- Commit → only on a user commit request, or as a local commit under a drive grant. Read `git status` first. Stage explicit paths. Never use `git add -A`. Push is G1.
+- Commit → only when the request or a project rule says to commit. A drive grant alone does not permit a commit: leave the changes in the working tree and say so in the report. Read `git status` first. Stage explicit paths. Never use `git add -A`. Push is G1.
 - Before you ask the user → classify the question: can a run answer it, does an approved decision answer it, or does the user own it? Ask only user-owned questions, in one batch. Give options with the recommended one first and a one-line consequence for each.
 - The same correction twice → record it, then run `playbooks/reflect.md`.
 - End of every playbook → `playbooks/wrap-up.md`.
@@ -76,13 +76,13 @@ Gates stop work in any pace. Details: `principles/stop-at-gates.md`.
 
 Pick one playbook. Copy its steps to a checklist: the host's plan or todo tool, or an inline list. Mark each skipped step `skip: <reason>`. If no playbook fits, use `playbooks/figure-it-out.md`.
 
-- **Kickoff** (`playbooks/kickoff.md`). Extract intent and close open questions for a new project or slice. No code. ("kickoff", "brainstorm", "open questions", "킥오프", "브레인스토밍")
+- **Kickoff** (`playbooks/kickoff.md`). Extract intent and close open questions for a new project, a slice or a vague wish: reframe it as candidate problems, sharpen it into the practitioner's terms, then ask. No code. ("kickoff", "brainstorm", "open questions", "reframe", "sharpen", "make X work with Y", "킥오프", "브레인스토밍", "연동되게 해줘")
 - **Design docs** (`playbooks/design-docs.md`). Write or rewrite spec, domain, ADR and plan with IDs. ("write the spec", "ADR", "make a plan", "spec 써줘", "plan 만들어")
-- **Prototype** (`playbooks/prototype.md`). Settle a design fork with throwaway variants. ("prototype", "try both", "which layout", "프로토타입", "비교해 봐")
+- **Prototype** (`playbooks/prototype.md`). Settle a design fork, or a "which is better" question that a run can settle, with throwaway variants and a measurement. ("prototype", "try both", "which layout", "which is faster", "프로토타입", "비교해 봐", "뭐가 나아")
 - **Build** (`playbooks/build.md`). Implement one unit or plan task, test-first. ("do task 3", "next task", "implement", "작업 3 해", "다음 작업")
 - **Fix** (`playbooks/fix.md`). Reproduce and fix one defect or one review memo. ("fix this bug", "fix memo 1", "버그 고쳐", "메모 1 고쳐")
 - **Review** (`playbooks/review.md`). Explain and review a change, a design or a whole document, with one or two lenses. Findings only; a requested fix continues in Fix. ("review this commit", "explain the diff", "does every AC have a test", "macro and micro review", "리뷰", "문서 대조", "설계·코드 교차 검토")
-- **Drive** (`playbooks/drive.md`). Run autonomously to a checkable exit predicate after an explicit grant. ("run until done", "don't stop", "끝까지 해", "자율로")
+- **Drive** (`playbooks/drive.md`). Run autonomously to a checkable exit predicate after an explicit grant. The grant covers the work, not a commit. ("run until done", "don't stop", "끝까지 해", "자율로")
 - **Checkpoint** (`playbooks/checkpoint.md`). Report remaining work and confirm pending AI decisions. Read-only. ("what's left", "where are we", "approve the proposals", "남은 작업", "결정 확인")
 - **Figure it out** (`playbooks/figure-it-out.md`). Design the steps when no playbook fits, then execute. ("figure it out", "알아서 방법 찾아")
 - **Reflect** (`playbooks/reflect.md`). Turn repeated corrections into rules or checks. ("reflect", "retro", "회고", "같은 실수 막아")
