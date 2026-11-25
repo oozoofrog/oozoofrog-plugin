@@ -38,14 +38,14 @@ codex plugin add graph-flow@graph-flow
 
 ## Handoff
 
-`handoff@oozoofrog-plugin` 0.1.0은 작업 상태를 프로젝트 안의 `_context/handoff/<브랜치>.md`에 남기는 [인계 문서 스킬](../plugins/handoff/skills/handoff/SKILL.md)과 Claude Code 훅 4개(SessionStart, Stop, PreCompact, PostCompact)를 함께 설치합니다. 훅은 `claude-hooks/hooks.json`에 있고 Claude 매니페스트만 이를 가리킵니다. Codex에서는 스킬만 사용할 수 있습니다. Python 3과 Git이 필요하며, macOS에서는 `xcode-select --install`로 함께 설치됩니다.
+`handoff@oozoofrog-plugin` 0.1.2는 작업 상태를 프로젝트 안의 `_context/handoff/<브랜치>.md`에 남기는 [인계 문서 스킬](../plugins/handoff/skills/handoff/SKILL.md)과 Claude Code 훅 3개(SessionStart, PreCompact, PostCompact)를 함께 설치합니다. 훅은 `claude-hooks/hooks.json`에 있고 Claude 매니페스트만 이를 가리킵니다. Codex에서는 스킬만 사용할 수 있습니다. Python 3과 Git이 필요하며, macOS에서는 `xcode-select --install`로 함께 설치됩니다.
 
 ```sh
 claude plugin marketplace add oozoofrog/oozoofrog-plugin
 claude plugin install handoff@oozoofrog-plugin
 ```
 
-설치 후 Claude Code를 다시 시작해야 훅이 적용됩니다. 같은 스크립트를 `~/.claude/skills/handoff`와 `settings.json` 훅으로 직접 설치한 적이 있다면 둘 중 하나만 남깁니다. 둘 다 있으면 훅이 두 번 실행됩니다. 경고 기준과 정리 기간은 환경 변수(`HANDOFF_TOKENS`, `HANDOFF_STALE_DAYS`, `HANDOFF_STALE_COMMITS`, `HANDOFF_KEEP_COMPACT_DAYS`, `HANDOFF_KEEP_ARCHIVE_DAYS`)로 바꿉니다.
+설치 후 Claude Code를 다시 시작해야 훅이 적용됩니다. 같은 스크립트를 `~/.claude/skills/handoff`와 `settings.json` 훅으로 직접 설치한 적이 있다면 둘 중 하나만 남깁니다. 둘 다 있으면 훅이 두 번 실행됩니다. 정리 기간은 환경 변수(`HANDOFF_STALE_DAYS`, `HANDOFF_STALE_COMMITS`, `HANDOFF_KEEP_COMPACT_DAYS`, `HANDOFF_KEEP_ARCHIVE_DAYS`)로 바꿉니다.
 
 ## Model Advisor
 

@@ -11,17 +11,6 @@
         ]
       }
     ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 -I -B \"${CLAUDE_PLUGIN_ROOT}/skills/handoff/scripts/ctx_hook.py\" stop",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
     "PreCompact": [
       {
         "hooks": [

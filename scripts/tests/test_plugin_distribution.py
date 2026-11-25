@@ -171,7 +171,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertFalse((plugin / "hooks").exists())
         self.assertEqual("./claude-hooks/hooks.json", claude["hooks"])
         hooks = json.loads((plugin / "claude-hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
-        events = {"SessionStart": "session-start", "Stop": "stop", "PreCompact": "pre-compact", "PostCompact": "post-compact"}
+        events = {"SessionStart": "session-start", "PreCompact": "pre-compact", "PostCompact": "post-compact"}
         self.assertEqual(set(events), set(hooks))
         for event, arg in events.items():
             (entry,) = hooks[event]

@@ -9,7 +9,6 @@ Layout inside a project root:
 from __future__ import annotations
 
 import datetime as _dt
-import json
 import os
 import re
 import subprocess
@@ -19,11 +18,7 @@ from pathlib import Path
 CONTEXT_DIR = "_context"
 INJECT_LIMIT = 9000  # hook strings are capped at 10,000 characters by Claude Code
 STARTUP_LIMIT = 1500
-DEFAULT_THRESHOLD = 400_000
-DEFAULT_STEP = 150_000
-RECENT_WRITE_SECONDS = 600
 COMPACT_FRESH_SECONDS = 300
-STATE_KEEP_SECONDS = 7 * 86400
 DONE_ITEMS_LIMIT = 8
 REQUIRED_KEYS = ("status", "branch", "head", "updated", "session_id", "goal")
 STATUSES = ("active", "done")
@@ -41,16 +36,8 @@ def _int_env(name: str, default: int) -> int:
         return default
 
 
-def threshold() -> int:
-    return _int_env("HANDOFF_TOKENS", DEFAULT_THRESHOLD)
-
-
-def step() -> int:
-    return _int_env("HANDOFF_TOKENS_STEP", DEFAULT_STEP)
-
-
 def unattended() -> bool:
-    """No one can act on a handoff request here: T3 Code delegated child threads run unattended."""
+    """T3 Code delegated child threads run unattended with their own scoped brief."""
     return os.environ.get("T3CODE_THREAD_ID", "").startswith("thread:delegated-task:")
 
 
@@ -68,10 +55,6 @@ def keep_compact_days() -> int:
 
 def keep_archive_days() -> int:
     return _int_env("HANDOFF_KEEP_ARCHIVE_DAYS", 90)
-
-
-def state_dir() -> Path:
-    return Path(os.environ.get("HANDOFF_STATE_DIR") or (Path.home() / ".claude" / "state" / "handoff"))
 
 
 # ---------- git / paths ----------
@@ -266,45 +249,6 @@ def staleness(root: Path, fm: dict, path: Path) -> list[str]:
     return reasons
 
 
-# ---------- transcript ----------
-
-def context_tokens(transcript_path: str | None, max_bytes: int = 16 * 1024 * 1024) -> int | None:
-    """Latest main-chain assistant usage → input + cache_creation + cache_read."""
-    if not transcript_path:
-        return None
-    p = Path(transcript_path)
-    try:
-        size = p.stat().st_size
-        with p.open("rb") as f:
-            pos, buf, scanned, chunk = size, b"", 0, 256 * 1024
-            while pos > 0 and scanned < max_bytes:
-                n = min(chunk, pos)
-                pos -= n
-                f.seek(pos)
-                buf = f.read(n) + buf
-                scanned += n
-                lines = buf.split(b"\n")
-                buf = lines[0] if pos > 0 else b""
-                complete = lines[1:] if pos > 0 else lines
-                for raw in reversed(complete):
-                    if b'"usage"' not in raw or b'"assistant"' not in raw:
-                        continue
-                    try:
-                        d = json.loads(raw)
-                    except ValueError:
-                        continue
-                    if d.get("type") != "assistant" or d.get("isSidechain"):
-                        continue
-                    u = (d.get("message") or {}).get("usage") or {}
-                    if not u:
-                        continue
-                    return int(u.get("input_tokens", 0)) + int(u.get("cache_creation_input_tokens", 0)) + int(
-                        u.get("cache_read_input_tokens", 0))
-    except OSError:
-        return None
-    return None
-
-
 # ---------- hook behaviours ----------
 
 def _pointer(rel: Path, fm: dict, lead: str, tail: str) -> str:
@@ -313,6 +257,9 @@ def _pointer(rel: Path, fm: dict, lead: str, tail: str) -> str:
 
 
 def session_start(inp: dict) -> str | None:
+    source = inp.get("source") or "startup"
+    if source in ("resume", "fork") or unattended():
+        return None  # a resumed or forked conversation already holds its state; a delegated thread has its brief
     root = find_root(inp.get("cwd") or os.getcwd())
     if not root:
         return None
@@ -338,7 +285,6 @@ def session_start(inp: dict) -> str | None:
                         "자동으로 넣지 않았습니다. 이 작업을 이어갈 때만 읽고 현재 코드와 대조하세요. "
                         "끝난 작업이면 handoff 스킬로 done 처리해 치우세요.")
     age = age_seconds(path)
-    source = inp.get("source") or "startup"
     if source == "compact" and age > COMPACT_FRESH_SECONDS:
         return _pointer(rel, fm, f"압축 전에 쓴 인계 문서가 있습니다 (갱신 {human_age(age)})",
                         "방금 만든 압축 요약이 더 최신입니다. 둘이 다르면 요약을 따르고, "
@@ -348,55 +294,8 @@ def session_start(inp: dict) -> str | None:
                   "이어서 작업하기 전에 현재 코드와 대조하고, 확인 안 된 항목은 검증한 뒤 사용하세요. "
                   "작업 상태가 바뀌면 handoff 스킬로 이 문서를 갱신하세요.\n\n")
         return clip(header + text, INJECT_LIMIT, f"…(잘림. 전체 문서: {rel})")
-    nxt = extract_section(body, ("다음 할 일", "next"))
-    tail = (f"다음 할 일:\n{nxt}\n" if nxt else "") + "이 작업을 이어갈 때만 전체 문서를 읽으세요."
-    return _pointer(rel, fm, f"이 브랜치({branch})에 진행 중인 인계 문서가 있습니다 (갱신 {human_age(age)})", tail)
-
-
-def _sweep_state(sdir: Path) -> None:
-    try:
-        for f in sdir.glob("*.json"):
-            if age_seconds(f) > STATE_KEEP_SECONDS:
-                f.unlink(missing_ok=True)
-    except OSError:
-        pass
-
-
-def stop(inp: dict) -> dict | None:
-    if inp.get("stop_hook_active") or unattended():
-        return None
-    root = find_root(inp.get("cwd") or os.getcwd())
-    if not root:
-        return None
-    tokens = context_tokens(inp.get("transcript_path"))
-    t = threshold()
-    if tokens is None or tokens < t:
-        return None
-    level = (tokens - t) // step()
-    sdir = state_dir()
-    sfile = sdir / f"{safe_id(inp.get('session_id'))}.json"
-    try:
-        last = json.loads(sfile.read_text()).get("level", -1)
-    except (OSError, ValueError):
-        last = -1
-    if level <= last:
-        return None
-    try:
-        atomic_write(sfile, json.dumps({"level": level, "tokens": tokens, "root": str(root)}))
-    except OSError:
-        return None  # without state we could nag every turn; stay silent instead
-    _sweep_state(sdir)
-    path = handoff_path(root, branch_name(root))
-    if path.is_file() and age_seconds(path) < RECENT_WRITE_SECONDS:
-        return None  # a handoff was just written; recording the level is enough
-    rel = path.relative_to(root)
-    return {
-        "decision": "block",
-        "reason": (f"[handoff] 문맥이 약 {tokens:,} 토큰으로 기준 {t:,}을 넘었습니다. "
-                   f"handoff 스킬로 {rel}에 인계 문서를 쓰거나 갱신한 뒤, "
-                   "사용자에게 '/clear 후 이어서 작업할 수 있다'고 한 줄로 알리세요. "
-                   "진행 중이던 작업은 더 진행하지 마세요."),
-    }
+    return _pointer(rel, fm, f"이 브랜치({branch})에 진행 중인 인계 문서가 있습니다 (갱신 {human_age(age)})",
+                    "이 작업을 이어갈 때만 전체 문서를 읽으세요.")
 
 
 def pre_compact(inp: dict) -> str | None:
@@ -512,12 +411,13 @@ def prepare(cwd: str, allow_non_git: bool, session_id: str | None) -> dict:
         fm, _ = parse_frontmatter(text)
         res["stale"] = staleness(root, fm, path) if fm else ["frontmatter 없음"]
         other = fm.get("session_id")
-        if other and other == sid:
+        if other and other == sid and sid != "unknown":
             return res  # rewriting our own handoff: the previous draft is not worth archiving
         age = age_seconds(path)
         if fm.get("status") == "active" and other and age < 6 * 3600:
-            res["warning"] = (f"다른 세션({other[:8]})이 {human_age(age)}에 쓴 진행 중 문서입니다. "
-                              "덮어쓰기 전에 그 내용을 합치세요.")
+            who = "세션 ID를 알 수 없는 세션" if other == "unknown" or sid == "unknown" else f"다른 세션({other[:8]})"
+            res["warning"] = (f"{who}이 {human_age(age)}에 쓴 진행 중 문서입니다. "
+                              "이 세션이 쓴 문서가 아니면 덮어쓰기 전에 그 내용을 합치세요.")
         arch = archive_name(root, branch, other or "", "superseded")
         atomic_write(arch, text)
         res["archived"] = str(arch)
