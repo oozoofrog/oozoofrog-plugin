@@ -1,4 +1,4 @@
-"""Claude Code hook entry point. Usage: ctx_hook.py session-start|stop|pre-compact|post-compact
+"""Claude Code hook entry point. Usage: ctx_hook.py session-start|pre-compact|post-compact
 
 Always exits 0: a hook failure must never block the user's prompt or session.
 """
@@ -23,10 +23,6 @@ def main() -> None:
         if msg:
             print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart",
                                                      "additionalContext": msg}}, ensure_ascii=False))
-    elif event == "stop":
-        out = ctxlib.stop(inp)
-        if out:
-            print(json.dumps(out, ensure_ascii=False))
     elif event == "pre-compact":
         msg = ctxlib.pre_compact(inp)
         if msg:

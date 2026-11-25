@@ -53,7 +53,7 @@ skills-only Plugin `0.3.0`을 제공합니다. Plugin에 모델·런타임·생�
 
 ## 인계 문서
 
-[인계 문서](plugins/handoff/skills/handoff/SKILL.md) (`handoff` 0.1.0)는 작업 상태를 프로젝트 안의 `_context/handoff/<브랜치>.md`에 남겨, Claude Code에서 `/clear`나 새 세션 뒤에도 압축에 기대지 않고 이어가게 합니다. `_context/`는 기본으로 Git에 올라가지 않습니다. Claude Code에서는 훅 4개가 함께 등록됩니다: `/clear` 뒤 인계 문서 전체를, 새로 시작하거나 재개할 때는 목표와 다음 할 일만 넣고, 문맥이 40만 토큰(`HANDOFF_TOKENS`)을 넘으면 인계 문서를 쓰게 하고(사람이 지켜보지 않는 T3 Code 위임 스레드는 제외), 압축 요약을 `_context/sessions/`에 보관합니다. 14일 넘게 갱신되지 않았거나 커밋이 30개 넘게 지났거나 기록이 갈라졌거나 압축 전에 쓴 문서는 넣지 않고 위치만 알립니다. 끝난 문서와 사라진 브랜치의 문서는 보관 폴더로 옮기고, 오래된 보관본은 지웁니다. Python 3과 Git이 필요하며 MCP 서버는 없습니다. Codex에서는 스킬만 쓸 수 있습니다. [설치](docs/plugin-installation.md#handoff)를 확인하세요.
+[인계 문서](plugins/handoff/skills/handoff/SKILL.md) (`handoff` 0.1.2)는 작업 상태를 프로젝트 안의 `_context/handoff/<브랜치>.md`에 남겨, Claude Code에서 `/clear`나 새 세션 뒤에도 압축에 기대지 않고 이어가게 합니다. `_context/`는 기본으로 Git에 올라가지 않습니다. Claude Code에서는 훅 3개가 함께 등록됩니다: `/clear` 뒤에는 인계 문서 전체를, 새로 시작할 때는 문서 위치와 목표만 넣고, 재개(resume)·fork와 T3 Code 위임 스레드에는 아무것도 넣지 않으며, 압축 요약을 `_context/sessions/`에 보관합니다. 어떤 훅도 인계를 쓰라고 작업을 멈추지 않습니다. 인계 문서는 사용자가 원할 때 씁니다. 14일 넘게 갱신되지 않았거나 커밋이 30개 넘게 지났거나 기록이 갈라졌거나 압축 전에 쓴 문서는 넣지 않고 위치만 알립니다. 끝난 문서와 사라진 브랜치의 문서는 보관 폴더로 옮기고, 오래된 보관본은 지웁니다. Python 3과 Git이 필요하며 MCP 서버는 없습니다. Codex에서는 스킬만 쓸 수 있습니다. [설치](docs/plugin-installation.md#handoff)를 확인하세요.
 
 ## 모델 선택
 

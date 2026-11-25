@@ -75,9 +75,9 @@ These are requests, not examples of verified results.
 
 ## Handoff
 
-지금 작업 상태를 프로젝트 안의 `_context/handoff/<브랜치>.md`에 인계 문서로 남겨, /clear나 새 세션에서 압축 없이 이어가게 한다. "/handoff", "인계 문서 써줘", "세션 넘기기", "/clear 전에 정리", "여기까지 저장", 문맥 사용량 경고 훅이 인계를 요청할 때, 큰 작업 단위를 끝냈을 때 사용한다. 작업이 끝나 인계가 필요 없어지면 status를 done으로 바꾼다. 코드 커밋이나 PR 설명 작성에는 쓰지 않는다.
+지금 작업 상태를 프로젝트 안의 `_context/handoff/<브랜치>.md`에 인계 문서로 남겨, /clear나 새 세션에서 압축 없이 이어가게 한다. "/handoff", "인계 문서 써줘", "세션 넘기기", "/clear 전에 정리", "여기까지 저장"처럼 사용자가 인계를 요청할 때 사용한다. 작업이 끝나 인계가 필요 없어지면 status를 done으로 바꾼다. 코드 커밋이나 PR 설명 작성에는 쓰지 않는다.
 
-The Plugin writes `_context/handoff/<branch>.md` inside the project (ignored by Git by default) and, in Claude Code, registers four hooks: SessionStart injects the handoff after `/clear` and a short pointer on startup or resume; Stop asks for a handoff once context passes 400,000 tokens (`HANDOFF_TOKENS`), except in unattended T3 Code delegated threads; PreCompact and PostCompact keep compaction summaries in `_context/sessions/`. Stale context is not injected: a handoff older than 14 days, more than 30 commits behind, on diverged history, or written before a compaction is reduced to a pointer. Finished, detached, and deleted-branch handoffs move to `_context/sessions/`, and old summaries and archives expire. Python 3 and Git are required; there is no MCP server. In Codex only the skill is available. See [installation](docs/plugin-installation.md#handoff).
+The Plugin writes `_context/handoff/<branch>.md` inside the project (ignored by Git by default) and, in Claude Code, registers three hooks: SessionStart injects the handoff after `/clear` and a pointer with the path and goal on a fresh start, and adds nothing on resume, fork or in T3 Code delegated threads; PreCompact and PostCompact keep compaction summaries in `_context/sessions/`. No hook interrupts a session to ask for a handoff; you decide when to write one. Stale context is not injected: a handoff older than 14 days, more than 30 commits behind, on diverged history, or written before a compaction is reduced to a pointer. Finished, detached, and deleted-branch handoffs move to `_context/sessions/`, and old summaries and archives expire. Python 3 and Git are required; there is no MCP server. In Codex only the skill is available. See [installation](docs/plugin-installation.md#handoff).
 
 ## Model Advisor
 

@@ -51,9 +51,6 @@ class Base(unittest.TestCase):
         sh(self.repo, "add", ".")
         sh(self.repo, "commit", "-qm", "init")
         self.head = sh(self.repo, "rev-parse", "--short", "HEAD")
-        os.environ["HANDOFF_STATE_DIR"] = str(self.tmp / "state")
-        os.environ.pop("HANDOFF_TOKENS", None)
-        os.environ.pop("HANDOFF_TOKENS_STEP", None)
         os.environ.pop("T3CODE_THREAD_ID", None)
 
     def tearDown(self):
@@ -64,20 +61,6 @@ class Base(unittest.TestCase):
         p = ctxlib.handoff_path(self.repo, "main")
         p.write_text(text if text is not None else HANDOFF.format(head=self.head), encoding="utf-8")
         return p
-
-    def transcript(self, tokens, sidechain_after=None, filler=0):
-        p = self.tmp / "t.jsonl"
-        lines = [json.dumps({"type": "user", "message": {"content": "hi"}})]
-        lines.append(json.dumps({"type": "assistant", "isSidechain": False, "message": {
-            "usage": {"input_tokens": 2, "cache_creation_input_tokens": 1000,
-                      "cache_read_input_tokens": tokens - 1002}}}))
-        for _ in range(filler):
-            lines.append(json.dumps({"type": "user", "message": {"content": "y" * 1000}}))
-        if sidechain_after is not None:
-            lines.append(json.dumps({"type": "assistant", "isSidechain": True, "message": {
-                "usage": {"input_tokens": sidechain_after}}}))
-        p.write_text("\n".join(lines) + "\n")
-        return str(p)
 
 
 class RootTests(Base):
@@ -124,12 +107,26 @@ class SessionStartTests(Base):
 
     def test_startup_pointer_only(self):
         self.write_handoff()
-        for src in ("startup", "resume"):
-            msg = self.ss(src)
-            self.assertIn("결제 모듈 재시도 로직 정리", msg)
-            self.assertIn("RetryPolicy", msg)
-            self.assertNotIn("BODY_ONLY_MARKER", msg)
-            self.assertLessEqual(len(msg), ctxlib.STARTUP_LIMIT)
+        msg = self.ss("startup")
+        self.assertIn("결제 모듈 재시도 로직 정리", msg)
+        self.assertIn("_context/handoff/main.md", msg)
+        self.assertNotIn("RetryPolicy", msg)  # next steps of another task must not steer a new session
+        self.assertNotIn("BODY_ONLY_MARKER", msg)
+        self.assertLessEqual(len(msg), ctxlib.STARTUP_LIMIT)
+
+    def test_resume_and_fork_are_silent(self):
+        # The resumed conversation already holds its own state; T3 Code resumes on every message.
+        self.write_handoff()
+        for src in ("resume", "fork"):
+            self.assertIsNone(self.ss(src))
+
+    def test_delegated_thread_is_silent(self):
+        self.write_handoff()
+        os.environ["T3CODE_THREAD_ID"] = "thread:delegated-task:command%3Amcp%3Aabc%3Adelegate-task%3Adef"
+        for src in ("startup", "clear", "compact"):
+            self.assertIsNone(self.ss(src))
+        os.environ["T3CODE_THREAD_ID"] = "1b0a6462-c096-4e24-9de7-0da71eeaa43d"
+        self.assertIn("BODY_ONLY_MARKER", self.ss("clear"))
 
     def test_done_is_silent(self):
         self.write_handoff(HANDOFF.format(head=self.head).replace("status: active", "status: done"))
@@ -202,52 +199,6 @@ class SessionStartTests(Base):
         self.assertIn("BODY_ONLY_MARKER", self.ss("compact"))
 
 
-class StopTests(Base):
-    def stop(self, tokens, active=False, sid="s1"):
-        return ctxlib.stop({"cwd": str(self.repo), "session_id": sid, "stop_hook_active": active,
-                            "transcript_path": self.transcript(tokens)})
-
-    def test_below_threshold(self):
-        self.assertIsNone(self.stop(399_999))
-
-    def test_blocks_once_per_level(self):
-        out = self.stop(410_000)
-        self.assertEqual(out["decision"], "block")
-        self.assertIn("handoff", out["reason"])
-        self.assertIsNone(self.stop(420_000))
-        self.assertEqual(self.stop(560_000)["decision"], "block")
-        self.assertIsNone(self.stop(400_000, sid="s1"))
-
-    def test_stop_hook_active_guard(self):
-        self.assertIsNone(self.stop(900_000, active=True))
-
-    def test_unattended_delegated_thread_is_not_blocked(self):
-        os.environ["T3CODE_THREAD_ID"] = "thread:delegated-task:command%3Amcp%3Aabc%3Adelegate-task%3Adef"
-        self.assertIsNone(self.stop(900_000))
-        os.environ["T3CODE_THREAD_ID"] = "1b0a6462-c096-4e24-9de7-0da71eeaa43d"
-        self.assertEqual(self.stop(900_000)["decision"], "block")
-
-    def test_recent_handoff_suppresses(self):
-        self.write_handoff()
-        self.assertIsNone(self.stop(410_000))
-        self.assertIsNone(self.stop(420_000))  # level already recorded
-
-    def test_env_threshold(self):
-        os.environ["HANDOFF_TOKENS"] = "100000"
-        self.assertEqual(self.stop(120_000)["decision"], "block")
-
-
-class TranscriptTests(Base):
-    def test_ignores_sidechain_and_spans_chunks(self):
-        path = self.transcript(123_456, sidechain_after=999_999, filler=600)  # ~600KB > chunk size
-        self.assertGreater(Path(path).stat().st_size, 256 * 1024)
-        self.assertEqual(ctxlib.context_tokens(path), 123_456)
-
-    def test_missing(self):
-        self.assertIsNone(ctxlib.context_tokens(str(self.tmp / "nope.jsonl")))
-        self.assertIsNone(ctxlib.context_tokens(None))
-
-
 class CompactTests(Base):
     def test_post_compact_saves_and_stays_ignored(self):
         out = ctxlib.post_compact({"cwd": str(self.repo), "session_id": "abcdef123456",
@@ -274,6 +225,16 @@ class SkillHelperTests(Base):
         r2 = ctxlib.prepare(str(self.repo), False, "sess-a")
         self.assertIsNone(r2["warning"])
         self.assertIsNone(r2["archived"])  # own draft is not archived again
+
+    def test_prepare_without_session_id_always_archives(self):
+        # Codex has no CLAUDE_CODE_SESSION_ID: two such sessions must not overwrite each other silently.
+        ctxlib.prepare(str(self.repo), False, None)
+        self.write_handoff(HANDOFF.format(head=self.head).replace("session_id: sess-a", "session_id: unknown"))
+        r = ctxlib.prepare(str(self.repo), False, None)
+        self.assertIsNotNone(r["archived"])
+        self.assertTrue(Path(r["archived"]).is_file())
+        self.assertIn("알 수 없는", r["warning"])
+        self.assertNotIn("다른 세션", r["warning"])
 
     def test_prepare_non_git_requires_flag(self):
         d = self.tmp / "plain"
@@ -362,17 +323,6 @@ class LifecycleTests(Base):
         many = "\n".join(f"- 항목 {i}" for i in range(9))
         p.write_text(HANDOFF.format(head=cur).replace("## 진행 중", f"## 끝낸 일\n{many}\n\n## 진행 중"))
         self.assertTrue(any("끝낸 일" in e for e in ctxlib.validate(p, self.repo)["errors"]))
-
-    def test_stop_sweeps_old_state(self):
-        sdir = Path(os.environ["HANDOFF_STATE_DIR"])
-        sdir.mkdir(parents=True)
-        stale = sdir / "old.json"
-        stale.write_text("{}")
-        ancient = time.time() - 30 * 86400
-        os.utime(stale, (ancient, ancient))
-        ctxlib.stop({"cwd": str(self.repo), "session_id": "s9", "transcript_path": self.transcript(410_000)})
-        self.assertFalse(stale.exists())
-        self.assertTrue((sdir / "s9.json").exists())
 
 
 class HookEntryTests(Base):
