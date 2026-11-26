@@ -161,7 +161,7 @@ codex plugin add interface-first-design@oozoofrog-plugin
 
 ## fstack
 
-`fstack` 1.1.0은 기존 패키지 ID를 사용합니다. 등록된 우주개구리 마켓플레이스를 갱신한 다음 기존 설치를 업데이트하세요. 신규 설치 명령은 다음과 같습니다.
+`fstack` 2.0.0은 기존 패키지 ID를 사용합니다. 등록된 우주개구리 마켓플레이스를 갱신한 다음 기존 설치를 업데이트하세요. 신규 설치 명령은 다음과 같습니다.
 
 ```sh
 claude plugin install fstack@oozoofrog-plugin

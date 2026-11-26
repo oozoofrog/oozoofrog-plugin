@@ -36,7 +36,7 @@ Set `outcome` to match 결과 and `mode` to `delegated` when T3 or Codex childre
 2. For a new lesson, list the lessons folder first and reuse a lesson that says the same thing. One lesson per note. Title it as an action sentence in the owner's language.
 3. Add the lesson to the episode's `lessons` and the episode to the lesson's `episodes`. Lint warns when one side is missing.
 4. Write a lesson for the owner side (`audience: user`) when the instruction itself mattered: a terse request that worked because of context, a policy change that was never stated as a lasting rule, a compact numbered decision.
-5. Never change `status` here. Status changes go to a retro or to fstack reflect.
+5. Never change `status` here. Status changes go to a retro or to fstack capture-lessons.
 6. When the owner states a lasting rule or policy during the work, note it in the episode and add an inbox line "정책 변경: … → 회고에서 상충 교훈 확인". A decision can contradict an existing lesson, and the retro checks that.
 
 ## Knowledge and inbox

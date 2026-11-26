@@ -25,7 +25,7 @@ Note types: `episode` (one request), `lesson` (one lesson), `knowledge` (one sub
 ## Who decides what
 
 - The agent writes facts without asking: episode notes, new candidate lessons, rows in a lesson's 적용 기록 table, and the `applied`, `worked` and `last_seen` counters.
-- The owner decides status changes: candidate → adopted, adopted → encoded, any → retired, and promotion to the global vault. The agent proposes them in a retro or in fstack reflect as Accept / Reject / Defer lists, then applies only what the owner accepts. When an approved encoding is applied, set `encoded_in`.
+- The owner decides status changes: candidate → adopted, adopted → encoded, any → retired, and promotion to the global vault. The agent proposes them in a retro or in fstack capture-lessons as Accept / Reject / Defer lists, then applies only what the owner accepts. When an approved encoding is applied, set `encoded_in`.
 - A lesson that points to a rule that already exists (agent memory, `CLAUDE.md`, a test, a skill) is written as `encoded` from the start. Link to the rule; do not copy its text.
 - No hook writes to the wiki. Records are made at the end of a request (see Capture).
 - Never write personal data or secrets: e-mail addresses, locations, share-link tokens, keys. Write "개발자 메일" instead of an address.

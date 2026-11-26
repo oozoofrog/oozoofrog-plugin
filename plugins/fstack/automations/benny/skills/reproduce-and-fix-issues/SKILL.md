@@ -28,8 +28,8 @@ Load the external Benny configuration supplied by the automation. If the config,
 - Existing pull requests or commits switch the run to verify mode. Do not author over them.
 - Use `github.com` pull request links.
 - Keep captures, recordings, logs, and tokens out of source control.
-- Use fstack's `principle-guard-the-context-window` for delegated analysis.
-- Apply fstack's `principle-sequence-verifiable-units`, `principle-fix-root-causes`, and `principle-prove-it-works` through repro, fix, and verification.
+- Use fstack's `principle-manage-context` for delegated analysis.
+- Apply fstack's `principle-verify-in-stages`, `principle-trace-root-causes`, and `principle-verify-real-behavior` through repro, fix, and verification.
 
 ## 1. Freeze source coordinates
 
@@ -156,9 +156,9 @@ Collect:
 - Attachments and error signatures
 - Candidate code area
 
-Inspect screenshots and video. Use read-only parallel workers for code history, test ideas, blast-radius mapping, and media review when useful. Each worker gets a narrow question and the Slack-write prohibition.
+Inspect screenshots and video. Use read-only parallel workers for code history, test ideas, assess-change-impact mapping, and media review when useful. Each worker gets a narrow question and the Slack-write prohibition.
 
-Trace the action through the repository. Use fstack's `why` skill for regression history and defensive code. Form competing cause hypotheses and identify evidence that would separate them.
+Trace the action through the repository. Use fstack's `explain-design-decisions` skill for regression history and defensive code. Form competing cause hypotheses and identify evidence that would separate them.
 
 ## 7. Reproduce
 
@@ -259,7 +259,7 @@ Confirm the mechanism with runtime evidence. Eliminate competing hypotheses befo
 
 Fix the root cause with the smallest justified change.
 
-- Invoke fstack's `tdd` skill when there is a cheap local test target, and write the failing test before the fix.
+- Invoke fstack's `develop-test-first` skill when there is a cheap local test target, and write the failing test before the fix.
 - State why TDD was skipped when the path is expensive, unclear, or integration-heavy.
 - Keep unrelated cleanup out.
 - Stop if the change grows beyond the configured effort or risk budget.
@@ -291,8 +291,8 @@ Only after before-and-after proof:
 - Open a draft pull request. Never merge or deploy from this workflow.
 - Link the configured tracker issue using the tracker's supported pull request syntax.
 - Use the configured public URL form, normally `https://github.com/{owner}/{repo}/pull/{number}`.
-- Include the repro steps, root cause, test result, before and after evidence, and blast-radius checks.
-- Run the pull request text and all Slack updates through fstack's `unslop` skill.
+- Include the repro steps, root cause, test result, before and after evidence, and assess-change-impact checks.
+- Run the pull request text and all Slack updates through fstack's `edit-prose` skill.
 
 If pull request creation fails, do not claim success. Keep the commit or branch state in the run output and mark operations status `Fix did not land`.
 

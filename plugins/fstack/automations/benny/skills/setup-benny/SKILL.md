@@ -47,15 +47,15 @@ Preserve every unrelated top-level setting and every other plugin entry. If `plu
 
 Reload the target project or start a fresh agent rooted there. Verify that these shared fstack skills resolve from project scope:
 
-- `why`
-- `tdd`
-- `unslop`
-- `principle-separate-before-serializing-shared-state`
-- `principle-minimize-reader-load`
-- `principle-guard-the-context-window`
-- `principle-sequence-verifiable-units`
-- `principle-fix-root-causes`
-- `principle-prove-it-works`
+- `explain-design-decisions`
+- `develop-test-first`
+- `edit-prose`
+- `principle-isolate-shared-writes`
+- `principle-simplify-code-reading`
+- `principle-manage-context`
+- `principle-verify-in-stages`
+- `principle-trace-root-causes`
+- `principle-verify-real-behavior`
 
 Do not count a skill loaded from the current session or a user-scoped plugin. The check must show that a fresh agent in the target repository receives fstack through project settings.
 
@@ -112,7 +112,7 @@ Use only model slugs shown as available in the user's Cursor model picker or sup
 
 The source channel, triage identity, repository, tracker adapter, control skill, and feature map must be explicit. Fail setup if any required value stays ambiguous.
 
-Use fstack's `unslop` skill on the final automation names, descriptions, and prompt shims before saving them.
+Use fstack's `edit-prose` skill on the final automation names, descriptions, and prompt shims before saving them.
 
 ## 4. Check integration capabilities
 
