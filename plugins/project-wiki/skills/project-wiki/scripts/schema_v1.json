@@ -1,0 +1,171 @@
+{
+  "version": 1,
+  "template_folder": "90 템플릿",
+  "ignore_folders": [
+    ".obsidian",
+    ".trash"
+  ],
+  "forbidden_title_chars": "/\\:#^|[]",
+  "types": {
+    "episode": {
+      "required": [
+        "date",
+        "request",
+        "outcome",
+        "mode"
+      ],
+      "enums": {
+        "outcome": [
+          "success",
+          "partial",
+          "failure",
+          "in-progress"
+        ],
+        "mode": [
+          "main-session",
+          "delegated",
+          "mixed"
+        ]
+      },
+      "lists": [
+        "lessons",
+        "evidence",
+        "tags"
+      ],
+      "links": [
+        "lessons"
+      ]
+    },
+    "lesson": {
+      "required": [
+        "audience",
+        "kind",
+        "status",
+        "basis",
+        "first_seen",
+        "last_seen",
+        "applied",
+        "worked"
+      ],
+      "enums": {
+        "audience": [
+          "user",
+          "agent",
+          "both"
+        ],
+        "kind": [
+          "instruction",
+          "response",
+          "technical",
+          "process"
+        ],
+        "status": [
+          "candidate",
+          "adopted",
+          "encoded",
+          "retired"
+        ],
+        "basis": [
+          "success",
+          "failure",
+          "mixed"
+        ]
+      },
+      "integers": [
+        "applied",
+        "worked",
+        "missed"
+      ],
+      "lists": [
+        "episodes",
+        "tags",
+        "aliases",
+        "projects"
+      ],
+      "links": [
+        "episodes"
+      ]
+    },
+    "knowledge": {
+      "required": [
+        "area",
+        "verified"
+      ],
+      "enums": {
+        "area": [
+          "product",
+          "architecture",
+          "sync",
+          "reader",
+          "performance",
+          "verification",
+          "release",
+          "decisions",
+          "issues",
+          "glossary"
+        ]
+      },
+      "lists": [
+        "sources",
+        "tags"
+      ]
+    },
+    "retro": {
+      "required": [
+        "date",
+        "period"
+      ]
+    },
+    "chronicle": {
+      "required": []
+    },
+    "home": {
+      "required": []
+    },
+    "guide": {
+      "required": []
+    },
+    "inbox": {
+      "required": []
+    }
+  },
+  "dates": [
+    "date",
+    "first_seen",
+    "last_seen",
+    "verified"
+  ],
+  "application_log": {
+    "headings": [
+      "적용 기록",
+      "Applications"
+    ],
+    "effect_columns": [
+      "효과",
+      "Effect"
+    ],
+    "effect_values": {
+      "있음": "yes",
+      "없음": "no",
+      "모름": "unknown",
+      "yes": "yes",
+      "no": "no",
+      "unknown": "unknown",
+      "미적용": "missed",
+      "missed": "missed"
+    }
+  },
+  "evidence_fields": {
+    "episode": [
+      "evidence"
+    ],
+    "knowledge": [
+      "sources"
+    ]
+  },
+  "memory_prefixes": [
+    "메모리",
+    "memory"
+  ],
+  "adopted_min_worked": 2
+}

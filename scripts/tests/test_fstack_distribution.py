@@ -141,7 +141,7 @@ class FstackDistributionTests(unittest.TestCase):
         self.assertNotIn("disable-model-invocation", read(SKILL / "SKILL.md"))
         for manifest in (codex, claude):
             self.assertEqual(NAME, manifest["name"])
-            self.assertEqual("0.1.2", manifest["version"])
+            self.assertEqual("0.1.3", manifest["version"])
             self.assertEqual("https://github.com/oozoofrog/oozoofrog-plugin", manifest["repository"])
             self.assertEqual(sibling["author"], manifest["author"])
         for key in ("hooks", "mcpServers", "apps"):

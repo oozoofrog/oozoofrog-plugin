@@ -1,0 +1,28 @@
+filters:
+  and:
+    - 'type == "knowledge"'
+
+properties:
+  area:
+    displayName: "영역"
+  verified:
+    displayName: "확인한 날"
+
+views:
+  - type: table
+    name: "영역별"
+    groupBy:
+      property: area
+      direction: ASC
+    order:
+      - file.name
+      - verified
+  - type: table
+    name: "오래 확인 안 함"
+    sort:
+      - property: verified
+        direction: ASC
+    order:
+      - file.name
+      - area
+      - verified

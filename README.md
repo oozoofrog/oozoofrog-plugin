@@ -56,6 +56,7 @@ Each selector ends in `@oozoofrog-plugin`. Links open the skill or its detailed 
 | `review-moment@oozoofrog-plugin` | [Choose and implement an app-specific StoreKit review request](plugins/review-moment/skills/review-moment/SKILL.md) for iOS or macOS. |
 | `wild-reading-coach-builder@oozoofrog-plugin` | [Build a personal reading coach](plugins/wild-reading-coach-builder/skills/wild-reading-coach-builder/SKILL.md) from a book or supplied excerpts. Each edition has a reading index, source references, and a private reading record. On request, the coach writes a local experiment page that shows the reader's prediction beside the result they report. |
 | `fstack@oozoofrog-plugin` | [Calibrate pace and spec depth to the task, prove each step, and record decisions](plugins/fstack/skills/fstack/SKILL.md); see [fstack](#fstack). |
+| `project-wiki@oozoofrog-plugin` | [Keep a per-project Obsidian wiki of episodes, lessons and knowledge](plugins/project-wiki/skills/project-wiki/SKILL.md) that the owner and the agent improve together; see [Project Wiki](#project-wiki). |
 
 ## Examples
 
@@ -120,6 +121,12 @@ C4fy creates source-backed C1/C2/C3/C4 architecture maps with optional component
 Call the OpenAI Decisions API directly to classify text, JSON, or images, estimate predicate probabilities, or score against an ordered rubric. Use for explicit Decisions API requests or bounded semantic judgments that benefit from measured probabilities; not for general chat or free-form extraction.
 
 The skills-only Plugin bundles an `openai-decisions` command (Python 3) that wraps the official OpenAI CLI's `openai decisions create` for both Codex and Claude Code, and documents direct CLI calls as a fallback. Plugin installation does not register tools, provision credentials, or enable API billing. See [CLI prerequisites](plugins/openai-decisions/skills/openai-decisions/references/cli.md) and [installation](docs/plugin-installation.md#openai-decisions).
+
+## Project Wiki
+
+Keep a local Obsidian wiki per project so the owner and the agent both get better at working together. It records each finished request as an episode with an owner-side and an agent-side retrospective, turns repeated corrections into lessons that move from candidate to adopted to encoded, keeps project knowledge, and runs retros. It creates the vault in `_context/wiki`, seeds it from earlier Claude/Codex transcripts, T3 threads, handoff notes, agent memory and git history without reading the same source twice, and lints it. Use for "위키 만들어줘", "프로젝트 위키", "위키에 남겨줘", "이거 교훈으로 남겨줘", "교훈 정리", "위키 회고", "위키 검사", "지시를 어떻게 했어야 했나", lessons learned, an Obsidian project journal, or a retrospective of past agent work. Not for session handoff (use handoff), code or API documentation, or editing notes in an unrelated Obsidian vault.
+
+The skill creates the vault in `_context/wiki` (git-ignored with the rest of `_context/`) with templates, Obsidian Bases dashboards and a usage page, and never overwrites a bundled file you edited. After each request the agent writes an episode note with an owner-side and an agent-side retrospective, or asks in one line whether to; no hook writes to the wiki. The agent records lesson applications and counters; you decide status changes (candidate, adopted, encoded, retired) in a retro or in fstack reflect. `wiki_sources.py` finds earlier Claude Code transcripts (including git and T3 worktrees and former project paths), Codex sessions, handoff notes, agent memory and git history, prints only your own prompts, and keeps a watermark per source so a later seed reads only new material. `wiki_lint.py` checks the frontmatter schema, broken and alias-only links, embedded Bases views, Bases YAML, lesson counters, evidence paths and personal data. `wiki_guides.py` rebuilds the lists in the two guide notes from the adopted and encoded lessons. A retro proposes status changes, one list per kind, and lists the lessons that a new decision by you contradicts. Python 3 is required; Obsidian is needed only to view the vault. Bundled templates are Korean. See [installation](docs/plugin-installation.md#project-wiki).
 
 ## More documentation
 

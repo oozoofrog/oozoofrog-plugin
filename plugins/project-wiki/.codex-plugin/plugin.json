@@ -1,0 +1,25 @@
+{
+  "name": "project-wiki",
+  "version": "0.1.0",
+  "description": "Keep a local Obsidian wiki per project so the owner and the agent both get better at working together. It records each finished request as an episode with an owner-side and an agent-side retrospective, turns repeated corrections into lessons that move from candidate to adopted to encoded, keeps project knowledge, and runs retros. It creates the vault in `_context/wiki`, seeds it from earlier Claude/Codex transcripts, T3 threads, handoff notes, agent memory and git history without reading the same source twice, and lints it. Use for \"위키 만들어줘\", \"프로젝트 위키\", \"위키에 남겨줘\", \"이거 교훈으로 남겨줘\", \"교훈 정리\", \"위키 회고\", \"위키 검사\", \"지시를 어떻게 했어야 했나\", lessons learned, an Obsidian project journal, or a retrospective of past agent work. Not for session handoff (use handoff), code or API documentation, or editing notes in an unrelated Obsidian vault.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "skills": "./skills/",
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
+  "interface": {
+    "displayName": "프로젝트 위키",
+    "shortDescription": "작업 기록·교훈·지식을 쌓는 프로젝트별 Obsidian 위키",
+    "longDescription": "Keep a local Obsidian wiki per project so the owner and the agent both get better at working together. It records each finished request as an episode with an owner-side and an agent-side retrospective, turns repeated corrections into lessons that move from candidate to adopted to encoded, keeps project knowledge, and runs retros. It creates the vault in `_context/wiki`, seeds it from earlier Claude/Codex transcripts, T3 threads, handoff notes, agent memory and git history without reading the same source twice, and lints it. Use for \"위키 만들어줘\", \"프로젝트 위키\", \"위키에 남겨줘\", \"이거 교훈으로 남겨줘\", \"교훈 정리\", \"위키 회고\", \"위키 검사\", \"지시를 어떻게 했어야 했나\", lessons learned, an Obsidian project journal, or a retrospective of past agent work. Not for session handoff (use handoff), code or API documentation, or editing notes in an unrelated Obsidian vault.",
+    "developerName": "oozoofrog",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "$project-wiki 방금 끝난 작업을 프로젝트 위키에 남겨 주세요."
+    ]
+  }
+}
