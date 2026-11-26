@@ -1,0 +1,4 @@
+interface:
+  display_name: "PR 제안 리뷰"
+  short_description: "Post a verified code improvement as GitHub suggestions"
+  default_prompt: "Use $pr-suggest to post this pull request improvement as one COMMENT review with suggestions."

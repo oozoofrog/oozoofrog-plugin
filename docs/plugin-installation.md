@@ -47,6 +47,15 @@ claude plugin install handoff@oozoofrog-plugin
 
 설치 후 Claude Code를 다시 시작해야 훅이 적용됩니다. 같은 스크립트를 `~/.claude/skills/handoff`와 `settings.json` 훅으로 직접 설치한 적이 있다면 둘 중 하나만 남깁니다. 둘 다 있으면 훅이 두 번 실행됩니다. 정리 기간은 환경 변수(`HANDOFF_STALE_DAYS`, `HANDOFF_STALE_COMMITS`, `HANDOFF_KEEP_COMPACT_DAYS`, `HANDOFF_KEEP_ARCHIVE_DAYS`)로 바꿉니다.
 
+## Korean Tech Writing
+
+`korean-tech-writing@oozoofrog-plugin` 0.1.0은 스킬 2개를 설치합니다. [korean-tech-writing](../plugins/korean-tech-writing/skills/korean-tech-writing/SKILL.md)은 한국어 개발 문서를 쓰고, [pr-suggest](../plugins/korean-tech-writing/skills/pr-suggest/SKILL.md)는 PR 개선안을 suggestion 리뷰로 올립니다. 훅과 MCP 서버는 없습니다. `pr-suggest`에는 Python 3과 Git이 필요합니다. 호스트에 PR 도구가 없으면 GitHub CLI(`gh`)도 필요합니다.
+
+```sh
+claude plugin marketplace add oozoofrog/oozoofrog-plugin
+claude plugin install korean-tech-writing@oozoofrog-plugin
+```
+
 ## Project Wiki
 
 `project-wiki@oozoofrog-plugin` 0.1.0은 [프로젝트 위키 스킬](../plugins/project-wiki/skills/project-wiki/SKILL.md)과 표준 라이브러리만 쓰는 Python 스크립트 4개(`wiki_init.py`, `wiki_sources.py`, `wiki_lint.py`, `wiki_guides.py`)를 설치합니다. 훅과 MCP 서버는 없습니다. Claude Code와 Codex에서 같은 스킬을 씁니다.

@@ -12,6 +12,8 @@
 
 호출 예: `$interface-first-design으로 이 제품 UI의 구조·조작·상태를 설계하거나 검토해 주세요. 필요한 문구와 데이터의 의미는 유지해 주세요.`
 
+[한국어 개발 문서](plugins/korean-tech-writing/skills/korean-tech-writing/SKILL.md) (`korean-tech-writing` 0.1.0)는 spec, ADR, README, runbook, 규칙 문서, 커밋 메시지, PR 설명과 리뷰 코멘트를 씁니다. 요구 강도는 RFC 2119·RFC 8174를 따르고, 허용(MAY)은 "…해도 된다"로 씁니다. 문장은 ASD-STE100 원칙을 한국어에 맞게 적용하고, 사실과 확인 수준을 원문대로 유지합니다. 같은 Plugin의 [PR 제안 리뷰](plugins/korean-tech-writing/skills/pr-suggest/SKILL.md)(`pr-suggest`)는 남의 PR 개선안을 suggestion 묶음 리뷰 1건으로 올립니다. 올리기 전에 `suggest.py`가 suggestion을 PR head 원본에 다시 적용해, 결과가 수정본과 같은지 확인합니다. [설치 안내](docs/plugin-installation.md#korean-tech-writing)를 참고하세요.
+
 [한국어 제품 글쓰기](plugins/korean-product-writing/skills/korean-product-writing/SKILL.md)는 사실·조건·요청한 구성요소를 보존하며 제품 문구를 다듬습니다. skills-only Plugin에는 런타임이나 hooks가 없습니다. 앞선 실패 뒤 같은 6개 입력의 회귀 검사를 통과했으며 [이력과 한계](drafts/korean-product-writing/tests/regression-v4/results.md)를 보존합니다. 설치와 자동 로딩은 시험하지 않았습니다.
 
 설치 후 호출 예: `$korean-product-writing로 이 화면의 제목·설명·버튼을 사실과 조건을 유지해 다듬어 주세요.` 실제 설치나 자동 호출을 시험했다는 뜻은 아닙니다.

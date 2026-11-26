@@ -1,0 +1,4 @@
+interface:
+  display_name: "한국어 개발 문서"
+  short_description: "Write Korean developer docs with exact requirement strength and facts"
+  default_prompt: "Use $korean-tech-writing to edit this Korean developer document with exact requirement strength."
