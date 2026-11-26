@@ -1,0 +1,26 @@
+{
+  "name": "korean-tech-writing",
+  "version": "0.1.0",
+  "description": "Use when writing or editing Korean developer documents (specs, ADRs, READMEs, runbooks, API references, agent rule files such as CLAUDE.md, AGENTS.md and SKILL.md, code comments, commit messages, PR descriptions and review comments) so that requirement strength follows RFC 2119 and RFC 8174, sentences follow ASD-STE100 clarity principles, and facts and verification levels stay exact. 한국어 개발 문서를 쓰거나 다듬을 때 사용한다. UI 문구는 korean-product-writing을 쓰고, 문학 창작과 법률 계약 원문은 제외한다. The Plugin also includes pr-suggest, which posts an improvement to someone else's pull request as one COMMENT review of GitHub suggestions after checking that they reproduce the edit. 남의 PR에 개선안을 suggestion 묶음 리뷰로 올릴 때도 쓴다.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "skills": "./skills/",
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
+  "interface": {
+    "displayName": "한국어 개발 문서",
+    "shortDescription": "Write Korean developer docs with exact requirement strength and facts",
+    "longDescription": "Use when writing or editing Korean developer documents (specs, ADRs, READMEs, runbooks, API references, agent rule files such as CLAUDE.md, AGENTS.md and SKILL.md, code comments, commit messages, PR descriptions and review comments) so that requirement strength follows RFC 2119 and RFC 8174, sentences follow ASD-STE100 clarity principles, and facts and verification levels stay exact. 한국어 개발 문서를 쓰거나 다듬을 때 사용한다. UI 문구는 korean-product-writing을 쓰고, 문학 창작과 법률 계약 원문은 제외한다. The Plugin also includes pr-suggest, which posts an improvement to someone else's pull request as one COMMENT review of GitHub suggestions after checking that they reproduce the edit. 남의 PR에 개선안을 suggestion 묶음 리뷰로 올릴 때도 쓴다.",
+    "developerName": "oozoofrog",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $korean-tech-writing to edit this Korean developer document with exact requirement strength.",
+      "Use $pr-suggest to post this pull request improvement as one COMMENT review with suggestions."
+    ]
+  }
+}
