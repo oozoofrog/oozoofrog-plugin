@@ -69,7 +69,7 @@ Use $interface-first-design to review this product screen's actions, states, and
 Use $c4fy to map this repository's architecture with source evidence, including code structure for the components that need it.
 Use $high-council-implementation to prepare an implementation prompt with the best available high-tier model for my review and choice of implementation model.
 Use $apple-app-design-audit to audit this Mac app's design against the HIG and Liquid Glass, with captures.
-Use $fstack to fix this bug: reproduce it, prove the fix, and report decisions and evidence.
+$fstack 이 변경이 다른 기능에 영향을 주는지 확인해줘.
 ```
 
 These are requests, not examples of verified results.
@@ -98,9 +98,9 @@ Use when the user asks a high-tier model or a council of them to prepare an impl
 
 ## fstack
 
-Use fstack for repository engineering tasks that need implementation, investigation, review or verification, and for explicit pstack-style workflows.
+Use fstack for development requests in plain Korean or English: explain code, refine an idea, compare designs, assess measurements, review changes, implement or verify a fix. 개발 저장소에서 코드 설명, 요청문 다듬기, 사용법 안내, 변경 검토와 구현 검증에 사용한다. “둘 중 뭐가 나아요?”, “이걸로 빨라졌다고 할 수 있어요?”처럼 짧은 구현 비교나 측정 질문도 포함한다.
 
-Version 1.0.0 keeps the `fstack@oozoofrog-plugin` package ID. The [fstack entry point](plugins/fstack/skills/fstack/SKILL.md) now routes to the portable pstack workflows. Use [the skill index](plugins/fstack/skills/poteto-help/SKILL.md) for named workflows and the [host profile](plugins/fstack/skills/fstack/references/host.md) for model settings, delegation and project records. Project wiki capture and the trace checker remain available.
+Install `fstack@oozoofrog-plugin` alone. Describe the outcome, for example “이 변경이 다른 기능에 영향을 주는지 확인해줘.” The [entry point](plugins/fstack/skills/fstack/SKILL.md) selects the bundled procedures. You can still request a particular method. See the [package guide](plugins/fstack/README.md) for host-specific invocation and the [fresh-session evaluation](docs/validation/fstack-korean-entry.md) for known routing limits.
 
 ## Apple App Design Audit
 

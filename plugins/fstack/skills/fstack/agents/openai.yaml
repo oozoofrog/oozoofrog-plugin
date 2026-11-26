@@ -1,4 +1,4 @@
 interface:
   display_name: "fstack"
-  short_description: "Engineering playbooks, reviews and verification across agent hosts"
-  default_prompt: "Use $fstack to fix this bug: reproduce it, prove the fix, and report decisions and evidence."
+  short_description: "Describe the development result you want in Korean or English"
+  default_prompt: "$fstack 이 변경이 다른 기능에 영향을 주는지 확인해줘."

@@ -8,7 +8,7 @@
     {
       "name": "fstack",
       "source": "plugins/fstack",
-      "description": "Use fstack for repository engineering tasks that need implementation, investigation, review or verification, and for explicit pstack-style workflows."
+      "description": "Use fstack for development requests in plain Korean or English: explain code, refine an idea, compare designs, assess measurements, review changes, implement or verify a fix. 개발 저장소에서 코드 설명, 요청문 다듬기, 사용법 안내, 변경 검토와 구현 검증에 사용한다. “둘 중 뭐가 나아요?”, “이걸로 빨라졌다고 할 수 있어요?”처럼 짧은 구현 비교나 측정 질문도 포함한다."
     }
   ]
 }

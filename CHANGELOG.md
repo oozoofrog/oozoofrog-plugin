@@ -1,5 +1,9 @@
 # Changelog
 
+## fstack 1.1.0
+
+Use Korean or English to request a development outcome through fstack. The entry selects and combines bundled procedures, including less common methods through the specialist index. Standalone pstack and role setup are optional.
+
 ## fstack 1.0.0
 
 Replace the fstack 0.1 router with the portable pstack skill set under the existing plugin ID. Bundle 59 workflows and principles, 22 playbooks, two worker roles, host-scoped model settings, an activity-aware worktree inventory and the optional Benny automation sources. Preserve the project journal and trace checker. Cursor, Claude Code and Codex use one skill tree.

@@ -1,18 +1,16 @@
 ---
 name: poteto-help
-description: Guides users through pstack setup, /poteto-mode, and picking the skill, playbook, or principle for a task. Type /poteto-help with a question.
+description: Explain how to request a development outcome through fstack. Includes a lookup table for specialist workflows and optional setup.
 disable-model-invocation: true
 ---
 
 # Poteto help
 
-Answer the user's question about pstack, hand them a prompt they can send, and link the file the answer came from. For a help question, don't start the work. The user asked how, and a pstack run spends real tokens, so let them send the prompt.
+When the user asks how to use fstack, give one example they can say in their language and explain what result to expect. Start from the [fstack entry point](../fstack/SKILL.md). Use the [host profile](../fstack/references/host.md) for an exact invocation when requested. When the user asks how to request a particular output, find its procedure below. Use the procedure’s actual verification method and expected artifact in the example. If asked for just a prompt, provide only that text, without a slash command, setup or commentary. When fstack consults this index during a task, open the relevant bundled instructions and do the requested work.
 
-For engineering work use [poteto-mode](../poteto-mode/SKILL.md). For model settings use [setup-pstack](../setup-pstack/SKILL.md). Use the package's [host profile](../fstack/references/host.md) to give the command or file location for the installed version. Explain playbooks by reading their installed files. Give the user one actionable example.
+## Specialist index
 
-## Pick a skill
-
-The default answer is `/poteto-mode`, which runs most of the others when its steps need them. Name a skill directly when the user wants more or less of something than the playbook gives. Read the skill before you recommend it, and give one example prompt.
+The table maps requested outcomes to resources within this package. Direct invocations remain available. Model and budget setup is optional.
 
 | The user wants to | Skill |
 |---|---|
@@ -50,7 +48,7 @@ The default answer is `/poteto-mode`, which runs most of the others when its ste
 | Turn what a finished task taught into skill edits | [`/reflect`](../reflect/SKILL.md) |
 | Stop agents from repeating the same mistakes in this repo | [`/correct`](../correct/SKILL.md) |
 | Build a page whose buttons wake a Grok Bot over a webhook | [`/make-bot-ui`](../make-bot-ui/SKILL.md) |
-| Find their way around pstack | `/poteto-help` |
+| Learn how to use fstack | [fstack](../fstack/SKILL.md) |
 
 If a skill directory next to this one is missing from the table, read its frontmatter and route by its description. The `principle-*` directories are covered under principles below.
 

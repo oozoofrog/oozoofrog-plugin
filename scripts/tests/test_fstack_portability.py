@@ -31,8 +31,16 @@ class PortableWorkflows(unittest.TestCase):
         self.assertEqual(ROOT / entry["source"], PACKAGE)
         for host in ("claude", "codex", "cursor"):
             manifest = json.loads((PACKAGE / f".{host}-plugin/plugin.json").read_text())
-            self.assertEqual(manifest["version"], "1.0.0")
+            self.assertEqual(manifest["version"], "1.1.0")
             self.assertIn(manifest["description"], (SKILLS / "fstack/SKILL.md").read_text())
+
+    def test_specialist_index_reaches_every_bundled_workflow(self):
+        index = SKILLS / "poteto-help/SKILL.md"
+        destinations = {(index.parent / target).resolve() for target in local_targets(index.read_text())}
+        for skill in SKILLS.glob("*/SKILL.md"):
+            if skill != index and not skill.parent.name.startswith("principle-"):
+                with self.subTest(workflow=skill.parent.name):
+                    self.assertIn(skill, destinations)
 
     def test_settings_import_round_trip_and_profile_isolation(self):
         with tempfile.TemporaryDirectory() as d:

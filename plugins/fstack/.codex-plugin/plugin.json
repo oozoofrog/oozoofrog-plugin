@@ -1,7 +1,7 @@
 {
   "name": "fstack",
-  "version": "1.0.0",
-  "description": "Use fstack for repository engineering tasks that need implementation, investigation, review or verification, and for explicit pstack-style workflows.",
+  "version": "1.1.0",
+  "description": "Use fstack for development requests in plain Korean or English: explain code, refine an idea, compare designs, assess measurements, review changes, implement or verify a fix. 개발 저장소에서 코드 설명, 요청문 다듬기, 사용법 안내, 변경 검토와 구현 검증에 사용한다. “둘 중 뭐가 나아요?”, “이걸로 빨라졌다고 할 수 있어요?”처럼 짧은 구현 비교나 측정 질문도 포함한다.",
   "author": {
     "name": "oozoofrog",
     "url": "https://github.com/oozoofrog"
@@ -10,8 +10,8 @@
   "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
   "interface": {
     "displayName": "fstack",
-    "shortDescription": "Engineering playbooks, reviews and verification across agent hosts",
-    "longDescription": "Use fstack for repository engineering tasks that need implementation, investigation, review or verification, and for explicit pstack-style workflows.",
+    "shortDescription": "Describe the development result you want in Korean or English",
+    "longDescription": "Use fstack for development requests in plain Korean or English: explain code, refine an idea, compare designs, assess measurements, review changes, implement or verify a fix. 개발 저장소에서 코드 설명, 요청문 다듬기, 사용법 안내, 변경 검토와 구현 검증에 사용한다. “둘 중 뭐가 나아요?”, “이걸로 빨라졌다고 할 수 있어요?”처럼 짧은 구현 비교나 측정 질문도 포함한다.",
     "developerName": "oozoofrog",
     "category": "Productivity",
     "capabilities": [
@@ -19,7 +19,7 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Use $fstack to fix this bug: reproduce it, prove the fix, and report decisions and evidence."
+      "$fstack 이 변경이 다른 기능에 영향을 주는지 확인해줘."
     ]
   }
 }

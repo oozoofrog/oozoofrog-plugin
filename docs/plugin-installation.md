@@ -152,14 +152,14 @@ codex plugin add interface-first-design@oozoofrog-plugin
 
 ## fstack
 
-`fstack` 1.0.0은 기존 패키지 ID를 사용합니다. 등록된 우주개구리 마켓플레이스를 갱신한 다음 기존 설치를 업데이트하세요. 신규 설치 명령은 다음과 같습니다.
+`fstack` 1.1.0은 기존 패키지 ID를 사용합니다. 등록된 우주개구리 마켓플레이스를 갱신한 다음 기존 설치를 업데이트하세요. 신규 설치 명령은 다음과 같습니다.
 
 ```sh
 claude plugin install fstack@oozoofrog-plugin
 codex plugin add fstack@oozoofrog-plugin
 ```
 
-Claude Code에서는 `/fstack:fstack`, Codex에서는 `$fstack:fstack`으로 실행합니다. 새 세션에서 스킬 목록과 버전을 확인하세요. Cursor에서는 이 저장소의 Cursor 마켓플레이스에 있는 fstack을 선택합니다. 스킬 디렉터리를 직접 읽는 환경에서는 패키지 전체를 보존하고 `plugins/fstack/skills/<이름>`을 스킬 루트에 개별 링크합니다. 같은 이름의 사용자 스킬이 있으면 기존 링크의 소유권을 확인하고 패키지 이름을 지정해 호출하세요.
+개발 워크플로는 fstack 하나로 사용할 수 있습니다. 설치 후 한국어로 원하는 결과를 요청하세요. 직접 지정하려면 Claude Code에서는 `/fstack:fstack`, Codex에서는 `$fstack:fstack` 뒤에 요청을 적으세요. 새 세션에서 스킬 목록과 버전을 확인하세요. Cursor에서는 이 저장소의 Cursor 마켓플레이스에 있는 fstack을 선택합니다. 스킬 디렉터리를 직접 읽는 환경에서는 패키지 전체를 보존하고 `plugins/fstack/skills/<이름>`을 스킬 루트에 개별 링크합니다. 이미 별도 pstack이나 같은 이름의 사용자 스킬이 있으면 함께 사용할 수 있습니다. 기존 링크의 소유권을 확인하고 패키지 이름을 지정해 호출하세요.
 
 모델 설정과 워크트리 검사에는 Python 3이 필요합니다. GitHub 감시 도구는 Bun과 gh를 사용합니다. 첫 실행은 잠긴 버전의 의존성을 `FSTACK_CACHE_DIR` 또는 사용자 캐시에 설치합니다. statechart는 지원하는 TypeScript 런타임과 TLC·Java를 사용합니다. Benny는 Cursor Automations를 별도로 구성할 때만 실행합니다. [설치·업데이트·제거 안내](../plugins/fstack/README.md)
 

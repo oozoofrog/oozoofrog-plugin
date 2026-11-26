@@ -61,7 +61,7 @@ skills-only Plugin `0.3.0`을 제공합니다. Plugin에 모델·런타임·생�
 
 ## fstack
 
-[fstack](plugins/fstack/skills/fstack/SKILL.md) 1.0.0은 우주개구리 플러그인의 기존 이름과 호출 방법을 유지합니다. `$fstack`은 작업에 맞는 pstack 플레이북을 선택합니다. [스킬 목록](plugins/fstack/skills/poteto-help/SKILL.md)에서 코드 설명, 설계 비교, 검증, 작업 재개 등 개별 워크플로를 확인할 수 있습니다. 실행 환경별 설정은 [호스트 안내](plugins/fstack/skills/fstack/references/host.md)에 있습니다. 기존 프로젝트 위키 기록과 요구사항 추적 검사도 사용할 수 있습니다.
+개발 워크플로에는 fstack 하나를 설치하세요. Codex에서 직접 지정할 때는 `$fstack:fstack`, Claude Code에서는 `/fstack:fstack` 하나만 기억하면 됩니다. “두 방식 중 우리 앱에 맞는 쪽을 실제로 비교해줘” 또는 “이 변경이 다른 기능에 영향을 주는지 확인해줘”처럼 원하는 결과를 말하면 fstack이 필요한 절차를 고릅니다. 코드 설명, 요청문 다듬기, 상태 전이 검증, 병렬 검토도 같은 방식으로 요청할 수 있습니다. [사용법](plugins/fstack/README.md)
 
 ## 프로젝트 위키
 

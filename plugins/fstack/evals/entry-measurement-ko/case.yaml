@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: entry-measurement-ko
+context:
+  scaffold_script: scaffold.sh
