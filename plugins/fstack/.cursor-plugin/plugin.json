@@ -1,0 +1,13 @@
+{
+  "name": "fstack",
+  "version": "1.0.0",
+  "description": "Use fstack for repository engineering tasks that need implementation, investigation, review or verification, and for explicit pstack-style workflows.",
+  "author": {
+    "name": "oozoofrog",
+    "url": "https://github.com/oozoofrog"
+  },
+  "repository": "https://github.com/oozoofrog/oozoofrog-plugin",
+  "skills": "./skills/",
+  "agents": "./agents/",
+  "category": "developer-tools"
+}

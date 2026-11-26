@@ -1,4 +1,4 @@
 interface:
   display_name: "fstack"
-  short_description: "Match pace and spec depth to risk; prove each step"
+  short_description: "Engineering playbooks, reviews and verification across agent hosts"
   default_prompt: "Use $fstack to fix this bug: reproduce it, prove the fix, and report decisions and evidence."

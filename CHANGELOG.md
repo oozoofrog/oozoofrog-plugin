@@ -1,5 +1,10 @@
 # Changelog
 
+## fstack 1.0.0
+
+Replace the fstack 0.1 router with the portable pstack skill set under the existing plugin ID. Bundle 59 workflows and principles, 22 playbooks, two worker roles, host-scoped model settings, an activity-aware worktree inventory and the optional Benny automation sources. Preserve the project journal and trace checker. Cursor, Claude Code and Codex use one skill tree.
+
+
 ## Unreleased
 
 - Add `fstack` 0.1.0, a skills-only Plugin that merges ideas from pstack (Lauren Tan, MIT), tstack (Toby Lee, MIT) and dual-brain (Hanmin Kim, MIT) into one router: pace (step by default, drive on explicit grant) and spec tier (T0–T2) chosen per task, gates G1–G3, a decision ledger, 11 playbooks, 12 principles, an optional two-lens (macro and micro) review with an evidence bar for findings, a disclosed single-agent fallback, and `trace.py`. Routing and behavior cases for `claude plugin eval` ship in `plugins/fstack/evals/`. It follows project conventions for code style and delegates refactoring, handoff, orchestration and model choice to existing Plugins.

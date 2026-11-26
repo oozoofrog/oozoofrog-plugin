@@ -1,6 +1,6 @@
 # Notice
 
-This skill adapts ideas from the works below; text is rewritten.
+This distribution adapts skill text, role briefs and scripts from pstack 0.15.48 (cursor/plugins, commit 41e4009). The retained fstack records and trace tools also draw on the works below.
 
 ## pstack
 
@@ -86,4 +86,4 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-The file-by-file origins, adaptations and exclusions are in [sources](references/sources.md).
+The imported workflows, agent briefs, Benny sources, statechart implementation and GitHub watcher derive from [Lauren Tan’s pstack](https://github.com/cursor/plugins/tree/41e4009/pstack). Local adaptations include the host profiles, model settings reader and worktree inventory.

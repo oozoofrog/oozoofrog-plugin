@@ -1,0 +1,14 @@
+{
+  "name": "oozoofrog-plugin",
+  "owner": {
+    "name": "oozoofrog",
+    "email": "oozoofrog@oozoofrog.dev"
+  },
+  "plugins": [
+    {
+      "name": "fstack",
+      "source": "plugins/fstack",
+      "description": "Use fstack for repository engineering tasks that need implementation, investigation, review or verification, and for explicit pstack-style workflows."
+    }
+  ]
+}
