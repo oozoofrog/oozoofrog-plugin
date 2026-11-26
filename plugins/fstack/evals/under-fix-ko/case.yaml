@@ -1,4 +1,0 @@
-schema_version: "1.1"
-name: under-fix-ko
-context:
-  scaffold_script: scaffold.sh
