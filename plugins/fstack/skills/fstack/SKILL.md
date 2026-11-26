@@ -11,7 +11,7 @@ Precedence: user instructions > project rules (AGENTS.md, CLAUDE.md, ADR MUSTs) 
 
 ## Frame (right after this skill loads)
 
-- Restate the goal, the problem and the smallest artifact that meets the goal. Read the records that bear on the request (`references/records.md`).
+- Restate the goal, the problem and the smallest artifact that meets the goal. Read the records that bear on the request (`references/records.md`). Check whether `_context/wiki/.wiki/config.json` exists: git ignores it, so `git status` does not show it, and when it exists the project keeps a journal.
 - Choose Pace and Spec tier from the request. Pace is `step` unless the user granted `drive`. Spec is `T1` unless the change creates or alters a contract that others rely on (public API, CLI surface, persisted schema, protocol) or the user asks for spec, ADR or plan; then it is `T2`. Details: `references/dials.md`.
 - Send the frame line as visible reply text right after this skill loads, before your next tool call and before any action that changes files. A line only in thinking, in a tool input or in the final report does not count. If a file you read later changes a dial, send a corrected frame line before the next file change. It is one literal line in the user's language. Keep the keys `Pace:` and `Spec:` in every language:
   - `Pace: step · Spec: T1 — internal bug with a clear repro`

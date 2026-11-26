@@ -2,7 +2,7 @@
 **You own the record of the step.**
 
 1. Read `git status` and `git diff --stat`. Look for foreign files, scratch leftovers and injected defects that were not reverted.
-2. If the project keeps a journal, write the entry before any commit. Write other durable records only when something durable changed (`references/records.md`). Otherwise put the decision ledger in the report.
+2. If the project keeps a journal (a project-wiki vault counts: `references/records.md`), write the entry before any commit. Write other durable records only when something durable changed (`references/records.md`). Otherwise put the decision ledger in the report.
 3. Write the report (`references/report.md`) in the user's language.
 4. If no commit is allowed, go to step 7. A commit is allowed only when the request or a project rule says to commit. A drive grant alone does not allow one: say in the report that the changes are in the working tree.
 5. When a commit is allowed:

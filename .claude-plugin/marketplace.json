@@ -103,6 +103,12 @@
       "source": "./plugins/fstack",
       "description": "Use for ordinary engineering work in a code repository, also when the request is short or vague: fix a bug or odd behavior, build or change a feature, a vague wish such as 'make X work with Y' (intent and open questions before code), a 'which of two approaches is better?' question (answer it by measuring a throwaway prototype, not from opinion), write a spec, ADR or plan, do the next plan task, review a change or diff, report what is left or which decisions are pending, or run autonomously until done; also for fstack requests or pstack- or tstack-style requests. 코드 저장소의 일반 개발 요청에 사용한다. 요청이 짧거나 모호해도 해당한다: 버그나 이상한 동작 수정, 기능 추가·변경, 'A를 B와 연동되게' 같은 막연한 요구, 'A랑 B 중 뭐가 나아요?' 같은 방식 선택 질문(실행해 측정), 설계 문서 작성, 다음 작업 진행, 변경분 리뷰, 남은 작업 확인, 끝까지 자율 진행. Not for factual questions about what existing code does or returns, one-line explanations, single obvious edits such as a typo, non-engineering questions, behavior-preserving refactoring, session handoff, or model selection.",
       "category": "productivity"
+    },
+    {
+      "name": "project-wiki",
+      "source": "./plugins/project-wiki",
+      "description": "Keep a local Obsidian wiki per project so the owner and the agent both get better at working together. It records each finished request as an episode with an owner-side and an agent-side retrospective, turns repeated corrections into lessons that move from candidate to adopted to encoded, keeps project knowledge, and runs retros. It creates the vault in `_context/wiki`, seeds it from earlier Claude/Codex transcripts, T3 threads, handoff notes, agent memory and git history without reading the same source twice, and lints it. Use for \"위키 만들어줘\", \"프로젝트 위키\", \"위키에 남겨줘\", \"이거 교훈으로 남겨줘\", \"교훈 정리\", \"위키 회고\", \"위키 검사\", \"지시를 어떻게 했어야 했나\", lessons learned, an Obsidian project journal, or a retrospective of past agent work. Not for session handoff (use handoff), code or API documentation, or editing notes in an unrelated Obsidian vault.",
+      "category": "productivity"
     }
   ]
 }

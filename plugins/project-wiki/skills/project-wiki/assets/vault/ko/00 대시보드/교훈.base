@@ -1,0 +1,98 @@
+filters:
+  and:
+    - 'type == "lesson"'
+
+formulas:
+  hit_rate: 'if(applied > 0, (worked / applied * 100).round(0), "")'
+
+properties:
+  audience:
+    displayName: "대상"
+  kind:
+    displayName: "종류"
+  status:
+    displayName: "상태"
+  basis:
+    displayName: "출처"
+  applied:
+    displayName: "적용"
+  worked:
+    displayName: "효과"
+  formula.hit_rate:
+    displayName: "효과율(%)"
+  encoded_in:
+    displayName: "옮긴 곳"
+  first_seen:
+    displayName: "처음"
+  last_seen:
+    displayName: "마지막"
+
+views:
+  - type: table
+    name: "후보"
+    filters: 'status == "candidate"'
+    groupBy:
+      property: audience
+      direction: ASC
+    order:
+      - file.name
+      - kind
+      - basis
+      - first_seen
+      - applied
+      - worked
+  - type: table
+    name: "채택"
+    filters: 'status == "adopted"'
+    groupBy:
+      property: audience
+      direction: ASC
+    order:
+      - file.name
+      - kind
+      - applied
+      - worked
+      - formula.hit_rate
+      - last_seen
+  - type: table
+    name: "규칙으로 옮김"
+    filters: 'status == "encoded"'
+    order:
+      - file.name
+      - audience
+      - encoded_in
+      - last_seen
+  - type: table
+    name: "지시하는 사람용"
+    filters:
+      and:
+        - 'audience == "user" || audience == "both"'
+        - 'status != "retired"'
+    order:
+      - file.name
+      - status
+      - kind
+      - basis
+  - type: table
+    name: "에이전트용"
+    filters:
+      and:
+        - 'audience == "agent" || audience == "both"'
+        - 'status != "retired"'
+    order:
+      - file.name
+      - status
+      - kind
+      - basis
+  - type: table
+    name: "전체"
+    groupBy:
+      property: status
+      direction: ASC
+    order:
+      - file.name
+      - audience
+      - kind
+      - basis
+      - applied
+      - worked

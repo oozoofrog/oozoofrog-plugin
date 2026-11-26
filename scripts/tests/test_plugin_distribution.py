@@ -42,7 +42,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ['swift-intelligence', 'local-ai-studio', 'jev-client', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'high-council-implementation', 'openai-decisions', 'handoff', 'model-advisor', 'apple-app-design-audit', 'review-moment', 'wild-reading-coach-builder', 'fstack'],
+            ['swift-intelligence', 'local-ai-studio', 'jev-client', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'high-council-implementation', 'openai-decisions', 'handoff', 'model-advisor', 'apple-app-design-audit', 'review-moment', 'wild-reading-coach-builder', 'fstack', 'project-wiki'],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -120,6 +120,55 @@ class PluginDistributionTests(unittest.TestCase):
                 self.assertNotIn("/Users/oozoofrog", document.read_text())
                 for target in local_targets(document.read_text()):
                     self.assertTrue((document.parent / target).is_file(), (document, target))
+
+    def test_project_wiki_distribution(self) -> None:
+        from test_document_links import local_targets
+        source = skill_root("project-wiki")
+        plugin = REPO_ROOT / "plugins/project-wiki"
+        files = set(tree_files(source))
+        for required in ("SKILL.md", "agents/openai.yaml", "scripts/wiki_init.py", "scripts/wiki_lint.py",
+                         "scripts/wiki_sources.py", "scripts/wiki_guides.py", "scripts/schema_v1.json", "tests/test_wiki_lint.py",
+                         "references/schema.md", "references/capture.md", "references/seed.md", "references/retro.md",
+                         "assets/vault/ko/위키 사용법.md", "assets/vault/ko/00 대시보드/교훈.base"):
+            self.assertIn(required, files)
+        self.assertEqual({".codex-plugin/plugin.json", ".claude-plugin/plugin.json"} | {f"skills/project-wiki/{p}" for p in files},
+                         {p for p in tree_files(plugin) if not p.startswith("evals/")})
+        evals = plugin / "evals"
+        self.assertIn("results/", (evals / ".gitignore").read_text().split())
+        for case in sorted(evals.iterdir()):
+            if case.name in {"README.md", ".gitignore", "_fixtures"}:
+                continue
+            self.assertTrue((case / "prompt.md").is_file(), case)
+            self.assertTrue(list((case / "graders").glob("*.md")), case)
+            self.assertIn(case.name, (evals / "README.md").read_text(), case)
+        manifest = json.loads((plugin / ".codex-plugin/plugin.json").read_text())
+        self.assertEqual("./skills/", manifest["skills"])
+        for key in ("mcpServers", "apps", "hooks"):
+            self.assertNotIn(key, manifest)
+        description = (source / "SKILL.md").read_text().split("description: ", 1)[1].splitlines()[0]
+        self.assertEqual(description, manifest["description"])
+        self.assertEqual(description, manifest["interface"]["longDescription"])
+        self.assertIn(description, (REPO_ROOT / "README.md").read_text())
+        metadata = {}
+        for line in (source / "agents/openai.yaml").read_text().splitlines():
+            if line.startswith("  ") and ": " in line:
+                key, value = line.strip().split(": ", 1)
+                metadata[key] = json.loads(value)
+        self.assertEqual(metadata["display_name"], manifest["interface"]["displayName"])
+        self.assertEqual(metadata["short_description"], manifest["interface"]["shortDescription"])
+        self.assertEqual([metadata["default_prompt"]], manifest["interface"]["defaultPrompt"])
+        self.assertIn("$project-wiki", metadata["default_prompt"])
+        for name in ("wiki_init.py", "wiki_lint.py", "wiki_sources.py", "wiki_guides.py"):
+            mode = subprocess.run(["git", "ls-files", "-s", f"plugins/project-wiki/skills/project-wiki/scripts/{name}"],
+                                  cwd=REPO_ROOT, capture_output=True, text=True).stdout.split(" ", 1)[0]
+            if mode:
+                self.assertEqual("100755", mode, name)
+        for document in source.rglob("*.md"):
+            self.assertNotIn("/Users/", document.read_text(), document)
+            if "assets" in document.parts:
+                continue
+            for target in local_targets(document.read_text()):
+                self.assertTrue((document.parent / target).is_file(), (document, target))
 
     def test_refactor_distribution(self) -> None:
         from test_document_links import local_targets

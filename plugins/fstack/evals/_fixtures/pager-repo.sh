@@ -3,14 +3,17 @@
 # Writes only below "$PWD". Makes no network calls. Has no remote.
 # Options: --with-plan  add docs/plan and docs/decisions files with open work.
 #          --with-diff  leave one uncommitted change in pager.py.
+#          --with-wiki  add a git-ignored project-wiki vault in _context/wiki.
 set -euo pipefail
 
 with_plan=0
 with_diff=0
+with_wiki=0
 for arg in "$@"; do
   case "$arg" in
     --with-plan) with_plan=1 ;;
     --with-diff) with_diff=1 ;;
+    --with-wiki) with_wiki=1 ;;
     *) echo "unknown option: $arg" >&2; exit 64 ;;
   esac
 done
@@ -162,6 +165,72 @@ MD
 | D1 | Pages are numbered from 1 | Approved (user, 2026-11-01) | kickoff |
 | D2 | `--page` past the end exits with code 2 instead of printing nothing | Proposed (AI) | U3 analysis |
 | D3 | Default page size stays 10 | Proposed (AI) | CLI review |
+MD
+fi
+
+if [ "$with_wiki" -eq 1 ]; then
+  printf '_context/\n' > .gitignore
+  mkdir -p "_context/wiki/.wiki" "_context/wiki/10 작업 기록" "_context/wiki/20 교훈" "_context/wiki/90 템플릿"
+  cat > "_context/wiki/.wiki/config.json" <<'JSON'
+{
+  "schema_version": 1,
+  "kind": "project",
+  "lang": "ko",
+  "project": "pager",
+  "folders": {"episodes": "10 작업 기록", "lessons": "20 교훈", "templates": "90 템플릿"}
+}
+JSON
+  cat > "_context/wiki/90 템플릿/작업 기록 템플릿.md" <<'MD'
+---
+type: episode
+date: {{date}}
+request: ""
+outcome: in-progress  # success | partial | failure | in-progress
+mode: main-session  # main-session | delegated | mixed
+lessons: []
+evidence: []
+---
+
+# {{title}}
+
+## 요청 원문
+
+## 목표와 완료 기준
+
+## 한 일
+
+## 결과
+
+## 회고: 지시
+
+## 회고: 대응
+
+## 근거
+MD
+  cat > "_context/wiki/20 교훈/버그는 고치기 전에 재현한다.md" <<'MD'
+---
+type: lesson
+audience: agent
+kind: response
+status: candidate
+basis: failure
+first_seen: 2026-11-01
+last_seen: 2026-11-01
+applied: 1
+worked: 1
+encoded_in: ""
+episodes: []
+---
+
+# 버그는 고치기 전에 재현한다
+
+> [!abstract] 한 문장
+> 버그 보고를 받으면 코드를 고치기 전에 실패하는 실행을 먼저 보인다.
+
+## 적용 기록
+| 날짜 | 작업 기록 | 효과 | 내용 |
+|---|---|---|---|
+| 2026-11-01 | 첫 기록 | 있음 | 재현으로 원인을 바로 찾음 |
 MD
 fi
 

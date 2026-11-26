@@ -1,0 +1,57 @@
+filters:
+  and:
+    - 'type == "episode"'
+
+properties:
+  date:
+    displayName: "날짜"
+  outcome:
+    displayName: "결과"
+  mode:
+    displayName: "방식"
+  session:
+    displayName: "세션"
+  request:
+    displayName: "요청"
+
+views:
+  - type: table
+    name: "최근"
+    sort:
+      - property: date
+        direction: DESC
+    order:
+      - date
+      - file.name
+      - outcome
+      - mode
+  - type: table
+    name: "실패와 부분 성공"
+    filters:
+      or:
+        - 'outcome == "failure"'
+        - 'outcome == "partial"'
+    sort:
+      - property: date
+        direction: DESC
+    order:
+      - date
+      - file.name
+      - outcome
+      - request
+  - type: table
+    name: "진행 중"
+    filters: 'outcome == "in-progress"'
+    order:
+      - date
+      - file.name
+      - request
+  - type: table
+    name: "결과별"
+    groupBy:
+      property: outcome
+      direction: ASC
+    order:
+      - date
+      - file.name
+      - mode

@@ -1,0 +1,4 @@
+interface:
+  display_name: "프로젝트 위키"
+  short_description: "작업 기록·교훈·지식을 쌓는 프로젝트별 Obsidian 위키"
+  default_prompt: "$project-wiki 방금 끝난 작업을 프로젝트 위키에 남겨 주세요."
