@@ -10,7 +10,7 @@
 def total(items):
     result = 0
     for item in items:
-        result = result + item
+        result += item  # changed in head
     return result
 # line 15
 # line 16
@@ -27,9 +27,12 @@ def total(items):
 # line 27
 # line 28
 # line 29
-# line 30
+# line 30 changed in head
 # line 31
 # line 32
+```text
+fenced block inside the file
+```
 # line 33
 # line 34
 # line 35
