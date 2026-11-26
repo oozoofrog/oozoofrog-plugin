@@ -24,8 +24,8 @@ Load the external Benny configuration supplied by the automation. If the config 
 - If worker isolation cannot enforce those limits, do the work in the coordinator.
 - Never create an issue that cannot link back to the source thread.
 - Prefer no ticket over a guessed or duplicate ticket.
-- Apply fstack's `principle-separate-before-serializing-shared-state` to source coordinates.
-- Apply fstack's `principle-minimize-reader-load` and `unslop` skills to the final verdict.
+- Apply fstack's `principle-isolate-shared-writes` to source coordinates.
+- Apply fstack's `principle-simplify-code-reading` and `edit-prose` skills to the final verdict.
 
 ## 1. Freeze source coordinates
 
@@ -68,7 +68,7 @@ Use evidence already in the thread before asking the reporter for more.
 
 ## 3. Trace cause before routing
 
-Do a bounded source and history pass before choosing an owner or destination. Trace the path from the reported action to the observed result. Use fstack's `why` skill when the report looks like a regression or touches defensive code.
+Do a bounded source and history pass before choosing an owner or destination. Trace the path from the reported action to the observed result. Use fstack's `explain-design-decisions` skill when the report looks like a regression or touches defensive code.
 
 1. Identify the likely code path from the reported action to the observed result.
 2. Check whether the visible symptom belongs to that code path or a dependency below it.

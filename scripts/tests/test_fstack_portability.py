@@ -18,7 +18,7 @@ class PortableWorkflows(unittest.TestCase):
         sources = list(SKILLS.glob("*/SKILL.md"))
         self.assertEqual(len(sources), 60)
         self.assertEqual(len(list(SKILLS.glob("principle-*/SKILL.md"))), 24)
-        self.assertEqual(len(list((SKILLS / "poteto-mode/playbooks").glob("*.md"))), 22)
+        self.assertEqual(len(list((SKILLS / "run-engineering-workflow/playbooks").glob("*.md"))), 22)
         self.assertEqual(len(list((PACKAGE / "agents").glob("*.md"))), 2)
         for source in sources:
             self.assertIn("name: " + source.parent.name + "\n", source.read_text())
@@ -31,16 +31,26 @@ class PortableWorkflows(unittest.TestCase):
         self.assertEqual(ROOT / entry["source"], PACKAGE)
         for host in ("claude", "codex", "cursor"):
             manifest = json.loads((PACKAGE / f".{host}-plugin/plugin.json").read_text())
-            self.assertEqual(manifest["version"], "1.1.0")
+            self.assertEqual(manifest["version"], "2.0.0")
             self.assertIn(manifest["description"], (SKILLS / "fstack/SKILL.md").read_text())
 
     def test_specialist_index_reaches_every_bundled_workflow(self):
-        index = SKILLS / "poteto-help/SKILL.md"
+        index = SKILLS / "fstack/references/workflows.md"
         destinations = {(index.parent / target).resolve() for target in local_targets(index.read_text())}
+        for entry in ("fstack", "find-workflows"):
+            source = SKILLS / entry / "SKILL.md"
+            targets = {(source.parent / target).resolve() for target in local_targets(source.read_text())}
+            self.assertIn(index, targets)
         for skill in SKILLS.glob("*/SKILL.md"):
-            if skill != index and not skill.parent.name.startswith("principle-"):
+            if not skill.parent.name.startswith("principle-"):
                 with self.subTest(workflow=skill.parent.name):
                     self.assertIn(skill, destinations)
+
+    def test_rename_guide_covers_every_direct_command(self):
+        guide = PACKAGE / "commands.ko.md"
+        destinations = {(guide.parent / target).resolve() for target in local_targets(guide.read_text())}
+        expected = set(SKILLS.glob("*/SKILL.md")) - {SKILLS / "fstack/SKILL.md"}
+        self.assertEqual(destinations, expected)
 
     def test_settings_import_round_trip_and_profile_isolation(self):
         with tempfile.TemporaryDirectory() as d:
@@ -52,7 +62,7 @@ class PortableWorkflows(unittest.TestCase):
             original = "# budget: medium (high)\narena runners: first high, inherit-parent\n"
             rule.write_text(original)
             def models(host, *args, data=None, check=True):
-                return subprocess.run([sys.executable, str(SKILLS / "setup-pstack/scripts/models.py"),
+                return subprocess.run([sys.executable, str(SKILLS / "configure-models/scripts/models.py"),
                                        "--host", host, *args], env=env, input=data,
                                       capture_output=True, text=True, check=check)
             previous = models("cursor", "show").stdout
@@ -85,7 +95,7 @@ class PortableWorkflows(unittest.TestCase):
                 if state:
                     evidence.write_text(f"{wt}\t{state}\n")
                     args = ["--activity", str(evidence)]
-                r = subprocess.run([sys.executable, str(SKILLS / "poteto-mode/scripts/worktree_audit.py"),
+                r = subprocess.run([sys.executable, str(SKILLS / "run-engineering-workflow/scripts/worktree_audit.py"),
                                     "-b", "main", *args, str(repo)], check=True, env=env, capture_output=True, text=True)
                 return r.stdout.splitlines()[-1].split("\t")[-2]
             self.assertEqual(audit(), "review")

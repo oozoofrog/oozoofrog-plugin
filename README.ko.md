@@ -63,11 +63,13 @@ skills-only Plugin `0.3.0`을 제공합니다. Plugin에 모델·런타임·생�
 
 ## fstack
 
+[한국어 용도별 명령과 이전 이름](plugins/fstack/commands.ko.md)
+
 개발 워크플로에는 fstack 하나를 설치하세요. Codex에서 직접 지정할 때는 `$fstack:fstack`, Claude Code에서는 `/fstack:fstack` 하나만 기억하면 됩니다. “두 방식 중 우리 앱에 맞는 쪽을 실제로 비교해줘” 또는 “이 변경이 다른 기능에 영향을 주는지 확인해줘”처럼 원하는 결과를 말하면 fstack이 필요한 절차를 고릅니다. 코드 설명, 요청문 다듬기, 상태 전이 검증, 병렬 검토도 같은 방식으로 요청할 수 있습니다. [사용법](plugins/fstack/README.md)
 
 ## 프로젝트 위키
 
-[프로젝트 위키](plugins/project-wiki/skills/project-wiki/SKILL.md) (`project-wiki` 0.1.0)는 프로젝트마다 `_context/wiki`에 Obsidian 위키를 만들어, 요청 하나가 끝날 때마다 작업 기록(요청 원문, 결과, 지시 쪽 회고, 대응 쪽 회고)을 남기고, 되풀이된 교정을 교훈으로 모읍니다. 교훈은 후보 → 채택 → 규칙화 → 폐기 순서로 바뀌며, 적용 기록과 숫자는 에이전트가 고치고 상태는 사용자가 회고나 fstack reflect에서 고릅니다. 훅은 쓰지 않습니다. 의미 있는 작업은 에이전트가 바로 기록하고, 나머지는 "위키에 남길까요?"라고 한 줄로 묻습니다. 이전 Claude Code 대화(git·T3 worktree와 예전 프로젝트 경로 포함), Codex 세션, 인계 문서, 에이전트 메모리, git 기록에서 위키를 채우고, 기록원마다 읽은 위치를 남겨 다음에는 새 내용만 읽습니다. 검사 스크립트는 속성 형식, 끊긴 링크와 별칭 링크, 대시보드 보기 이름, 교훈 숫자, 근거 경로, 개인 정보를 확인합니다. 사용자가 고친 기본 파일은 다시 실행해도 덮어쓰지 않습니다. Python 3이 필요하고, 위키를 볼 때만 Obsidian이 필요합니다. 기본 템플릿은 한국어입니다. [설치](docs/plugin-installation.md#project-wiki)를 확인하세요.
+[프로젝트 위키](plugins/project-wiki/skills/project-wiki/SKILL.md) (`project-wiki` 0.1.0)는 프로젝트마다 `_context/wiki`에 Obsidian 위키를 만들어, 요청 하나가 끝날 때마다 작업 기록(요청 원문, 결과, 지시 쪽 회고, 대응 쪽 회고)을 남기고, 되풀이된 교정을 교훈으로 모읍니다. 교훈은 후보 → 채택 → 규칙화 → 폐기 순서로 바뀌며, 적용 기록과 숫자는 에이전트가 고치고 상태는 사용자가 회고나 fstack capture-lessons에서 고릅니다. 훅은 쓰지 않습니다. 의미 있는 작업은 에이전트가 바로 기록하고, 나머지는 "위키에 남길까요?"라고 한 줄로 묻습니다. 이전 Claude Code 대화(git·T3 worktree와 예전 프로젝트 경로 포함), Codex 세션, 인계 문서, 에이전트 메모리, git 기록에서 위키를 채우고, 기록원마다 읽은 위치를 남겨 다음에는 새 내용만 읽습니다. 검사 스크립트는 속성 형식, 끊긴 링크와 별칭 링크, 대시보드 보기 이름, 교훈 숫자, 근거 경로, 개인 정보를 확인합니다. 사용자가 고친 기본 파일은 다시 실행해도 덮어쓰지 않습니다. Python 3이 필요하고, 위키를 볼 때만 Obsidian이 필요합니다. 기본 템플릿은 한국어입니다. [설치](docs/plugin-installation.md#project-wiki)를 확인하세요.
 
 ## App Store 리뷰 요청
 
