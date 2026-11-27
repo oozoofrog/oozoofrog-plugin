@@ -3,7 +3,7 @@ import json
 import unittest
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
-PACKAGES = ('korean-product-writing','refactor','openai-decisions','handoff','model-advisor','apple-app-design-audit','wild-reading-coach-builder','fstack')
+PACKAGES = ('korean-product-writing','refactor','openai-decisions','handoff','model-advisor','model-fit-review','apple-app-design-audit','wild-reading-coach-builder','fstack')
 class PortableSkillDistributionTests(unittest.TestCase):
     def test_complete_sources_and_metadata(self):
         for name in PACKAGES:

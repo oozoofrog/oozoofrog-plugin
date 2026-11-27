@@ -4,6 +4,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -42,7 +43,7 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual("oozoofrog-plugin", marketplace["name"])
         self.assertEqual("oozoofrog-plugin", marketplace["interface"]["displayName"])
         self.assertEqual(
-            ['swift-intelligence', 'local-ai-studio', 'jev-client', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'high-council-implementation', 'openai-decisions', 'handoff', 'model-advisor', 'apple-app-design-audit', 'review-moment', 'wild-reading-coach-builder', 'fstack', 'project-wiki', 'korean-tech-writing'],
+            ['swift-intelligence', 'local-ai-studio', 'jev-client', 'korean-product-writing', 'interface-first-design', 'winpilot', 'c4fy', 'refactor', 'high-council-implementation', 'openai-decisions', 'handoff', 'model-advisor', 'model-fit-review', 'apple-app-design-audit', 'review-moment', 'wild-reading-coach-builder', 'fstack', 'project-wiki', 'korean-tech-writing'],
             [plugin["name"] for plugin in marketplace["plugins"]],
         )
         for entry in marketplace["plugins"]:
@@ -243,6 +244,58 @@ class PluginDistributionTests(unittest.TestCase):
         self.assertEqual([metadata["default_prompt"]], codex["interface"]["defaultPrompt"])
         self.assertIn("$handoff", metadata["default_prompt"])
         self.assertLessEqual(len(metadata["default_prompt"]), 128)
+
+    def test_model_fit_review_distribution(self) -> None:
+        from test_document_links import local_targets
+        source = skill_root("model-fit-review")
+        plugin = REPO_ROOT / "plugins/model-fit-review"
+        scripts = ("mfrlib.py", "extract_t3.py", "extract_logs.py", "snapshot_db.py", "export_items.py",
+                   "episodes.py", "score_practice.py", "sample_final_messages.py")
+        expected = {"SKILL.md", "agents/openai.yaml", "scripts/build_tables.sql", "tests/test_mfr.py",
+                    "tests/fixtures/session-a.jsonl", "tests/fixtures/session-b.jsonl"} | {f"scripts/{name}" for name in scripts} | {
+                    f"references/{name}.md" for name in ("procedure", "rubrics", "cards", "replay-and-judge", "lessons")}
+        self.assertEqual(expected, set(tree_files(source)))
+        self.assertEqual({".codex-plugin/plugin.json", ".claude-plugin/plugin.json"}
+                         | {f"skills/model-fit-review/{path}" for path in expected}, set(tree_files(plugin)))
+        codex = json.loads((plugin / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
+        self.assertEqual("./skills/", codex["skills"])
+        for key in ("mcpServers", "apps", "hooks"):
+            self.assertNotIn(key, codex)
+        description = (source / "SKILL.md").read_text(encoding="utf-8").split("description: ", 1)[1].splitlines()[0]
+        self.assertEqual(description, codex["description"])
+        self.assertEqual(description, codex["interface"]["longDescription"])
+        self.assertIn(description, (REPO_ROOT / "README.md").read_text(encoding="utf-8"))
+        self.assertIn("model-fit-review", (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8"))
+        metadata = {}
+        for line in (source / "agents/openai.yaml").read_text(encoding="utf-8").splitlines():
+            if line.startswith("  ") and ": " in line:
+                key, value = line.strip().split(": ", 1)
+                metadata[key] = json.loads(value)
+        for yaml_key, json_key in (("display_name", "displayName"), ("short_description", "shortDescription")):
+            self.assertEqual(metadata[yaml_key], codex["interface"][json_key])
+        self.assertEqual([metadata["default_prompt"]], codex["interface"]["defaultPrompt"])
+        self.assertIn("$model-fit-review", metadata["default_prompt"])
+        self.assertLessEqual(len(metadata["default_prompt"]), 128)
+        for name in scripts:
+            if name == "mfrlib.py":
+                continue
+            mode = subprocess.run(["git", "ls-files", "-s", f"plugins/model-fit-review/skills/model-fit-review/scripts/{name}"],
+                                  cwd=REPO_ROOT, capture_output=True, text=True).stdout.split(" ", 1)[0]
+            if mode:
+                self.assertEqual("100755", mode, name)
+        # Public repository: no machine paths or personal data in the package.
+        for path in plugin.rglob("*"):
+            self.assertFalse(path.is_symlink(), path)
+            if path.is_file() and path.suffix in {".md", ".py", ".sql", ".json", ".jsonl", ".yaml"}:
+                text = path.read_text(encoding="utf-8")
+                for marker in ("/Volumes/", "/Users/", "/home/", "@gmail"):
+                    self.assertNotIn(marker, text, (path, marker))
+        for document in source.rglob("*.md"):
+            for target in local_targets(document.read_text(encoding="utf-8")):
+                self.assertTrue((document.parent / target).is_file(), (document, target))
+        result = subprocess.run([sys.executable, "-I", "-B", "-m", "unittest", "discover", "-s", "tests"],
+                                cwd=source, capture_output=True, text=True)
+        self.assertEqual(0, result.returncode, result.stderr[-2000:])
 
     def test_c4fy_distribution(self) -> None:
         source = mirror = skill_root("c4fy")

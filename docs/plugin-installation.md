@@ -78,6 +78,17 @@ claude plugin install model-advisor@oozoofrog-plugin
 
 같은 스킬을 `~/.claude/skills/model-advisor`에 직접 둔 적이 있다면 둘 중 하나만 남깁니다. 둘 다 있으면 같은 요청에 두 스킬이 함께 후보로 뜹니다.
 
+## Model Fit Review
+
+`model-fit-review@oozoofrog-plugin` 0.1.0은 [모델 적합성 검토 스킬](../plugins/model-fit-review/skills/model-fit-review/SKILL.md)과 표준 라이브러리만 쓰는 Python 스크립트를 설치합니다. 훅과 MCP 서버는 없습니다. Claude Code와 Codex에서 같은 스킬을 쓰지만, Haiku 분류기와 재실행 후보처럼 서브에이전트 모델을 고르는 단계는 Claude Code에서만 됩니다.
+
+```sh
+claude plugin marketplace add oozoofrog/oozoofrog-plugin
+claude plugin install model-fit-review@oozoofrog-plugin
+```
+
+T3 Code 상태 DB를 쓰면 스킬이 읽기 전용으로 사본을 만듭니다. 사본은 수 GB일 수 있으므로 여유 공간이 있는 위치를 고르고, 검토가 끝나면 지울지 묻습니다.
+
 ## OpenAI Decisions
 
 `openai-decisions@oozoofrog-plugin`은 [스킬](../plugins/openai-decisions/skills/openai-decisions/SKILL.md)만 제공합니다. 스킬에 들어 있는 `scripts/openai-decisions`(Python 3)가 공식 OpenAI CLI 1.51.2 이상의 `openai decisions create`를 호출하며, Codex와 Claude Code가 같은 명령을 씁니다. 터미널에서 바로 쓰려면 이 파일을 `~/.local/bin/openai-decisions`로 링크합니다. 실행할 수 없으면 [공식 CLI 직접 호출](../plugins/openai-decisions/skills/openai-decisions/references/cli.md)을 따릅니다. Plugin 설치는 MCP 서버·API 키·과금 계정을 자동 등록하지 않습니다. API 키는 기존 비밀 입력·자격증명 저장소로 전달하고 설정 파일이나 대화에 복사하지 않습니다.
