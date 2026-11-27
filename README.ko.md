@@ -63,7 +63,7 @@ skills-only Plugin `0.3.0`을 제공합니다. Plugin에 모델·런타임·생�
 
 ## 모델 적합성 검토
 
-[모델 적합성 검토](plugins/model-fit-review/skills/model-fit-review/SKILL.md) (`model-fit-review` 0.1.0)는 지난 Claude Code 세션을 돌아보며 어떤 작업에 Fable 5.2, Opus 5.5, Sonnet 5.5, Haiku 5.5와 어떤 effort가 맞았는지 감각을 기르게 돕습니다. 실제 작업 단위로 사례 카드를 만들고, 먼저 고른 뒤 답을 보는 연습을 두 번 하며, 원하면 몇 건을 다른 회사 모델이 블라인드로 판정하는 재실행으로 확인합니다. 비용 감사가 아니므로 창작이나 깊은 분석 작업을 토큰 절약만을 이유로 낮추지 않습니다. 세션 로그(`~/.claude/projects`)만으로 동작하고, T3 Code 상태 DB가 있으면 읽기 전용 사본에서 실행별 모델과 effort를 더합니다. DB가 없으면 로그에 기록된 경우에만 effort를 알 수 있으며 보고서에 그 사실을 적습니다. 재실행(G1)과 CLAUDE.md·메모리·설정·훅 변경(G2)은 승인을 받은 뒤에만 진행합니다. 결과 파일과 DB 사본 위치는 실행할 때 직접 고릅니다. [설치](docs/plugin-installation.md#model-fit-review)를 확인하세요.
+[모델 적합성 검토](plugins/model-fit-review/skills/model-fit-review/SKILL.md) (`model-fit-review` 0.1.0)는 지난 Claude Code 세션을 돌아보며 어떤 작업에 Fable 5.2, Opus 5.5, Sonnet 5.5, Haiku 5.5와 어떤 effort가 맞았는지 감각을 기르게 돕습니다. 실제 작업 단위로 사례 카드를 만들고, 먼저 고른 뒤 답을 보는 연습을 두 번 하며, 원하면 몇 건을 다른 회사 모델이 블라인드로 판정하는 재실행으로 확인합니다. 비용 감사가 아니므로 창작이나 깊은 분석 작업을 토큰 절약만을 이유로 낮추지 않습니다. 세션 로그(`~/.claude/projects`)만으로 동작하고, T3 Code 상태 DB가 있으면 읽기 전용 사본에서 사람이 직접 보낸 메시지, 실행 완료 시각, 다른 에이전트가 시작한 실행을 더합니다. 모델과 토큰 사용량은 로그에 있고, effort도 대부분의 로그 항목에 기록됩니다. 분류용 서브에이전트에 메시지 본문을 보내기 전에 동의를 받습니다(C0). 재실행(G1)과 CLAUDE.md·메모리·설정·훅 변경(G2)은 승인을 받은 뒤에만 진행합니다. 결과 파일과 DB 사본 위치는 실행할 때 직접 고릅니다. [설치](docs/plugin-installation.md#model-fit-review)를 확인하세요.
 
 ## fstack
 

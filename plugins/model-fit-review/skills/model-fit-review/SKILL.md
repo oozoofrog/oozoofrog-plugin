@@ -11,12 +11,13 @@ This is a learning loop. Do not frame results as savings. Never recommend a smal
 
 ## Before you start
 
-1. Ask once (AskUserQuestion) where to keep the review files. Suggest `<project working dir>/_model-fit-review/`. Never assume a secondary disk or any fixed path. All later outputs go there.
+1. Ask once (AskUserQuestion) where to keep the review files. Suggest a directory outside every git repository, for example `~/model-fit-review/`. The files hold message text, so a directory inside a git work tree must be git-ignored; the scripts refuse any other directory inside a work tree (override: `--allow-repo`). Never assume a secondary disk or any fixed path. All later outputs go there.
 2. Find the inputs:
-   - Required: Claude Code session logs, by default `~/.claude/projects/*/*.jsonl`.
-   - Optional: a T3 Code state DB (`statev2.sqlite`). It adds per-run model and effort and the run completion time.
-3. If the T3 DB exists, tell the user the copy can be several GB, then run `scripts/snapshot_db.py --source <db> --dest <review dir>/data`. It opens the source read-only, checks free space and copies with `sqlite3 "file:...?mode=ro" ".backup <dest>"`. Never read the live DB for analysis.
-4. If there is no T3 DB, use the log-only path. Effort is then known only where the log records it. State the coverage in the report.
+   - Required: Claude Code session logs, by default `~/.claude/projects/*/*.jsonl`. They record model and token use per call, and effort on most assistant entries.
+   - Optional: a T3 Code state DB (`statev2.sqlite`). It adds which user rows a person typed (human-message origin), run completion times, and the runs other agents started. It does not add effort.
+3. If the T3 DB exists, tell the user the copy can be several GB, then run `scripts/snapshot_db.py --source <db> --dest <review dir>/data --yes`. An agent's shell has no terminal, so `--yes` is required there; without it the script asks and stops. It opens the source read-only, checks free space, copies with the SQLite backup API and switches the copy to `journal_mode=DELETE`, so no `-wal` or `-shm` files appear. Never read the live DB for analysis.
+4. If there is no T3 DB, use the log-only path. State the effort coverage and the human-filter precision in the report.
+5. Set `TMPDIR` (and `SQLITE_TMPDIR`) when the default temporary directory is on a small disk; every script honors them.
 
 ## Phases
 
@@ -25,9 +26,9 @@ Follow [references/procedure.md](references/procedure.md) for every step, its ch
 | Phase | Do | Gate or check |
 |---|---|---|
 | A. Frame | Agree the goal, the done predicate and the period | Predicate is falsifiable |
-| B. Extract | `extract_t3.py` or `extract_logs.py` → messages and distinct runs | Counts printed; human filter applied |
-| C. Label | Hand-label 30–40 items, then calibrated Haiku labels with [references/rubrics.md](references/rubrics.md) | ≥ 85 % agreement, or labels used only for sampling |
-| D. Episodes | `episodes.py` groups runs; sample by model × outcome × task type | 20 boundaries read by hand |
+| B. Extract | `extract_t3.py` or `extract_logs.py` with `--since`/`--until` → messages and distinct runs | Counts printed; 10 random human messages read, precision recorded |
+| C. Label | **C0** consent, then hand-label 30–40 reaction items and run calibrated Haiku labels with [references/rubrics.md](references/rubrics.md) | ≥ 85 % agreement on reactions, or labels used only for sampling |
+| D. Episodes | `episodes.py` groups runs; sample by model × outcome × task type | 20 boundaries (all if fewer) read by hand |
 | E. Cards | Write cards per [references/cards.md](references/cards.md) | Each fact traces to a run id |
 | F. Round 1 | Practice via AskUserQuestion, one card per question | Baseline stored before any guide |
 | G. Replays (optional) | [references/replay-and-judge.md](references/replay-and-judge.md) | **G1** approval first |
@@ -37,6 +38,7 @@ Follow [references/procedure.md](references/procedure.md) for every step, its ch
 
 ## Gates
 
+- **C0** — before Phase C: tell the user that request and reply text (with model names masked) goes to classifier subagents, and ask for consent. Without consent, hand-label a smaller sample and say so.
 - **G1** — before any replay: show cases, models and effort, estimated tokens, and the isolation setup. Wait for approval.
 - **G2** — before any change to CLAUDE.md, memory, settings or hooks: show the exact change and its evidence. Wait for approval for each change separately.
 
@@ -44,7 +46,7 @@ Follow [references/procedure.md](references/procedure.md) for every step, its ch
 
 Read [references/lessons.md](references/lessons.md) before Phase B. The short form:
 
-- Count only human messages, and count distinct runs. The reaction to a run is the first human message after it completed; earlier messages are steer.
+- Count only human messages, and count distinct runs. The reaction to a run is the first human message after it completed, and only if no other run of the thread (any provider, including runs that a delegation result started) completed first; otherwise the run is `superseded`. Messages sent while it ran are steer.
 - Session commands (`/compact`, `/clear`, `/reload-*`, `/mcp`, `/output-style`) are not tasks. A slash-invoked skill with text is a task.
 - Keep model names out of every item given to a classifier or judge.
 - A "fix" reaction is not always a model failure. Cards separate result fixes from method corrections.
@@ -53,7 +55,7 @@ Read [references/lessons.md](references/lessons.md) before Phase B. The short fo
 
 ## Report
 
-End with: inputs used (logs only, or logs + T3 DB) and effort coverage; what was VERIFIED, NOT VERIFIED or INCONCLUSIVE; round scores with over- and under-picks; the guide; open G2 proposals; and the location of the snapshot copy with an offer to delete it.
+End with: inputs used (logs only, or logs + T3 DB), the period, effort coverage and human-filter precision; what was VERIFIED, NOT VERIFIED or INCONCLUSIVE; round scores with over- and under-picks; the guide; open G2 proposals; and the location of the snapshot copy with an offer to delete it (`snapshot_db.py --delete <snapshot>` also removes `-wal`/`-shm` files).
 
 ## Host notes
 

@@ -1,10 +1,10 @@
 # Rubrics
 
-Give a classifier the rubric and the items only. Do not tell it which model produced a reply, and do not pass ids that reveal the model.
+Give a classifier the rubric and the items only. Do not tell it which model produced a reply, and do not pass ids that reveal the model. `export_items.py` masks model names and ids as `[model]`.
 
 ## Follow-up rubric (reaction to a result)
 
-Each item is one agent run. It has three fields:
+Use this rubric for items with `kind: "reaction"` only. Each item is one agent run. It has three text fields:
 - `request`: what the user asked.
 - `assistant_reply_end`: the end of the agent's final reply (may be cut at the start).
 - `next_user_message`: the next message the user sent in the same conversation.
@@ -27,11 +27,25 @@ Tie-breakers:
 3. A pure question about status or meaning → `clarify`.
 4. Work on a different feature, project or subject that does not mention the result → `new_topic`, not `extend`. Use `extend` only when the new work builds on the result just delivered.
 
-Output: a JSON object `{item_id: label}`.
+Output: a JSON object `{item_id: label}`. Calibrate and report agreement on these items only.
+
+## Steer rubric (message sent while the run was going)
+
+Use this rubric for items with `kind: "steer"`. The user sent `next_user_message` after `request` and before the agent finished, so the user had not seen a result; `assistant_reply_end` is empty. Choose exactly one label.
+
+| label | Use when the message... |
+|---|---|
+| add | adds a requirement, detail or file to the running request. |
+| correct | says the request or the agent's visible progress is wrong and changes the target. |
+| method | corrects how the agent works (tool, delegation, question format, verification). |
+| ask | asks about status or progress. |
+| other | anything else, including a new unrelated request. |
+
+Output: `{item_id: label}`. Steer labels are not calibrated; report steer counts as indicative only. `episodes.py` counts `correct` and `method` per episode (`steer_correct`, `steer_method`).
 
 ## Task-type rubric (per episode)
 
-Each item is one episode: the user's requests in order (first 6 shown, each cut at 220 characters) and `n_requests`.
+Export the items with `export_items.py --data <dir> --episodes`. Each item is one episode: the user's requests in order (first 6 shown, each cut at 220 characters) and `n_requests`. When `source` is `delegated`, every run was started by another agent and the requests are its briefs; judge the work they describe.
 
 | label | Use when most of the work is... |
 |---|---|
