@@ -36,7 +36,7 @@ def finals(projects: Path, since: str) -> list[tuple[str, str, str]]:
                     d = json.loads(line)
                 except ValueError:
                     continue
-                if mfrlib.log_human_text(d) is not None:
+                if mfrlib.prompt_kind(d)[0] is not None:  # any prompt (human or injected) ends a turn
                     if last:
                         out.append(last)
                     last = None

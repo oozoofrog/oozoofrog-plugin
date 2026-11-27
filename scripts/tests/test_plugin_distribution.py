@@ -252,7 +252,7 @@ class PluginDistributionTests(unittest.TestCase):
         scripts = ("mfrlib.py", "extract_t3.py", "extract_logs.py", "snapshot_db.py", "export_items.py",
                    "episodes.py", "score_practice.py", "sample_final_messages.py")
         expected = {"SKILL.md", "agents/openai.yaml", "scripts/build_tables.sql", "tests/test_mfr.py",
-                    "tests/fixtures/session-a.jsonl"} | {f"scripts/{name}" for name in scripts} | {
+                    "tests/fixtures/session-a.jsonl", "tests/fixtures/session-b.jsonl"} | {f"scripts/{name}" for name in scripts} | {
                     f"references/{name}.md" for name in ("procedure", "rubrics", "cards", "replay-and-judge", "lessons")}
         self.assertEqual(expected, set(tree_files(source)))
         self.assertEqual({".codex-plugin/plugin.json", ".claude-plugin/plugin.json"}
