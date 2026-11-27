@@ -1,0 +1,4 @@
+interface:
+  display_name: "모델 적합성 검토"
+  short_description: "지난 세션으로 모델·effort 선택 감각을 연습하는 검토"
+  default_prompt: "$model-fit-review 지난 세션으로 어떤 모델이 맞았는지 검토하고 연습 카드를 만들어 주세요."

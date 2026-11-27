@@ -1,0 +1,14 @@
+{"type": "user", "timestamp": "2026-01-05T10:00:00Z", "message": {"role": "user", "content": "Add a dark mode toggle to the settings screen"}}
+{"type": "assistant", "timestamp": "2026-01-05T10:00:30Z", "effort": "high", "message": {"model": "claude-sonnet-5-5", "content": [{"type": "tool_use", "id": "t1", "name": "Read", "input": {}}], "usage": {"input_tokens": 10, "cache_read_input_tokens": 1000, "cache_creation_input_tokens": 0}}}
+{"type": "user", "timestamp": "2026-01-05T10:00:31Z", "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "t1", "content": "file text"}]}}
+{"type": "user", "timestamp": "2026-01-05T10:00:32Z", "isMeta": true, "message": {"role": "user", "content": "Caveat: injected by the harness"}}
+{"type": "user", "timestamp": "2026-01-05T10:00:33Z", "message": {"role": "user", "content": "<system-reminder>background note</system-reminder>"}}
+{"type": "assistant", "timestamp": "2026-01-05T10:01:00Z", "isSidechain": true, "message": {"model": "claude-haiku-5-5", "content": [{"type": "text", "text": "subagent text"}]}}
+{"type": "assistant", "timestamp": "2026-01-05T10:02:00Z", "effort": "high", "message": {"model": "claude-sonnet-5-5", "content": [{"type": "text", "text": "Added the toggle."}], "usage": {"input_tokens": 20, "cache_read_input_tokens": 3000, "cache_creation_input_tokens": 5}}}
+{"type": "user", "timestamp": "2026-01-05T10:03:00Z", "message": {"role": "user", "content": [{"type": "text", "text": "The toggle does not save after restart"}]}}
+{"type": "assistant", "timestamp": "2026-01-05T10:04:00Z", "message": {"model": "claude-sonnet-5-5", "content": [{"type": "text", "text": "Fixed persistence."}]}}
+{"type": "user", "timestamp": "2026-01-05T10:05:00Z", "message": {"role": "user", "content": "<command-name>/compact</command-name>\n<command-message>compact</command-message>\n<command-args></command-args>"}}
+{"type": "assistant", "timestamp": "2026-01-05T10:05:30Z", "message": {"model": "<synthetic>", "content": [{"type": "text", "text": "Compacted"}]}}
+{"type": "user", "timestamp": "2026-01-05T10:06:00Z", "message": {"role": "user", "content": "<command-name>/release-notes</command-name>\n<command-args>draft notes for version 2</command-args>"}}
+{"type": "assistant", "timestamp": "2026-01-05T10:07:00Z", "message": {"model": "claude-opus-5-5", "content": [{"type": "text", "text": "Draft ready."}]}}
+not json

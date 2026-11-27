@@ -1,5 +1,9 @@
 # Changelog
 
+## model-fit-review 0.1.0
+
+Add a skills-only Plugin for Claude Code and Codex that reviews your own past sessions to build judgment on when Fable 5.2, Opus 5.5, Sonnet 5.5 or Haiku 5.5, and which effort, fits a task. It writes case cards from real episodes, runs a baseline and a held-out practice round through AskUserQuestion, writes a one-page guide that cites only round-1 cards, and optionally runs blind counterfactual replays judged by a different vendor (gate G1). Recurring method corrections are checked against existing rules; any change to CLAUDE.md, memory, settings or hooks needs approval per change (gate G2). Standard-library scripts read Claude Code logs, or a read-only snapshot of a T3 Code state DB when one exists, count only human messages and distinct runs, separate reactions after a run completed from messages sent during it, exclude session commands, and group runs into episodes at a `new_topic` reaction. Without the DB, effort is known only where the log records it. Tests on synthetic fixtures cover these rules. The skill has not been run end to end from the installed Plugin.
+
 ## fstack 2.0.0
 
 Rename all 35 specialist commands and 24 principle commands. Comment reviews return findings, feature requests finish with local verification, and decision logs use a local evidence check. Both entry points share the workflow index. Keep the fstack entry point and saved role keys. Update direct invocations using the [Korean command guide](plugins/fstack/commands.ko.md).
